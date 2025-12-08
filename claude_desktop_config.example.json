@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "memory-indexer": {
+      "command": "D:/data/memory-indexer/src/MemoryIndexer.Console/bin/Debug/net8.0/win-x64/memory-indexer.exe",
+      "args": [],
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

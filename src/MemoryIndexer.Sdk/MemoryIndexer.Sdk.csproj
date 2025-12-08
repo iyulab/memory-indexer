@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>SDK for integrating Memory Indexer into consumer applications</Description>
+    <PackageTags>mcp;memory;sdk;integration</PackageTags>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>MemoryIndexer</PackageId>
+    <PackageReadmeFile></PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MemoryIndexer.Core\MemoryIndexer.Core.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Storage\MemoryIndexer.Storage.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Embedding\MemoryIndexer.Embedding.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Intelligence\MemoryIndexer.Intelligence.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Mcp\MemoryIndexer.Mcp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+  </ItemGroup>
+
+</Project>

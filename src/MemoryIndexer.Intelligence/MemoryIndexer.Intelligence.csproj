@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Intelligence services for Memory Indexer (chunking, scoring, summarization)</Description>
+    <PackageTags>mcp;memory;chunking;scoring;summarization</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MemoryIndexer.Core\MemoryIndexer.Core.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Embedding\MemoryIndexer.Embedding.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="System.Numerics.Tensors" />
+  </ItemGroup>
+
+</Project>

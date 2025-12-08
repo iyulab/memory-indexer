@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>MCP Server implementation for Memory Indexer</Description>
+    <PackageTags>mcp;memory;server;tools</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MemoryIndexer.Core\MemoryIndexer.Core.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Storage\MemoryIndexer.Storage.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Embedding\MemoryIndexer.Embedding.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Intelligence\MemoryIndexer.Intelligence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>
