@@ -176,6 +176,11 @@ public sealed class EmbeddingOptions
 public enum EmbeddingProvider
 {
     /// <summary>
+    /// Mock provider for testing (returns random embeddings).
+    /// </summary>
+    Mock,
+
+    /// <summary>
     /// Ollama local inference.
     /// </summary>
     Ollama,
@@ -191,9 +196,15 @@ public enum EmbeddingProvider
     AzureOpenAI,
 
     /// <summary>
-    /// Custom HTTP endpoint.
+    /// Custom HTTP endpoint (OpenAI-compatible).
     /// </summary>
-    Custom
+    Custom,
+
+    /// <summary>
+    /// Local ONNX-based embedding using LocalEmbedder.
+    /// Supports models like all-MiniLM-L6-v2, bge-small-en-v1.5, etc.
+    /// </summary>
+    Local
 }
 
 /// <summary>

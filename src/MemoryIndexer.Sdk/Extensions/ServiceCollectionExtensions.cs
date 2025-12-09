@@ -3,12 +3,12 @@ using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Services;
 using MemoryIndexer.Embedding.Providers;
 using MemoryIndexer.Intelligence.Chunking;
-using MemoryIndexer.Intelligence.Deduplication;
-using MemoryIndexer.Intelligence.Scoring;
-using MemoryIndexer.Intelligence.Search;
 using MemoryIndexer.Intelligence.Compression;
 using MemoryIndexer.Intelligence.ContextOptimization;
+using MemoryIndexer.Intelligence.Deduplication;
 using MemoryIndexer.Intelligence.KnowledgeGraph;
+using MemoryIndexer.Intelligence.Scoring;
+using MemoryIndexer.Intelligence.Search;
 using MemoryIndexer.Intelligence.SelfEditing;
 using MemoryIndexer.Intelligence.Summarization;
 using MemoryIndexer.Storage.InMemory;
@@ -90,16 +90,21 @@ public static class ServiceCollectionExtensions
 
             return options.Value.Embedding.Provider switch
             {
+                EmbeddingProvider.Local => new LocalEmbeddingService(
+                    cache,
+                    options,
+                    sp.GetRequiredService<ILogger<LocalEmbeddingService>>()),
                 EmbeddingProvider.Ollama => new OllamaEmbeddingService(
                     httpClientFactory.CreateClient("Ollama"),
                     cache,
                     options,
                     sp.GetRequiredService<ILogger<OllamaEmbeddingService>>()),
-                EmbeddingProvider.OpenAI or EmbeddingProvider.AzureOpenAI => new OpenAIEmbeddingService(
-                    httpClientFactory.CreateClient("OpenAI"),
-                    cache,
-                    options,
-                    sp.GetRequiredService<ILogger<OpenAIEmbeddingService>>()),
+                EmbeddingProvider.OpenAI or EmbeddingProvider.AzureOpenAI or EmbeddingProvider.Custom =>
+                    new OpenAIEmbeddingService(
+                        httpClientFactory.CreateClient("OpenAI"),
+                        cache,
+                        options,
+                        sp.GetRequiredService<ILogger<OpenAIEmbeddingService>>()),
                 _ => new MockEmbeddingService(
                     options,
                     sp.GetRequiredService<ILogger<MockEmbeddingService>>())
@@ -111,6 +116,7 @@ public static class ServiceCollectionExtensions
 
         // Register intelligence services (Phase 2)
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();
+        services.TryAddSingleton<IQueryExpander, QueryExpander>();
         services.TryAddSingleton<DuplicateDetector>();
         services.TryAddSingleton<ImportanceAnalyzer>();
         services.TryAddSingleton<TopicSegmenter>();

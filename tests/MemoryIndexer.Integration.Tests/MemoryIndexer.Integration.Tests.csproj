@@ -22,6 +22,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Local embedding for integration tests (iyulab open source) -->
+    <PackageReference Include="LocalEmbedder" />
   </ItemGroup>
 
 </Project>

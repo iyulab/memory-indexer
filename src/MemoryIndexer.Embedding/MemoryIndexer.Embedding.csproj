@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Description>Embedding generation services for Memory Indexer</Description>
-    <PackageTags>mcp;memory;embedding;bge;ollama</PackageTags>
+    <PackageTags>mcp;memory;embedding;bge;ollama;local</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +13,8 @@
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <!-- Local embedding (iyulab open source) - optional, for local model support -->
+    <PackageReference Include="LocalEmbedder" />
   </ItemGroup>
 
 </Project>
