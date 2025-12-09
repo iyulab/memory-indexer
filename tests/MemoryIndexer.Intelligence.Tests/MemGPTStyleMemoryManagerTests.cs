@@ -181,7 +181,6 @@ public class MemGPTStyleMemoryManagerTests
     public async Task GetWorkingMemoryAsync_AfterUpdate_ShouldReflectChanges()
     {
         // Arrange
-        var sessionId = "test_session";
         await _manager.ReplaceWorkingMemoryAsync("core", "Core content");
 
         // Act

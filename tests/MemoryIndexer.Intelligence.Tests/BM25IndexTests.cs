@@ -39,7 +39,7 @@ public class BM25IndexTests
 
         // Assert
         Assert.NotEmpty(results);
-        Assert.True(results.Any(r => r.Id == id1 || r.Id == id2));
+        Assert.Contains(results, r => r.Id == id1 || r.Id == id2);
     }
 
     [Fact]
