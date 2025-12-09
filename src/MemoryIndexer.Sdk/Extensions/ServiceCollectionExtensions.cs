@@ -2,10 +2,21 @@ using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Services;
 using MemoryIndexer.Embedding.Providers;
+using MemoryIndexer.Intelligence.Chunking;
+using MemoryIndexer.Intelligence.Deduplication;
 using MemoryIndexer.Intelligence.Scoring;
+using MemoryIndexer.Intelligence.Search;
+using MemoryIndexer.Intelligence.Compression;
+using MemoryIndexer.Intelligence.ContextOptimization;
+using MemoryIndexer.Intelligence.KnowledgeGraph;
+using MemoryIndexer.Intelligence.SelfEditing;
+using MemoryIndexer.Intelligence.Summarization;
 using MemoryIndexer.Storage.InMemory;
+using MemoryIndexer.Storage.Qdrant;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace MemoryIndexer.Sdk.Extensions;
@@ -47,7 +58,13 @@ public static class ServiceCollectionExtensions
             {
                 StorageType.InMemory => new InMemoryMemoryStore(logger),
                 StorageType.SqliteVec => new InMemoryMemoryStore(logger), // TODO: Implement SqliteVec
-                StorageType.Qdrant => new InMemoryMemoryStore(logger),    // TODO: Implement Qdrant
+                StorageType.Qdrant => new QdrantMemoryStore(
+                    host: options.Storage.Qdrant?.Host ?? "localhost",
+                    port: options.Storage.Qdrant?.Port ?? 6334,
+                    apiKey: options.Storage.Qdrant?.ApiKey,
+                    collectionName: options.Storage.Qdrant?.CollectionName ?? "memories",
+                    vectorDimensions: options.Embedding.Dimensions,
+                    logger: sp.GetRequiredService<ILogger<QdrantMemoryStore>>()),
                 _ => new InMemoryMemoryStore(logger)
             };
         });
@@ -58,25 +75,60 @@ public static class ServiceCollectionExtensions
             return new InMemorySessionStore(logger);
         });
 
+        // Register memory cache for embedding caching
+        services.TryAddSingleton<IMemoryCache, MemoryCache>();
+
+        // Register HTTP client factory
+        services.AddHttpClient();
+
         // Register embedding service based on configuration
         services.TryAddSingleton<IEmbeddingService>(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
-            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MockEmbeddingService>>();
+            var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>();
+            var cache = sp.GetRequiredService<IMemoryCache>();
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 
-            return options.Embedding.Provider switch
+            return options.Value.Embedding.Provider switch
             {
-                EmbeddingProvider.Ollama => new MockEmbeddingService(
-                    sp.GetRequiredService<IOptions<MemoryIndexerOptions>>(), logger), // TODO: Implement Ollama
-                EmbeddingProvider.OpenAI => new MockEmbeddingService(
-                    sp.GetRequiredService<IOptions<MemoryIndexerOptions>>(), logger), // TODO: Implement OpenAI
+                EmbeddingProvider.Ollama => new OllamaEmbeddingService(
+                    httpClientFactory.CreateClient("Ollama"),
+                    cache,
+                    options,
+                    sp.GetRequiredService<ILogger<OllamaEmbeddingService>>()),
+                EmbeddingProvider.OpenAI or EmbeddingProvider.AzureOpenAI => new OpenAIEmbeddingService(
+                    httpClientFactory.CreateClient("OpenAI"),
+                    cache,
+                    options,
+                    sp.GetRequiredService<ILogger<OpenAIEmbeddingService>>()),
                 _ => new MockEmbeddingService(
-                    sp.GetRequiredService<IOptions<MemoryIndexerOptions>>(), logger)
+                    options,
+                    sp.GetRequiredService<ILogger<MockEmbeddingService>>())
             };
         });
 
         // Register scoring service
         services.TryAddSingleton<IScoringService, DefaultScoringService>();
+
+        // Register intelligence services (Phase 2)
+        services.TryAddSingleton<IHybridSearchService, HybridSearchService>();
+        services.TryAddSingleton<DuplicateDetector>();
+        services.TryAddSingleton<ImportanceAnalyzer>();
+        services.TryAddSingleton<TopicSegmenter>();
+
+        // Register summarization services (Phase 3)
+        services.TryAddSingleton<ISummarizationService, ExtractiveSummarizer>();
+
+        // Register compression services (Phase 3)
+        services.TryAddSingleton<IPromptCompressor, LLMLinguaCompressor>();
+
+        // Register knowledge graph services (Phase 3)
+        services.TryAddSingleton<IKnowledgeGraphService, EntityExtractor>();
+
+        // Register self-editing memory services (Phase 3)
+        services.TryAddSingleton<ISelfEditingMemoryService, MemGPTStyleMemoryManager>();
+
+        // Register context optimization services (Phase 3)
+        services.TryAddSingleton<IContextOptimizer, ContextWindowOptimizer>();
 
         return services;
     }

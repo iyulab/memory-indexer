@@ -70,6 +70,37 @@ public sealed class StorageOptions
     /// Higher values = better recall, slower search.
     /// </summary>
     public int HnswEfSearch { get; set; } = 64;
+
+    /// <summary>
+    /// Qdrant-specific configuration options.
+    /// </summary>
+    public QdrantOptions? Qdrant { get; set; }
+}
+
+/// <summary>
+/// Qdrant-specific configuration options.
+/// </summary>
+public sealed class QdrantOptions
+{
+    /// <summary>
+    /// Qdrant server host.
+    /// </summary>
+    public string Host { get; set; } = "localhost";
+
+    /// <summary>
+    /// Qdrant server port (gRPC).
+    /// </summary>
+    public int Port { get; set; } = 6334;
+
+    /// <summary>
+    /// API key for authentication (optional).
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// Collection name in Qdrant.
+    /// </summary>
+    public string CollectionName { get; set; } = "memories";
 }
 
 /// <summary>

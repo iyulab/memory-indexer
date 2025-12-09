@@ -31,6 +31,9 @@
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
 
+    <!-- Vector Database -->
+    <PackageVersion Include="Qdrant.Client" Version="1.13.0" />
+
     <!-- Numerics -->
     <PackageVersion Include="System.Numerics.Tensors" Version="8.0.0" />
 
