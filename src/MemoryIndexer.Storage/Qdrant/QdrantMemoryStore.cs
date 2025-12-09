@@ -350,7 +350,7 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
                 IsHealthy = info.Status == CollectionStatus.Green,
                 CollectionName = _collectionName,
                 PointsCount = (long)info.PointsCount,
-                VectorsCount = (long)info.VectorsCount,
+                VectorsCount = (long)info.PointsCount, // VectorsCount removed in newer API
                 Status = info.Status.ToString()
             };
         }
@@ -565,7 +565,7 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
             UpdatedAt = GetPayloadDateTime(payload, "updated_at"),
             LastAccessedAt = GetPayloadDateTimeOrNull(payload, "last_accessed_at"),
             IsDeleted = GetPayloadBool(payload, "is_deleted"),
-            Embedding = point.Vectors?.Vector?.Data?.ToArray(),
+            Embedding = ExtractEmbedding(point.Vectors),
             Topics = GetPayloadList(payload, "topics"),
             Entities = GetPayloadList(payload, "entities"),
             Metadata = GetPayloadStringDictionary(payload, "metadata")
@@ -590,11 +590,25 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
             UpdatedAt = GetPayloadDateTime(payload, "updated_at"),
             LastAccessedAt = GetPayloadDateTimeOrNull(payload, "last_accessed_at"),
             IsDeleted = GetPayloadBool(payload, "is_deleted"),
-            Embedding = point.Vectors?.Vector?.Data?.ToArray(),
+            Embedding = ExtractEmbedding(point.Vectors),
             Topics = GetPayloadList(payload, "topics"),
             Entities = GetPayloadList(payload, "entities"),
             Metadata = GetPayloadStringDictionary(payload, "metadata")
         };
+    }
+
+    private static float[]? ExtractEmbedding(VectorsOutput? vectors)
+    {
+        if (vectors == null) return null;
+
+        // Try to get the vector data from the new API
+        var vector = vectors.Vector;
+        if (vector == null) return null;
+
+#pragma warning disable CS0612 // Type or member is obsolete
+        // Use Data property (deprecated but still available)
+        return vector.Data?.ToArray();
+#pragma warning restore CS0612
     }
 
     private static string GetPayloadString(
