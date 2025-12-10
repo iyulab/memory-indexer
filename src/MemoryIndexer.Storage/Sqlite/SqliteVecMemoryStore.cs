@@ -2,6 +2,7 @@ using System.Text.Json;
 using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
+using MemoryIndexer.Core.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
@@ -31,8 +32,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         SqliteOptions? options = null,
         ILogger<SqliteVecMemoryStore>? logger = null)
     {
-        _options = options ?? new SqliteOptions { DatabasePath = databasePath };
-        _connectionString = BuildConnectionString(_options.DatabasePath);
+        _options = options ?? new SqliteOptions();
+        _connectionString = BuildConnectionString(databasePath);
         _vectorDimensions = vectorDimensions;
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteVecMemoryStore>.Instance;
     }
@@ -68,7 +69,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             await CreateSchemaAsync(cancellationToken);
 
             _initialized = true;
-            _logger.LogInformation("Initialized SQLite memory store at {DatabasePath}", _options.DatabasePath);
+            _logger.LogInformation("Initialized SQLite memory store with {Dimensions} dimensions", _vectorDimensions);
         }
         finally
         {
@@ -142,8 +143,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             await CreateFtsTableAsync(cancellationToken);
         }
 
-        _logger.LogDebug("Schema created with FTS={FtsEnabled}, Vector={VectorEnabled}",
-            _options.EnableFullTextSearch, _options.EnableVectorSearch);
+        _logger.LogDebug("Schema created with FTS={FtsEnabled}", _options.EnableFullTextSearch);
     }
 
     private async Task CreateFtsTableAsync(CancellationToken cancellationToken)
@@ -398,7 +398,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             .Select(m => new MemorySearchResult
             {
                 Memory = m,
-                Score = CosineSimilarity(queryVector, m.Embedding!.Value.ToArray())
+                Score = VectorMath.CosineSimilarity(queryVector, m.Embedding!.Value.ToArray())
             })
             .Where(r => r.Score >= options.MinScore)
             .OrderByDescending(r => r.Score)
@@ -826,24 +826,6 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         return $"SELECT * FROM {TableName} {whereClause}";
     }
 
-    private static float CosineSimilarity(float[] a, float[] b)
-    {
-        if (a.Length != b.Length) return 0;
-
-        float dotProduct = 0;
-        float normA = 0;
-        float normB = 0;
-
-        for (int i = 0; i < a.Length; i++)
-        {
-            dotProduct += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        var denominator = Math.Sqrt(normA) * Math.Sqrt(normB);
-        return denominator == 0 ? 0 : (float)(dotProduct / denominator);
-    }
 
     #endregion
 

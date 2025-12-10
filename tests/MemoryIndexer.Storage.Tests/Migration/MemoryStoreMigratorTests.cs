@@ -1,6 +1,7 @@
 using FluentAssertions;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
+using MemoryIndexer.Core.Tests;
 using MemoryIndexer.Storage.InMemory;
 using MemoryIndexer.Storage.Migration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -21,18 +22,7 @@ public sealed class MemoryStoreMigratorTests
     }
 
     private static MemoryUnit CreateTestMemory(string userId, string content)
-    {
-        return new MemoryUnit
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Content = content,
-            Type = MemoryType.Semantic,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            Embedding = new float[384]
-        };
-    }
+        => TestHelpers.CreateTestMemoryWithId(userId, content);
 
     private static InMemoryMemoryStore CreateInMemoryStore()
     {

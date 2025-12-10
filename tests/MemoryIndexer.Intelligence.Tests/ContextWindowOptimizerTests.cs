@@ -1,5 +1,6 @@
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
+using MemoryIndexer.Core.Tests;
 using MemoryIndexer.Intelligence.ContextOptimization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -35,31 +36,10 @@ public class ContextWindowOptimizerTests
     }
 
     private static ReadOnlyMemory<float> GenerateMockEmbedding(string text)
-    {
-        var hash = text.GetHashCode();
-        var random = new Random(hash);
-        var embedding = new float[1024];
-        for (var i = 0; i < embedding.Length; i++)
-        {
-            embedding[i] = (float)random.NextDouble() * 2 - 1;
-        }
-        var norm = (float)Math.Sqrt(embedding.Sum(x => x * x));
-        for (var i = 0; i < embedding.Length; i++)
-        {
-            embedding[i] /= norm;
-        }
-        return embedding;
-    }
+        => TestHelpers.GenerateMockEmbedding(text, 1024);
 
     private static MemoryUnit CreateMemoryWithImportance(float importance, string content = "Test content")
-    {
-        return new MemoryUnit
-        {
-            Content = content,
-            ImportanceScore = importance,
-            Embedding = GenerateMockEmbedding(content + importance)
-        };
-    }
+        => TestHelpers.CreateTestMemoryWithImportance(importance, content);
 
     [Fact]
     public void LongContextReorder_EmptyList_ShouldReturnEmpty()

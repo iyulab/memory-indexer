@@ -548,37 +548,19 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
     }
 
     private static MemoryUnit PointToMemory(RetrievedPoint point)
-    {
-        var payload = point.Payload;
-
-        return new MemoryUnit
-        {
-            Id = Guid.Parse(point.Id.Uuid),
-            UserId = GetPayloadString(payload, "user_id"),
-            SessionId = GetPayloadStringOrNull(payload, "session_id"),
-            Content = GetPayloadString(payload, "content"),
-            ContentHash = GetPayloadStringOrNull(payload, "content_hash"),
-            Type = (MemoryType)GetPayloadInt(payload, "type"),
-            ImportanceScore = GetPayloadFloat(payload, "importance_score"),
-            AccessCount = GetPayloadInt(payload, "access_count"),
-            CreatedAt = GetPayloadDateTime(payload, "created_at"),
-            UpdatedAt = GetPayloadDateTime(payload, "updated_at"),
-            LastAccessedAt = GetPayloadDateTimeOrNull(payload, "last_accessed_at"),
-            IsDeleted = GetPayloadBool(payload, "is_deleted"),
-            Embedding = ExtractEmbedding(point.Vectors),
-            Topics = GetPayloadList(payload, "topics"),
-            Entities = GetPayloadList(payload, "entities"),
-            Metadata = GetPayloadStringDictionary(payload, "metadata")
-        };
-    }
+        => PayloadToMemory(point.Id.Uuid, point.Payload, point.Vectors);
 
     private static MemoryUnit PointToMemory(ScoredPoint point)
-    {
-        var payload = point.Payload;
+        => PayloadToMemory(point.Id.Uuid, point.Payload, point.Vectors);
 
+    private static MemoryUnit PayloadToMemory(
+        string uuid,
+        IDictionary<string, Value> payload,
+        VectorsOutput? vectors)
+    {
         return new MemoryUnit
         {
-            Id = Guid.Parse(point.Id.Uuid),
+            Id = Guid.Parse(uuid),
             UserId = GetPayloadString(payload, "user_id"),
             SessionId = GetPayloadStringOrNull(payload, "session_id"),
             Content = GetPayloadString(payload, "content"),
@@ -590,7 +572,7 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
             UpdatedAt = GetPayloadDateTime(payload, "updated_at"),
             LastAccessedAt = GetPayloadDateTimeOrNull(payload, "last_accessed_at"),
             IsDeleted = GetPayloadBool(payload, "is_deleted"),
-            Embedding = ExtractEmbedding(point.Vectors),
+            Embedding = ExtractEmbedding(vectors),
             Topics = GetPayloadList(payload, "topics"),
             Entities = GetPayloadList(payload, "entities"),
             Metadata = GetPayloadStringDictionary(payload, "metadata")

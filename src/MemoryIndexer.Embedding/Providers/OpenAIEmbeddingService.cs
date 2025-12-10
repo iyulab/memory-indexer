@@ -13,164 +13,100 @@ namespace MemoryIndexer.Embedding.Providers;
 /// Embedding service using OpenAI API.
 /// Supports text-embedding-3-small, text-embedding-3-large, and text-embedding-ada-002.
 /// </summary>
-public sealed class OpenAIEmbeddingService : IEmbeddingService
+public sealed class OpenAIEmbeddingService : CachedEmbeddingServiceBase
 {
     private readonly HttpClient _httpClient;
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<OpenAIEmbeddingService> _logger;
-    private readonly EmbeddingOptions _options;
-    private readonly TimeSpan _cacheTtl;
+    private readonly string _model;
+    private readonly int _dimensions;
 
     private const string DefaultEndpoint = "https://api.openai.com/v1";
+
+    protected override string CacheKeyPrefix => "openai";
+    public override int Dimensions => _dimensions;
 
     public OpenAIEmbeddingService(
         HttpClient httpClient,
         IMemoryCache cache,
         IOptions<MemoryIndexerOptions> options,
         ILogger<OpenAIEmbeddingService> logger)
+        : base(cache, logger, options.Value.Embedding)
     {
         _httpClient = httpClient;
-        _cache = cache;
-        _logger = logger;
-        _options = options.Value.Embedding;
-        _cacheTtl = TimeSpan.FromMinutes(_options.CacheTtlMinutes);
+        var embeddingOptions = options.Value.Embedding;
+        _model = embeddingOptions.Model;
+        _dimensions = embeddingOptions.Dimensions;
 
-        var endpoint = string.IsNullOrEmpty(_options.Endpoint) || _options.Endpoint.Contains("localhost")
+        var endpoint = string.IsNullOrEmpty(embeddingOptions.Endpoint) || embeddingOptions.Endpoint.Contains("localhost")
             ? DefaultEndpoint
-            : _options.Endpoint;
+            : embeddingOptions.Endpoint;
 
         _httpClient.BaseAddress = new Uri(endpoint);
-        _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
+        _httpClient.Timeout = TimeSpan.FromSeconds(embeddingOptions.TimeoutSeconds);
 
-        if (!string.IsNullOrEmpty(_options.ApiKey))
+        if (!string.IsNullOrEmpty(embeddingOptions.ApiKey))
         {
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+                new AuthenticationHeaderValue("Bearer", embeddingOptions.ApiKey);
         }
     }
 
-    /// <inheritdoc />
-    public int Dimensions => _options.Dimensions;
-
-    /// <inheritdoc />
-    public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
+    protected override async Task<ReadOnlyMemory<float>> GenerateSingleEmbeddingAsync(
         string text,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(text);
-
-        var cacheKey = GetCacheKey(text);
-
-        if (_options.CacheTtlMinutes > 0 && _cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
-        {
-            _logger.LogDebug("Cache hit for embedding");
-            return cached;
-        }
-
-        var embeddings = await GenerateEmbeddingsInternalAsync([text], cancellationToken);
-        var embedding = embeddings[0];
-
-        if (_options.CacheTtlMinutes > 0)
-        {
-            _cache.Set(cacheKey, embedding, _cacheTtl);
-        }
-
-        return embedding;
+        var embeddings = await GenerateBatchInternalAsync([text], cancellationToken);
+        return embeddings[0];
     }
 
-    /// <inheritdoc />
-    public async Task<IReadOnlyList<ReadOnlyMemory<float>>> GenerateBatchEmbeddingsAsync(
-        IEnumerable<string> texts,
-        CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Override to use OpenAI's native batch API for better performance.
+    /// </summary>
+    protected override async Task ProcessUncachedBatchAsync(
+        List<string> allTexts,
+        ReadOnlyMemory<float>[] results,
+        List<(int Index, string Text)> uncached,
+        CancellationToken cancellationToken)
     {
-        var textList = texts.ToList();
-        if (textList.Count == 0)
-        {
-            return Array.Empty<ReadOnlyMemory<float>>();
-        }
+        var batches = uncached
+            .Select((item, i) => (item, BatchIndex: i / BatchSize))
+            .GroupBy(x => x.BatchIndex)
+            .Select(g => g.ToList());
 
-        _logger.LogDebug("Generating batch embeddings for {Count} texts", textList.Count);
-
-        var results = new List<ReadOnlyMemory<float>>(textList.Count);
-        var uncachedIndices = new List<int>();
-        var uncachedTexts = new List<string>();
-
-        // Check cache first
-        for (var i = 0; i < textList.Count; i++)
-        {
-            var cacheKey = GetCacheKey(textList[i]);
-            if (_options.CacheTtlMinutes > 0 && _cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
-            {
-                results.Add(cached);
-            }
-            else
-            {
-                results.Add(ReadOnlyMemory<float>.Empty);
-                uncachedIndices.Add(i);
-                uncachedTexts.Add(textList[i]);
-            }
-        }
-
-        if (uncachedTexts.Count == 0)
-        {
-            _logger.LogDebug("All {Count} embeddings found in cache", textList.Count);
-            return results;
-        }
-
-        // Process uncached texts in batches (OpenAI supports native batching)
-        var batches = uncachedTexts
-            .Select((text, index) => new { text, index })
-            .GroupBy(x => x.index / _options.BatchSize)
-            .Select(g => g.Select(x => x.text).ToList())
-            .ToList();
-
-        var processedCount = 0;
         foreach (var batch in batches)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var batchEmbeddings = await GenerateEmbeddingsInternalAsync(batch, cancellationToken);
+            var textsInBatch = batch.Select(x => x.item.Text).ToList();
+            var embeddings = await GenerateBatchInternalAsync(textsInBatch, cancellationToken);
 
-            for (var i = 0; i < batchEmbeddings.Count; i++)
+            for (var i = 0; i < batch.Count; i++)
             {
-                var originalIndex = uncachedIndices[processedCount + i];
-                results[originalIndex] = batchEmbeddings[i];
-
-                if (_options.CacheTtlMinutes > 0)
-                {
-                    var cacheKey = GetCacheKey(textList[originalIndex]);
-                    _cache.Set(cacheKey, batchEmbeddings[i], _cacheTtl);
-                }
+                var originalIndex = batch[i].item.Index;
+                results[originalIndex] = embeddings[i];
+                CacheEmbedding(allTexts[originalIndex], embeddings[i]);
             }
-
-            processedCount += batch.Count;
         }
-
-        return results;
     }
 
-    private async Task<IReadOnlyList<ReadOnlyMemory<float>>> GenerateEmbeddingsInternalAsync(
+    private async Task<IReadOnlyList<ReadOnlyMemory<float>>> GenerateBatchInternalAsync(
         List<string> texts,
         CancellationToken cancellationToken)
     {
         var request = new OpenAIEmbeddingRequest
         {
-            Model = _options.Model,
+            Model = _model,
             Input = texts,
-            Dimensions = _options.Dimensions
+            Dimensions = _dimensions
         };
 
-        _logger.LogDebug("Requesting {Count} embeddings from OpenAI", texts.Count);
+        Logger.LogDebug("Requesting {Count} embeddings from OpenAI", texts.Count);
 
-        var response = await _httpClient.PostAsJsonAsync(
-            "/embeddings",
-            request,
-            cancellationToken);
+        var response = await _httpClient.PostAsJsonAsync("/embeddings", request, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("OpenAI embedding request failed: {StatusCode} - {Error}",
+            Logger.LogError("OpenAI embedding request failed: {StatusCode} - {Error}",
                 response.StatusCode, errorContent);
             throw new HttpRequestException(
                 $"OpenAI embedding request failed: {response.StatusCode} - {errorContent}");
@@ -184,25 +120,13 @@ public sealed class OpenAIEmbeddingService : IEmbeddingService
             throw new InvalidOperationException("OpenAI returned empty embeddings");
         }
 
-        // Sort by index to ensure correct order
-        var sortedData = result.Data.OrderBy(d => d.Index).ToList();
-
-        return sortedData
+        return result.Data
+            .OrderBy(d => d.Index)
             .Select(d => (ReadOnlyMemory<float>)d.Embedding)
             .ToList();
     }
-
-    private static string GetCacheKey(string text)
-    {
-        var hash = System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(text));
-        return $"emb:openai:{Convert.ToHexString(hash)}";
-    }
 }
 
-/// <summary>
-/// OpenAI embedding API request model.
-/// </summary>
 internal sealed class OpenAIEmbeddingRequest
 {
     [JsonPropertyName("model")]
@@ -218,9 +142,6 @@ internal sealed class OpenAIEmbeddingRequest
     public string EncodingFormat { get; init; } = "float";
 }
 
-/// <summary>
-/// OpenAI embedding API response model.
-/// </summary>
 internal sealed class OpenAIEmbeddingResponse
 {
     [JsonPropertyName("data")]

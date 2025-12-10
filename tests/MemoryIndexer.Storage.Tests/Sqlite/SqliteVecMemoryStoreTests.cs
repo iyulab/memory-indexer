@@ -2,6 +2,7 @@ using FluentAssertions;
 using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
+using MemoryIndexer.Core.Tests;
 using MemoryIndexer.Storage.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -27,10 +28,8 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime
     {
         var options = new SqliteOptions
         {
-            DatabasePath = _testDbPath,
             UseWalMode = true,
             FtsTokenizer = "trigram",
-            EnableVectorSearch = true,
             EnableFullTextSearch = true
         };
 
@@ -40,7 +39,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime
             options: options,
             logger: NullLogger<SqliteVecMemoryStore>.Instance);
 
-        // Constructor calls InitializeAsync internally
+        await Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
@@ -607,37 +606,10 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime
     #region Helper Methods
 
     private static MemoryUnit CreateTestMemory(string userId = "test-user")
-    {
-        return new MemoryUnit
-        {
-            UserId = userId,
-            Content = "Test memory content for unit testing",
-            Type = MemoryType.Episodic,
-            ImportanceScore = 0.7f,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-    }
+        => TestHelpers.CreateTestMemory(userId);
 
     private static ReadOnlyMemory<float> CreateTestEmbedding(int dimensions, int seed = 42)
-    {
-        var embedding = new float[dimensions];
-        var random = new Random(seed);
-
-        for (var i = 0; i < dimensions; i++)
-        {
-            embedding[i] = (float)(random.NextDouble() * 2 - 1);
-        }
-
-        // Normalize
-        var norm = MathF.Sqrt(embedding.Sum(x => x * x));
-        for (var i = 0; i < dimensions; i++)
-        {
-            embedding[i] /= norm;
-        }
-
-        return embedding;
-    }
+        => TestHelpers.CreateTestEmbedding(dimensions, seed);
 
     #endregion
 }

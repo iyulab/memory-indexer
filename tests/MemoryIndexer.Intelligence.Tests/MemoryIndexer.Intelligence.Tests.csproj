@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\src\MemoryIndexer.Core\MemoryIndexer.Core.csproj" />
     <ProjectReference Include="..\..\src\MemoryIndexer.Embedding\MemoryIndexer.Embedding.csproj" />
     <ProjectReference Include="..\..\src\MemoryIndexer.Storage\MemoryIndexer.Storage.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Core.Tests\MemoryIndexer.Core.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

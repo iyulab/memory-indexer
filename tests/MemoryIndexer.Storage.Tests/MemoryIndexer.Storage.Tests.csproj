@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MemoryIndexer.Storage\MemoryIndexer.Storage.csproj" />
+    <ProjectReference Include="..\MemoryIndexer.Core.Tests\MemoryIndexer.Core.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

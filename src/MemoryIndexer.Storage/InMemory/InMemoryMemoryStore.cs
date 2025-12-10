@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using System.Numerics.Tensors;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
+using MemoryIndexer.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Storage.InMemory;
@@ -129,7 +129,7 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
             .Select(m => new
             {
                 Memory = m,
-                Score = CalculateCosineSimilarity(queryEmbedding, m.Embedding!.Value)
+                Score = VectorMath.CosineSimilarity(queryEmbedding, m.Embedding!.Value)
             })
             .Where(r => r.Score >= options.MinScore)
             .OrderByDescending(r => r.Score)
@@ -217,24 +217,4 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Calculates cosine similarity between two vectors.
-    /// </summary>
-    private static float CalculateCosineSimilarity(ReadOnlyMemory<float> a, ReadOnlyMemory<float> b)
-    {
-        var spanA = a.Span;
-        var spanB = b.Span;
-
-        if (spanA.Length != spanB.Length)
-            return 0f;
-
-        var dotProduct = TensorPrimitives.Dot(spanA, spanB);
-        var normA = TensorPrimitives.Norm(spanA);
-        var normB = TensorPrimitives.Norm(spanB);
-
-        if (normA == 0 || normB == 0)
-            return 0f;
-
-        return dotProduct / (normA * normB);
-    }
 }

@@ -54,6 +54,53 @@ public sealed class StorageOptions
     public string CollectionName { get; set; } = "memories";
 
     /// <summary>
+    /// Vector dimensions for storage.
+    /// </summary>
+    public int VectorDimensions { get; set; } = 768;
+
+    /// <summary>
+    /// Qdrant-specific configuration options.
+    /// </summary>
+    public QdrantOptions Qdrant { get; set; } = new();
+
+    /// <summary>
+    /// SQLite-specific configuration options.
+    /// </summary>
+    public SqliteOptions Sqlite { get; set; } = new();
+}
+
+/// <summary>
+/// SQLite-specific configuration options.
+/// </summary>
+public sealed class SqliteOptions
+{
+    /// <summary>
+    /// Enable WAL (Write-Ahead Logging) mode for better concurrency.
+    /// </summary>
+    public bool UseWalMode { get; set; } = true;
+
+    /// <summary>
+    /// FTS5 tokenizer for full-text search.
+    /// Options: "trigram" (best for CJK/multilingual), "unicode61", "porter" (English stemming)
+    /// </summary>
+    public string FtsTokenizer { get; set; } = "trigram";
+
+    /// <summary>
+    /// SQLite cache size in KB. Default: 2000 (2MB).
+    /// </summary>
+    public int CacheSizeKb { get; set; } = 2000;
+
+    /// <summary>
+    /// Enable full-text search using FTS5.
+    /// </summary>
+    public bool EnableFullTextSearch { get; set; } = true;
+
+    /// <summary>
+    /// Busy timeout in milliseconds. How long to wait when database is locked.
+    /// </summary>
+    public int BusyTimeoutMs { get; set; } = 5000;
+
+    /// <summary>
     /// HNSW index M parameter (graph connectivity).
     /// Higher values = better recall, more memory.
     /// </summary>
@@ -70,60 +117,6 @@ public sealed class StorageOptions
     /// Higher values = better recall, slower search.
     /// </summary>
     public int HnswEfSearch { get; set; } = 64;
-
-    /// <summary>
-    /// Qdrant-specific configuration options.
-    /// </summary>
-    public QdrantOptions? Qdrant { get; set; }
-
-    /// <summary>
-    /// SQLite-specific configuration options.
-    /// </summary>
-    public SqliteOptions? Sqlite { get; set; }
-}
-
-/// <summary>
-/// SQLite-specific configuration options.
-/// </summary>
-public sealed class SqliteOptions
-{
-    /// <summary>
-    /// Database file path. Default: "memories.db"
-    /// </summary>
-    public string DatabasePath { get; set; } = "memories.db";
-
-    /// <summary>
-    /// Enable WAL (Write-Ahead Logging) mode for better concurrency.
-    /// WAL allows concurrent reads during writes.
-    /// </summary>
-    public bool UseWalMode { get; set; } = true;
-
-    /// <summary>
-    /// FTS5 tokenizer for full-text search.
-    /// Options: "trigram" (best for CJK/multilingual), "unicode61", "porter" (English stemming)
-    /// </summary>
-    public string FtsTokenizer { get; set; } = "trigram";
-
-    /// <summary>
-    /// SQLite cache size in KB. Default: 2000 (2MB).
-    /// Larger cache improves performance for repeated queries.
-    /// </summary>
-    public int CacheSizeKb { get; set; } = 2000;
-
-    /// <summary>
-    /// Enable vector search using sqlite-vec extension.
-    /// </summary>
-    public bool EnableVectorSearch { get; set; } = true;
-
-    /// <summary>
-    /// Enable full-text search using FTS5.
-    /// </summary>
-    public bool EnableFullTextSearch { get; set; } = true;
-
-    /// <summary>
-    /// Busy timeout in milliseconds. How long to wait when database is locked.
-    /// </summary>
-    public int BusyTimeoutMs { get; set; } = 5000;
 }
 
 /// <summary>
@@ -132,24 +125,9 @@ public sealed class SqliteOptions
 public sealed class QdrantOptions
 {
     /// <summary>
-    /// Qdrant server host.
-    /// </summary>
-    public string Host { get; set; } = "localhost";
-
-    /// <summary>
-    /// Qdrant server port (gRPC).
-    /// </summary>
-    public int Port { get; set; } = 6334;
-
-    /// <summary>
     /// API key for authentication (optional).
     /// </summary>
     public string? ApiKey { get; set; }
-
-    /// <summary>
-    /// Collection name in Qdrant.
-    /// </summary>
-    public string CollectionName { get; set; } = "memories";
 }
 
 /// <summary>
@@ -251,7 +229,6 @@ public enum EmbeddingProvider
 
     /// <summary>
     /// Local ONNX-based embedding using LocalEmbedder.
-    /// Supports models like all-MiniLM-L6-v2, bge-small-en-v1.5, etc.
     /// </summary>
     Local
 }

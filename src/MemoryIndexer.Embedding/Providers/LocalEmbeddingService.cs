@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using LocalEmbedder;
 using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
@@ -16,6 +18,10 @@ namespace MemoryIndexer.Embedding.Providers;
 /// LocalEmbedder is an open-source library by iyulab that provides fast,
 /// local embedding generation using ONNX Runtime. Models are downloaded
 /// automatically on first use and cached locally.
+///
+/// Note: This service doesn't extend CachedEmbeddingServiceBase because it requires
+/// IAsyncDisposable for model cleanup and has lazy model loading that differs
+/// from the HTTP-based providers.
 /// </remarks>
 public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
 {
@@ -27,6 +33,8 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
 
     private IEmbeddingModel? _model;
     private bool _disposed;
+
+    private const string CacheKeyPrefix = "local";
 
     /// <summary>
     /// Default model ID if not specified in configuration.
@@ -62,40 +70,15 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
 
         var embeddingOptions = options.Value.Embedding;
 
-        // Use configured model or default
         _modelId = !string.IsNullOrEmpty(embeddingOptions.Model)
             ? embeddingOptions.Model
             : DefaultModelId;
 
-        // Get dimensions from known models or use configured value
         Dimensions = SupportedModels.TryGetValue(_modelId, out var knownDims)
             ? knownDims
             : embeddingOptions.Dimensions;
 
         _cacheTtl = TimeSpan.FromMinutes(embeddingOptions.CacheTtlMinutes);
-
-        _logger.LogInformation(
-            "LocalEmbeddingService initialized with model {ModelId}, dimensions {Dimensions}",
-            _modelId, Dimensions);
-    }
-
-    /// <summary>
-    /// Creates a LocalEmbeddingService with specific model configuration.
-    /// </summary>
-    public LocalEmbeddingService(
-        string modelId,
-        IMemoryCache cache,
-        ILogger<LocalEmbeddingService> logger,
-        TimeSpan? cacheTtl = null)
-    {
-        _cache = cache;
-        _logger = logger;
-        _modelId = modelId;
-        _cacheTtl = cacheTtl ?? TimeSpan.FromMinutes(60);
-
-        Dimensions = SupportedModels.TryGetValue(_modelId, out var knownDims)
-            ? knownDims
-            : 384; // Default fallback
 
         _logger.LogInformation(
             "LocalEmbeddingService initialized with model {ModelId}, dimensions {Dimensions}",
@@ -114,32 +97,24 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
             return new float[Dimensions];
         }
 
-        // Check cache first
-        var cacheKey = $"local_embed:{_modelId}:{text.GetHashCode()}";
-        if (_cache.TryGetValue<float[]>(cacheKey, out var cachedEmbedding) && cachedEmbedding != null)
+        var cacheKey = GetCacheKey(text);
+        if (_cacheTtl > TimeSpan.Zero && _cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
         {
-            return cachedEmbedding;
+            _logger.LogDebug("Cache hit for embedding");
+            return cached;
         }
 
         await EnsureModelLoadedAsync(cancellationToken);
 
-        try
-        {
-            var embedding = await _model!.EmbedAsync(text);
+        var embedding = await _model!.EmbedAsync(text);
+        ReadOnlyMemory<float> result = embedding;
 
-            // Cache the result
-            if (_cacheTtl > TimeSpan.Zero)
-            {
-                _cache.Set(cacheKey, embedding, _cacheTtl);
-            }
-
-            return embedding;
-        }
-        catch (Exception ex)
+        if (_cacheTtl > TimeSpan.Zero)
         {
-            _logger.LogError(ex, "Failed to generate embedding for text of length {Length}", text.Length);
-            throw;
+            _cache.Set(cacheKey, result, _cacheTtl);
         }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -152,63 +127,56 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
         var textList = texts.ToList();
         if (textList.Count == 0)
         {
-            return Array.Empty<ReadOnlyMemory<float>>();
+            return [];
         }
+
+        _logger.LogDebug("Generating batch embeddings for {Count} texts", textList.Count);
 
         await EnsureModelLoadedAsync(cancellationToken);
 
-        var results = new List<ReadOnlyMemory<float>>(textList.Count);
-        var uncachedTexts = new List<(int Index, string Text)>();
+        var results = new ReadOnlyMemory<float>[textList.Count];
+        var uncached = new List<(int Index, string Text)>();
 
-        // Check cache for each text
+        // Check cache first
         for (var i = 0; i < textList.Count; i++)
         {
             var text = textList[i];
             if (string.IsNullOrWhiteSpace(text))
             {
-                results.Add(new float[Dimensions]);
+                results[i] = new float[Dimensions];
                 continue;
             }
 
-            var cacheKey = $"local_embed:{_modelId}:{text.GetHashCode()}";
-            if (_cache.TryGetValue<float[]>(cacheKey, out var cachedEmbedding) && cachedEmbedding != null)
+            var cacheKey = GetCacheKey(text);
+            if (_cacheTtl > TimeSpan.Zero && _cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
             {
-                results.Add(cachedEmbedding);
+                results[i] = cached;
             }
             else
             {
-                uncachedTexts.Add((i, text));
-                results.Add(ReadOnlyMemory<float>.Empty); // Placeholder
+                uncached.Add((i, text));
             }
         }
 
-        // Generate embeddings for uncached texts
-        if (uncachedTexts.Count > 0)
+        if (uncached.Count == 0)
         {
-            try
+            _logger.LogDebug("All {Count} embeddings found in cache", textList.Count);
+            return results;
+        }
+
+        // Use native batch API for uncached texts
+        var uncachedTexts = uncached.Select(x => x.Text).ToArray();
+        var embeddings = await _model!.EmbedAsync(uncachedTexts);
+
+        for (var j = 0; j < uncached.Count; j++)
+        {
+            var (index, text) = uncached[j];
+            ReadOnlyMemory<float> embedding = embeddings[j];
+            results[index] = embedding;
+
+            if (_cacheTtl > TimeSpan.Zero)
             {
-                var uncachedTextArray = uncachedTexts.Select(x => x.Text).ToArray();
-                var embeddings = await _model!.EmbedAsync(uncachedTextArray);
-
-                for (var j = 0; j < uncachedTexts.Count; j++)
-                {
-                    var (index, text) = uncachedTexts[j];
-                    var embedding = embeddings[j];
-
-                    results[index] = embedding;
-
-                    // Cache the result
-                    if (_cacheTtl > TimeSpan.Zero)
-                    {
-                        var cacheKey = $"local_embed:{_modelId}:{text.GetHashCode()}";
-                        _cache.Set(cacheKey, embedding, _cacheTtl);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to generate batch embeddings for {Count} texts", uncachedTexts.Count);
-                throw;
+                _cache.Set(GetCacheKey(text), embedding, _cacheTtl);
             }
         }
 
@@ -236,7 +204,6 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
                 "Model {ModelId} loaded in {ElapsedMs}ms, dimensions: {Dimensions}",
                 _modelId, sw.ElapsedMilliseconds, _model.Dimensions);
 
-            // Verify dimensions match
             if (_model.Dimensions != Dimensions)
             {
                 _logger.LogWarning(
@@ -248,6 +215,15 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
         {
             _initLock.Release();
         }
+    }
+
+    /// <summary>
+    /// Gets a consistent cache key using SHA256 hash. Same approach as CachedEmbeddingServiceBase.
+    /// </summary>
+    private string GetCacheKey(string text)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        return $"emb:{CacheKeyPrefix}:{Convert.ToHexString(hash)}";
     }
 
     public async ValueTask DisposeAsync()

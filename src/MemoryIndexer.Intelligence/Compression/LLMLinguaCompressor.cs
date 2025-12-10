@@ -314,9 +314,6 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
     {
         var scoredTokens = new List<ScoredToken>(tokens.Count);
 
-        // Generate embedding for the whole text (semantic context)
-        var textEmbedding = await _embeddingService.GenerateEmbeddingAsync(originalText, cancellationToken);
-
         for (var i = 0; i < tokens.Count; i++)
         {
             var token = tokens[i];

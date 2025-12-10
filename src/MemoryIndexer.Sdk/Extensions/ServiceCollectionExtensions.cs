@@ -59,17 +59,11 @@ public static class ServiceCollectionExtensions
             {
                 StorageType.InMemory => new InMemoryMemoryStore(logger),
                 StorageType.SqliteVec => new SqliteVecMemoryStore(
-                    databasePath: options.Storage.Sqlite?.DatabasePath ?? options.Storage.ConnectionString ?? "memories.db",
-                    vectorDimensions: options.Embedding.Dimensions,
+                    databasePath: options.Storage.ConnectionString ?? "memories.db",
+                    vectorDimensions: options.Storage.VectorDimensions > 0 ? options.Storage.VectorDimensions : options.Embedding.Dimensions,
                     options: options.Storage.Sqlite,
                     logger: sp.GetRequiredService<ILogger<SqliteVecMemoryStore>>()),
-                StorageType.Qdrant => new QdrantMemoryStore(
-                    host: options.Storage.Qdrant?.Host ?? "localhost",
-                    port: options.Storage.Qdrant?.Port ?? 6334,
-                    apiKey: options.Storage.Qdrant?.ApiKey,
-                    collectionName: options.Storage.Qdrant?.CollectionName ?? "memories",
-                    vectorDimensions: options.Embedding.Dimensions,
-                    logger: sp.GetRequiredService<ILogger<QdrantMemoryStore>>()),
+                StorageType.Qdrant => CreateQdrantStore(options, sp.GetRequiredService<ILogger<QdrantMemoryStore>>()),
                 _ => new InMemoryMemoryStore(logger)
             };
         });
@@ -161,5 +155,24 @@ public static class ServiceCollectionExtensions
             o.Scoring = options.Scoring;
             o.Search = options.Search;
         });
+    }
+
+    private static QdrantMemoryStore CreateQdrantStore(
+        MemoryIndexerOptions options,
+        ILogger<QdrantMemoryStore> logger)
+    {
+        // Parse connection string for host:port format
+        var connectionString = options.Storage.ConnectionString ?? "localhost:6334";
+        var parts = connectionString.Replace("http://", "").Replace("https://", "").Split(':');
+        var host = parts.Length > 0 ? parts[0] : "localhost";
+        var port = parts.Length > 1 && int.TryParse(parts[1], out var p) ? p : 6334;
+
+        return new QdrantMemoryStore(
+            host: host,
+            port: port,
+            apiKey: options.Storage.Qdrant.ApiKey,
+            collectionName: options.Storage.CollectionName ?? "memories",
+            vectorDimensions: options.Storage.VectorDimensions > 0 ? options.Storage.VectorDimensions : options.Embedding.Dimensions,
+            logger: logger);
     }
 }
