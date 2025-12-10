@@ -1,12 +1,34 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>SDK for integrating Memory Indexer into consumer applications</Description>
-    <PackageTags>mcp;memory;sdk;integration</PackageTags>
+    <Description>Memory Indexer SDK - Long-term memory management for LLM applications via MCP (Model Context Protocol). Features semantic search, vector storage, PII detection, prompt injection defense, and OpenTelemetry observability.</Description>
+    <PackageTags>mcp;memory;sdk;llm;ai;vector-search;semantic-search;opentelemetry;observability</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>MemoryIndexer</PackageId>
-    <PackageReadmeFile></PackageReadmeFile>
+    <Title>Memory Indexer SDK</Title>
+    <PackageProjectUrl>https://github.com/memory-indexer/memory-indexer</PackageProjectUrl>
+    <PackageReleaseNotes>
+v0.1.0:
+- Core memory storage with InMemory, SQLite-vec, and Qdrant backends
+- MCP tools for store, recall, get, list, update, delete operations
+- Embedding support: Local, Ollama, OpenAI providers
+- Hybrid search with BM25 and vector similarity
+- Knowledge graph with entity extraction
+- Self-editing memory management
+- Context window optimization
+- PII detection and prompt injection defense
+- OpenTelemetry tracing and metrics
+    </PackageReleaseNotes>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedAllSources>true</EmbedAllSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MemoryIndexer.Core\MemoryIndexer.Core.csproj" />

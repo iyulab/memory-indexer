@@ -95,4 +95,4 @@ appsettings.Local.json
 research-docs/
 local-docs/
 CLAUDE.local.md
-.env
+.envnupkg/
