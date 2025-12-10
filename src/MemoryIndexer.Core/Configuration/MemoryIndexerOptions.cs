@@ -75,6 +75,55 @@ public sealed class StorageOptions
     /// Qdrant-specific configuration options.
     /// </summary>
     public QdrantOptions? Qdrant { get; set; }
+
+    /// <summary>
+    /// SQLite-specific configuration options.
+    /// </summary>
+    public SqliteOptions? Sqlite { get; set; }
+}
+
+/// <summary>
+/// SQLite-specific configuration options.
+/// </summary>
+public sealed class SqliteOptions
+{
+    /// <summary>
+    /// Database file path. Default: "memories.db"
+    /// </summary>
+    public string DatabasePath { get; set; } = "memories.db";
+
+    /// <summary>
+    /// Enable WAL (Write-Ahead Logging) mode for better concurrency.
+    /// WAL allows concurrent reads during writes.
+    /// </summary>
+    public bool UseWalMode { get; set; } = true;
+
+    /// <summary>
+    /// FTS5 tokenizer for full-text search.
+    /// Options: "trigram" (best for CJK/multilingual), "unicode61", "porter" (English stemming)
+    /// </summary>
+    public string FtsTokenizer { get; set; } = "trigram";
+
+    /// <summary>
+    /// SQLite cache size in KB. Default: 2000 (2MB).
+    /// Larger cache improves performance for repeated queries.
+    /// </summary>
+    public int CacheSizeKb { get; set; } = 2000;
+
+    /// <summary>
+    /// Enable vector search using sqlite-vec extension.
+    /// </summary>
+    public bool EnableVectorSearch { get; set; } = true;
+
+    /// <summary>
+    /// Enable full-text search using FTS5.
+    /// </summary>
+    public bool EnableFullTextSearch { get; set; } = true;
+
+    /// <summary>
+    /// Busy timeout in milliseconds. How long to wait when database is locked.
+    /// </summary>
+    public int BusyTimeoutMs { get; set; } = 5000;
 }
 
 /// <summary>

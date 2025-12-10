@@ -33,6 +33,7 @@
 
     <!-- Vector Database -->
     <PackageVersion Include="Qdrant.Client" Version="1.16.1" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Sqlite" Version="1.51.0-preview" />
 
     <!-- Numerics -->
     <PackageVersion Include="System.Numerics.Tensors" Version="10.0.0" />

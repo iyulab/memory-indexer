@@ -13,6 +13,7 @@ using MemoryIndexer.Intelligence.SelfEditing;
 using MemoryIndexer.Intelligence.Summarization;
 using MemoryIndexer.Storage.InMemory;
 using MemoryIndexer.Storage.Qdrant;
+using MemoryIndexer.Storage.Sqlite;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -57,7 +58,11 @@ public static class ServiceCollectionExtensions
             return options.Storage.Type switch
             {
                 StorageType.InMemory => new InMemoryMemoryStore(logger),
-                StorageType.SqliteVec => new InMemoryMemoryStore(logger), // TODO: Implement SqliteVec
+                StorageType.SqliteVec => new SqliteVecMemoryStore(
+                    databasePath: options.Storage.Sqlite?.DatabasePath ?? options.Storage.ConnectionString ?? "memories.db",
+                    vectorDimensions: options.Embedding.Dimensions,
+                    options: options.Storage.Sqlite,
+                    logger: sp.GetRequiredService<ILogger<SqliteVecMemoryStore>>()),
                 StorageType.Qdrant => new QdrantMemoryStore(
                     host: options.Storage.Qdrant?.Host ?? "localhost",
                     port: options.Storage.Qdrant?.Port ?? 6334,
