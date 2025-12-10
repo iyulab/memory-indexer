@@ -10,6 +10,7 @@ using MemoryIndexer.Intelligence.KnowledgeGraph;
 using MemoryIndexer.Intelligence.Scoring;
 using MemoryIndexer.Intelligence.Search;
 using MemoryIndexer.Intelligence.SelfEditing;
+using MemoryIndexer.Intelligence.Security;
 using MemoryIndexer.Intelligence.Summarization;
 using MemoryIndexer.Storage.InMemory;
 using MemoryIndexer.Storage.Qdrant;
@@ -134,6 +135,10 @@ public static class ServiceCollectionExtensions
 
         // Register context optimization services (Phase 3)
         services.TryAddSingleton<IContextOptimizer, ContextWindowOptimizer>();
+
+        // Register security services (Phase 4)
+        services.TryAddSingleton<IPiiDetector, RegexPiiDetector>();
+        services.TryAddSingleton<IPromptInjectionDetector, PromptInjectionDetector>();
 
         return services;
     }
