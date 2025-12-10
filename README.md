@@ -23,9 +23,11 @@ See the full [Effectiveness Report](docs/EFFECTIVENESS_REPORT.md) for detailed a
 ## Features
 
 - **Semantic Search** - Vector-based similarity search with hybrid retrieval (dense + sparse)
+- **Full-Text Search** - FTS5-based BM25 ranking with trigram tokenizer (CJK/multilingual)
+- **Hybrid Search** - RRF (Reciprocal Rank Fusion) combining vector and text search
 - **Query Expansion** - Automatic synonym and context expansion for better recall
 - **MCP Integration** - Standard MCP tools for Claude Desktop and other MCP clients
-- **Flexible Storage** - Pluggable storage backends (InMemory, Qdrant)
+- **Dual Storage** - SQLite-vec (local) and Qdrant (production) backends
 - **Local Embeddings** - Built-in support for local embedding models (all-MiniLM-L6-v2)
 - **SDK Package** - Embeddable NuGet package for .NET applications
 
@@ -52,6 +54,85 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 }
 ```
 
+## Storage Backend Selection
+
+Memory Indexer supports multiple storage backends optimized for different use cases:
+
+### Storage Options
+
+| Storage | Best For | Features | Dependencies |
+|---------|----------|----------|--------------|
+| **SQLite-vec** | Local dev, SDK embedded, MCP stdio | Single file, FTS5, hybrid search | Zero external |
+| **Qdrant** | Production, high-scale | HNSW index, distributed, BM42 | Qdrant server |
+| **InMemory** | Testing only | Fast, ephemeral | None |
+
+### Usage Scenarios
+
+| Scenario | Recommended Storage | Configuration |
+|----------|---------------------|---------------|
+| **SDK embedded in app** | SQLite-vec | `appsettings.sdk-embedded.json` |
+| **MCP server (stdio)** | SQLite-vec | `appsettings.mcp-server.json` |
+| **Production deployment** | Qdrant | `appsettings.qdrant-production.json` |
+| **Unit testing** | InMemory | `Storage.Type = "InMemory"` |
+
+### SQLite-vec Configuration
+
+```json
+{
+  "MemoryIndexer": {
+    "Storage": {
+      "Type": "SqliteVec",
+      "Sqlite": {
+        "DatabasePath": "memories.db",
+        "UseWalMode": true,
+        "FtsTokenizer": "trigram",
+        "CacheSizeKb": 2000,
+        "EnableVectorSearch": true,
+        "EnableFullTextSearch": true,
+        "BusyTimeoutMs": 5000
+      }
+    },
+    "Embedding": {
+      "Provider": "Local",
+      "Model": "all-MiniLM-L6-v2",
+      "Dimensions": 384
+    }
+  }
+}
+```
+
+### Qdrant Configuration
+
+```json
+{
+  "MemoryIndexer": {
+    "Storage": {
+      "Type": "Qdrant",
+      "Qdrant": {
+        "Host": "localhost",
+        "Port": 6334,
+        "ApiKey": null,
+        "CollectionName": "memories"
+      }
+    },
+    "Embedding": {
+      "Provider": "Ollama",
+      "Model": "nomic-embed-text",
+      "Dimensions": 768,
+      "Endpoint": "http://localhost:11434"
+    }
+  }
+}
+```
+
+### FTS5 Tokenizer Options
+
+| Tokenizer | Use Case | Description |
+|-----------|----------|-------------|
+| `trigram` | CJK, multilingual | Best for Korean, Chinese, Japanese |
+| `unicode61` | Unicode standard | General multilingual support |
+| `porter` | English only | English stemming |
+
 ## MCP Tools
 
 | Tool | Description |
@@ -63,17 +144,52 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 | `memory_update` | Update memory content or metadata |
 | `memory_delete` | Delete a memory |
 
-## Configuration
+## SDK Usage
+
+```csharp
+// Add Memory Indexer to your application
+services.AddMemoryIndexer(options =>
+{
+    options.Storage.Type = StorageType.SqliteVec;
+    options.Storage.Sqlite = new SqliteOptions
+    {
+        DatabasePath = "app_memories.db",
+        UseWalMode = true
+    };
+    options.Embedding.Provider = EmbeddingProvider.Local;
+    options.Embedding.Model = "all-MiniLM-L6-v2";
+    options.Embedding.Dimensions = 384;
+});
+
+// Use the memory service
+var memoryService = serviceProvider.GetRequiredService<MemoryService>();
+await memoryService.StoreAsync(new MemoryUnit
+{
+    UserId = "user-123",
+    Content = "User prefers dark mode",
+    Type = MemoryType.Semantic
+});
+```
+
+## Search Configuration
+
+### Hybrid Search Weights
 
 ```json
 {
-  "MemoryIndexer": {
-    "Storage": { "Type": "InMemory" },
-    "Embedding": { "Dimensions": 1024 },
-    "Search": { "DefaultLimit": 10 }
+  "Search": {
+    "DenseWeight": 0.6,
+    "SparseWeight": 0.4,
+    "RrfK": 60,
+    "MmrLambda": 0.7
   }
 }
 ```
+
+- `DenseWeight`: Weight for vector similarity (0.0-1.0)
+- `SparseWeight`: Weight for BM25 text match (0.0-1.0)
+- `RrfK`: RRF constant (typically 60)
+- `MmrLambda`: MMR diversity parameter (higher = more relevance, lower = more diversity)
 
 ## Documentation
 
@@ -83,14 +199,15 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 
 ## Project Status
 
-**Phase 3 Complete**: Advanced intelligence features implemented.
+**Phase 2 Complete**: Dual storage backend implementation.
 
 - 6 core MCP tools + advanced search tools
+- **SQLite-vec storage** with FTS5 hybrid search
+- **Qdrant integration** for production scale
 - Local embedding support (all-MiniLM-L6-v2, 384 dimensions)
-- Hybrid search with BM25 + dense vectors
+- Hybrid search with BM25 + dense vectors + RRF fusion
 - Query expansion for improved recall
-- Qdrant integration for production scale
-- 159 passing tests
+- 160+ passing tests
 
 ## License
 

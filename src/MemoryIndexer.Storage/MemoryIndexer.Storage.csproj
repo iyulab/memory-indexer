@@ -11,10 +11,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.InMemory" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Qdrant.Client" />
+    <PackageReference Include="System.Numerics.Tensors" />
   </ItemGroup>
 
 </Project>

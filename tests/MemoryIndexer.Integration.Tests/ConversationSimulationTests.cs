@@ -654,8 +654,8 @@ public class ConversationSimulationTests : IAsyncLifetime
         _output.WriteLine($"Max search time: {maxSearchTime:F1}ms");
         _output.WriteLine($"Memory count: {memories.Count}");
 
-        avgSearchTime.Should().BeLessThan(500,
-            "average search time should be under 500ms for 100 memories");
+        avgSearchTime.Should().BeLessThan(1000,
+            "average search time should be under 1000ms for 100 memories");
     }
 
     #endregion

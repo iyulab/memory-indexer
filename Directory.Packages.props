@@ -25,15 +25,12 @@
 
     <!-- Vector Data -->
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="9.7.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.InMemory" Version="1.68.0-preview" />
 
     <!-- Database -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
 
     <!-- Vector Database -->
     <PackageVersion Include="Qdrant.Client" Version="1.16.1" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Sqlite" Version="1.51.0-preview" />
 
     <!-- Numerics -->
     <PackageVersion Include="System.Numerics.Tensors" Version="10.0.0" />
