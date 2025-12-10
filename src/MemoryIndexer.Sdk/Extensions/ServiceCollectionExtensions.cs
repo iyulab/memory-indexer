@@ -12,6 +12,7 @@ using MemoryIndexer.Intelligence.Search;
 using MemoryIndexer.Intelligence.SelfEditing;
 using MemoryIndexer.Intelligence.Security;
 using MemoryIndexer.Intelligence.Summarization;
+using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.Storage.InMemory;
 using MemoryIndexer.Storage.Qdrant;
 using MemoryIndexer.Storage.Sqlite;
@@ -139,6 +140,9 @@ public static class ServiceCollectionExtensions
         // Register security services (Phase 4)
         services.TryAddSingleton<IPiiDetector, RegexPiiDetector>();
         services.TryAddSingleton<IPromptInjectionDetector, PromptInjectionDetector>();
+
+        // Register observability services (Phase 4)
+        services.TryAddSingleton<InstrumentedMemoryService>();
 
         return services;
     }

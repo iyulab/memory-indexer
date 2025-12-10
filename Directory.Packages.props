@@ -49,5 +49,12 @@
     <!-- Local Embedding & Reranking (iyulab open source) -->
     <PackageVersion Include="LocalEmbedder" Version="0.3.0" />
     <PackageVersion Include="LocalReranker" Version="0.1.0" />
+
+    <!-- OpenTelemetry Observability -->
+    <PackageVersion Include="OpenTelemetry" Version="1.11.2" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.11.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.11.2" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
   </ItemGroup>
 </Project>
