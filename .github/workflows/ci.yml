@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run Unit Tests (excluding Heavy tests)
+      run: |
+        dotnet test tests/MemoryIndexer.Core.Tests --no-build --configuration Release --verbosity normal
+        dotnet test tests/MemoryIndexer.Storage.Tests --no-build --configuration Release --verbosity normal
+        dotnet test tests/MemoryIndexer.Intelligence.Tests --no-build --configuration Release --verbosity normal
+
+    - name: Run Integration Tests (CI-safe only)
+      run: |
+        dotnet test tests/MemoryIndexer.Integration.Tests \
+          --no-build \
+          --configuration Release \
+          --verbosity normal \
+          --filter "Category!=Heavy"
+      continue-on-error: true
+
+  # Optional: Run heavy tests on schedule or manual trigger
+  heavy-tests:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore and Build
+      run: |
+        dotnet restore
+        dotnet build --no-restore --configuration Release
+
+    - name: Run All Tests (including Heavy)
+      run: |
+        dotnet test --no-build --configuration Release --verbosity normal
+      timeout-minutes: 30

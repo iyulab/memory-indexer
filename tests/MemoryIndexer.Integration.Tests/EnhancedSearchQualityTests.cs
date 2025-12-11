@@ -21,6 +21,7 @@ namespace MemoryIndexer.Integration.Tests;
 /// Tests improvements over baseline vector-only search.
 /// </summary>
 [Trait("Category", "Integration")]
+[Trait("Category", "Heavy")]
 [Trait("Category", "QualityImprovement")]
 public class EnhancedSearchQualityTests : IAsyncLifetime
 {

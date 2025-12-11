@@ -14,6 +14,8 @@ namespace MemoryIndexer.Integration.Tests;
 /// These tests verify the full memory store workflow with actual vector embeddings.
 /// </summary>
 [Trait("Category", "Integration")]
+[Trait("Category", "Heavy")]
+[Trait("Category", "LocalModel")]
 public class LocalEmbeddingIntegrationTests : IAsyncLifetime
 {
     private readonly ITestOutputHelper _output;

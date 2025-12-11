@@ -20,6 +20,7 @@ namespace MemoryIndexer.Integration.Tests;
 /// with and without Memory Indexer.
 /// </summary>
 [Trait("Category", "Integration")]
+[Trait("Category", "Heavy")]
 [Trait("Category", "EffectivenessReport")]
 public class MemoryIndexerEffectivenessTests : IAsyncLifetime
 {

@@ -19,6 +19,8 @@ namespace MemoryIndexer.Integration.Tests;
 /// Tests the SDK's DI integration with LocalEmbedder-based embedding service.
 /// </summary>
 [Trait("Category", "Integration")]
+[Trait("Category", "Heavy")]
+[Trait("Category", "LocalModel")]
 public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
 {
     private readonly ITestOutputHelper _output;

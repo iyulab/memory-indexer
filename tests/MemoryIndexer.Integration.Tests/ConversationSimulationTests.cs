@@ -14,6 +14,7 @@ namespace MemoryIndexer.Integration.Tests;
 /// Tests short-term memory, long-term memory, topic switching, and recall accuracy.
 /// </summary>
 [Trait("Category", "Integration")]
+[Trait("Category", "Heavy")]
 [Trait("Category", "Simulation")]
 public class ConversationSimulationTests : IAsyncLifetime
 {

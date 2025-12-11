@@ -22,6 +22,8 @@ namespace MemoryIndexer.Integration.Tests;
 /// embedding models are not available.
 /// </summary>
 [Trait("Category", "Integration")]
+[Trait("Category", "Heavy")]
+[Trait("Category", "GpuStack")]
 public class GpuStackEmbeddingTests
 {
     private readonly ITestOutputHelper _output;
