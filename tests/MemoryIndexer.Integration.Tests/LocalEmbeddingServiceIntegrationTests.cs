@@ -1,116 +1,59 @@
 using FluentAssertions;
-using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
-using MemoryIndexer.Embedding.Providers;
+using MemoryIndexer.Integration.Tests.Fixtures;
 using MemoryIndexer.Storage.InMemory;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace MemoryIndexer.Integration.Tests;
 
 /// <summary>
-/// Integration tests for LocalEmbeddingService using dependency injection.
-/// Tests the SDK's DI integration with LocalEmbedder-based embedding service.
+/// Integration tests for LocalEmbeddingService using shared fixture.
+/// Tests the SDK's embedding service integration with LocalEmbedder.
+/// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
 [Trait("Category", "LocalModel")]
-public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
+[Collection(EmbeddingTestCollection.Name)]
+public class LocalEmbeddingServiceIntegrationTests
 {
     private readonly ITestOutputHelper _output;
-    private ServiceProvider? _serviceProvider;
+    private readonly SharedEmbeddingFixture _fixture;
+    private readonly IMemoryStore _memoryStore;
 
-    public LocalEmbeddingServiceIntegrationTests(ITestOutputHelper output)
+    public LocalEmbeddingServiceIntegrationTests(SharedEmbeddingFixture fixture, ITestOutputHelper output)
     {
+        _fixture = fixture;
         _output = output;
-    }
+        _memoryStore = new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance);
 
-    public Task InitializeAsync()
-    {
-        var services = new ServiceCollection();
-
-        // Configure options for Local embedding provider
-        var indexerOptions = new MemoryIndexerOptions
-        {
-            Embedding = new EmbeddingOptions
-            {
-                Provider = EmbeddingProvider.Local,
-                Model = "all-MiniLM-L6-v2",
-                Dimensions = 384,
-                CacheTtlMinutes = 5
-            }
-        };
-
-        // Register options
-        services.AddSingleton<IOptions<MemoryIndexerOptions>>(Options.Create(indexerOptions));
-
-        // Register memory cache
-        services.AddSingleton<IMemoryCache>(new MemoryCache(new MemoryCacheOptions()));
-
-        // Register logging
-        services.AddLogging();
-
-        // Register LocalEmbeddingService directly (mimics SDK registration)
-        services.AddSingleton<IEmbeddingService>(sp =>
-            new LocalEmbeddingService(
-                sp.GetRequiredService<IMemoryCache>(),
-                sp.GetRequiredService<IOptions<MemoryIndexerOptions>>(),
-                NullLogger<LocalEmbeddingService>.Instance));
-
-        // Register memory store
-        services.AddSingleton<IMemoryStore>(sp =>
-            new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance));
-
-        _serviceProvider = services.BuildServiceProvider();
-
-        _output.WriteLine("ServiceProvider initialized with LocalEmbeddingService");
-        return Task.CompletedTask;
-    }
-
-    public async Task DisposeAsync()
-    {
-        if (_serviceProvider is IAsyncDisposable asyncDisposable)
-        {
-            await asyncDisposable.DisposeAsync();
-        }
-        else
-        {
-            _serviceProvider?.Dispose();
-        }
+        _output.WriteLine($"Using shared embedding service: {_fixture.ModelId}, Dimensions: {_fixture.Dimensions}");
     }
 
     [Fact]
     public async Task EmbeddingService_ShouldBeResolvable()
     {
-        // Arrange & Act
-        var embeddingService = _serviceProvider!.GetRequiredService<IEmbeddingService>();
-
         // Assert
-        embeddingService.Should().NotBeNull();
-        embeddingService.Should().BeOfType<LocalEmbeddingService>();
-        embeddingService.Dimensions.Should().Be(384);
+        _fixture.EmbeddingService.Should().NotBeNull();
+        _fixture.EmbeddingService!.Dimensions.Should().Be(384);
 
-        _output.WriteLine($"EmbeddingService resolved: {embeddingService.GetType().Name}");
-        _output.WriteLine($"Dimensions: {embeddingService.Dimensions}");
+        _output.WriteLine($"EmbeddingService resolved: {_fixture.EmbeddingService.GetType().Name}");
+        _output.WriteLine($"Dimensions: {_fixture.EmbeddingService.Dimensions}");
 
         await Task.CompletedTask;
     }
 
     [Fact]
-    public async Task GenerateEmbedding_ThroughDI_ReturnsValidVector()
+    public async Task GenerateEmbedding_ThroughService_ReturnsValidVector()
     {
         // Arrange
-        var embeddingService = _serviceProvider!.GetRequiredService<IEmbeddingService>();
         var text = "This is a test sentence for embedding generation via DI.";
 
         // Act
-        var embedding = await embeddingService.GenerateEmbeddingAsync(text);
+        var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(text);
 
         // Assert
         embedding.Length.Should().Be(384);
@@ -121,10 +64,9 @@ public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GenerateBatchEmbeddings_ThroughDI_ReturnsMultipleVectors()
+    public async Task GenerateBatchEmbeddings_ThroughService_ReturnsMultipleVectors()
     {
         // Arrange
-        var embeddingService = _serviceProvider!.GetRequiredService<IEmbeddingService>();
         var texts = new[]
         {
             "First sentence for batch embedding.",
@@ -133,7 +75,7 @@ public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
         };
 
         // Act
-        var embeddings = await embeddingService.GenerateBatchEmbeddingsAsync(texts);
+        var embeddings = await _fixture.EmbeddingService!.GenerateBatchEmbeddingsAsync(texts);
 
         // Assert
         embeddings.Should().HaveCount(3);
@@ -149,29 +91,27 @@ public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
     public async Task EmbeddingCaching_WorksCorrectly()
     {
         // Arrange
-        var embeddingService = _serviceProvider!.GetRequiredService<IEmbeddingService>();
-        var text = "This text should be cached for performance.";
+        var text = $"This text should be cached for performance - {Guid.NewGuid()}.";
 
         // Act - First call (generates embedding)
         var sw1 = System.Diagnostics.Stopwatch.StartNew();
-        var embedding1 = await embeddingService.GenerateEmbeddingAsync(text);
+        var embedding1 = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(text);
         sw1.Stop();
         var firstCallTime = sw1.ElapsedMilliseconds;
 
         // Second call (should use cache)
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var embedding2 = await embeddingService.GenerateEmbeddingAsync(text);
+        var embedding2 = await _fixture.EmbeddingService.GenerateEmbeddingAsync(text);
         sw2.Stop();
         var secondCallTime = sw2.ElapsedMilliseconds;
 
         // Assert
         embedding1.Span.ToArray().Should().BeEquivalentTo(embedding2.Span.ToArray());
 
-        // Cache hit should be significantly faster (at least 10x faster typically)
+        // Cache hit should be significantly faster
         _output.WriteLine($"First call: {firstCallTime}ms, Second call (cached): {secondCallTime}ms");
 
         // The second call should be faster due to caching
-        // Note: First call includes model loading time
         secondCallTime.Should().BeLessThanOrEqualTo(firstCallTime);
     }
 
@@ -179,9 +119,6 @@ public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
     public async Task FullMemoryWorkflow_WithLocalEmbeddings()
     {
         // Arrange
-        var embeddingService = _serviceProvider!.GetRequiredService<IEmbeddingService>();
-        var memoryStore = _serviceProvider!.GetRequiredService<IMemoryStore>();
-
         var memories = new[]
         {
             "Python is a versatile programming language used for web development and data science.",
@@ -195,7 +132,7 @@ public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
         _output.WriteLine("Storing memories...");
         foreach (var content in memories)
         {
-            var embedding = await embeddingService.GenerateEmbeddingAsync(content);
+            var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(content);
             var memory = new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -204,15 +141,15 @@ public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
                 SessionId = "test-session",
                 Embedding = embedding
             };
-            await memoryStore.StoreAsync(memory);
+            await _memoryStore.StoreAsync(memory);
         }
 
         // Query
         var queryText = "How do I build web applications?";
         _output.WriteLine($"\nQuerying: '{queryText}'");
 
-        var queryEmbedding = await embeddingService.GenerateEmbeddingAsync(queryText);
-        var results = await memoryStore.SearchAsync(
+        var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(queryText);
+        var results = await _memoryStore.SearchAsync(
             queryEmbedding,
             new MemorySearchOptions { Limit = 3, UserId = "test-user" });
 
@@ -233,16 +170,14 @@ public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
     public async Task SemanticSimilarity_ProducesExpectedResults()
     {
         // Arrange
-        var embeddingService = _serviceProvider!.GetRequiredService<IEmbeddingService>();
-
         var baseText = "How to train a machine learning model?";
         var similarText = "What are the steps to build an ML model?";
         var unrelatedText = "The weather forecast shows sunny skies tomorrow.";
 
         // Act
-        var baseEmbedding = await embeddingService.GenerateEmbeddingAsync(baseText);
-        var similarEmbedding = await embeddingService.GenerateEmbeddingAsync(similarText);
-        var unrelatedEmbedding = await embeddingService.GenerateEmbeddingAsync(unrelatedText);
+        var baseEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(baseText);
+        var similarEmbedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync(similarText);
+        var unrelatedEmbedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync(unrelatedText);
 
         var similarScore = CosineSimilarity(baseEmbedding.Span, similarEmbedding.Span);
         var unrelatedScore = CosineSimilarity(baseEmbedding.Span, unrelatedEmbedding.Span);
@@ -259,16 +194,13 @@ public class LocalEmbeddingServiceIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DifferentModels_HaveDifferentDimensions()
+    public async Task ServiceDimensions_MatchModelConfiguration()
     {
-        // This test validates that the model configuration works correctly
-        var embeddingService = _serviceProvider!.GetRequiredService<IEmbeddingService>();
-
         // The configured model is all-MiniLM-L6-v2 with 384 dimensions
-        embeddingService.Dimensions.Should().Be(384);
+        _fixture.EmbeddingService!.Dimensions.Should().Be(384);
 
         // Verify actual embedding matches expected dimensions
-        var embedding = await embeddingService.GenerateEmbeddingAsync("Test");
+        var embedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync("Test");
         embedding.Length.Should().Be(384);
 
         _output.WriteLine($"Model all-MiniLM-L6-v2: {embedding.Length} dimensions (expected 384)");

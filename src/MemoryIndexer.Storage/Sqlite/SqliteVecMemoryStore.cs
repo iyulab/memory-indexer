@@ -133,6 +133,11 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             CREATE INDEX IF NOT EXISTS idx_{TableName}_type ON {TableName}(type);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_is_deleted ON {TableName}(is_deleted);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_importance ON {TableName}(importance_score);
+
+            -- Composite indexes for multi-tenant query optimization
+            CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_scope ON {TableName}(user_id, is_deleted);
+            CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_session ON {TableName}(user_id, session_id, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_type ON {TableName}(user_id, type, created_at DESC);
         ";
 
         await ExecuteNonQueryAsync(createTableSql, cancellationToken);
@@ -369,18 +374,12 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
     {
         await EnsureCollectionExistsAsync(cancellationToken);
 
-        // Get all candidate memories with filters
+        // Get all candidate memories with CTE-based tenant-scoped filters
         var filterSql = BuildSearchFilterQuery(options);
         using var command = CreateCommand(filterSql);
 
-        if (!string.IsNullOrEmpty(options.UserId))
-        {
-            command.Parameters.AddWithValue("@user_id", options.UserId);
-        }
-        if (!string.IsNullOrEmpty(options.SessionId))
-        {
-            command.Parameters.AddWithValue("@session_id", options.SessionId);
-        }
+        // Bind parameters for CTE query
+        AddSearchParameters(command, options);
 
         var candidates = new List<MemoryUnit>();
         using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -405,10 +404,36 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             .Take(options.Limit)
             .ToList();
 
-        _logger.LogDebug("Vector search found {Count} results from {Total} candidates",
+        _logger.LogDebug("Vector search found {Count} results from {Total} candidates (CTE pre-filtered)",
             results.Count, candidates.Count);
 
         return results;
+    }
+
+    /// <summary>
+    /// Adds parameters for search query including CTE parameters.
+    /// </summary>
+    private static void AddSearchParameters(SqliteCommand command, MemorySearchOptions options)
+    {
+        if (!string.IsNullOrEmpty(options.UserId))
+        {
+            command.Parameters.AddWithValue("@user_id", options.UserId);
+        }
+
+        if (!string.IsNullOrEmpty(options.SessionId))
+        {
+            command.Parameters.AddWithValue("@session_id", options.SessionId);
+        }
+
+        if (options.CreatedAfter.HasValue)
+        {
+            command.Parameters.AddWithValue("@created_after", options.CreatedAfter.Value.ToString("O"));
+        }
+
+        if (options.CreatedBefore.HasValue)
+        {
+            command.Parameters.AddWithValue("@created_before", options.CreatedBefore.Value.ToString("O"));
+        }
     }
 
     /// <inheritdoc />
@@ -797,14 +822,84 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         return $"SELECT * FROM {TableName} WHERE {string.Join(" AND ", conditions)} {orderBy} {limit}";
     }
 
+    /// <summary>
+    /// Builds a CTE-based query for tenant-scoped search with explicit data isolation.
+    /// Uses Common Table Expression to enforce tenant boundary as the first filtering step.
+    /// </summary>
+    /// <remarks>
+    /// CTE structure ensures:
+    /// 1. Tenant isolation is applied FIRST in query execution
+    /// 2. All subsequent filters operate within tenant scope only
+    /// 3. Query intent is explicit and auditable
+    /// </remarks>
     private static string BuildSearchFilterQuery(MemorySearchOptions options)
     {
-        var conditions = new List<string>();
-
+        // When UserId is provided, use CTE-based pre-filtering for explicit tenant isolation
         if (!string.IsNullOrEmpty(options.UserId))
         {
-            conditions.Add("user_id = @user_id");
+            return BuildCteSearchQuery(options);
         }
+
+        // Fallback for legacy queries without UserId (should be rare/deprecated)
+        return BuildLegacySearchQuery(options);
+    }
+
+    /// <summary>
+    /// Builds CTE-based query that enforces tenant isolation at the query level.
+    /// </summary>
+    private static string BuildCteSearchQuery(MemorySearchOptions options)
+    {
+        // CTE Phase 1: Tenant-scoped base data (always first filter)
+        var deletedCondition = options.IncludeDeleted ? "" : "AND is_deleted = 0";
+        var cte = $@"
+WITH tenant_scope AS (
+    SELECT *
+    FROM {TableName}
+    WHERE user_id = @user_id
+      {deletedCondition}
+)";
+
+        // Phase 2: Additional filters within tenant scope
+        var additionalConditions = new List<string>();
+
+        if (!string.IsNullOrEmpty(options.SessionId))
+        {
+            additionalConditions.Add("session_id = @session_id");
+        }
+
+        if (options.Types?.Length > 0)
+        {
+            var typeConditions = string.Join(" OR ", options.Types.Select(t => $"type = {(int)t}"));
+            additionalConditions.Add($"({typeConditions})");
+        }
+
+        if (options.CreatedAfter.HasValue)
+        {
+            additionalConditions.Add("created_at >= @created_after");
+        }
+
+        if (options.CreatedBefore.HasValue)
+        {
+            additionalConditions.Add("created_at <= @created_before");
+        }
+
+        var whereClause = additionalConditions.Count > 0
+            ? $"WHERE {string.Join(" AND ", additionalConditions)}"
+            : "";
+
+        return $@"{cte}
+SELECT * FROM tenant_scope
+{whereClause}
+ORDER BY created_at DESC";
+    }
+
+    /// <summary>
+    /// Legacy query builder for backward compatibility (without CTE).
+    /// Should be avoided in favor of CTE-based queries.
+    /// </summary>
+    private static string BuildLegacySearchQuery(MemorySearchOptions options)
+    {
+        var conditions = new List<string>();
 
         if (!string.IsNullOrEmpty(options.SessionId))
         {

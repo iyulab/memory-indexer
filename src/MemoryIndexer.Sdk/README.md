@@ -7,8 +7,10 @@ Long-term memory management for LLM applications via MCP (Model Context Protocol
 - **Semantic Search**: Vector-based similarity search with hybrid BM25 + embedding retrieval
 - **Multiple Storage Backends**: InMemory, SQLite-vec, and Qdrant
 - **Embedding Providers**: Local (ONNX), Ollama, OpenAI, Azure OpenAI
+- **Multi-Tenant Support**: Complete tenant isolation with CTE-based pre-filtering
 - **Security**: PII detection and prompt injection defense
 - **Observability**: Built-in OpenTelemetry tracing and metrics
+- **Evaluation**: LoCoMo benchmark evaluation for memory retrieval quality
 - **MCP Integration**: Ready-to-use MCP tools for Claude and other LLM clients
 
 ## Quick Start

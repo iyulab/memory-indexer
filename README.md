@@ -2,9 +2,11 @@
 
 A .NET MCP server for LLM long-term memory management.
 
-[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
+[![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-159%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-282%20passing-brightgreen)]()
 
 ## Overview
 
@@ -199,15 +201,32 @@ await memoryService.StoreAsync(new MemoryUnit
 
 ## Project Status
 
-**Phase 2 Complete**: Dual storage backend implementation.
+**v0.1.0 Released**: Full-featured memory management SDK.
 
+### Features
 - 6 core MCP tools + advanced search tools
 - **SQLite-vec storage** with FTS5 hybrid search
 - **Qdrant integration** for production scale
 - Local embedding support (all-MiniLM-L6-v2, 384 dimensions)
 - Hybrid search with BM25 + dense vectors + RRF fusion
 - Query expansion for improved recall
-- 160+ passing tests
+- **Knowledge Graph** with entity extraction
+- **Self-editing memory** management
+- **PII detection** and prompt injection defense
+- **Multi-tenant isolation** with CTE-based pre-filtering
+- **OpenTelemetry** observability (tracing & metrics)
+- **LoCoMo benchmark** evaluation suite
+
+### Test Coverage
+- 282 tests (Core, Storage, Intelligence, Integration)
+- Evaluation metrics: Recall, Precision, MRR, NDCG
+
+## Installation
+
+```bash
+# NuGet Package
+dotnet add package MemoryIndexer
+```
 
 ## License
 

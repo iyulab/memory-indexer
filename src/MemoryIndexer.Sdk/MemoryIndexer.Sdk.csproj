@@ -3,10 +3,11 @@
   <PropertyGroup>
     <Description>Memory Indexer SDK - Long-term memory management for LLM applications via MCP (Model Context Protocol). Features semantic search, vector storage, PII detection, prompt injection defense, and OpenTelemetry observability.</Description>
     <PackageTags>mcp;memory;sdk;llm;ai;vector-search;semantic-search;opentelemetry;observability</PackageTags>
+    <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>MemoryIndexer</PackageId>
     <Title>Memory Indexer SDK</Title>
-    <PackageProjectUrl>https://github.com/memory-indexer/memory-indexer</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/iyulab/memory-indexer</PackageProjectUrl>
     <PackageReleaseNotes>
 v0.1.0:
 - Core memory storage with InMemory, SQLite-vec, and Qdrant backends
@@ -17,6 +18,9 @@ v0.1.0:
 - Self-editing memory management
 - Context window optimization
 - PII detection and prompt injection defense
+- Multi-tenant data isolation with CTE-based pre-filtering
+- LoCoMo benchmark evaluation (SingleHop, MultiHop, Temporal, CrossSession, Factual)
+- RAGAS-style retrieval metrics (Recall, Precision, MRR, NDCG)
 - OpenTelemetry tracing and metrics
     </PackageReleaseNotes>
     <IncludeSymbols>true</IncludeSymbols>

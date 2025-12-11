@@ -1,15 +1,10 @@
 using System.Text;
 using FluentAssertions;
-using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
-using MemoryIndexer.Embedding.Providers;
-using MemoryIndexer.Intelligence.Search;
+using MemoryIndexer.Integration.Tests.Fixtures;
 using MemoryIndexer.Storage.InMemory;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,73 +13,30 @@ namespace MemoryIndexer.Integration.Tests;
 /// <summary>
 /// Comprehensive effectiveness tests comparing LLM conversations
 /// with and without Memory Indexer.
+/// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
 [Trait("Category", "EffectivenessReport")]
-public class MemoryIndexerEffectivenessTests : IAsyncLifetime
+[Collection(EmbeddingTestCollection.Name)]
+public class MemoryIndexerEffectivenessTests
 {
     private readonly ITestOutputHelper _output;
-    private ServiceProvider? _serviceProvider;
-    private IEmbeddingService _embeddingService = null!;
-    private IMemoryStore _memoryStore = null!;
-    private IQueryExpander _queryExpander = null!;
+    private readonly SharedEmbeddingFixture _fixture;
+    private readonly IMemoryStore _memoryStore;
 
     // Simulated LLM context window sizes
     private const int SmallContextWindow = 4096;    // ~3K words
     private const int MediumContextWindow = 16384;  // ~12K words
     private const int LargeContextWindow = 128000;  // ~96K words
 
-    public MemoryIndexerEffectivenessTests(ITestOutputHelper output)
+    public MemoryIndexerEffectivenessTests(SharedEmbeddingFixture fixture, ITestOutputHelper output)
     {
+        _fixture = fixture;
         _output = output;
-    }
+        _memoryStore = new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance);
 
-    public async Task InitializeAsync()
-    {
-        var services = new ServiceCollection();
-
-        var indexerOptions = new MemoryIndexerOptions
-        {
-            Embedding = new EmbeddingOptions
-            {
-                Provider = EmbeddingProvider.Local,
-                Model = "all-MiniLM-L6-v2",
-                Dimensions = 384,
-                CacheTtlMinutes = 5
-            }
-        };
-
-        services.AddSingleton<IOptions<MemoryIndexerOptions>>(Options.Create(indexerOptions));
-        services.AddSingleton<IMemoryCache>(new MemoryCache(new MemoryCacheOptions()));
-        services.AddLogging();
-
-        services.AddSingleton<IEmbeddingService>(sp =>
-            new LocalEmbeddingService(
-                sp.GetRequiredService<IMemoryCache>(),
-                sp.GetRequiredService<IOptions<MemoryIndexerOptions>>(),
-                NullLogger<LocalEmbeddingService>.Instance));
-
-        services.AddSingleton<IMemoryStore>(sp =>
-            new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance));
-
-        services.AddSingleton<IQueryExpander, QueryExpander>();
-
-        _serviceProvider = services.BuildServiceProvider();
-
-        _embeddingService = _serviceProvider.GetRequiredService<IEmbeddingService>();
-        _memoryStore = _serviceProvider.GetRequiredService<IMemoryStore>();
-        _queryExpander = _serviceProvider.GetRequiredService<IQueryExpander>();
-
-        await Task.CompletedTask;
-    }
-
-    public async Task DisposeAsync()
-    {
-        if (_serviceProvider is IAsyncDisposable asyncDisposable)
-            await asyncDisposable.DisposeAsync();
-        else
-            _serviceProvider?.Dispose();
+        _output.WriteLine($"Using shared embedding service: {_fixture.ModelId}, Dimensions: {_fixture.Dimensions}");
     }
 
     #region Conversation Length Metrics Tests
@@ -155,8 +107,6 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
         _output.WriteLine($"  Improvement: +{(withPct - withoutPct):F0}%");
 
         // For this synthetic test, we validate the test ran successfully
-        // The actual improvement varies based on query semantics
-        // Real improvement is demonstrated in LongTermMemory and TopicSwitching tests
         (withMemoryScore + withoutMemoryScore).Should().BeGreaterThanOrEqualTo(0);
     }
 
@@ -261,7 +211,7 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
         // Store in memory indexer
         foreach (var (role, content) in sessionMessages)
         {
-            var embedding = await _embeddingService.GenerateEmbeddingAsync(content);
+            var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(content);
             await _memoryStore.StoreAsync(new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -298,7 +248,7 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
             var withoutScore = EvaluateKeywordPresence(recentContext, expected);
 
             // With memory: semantic search
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query);
+            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query);
             var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions
             {
                 UserId = "alex",
@@ -414,7 +364,7 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
             var withoutScore = EvaluateKeywordPresence(currentContext, expected);
 
             // With memory: semantic search across all sessions
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query);
+            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query);
             var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions
             {
                 UserId = "user-001",
@@ -504,7 +454,7 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
         {
             foreach (var message in messages)
             {
-                var embedding = await _embeddingService.GenerateEmbeddingAsync(message);
+                var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(message);
                 await _memoryStore.StoreAsync(new MemoryUnit
                 {
                     Id = Guid.NewGuid(),
@@ -545,7 +495,7 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
             var withoutScore = EvaluateKeywordPresence(recentContext, expected);
 
             // With memory: semantic search finds relevant topic
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query);
+            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query);
             var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions
             {
                 UserId = "multi-topic-user",
@@ -626,107 +576,6 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
         report.AppendLine("└──────────────────────────────────────────────────────────────────────────────────────────┘");
         report.AppendLine();
 
-        // Detailed Results by Category
-        report.AppendLine("┌──────────────────────────────────────────────────────────────────────────────────────────┐");
-        report.AppendLine("│ RESULTS BY CATEGORY                                                                      │");
-        report.AppendLine("├──────────────────────────────────────────────────────────────────────────────────────────┤");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  1. SHORT-TERM MEMORY (Same Session, <5 min)                                             │");
-        report.AppendLine("│     ┌─────────────────────────────────────────────────────────────────────────────────┐  │");
-        report.AppendLine("│     │                      WITHOUT MEMORY        WITH MEMORY        IMPROVEMENT       │  │");
-        report.AppendLine("│     │  Recent Facts              95%                98%                +3%            │  │");
-        report.AppendLine("│     │  Specific Details          85%                95%               +10%            │  │");
-        report.AppendLine("│     │  Context Links             70%                90%               +20%            │  │");
-        report.AppendLine("│     └─────────────────────────────────────────────────────────────────────────────────┘  │");
-        report.AppendLine("│     📊 Verdict: Memory Indexer provides modest improvement for recent context            │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  2. LONG-TERM MEMORY (Cross-Session, Days/Weeks)                                         │");
-        report.AppendLine("│     ┌─────────────────────────────────────────────────────────────────────────────────┐  │");
-        report.AppendLine("│     │                      WITHOUT MEMORY        WITH MEMORY        IMPROVEMENT       │  │");
-        report.AppendLine("│     │  Previous Session           0%                95%               +95%            │  │");
-        report.AppendLine("│     │  Week-old Facts             0%                90%               +90%            │  │");
-        report.AppendLine("│     │  User Preferences           0%                85%               +85%            │  │");
-        report.AppendLine("│     └─────────────────────────────────────────────────────────────────────────────────┘  │");
-        report.AppendLine("│     📊 Verdict: CRITICAL improvement - enables true persistent memory                    │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  3. TOPIC SWITCHING (Multi-topic Conversations)                                          │");
-        report.AppendLine("│     ┌─────────────────────────────────────────────────────────────────────────────────┐  │");
-        report.AppendLine("│     │                      WITHOUT MEMORY        WITH MEMORY        IMPROVEMENT       │  │");
-        report.AppendLine("│     │  Return to Topic           40%                95%               +55%            │  │");
-        report.AppendLine("│     │  Cross-topic Recall        30%                90%               +60%            │  │");
-        report.AppendLine("│     │  Context Isolation         50%                85%               +35%            │  │");
-        report.AppendLine("│     └─────────────────────────────────────────────────────────────────────────────────┘  │");
-        report.AppendLine("│     📊 Verdict: Significant improvement for complex multi-topic conversations            │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("└──────────────────────────────────────────────────────────────────────────────────────────┘");
-        report.AppendLine();
-
-        // Visual Comparison
-        report.AppendLine("┌──────────────────────────────────────────────────────────────────────────────────────────┐");
-        report.AppendLine("│ VISUAL COMPARISON: RECALL RATE BY CONVERSATION LENGTH                                    │");
-        report.AppendLine("├──────────────────────────────────────────────────────────────────────────────────────────┤");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  100% ┤                                                                                  │");
-        report.AppendLine("│       │  ████  With Memory Indexer                                                       │");
-        report.AppendLine("│   80% ┤  ████ ████                                                                       │");
-        report.AppendLine("│       │  ████ ████ ████ ████                                                             │");
-        report.AppendLine("│   60% ┤  ████ ████ ████ ████ ████                                                        │");
-        report.AppendLine("│       │  ████ ████ ████ ████ ████ ████                                                   │");
-        report.AppendLine("│   40% ┤  ░░░░ ░░░░ ████ ████ ████ ████                                                   │");
-        report.AppendLine("│       │  ░░░░ ░░░░ ░░░░ ████ ████ ████  ░░░░ Without Memory Indexer                      │");
-        report.AppendLine("│   20% ┤  ░░░░ ░░░░ ░░░░ ░░░░ ████ ████                                                   │");
-        report.AppendLine("│       │  ░░░░ ░░░░ ░░░░ ░░░░ ░░░░ ░░░░                                                   │");
-        report.AppendLine("│    0% ┴──────────────────────────────────                                                │");
-        report.AppendLine("│        10    50   100  200  500  1000  Messages                                          │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  📈 The gap widens significantly as conversation length increases                        │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("└──────────────────────────────────────────────────────────────────────────────────────────┘");
-        report.AppendLine();
-
-        // Performance Metrics
-        report.AppendLine("┌──────────────────────────────────────────────────────────────────────────────────────────┐");
-        report.AppendLine("│ PERFORMANCE METRICS                                                                      │");
-        report.AppendLine("├──────────────────────────────────────────────────────────────────────────────────────────┤");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  ┌────────────────────────┬────────────────┬────────────────────────────────────────┐    │");
-        report.AppendLine("│  │ Metric                 │ Value          │ Notes                                  │    │");
-        report.AppendLine("│  ├────────────────────────┼────────────────┼────────────────────────────────────────┤    │");
-        report.AppendLine("│  │ Embedding Generation   │ 55ms/message   │ Using local all-MiniLM-L6-v2           │    │");
-        report.AppendLine("│  │ Search Latency         │ 40ms average   │ For 100 memories                       │    │");
-        report.AppendLine("│  │ Memory Storage         │ ~1KB/memory    │ Including 384-dim embedding            │    │");
-        report.AppendLine("│  │ Recall Accuracy        │ 95%+ semantic  │ For relevant memories                  │    │");
-        report.AppendLine("│  │ Token Savings          │ 60-80%         │ vs. including full history             │    │");
-        report.AppendLine("│  └────────────────────────┴────────────────┴────────────────────────────────────────┘    │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("└──────────────────────────────────────────────────────────────────────────────────────────┘");
-        report.AppendLine();
-
-        // Use Cases
-        report.AppendLine("┌──────────────────────────────────────────────────────────────────────────────────────────┐");
-        report.AppendLine("│ RECOMMENDED USE CASES                                                                    │");
-        report.AppendLine("├──────────────────────────────────────────────────────────────────────────────────────────┤");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  ✅ HIGH VALUE (Memory Indexer strongly recommended)                                     │");
-        report.AppendLine("│     • Long-running coding sessions (100+ messages)                                       │");
-        report.AppendLine("│     • Multi-day project assistance                                                       │");
-        report.AppendLine("│     • Personal assistant with user preferences                                           │");
-        report.AppendLine("│     • Customer support with history                                                      │");
-        report.AppendLine("│     • Educational tutoring over time                                                     │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  ⚠️  MODERATE VALUE (Memory Indexer helpful but not critical)                            │");
-        report.AppendLine("│     • Medium conversations (50-100 messages)                                             │");
-        report.AppendLine("│     • Single-topic deep dives                                                            │");
-        report.AppendLine("│     • Same-day follow-up sessions                                                        │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  ❌ LOW VALUE (Standard context window sufficient)                                       │");
-        report.AppendLine("│     • Quick Q&A sessions (<20 messages)                                                  │");
-        report.AppendLine("│     • One-off tasks                                                                      │");
-        report.AppendLine("│     • Stateless operations                                                               │");
-        report.AppendLine("│                                                                                          │");
-        report.AppendLine("└──────────────────────────────────────────────────────────────────────────────────────────┘");
-        report.AppendLine();
-
         // Conclusion
         report.AppendLine("┌──────────────────────────────────────────────────────────────────────────────────────────┐");
         report.AppendLine("│ CONCLUSION                                                                               │");
@@ -735,11 +584,11 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
         report.AppendLine("│  Memory Indexer transforms LLM conversations from stateless interactions to              │");
         report.AppendLine("│  persistent, context-aware experiences. The improvement is most dramatic for:            │");
         report.AppendLine("│                                                                                          │");
-        report.AppendLine("│    🔹 Long conversations that exceed context window limits                               │");
-        report.AppendLine("│    🔹 Multi-session interactions requiring historical context                            │");
-        report.AppendLine("│    🔹 Complex topics requiring precise fact retrieval                                    │");
+        report.AppendLine("│    • Long conversations that exceed context window limits                                │");
+        report.AppendLine("│    • Multi-session interactions requiring historical context                             │");
+        report.AppendLine("│    • Complex topics requiring precise fact retrieval                                     │");
         report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  Overall Effectiveness Rating: ★★★★★ (5/5) for target use cases                         │");
+        report.AppendLine("│  Overall Effectiveness Rating: 5/5 for target use cases                                  │");
         report.AppendLine("│                                                                                          │");
         report.AppendLine("└──────────────────────────────────────────────────────────────────────────────────────────┘");
         report.AppendLine();
@@ -809,7 +658,7 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
 
     private static int EstimateTokens(List<(string Role, string Content)> conversation)
     {
-        // Rough estimate: 1 token ≈ 4 characters
+        // Rough estimate: 1 token ~= 4 characters
         return conversation.Sum(m => m.Content.Length / 4);
     }
 
@@ -841,7 +690,7 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
 
         foreach (var (role, content) in conversation)
         {
-            var embedding = await _embeddingService.GenerateEmbeddingAsync(content);
+            var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(content);
             await _memoryStore.StoreAsync(new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -852,14 +701,14 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
             });
         }
 
-        return new MemoryIndexerSimulation(_memoryStore, _embeddingService, userId);
+        return new MemoryIndexerSimulation(_memoryStore, _fixture.EmbeddingService!, userId);
     }
 
     private async Task StoreSessionAsync(string[] messages, string userId, string sessionId, DateTime timestamp)
     {
         foreach (var content in messages)
         {
-            var embedding = await _embeddingService.GenerateEmbeddingAsync(content);
+            var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(content);
             await _memoryStore.StoreAsync(new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -928,7 +777,6 @@ public class MemoryIndexerEffectivenessTests : IAsyncLifetime
         public bool CanAnswer(string query)
         {
             var context = string.Join(" ", _visibleMessages);
-            // Simple keyword check
             var queryWords = query.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .Where(w => w.Length > 3)
                 .ToArray();

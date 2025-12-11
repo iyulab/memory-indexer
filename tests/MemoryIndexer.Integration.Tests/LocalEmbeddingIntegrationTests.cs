@@ -2,6 +2,7 @@ using FluentAssertions;
 using LocalEmbedder;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
+using MemoryIndexer.Integration.Tests.Fixtures;
 using MemoryIndexer.Storage.InMemory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -12,34 +13,25 @@ namespace MemoryIndexer.Integration.Tests;
 /// <summary>
 /// Integration tests using LocalEmbedder for real embedding generation.
 /// These tests verify the full memory store workflow with actual vector embeddings.
+/// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
 [Trait("Category", "LocalModel")]
-public class LocalEmbeddingIntegrationTests : IAsyncLifetime
+[Collection(EmbeddingTestCollection.Name)]
+public class LocalEmbeddingIntegrationTests
 {
     private readonly ITestOutputHelper _output;
-    private IEmbeddingModel? _model;
-    private IMemoryStore? _memoryStore;
+    private readonly SharedEmbeddingFixture _fixture;
+    private readonly IMemoryStore _memoryStore;
 
-    public LocalEmbeddingIntegrationTests(ITestOutputHelper output)
+    public LocalEmbeddingIntegrationTests(SharedEmbeddingFixture fixture, ITestOutputHelper output)
     {
+        _fixture = fixture;
         _output = output;
-    }
-
-    public async Task InitializeAsync()
-    {
-        _output.WriteLine("Loading embedding model (all-MiniLM-L6-v2)...");
-        _model = await LocalEmbedder.LocalEmbedder.LoadAsync("all-MiniLM-L6-v2");
-        _output.WriteLine($"Model loaded: {_model.ModelId}, Dimensions: {_model.Dimensions}");
-
         _memoryStore = new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance);
-    }
 
-    public async Task DisposeAsync()
-    {
-        _model?.Dispose();
-        await Task.CompletedTask;
+        _output.WriteLine($"Using shared embedding model: {_fixture.ModelId}, Dimensions: {_fixture.Dimensions}");
     }
 
     [Fact]
@@ -49,7 +41,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
         var text = "This is a test sentence for embedding generation.";
 
         // Act
-        var embedding = await _model!.EmbedAsync(text);
+        var embedding = await _fixture.EmbeddingModel!.EmbedAsync(text);
 
         // Assert
         embedding.Should().NotBeNull();
@@ -75,7 +67,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
         };
 
         // Act
-        var embeddings = await _model!.EmbedAsync(texts);
+        var embeddings = await _fixture.EmbeddingModel!.EmbedAsync(texts);
 
         // Assert
         embeddings.Should().HaveCount(4);
@@ -95,9 +87,9 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
         var unrelatedText = "The weather forecast predicts rain tomorrow.";
 
         // Act
-        var baseEmbedding = await _model!.EmbedAsync(baseText);
-        var similarEmbedding = await _model.EmbedAsync(similarText);
-        var unrelatedEmbedding = await _model.EmbedAsync(unrelatedText);
+        var baseEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(baseText);
+        var similarEmbedding = await _fixture.EmbeddingModel.EmbedAsync(similarText);
+        var unrelatedEmbedding = await _fixture.EmbeddingModel.EmbedAsync(unrelatedText);
 
         var similarScore = LocalEmbedder.LocalEmbedder.CosineSimilarity(baseEmbedding, similarEmbedding);
         var unrelatedScore = LocalEmbedder.LocalEmbedder.CosineSimilarity(baseEmbedding, unrelatedEmbedding);
@@ -131,7 +123,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
 
         foreach (var content in memories)
         {
-            var embedding = await _model!.EmbedAsync(content);
+            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content);
             var memory = new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -140,7 +132,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
                 SessionId = "test-session",
                 Embedding = embedding
             };
-            await _memoryStore!.StoreAsync(memory);
+            await _memoryStore.StoreAsync(memory);
             storedIds.Add(memory.Id);
             _output.WriteLine($"  Stored: {content[..Math.Min(50, content.Length)]}...");
         }
@@ -149,13 +141,13 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
         var queryText = "How do I build a web API?";
         _output.WriteLine($"\nQuerying: '{queryText}'");
 
-        var queryEmbedding = await _model!.EmbedAsync(queryText);
+        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(queryText);
         var searchOptions = new MemorySearchOptions
         {
             Limit = 3,
             UserId = "test-user"
         };
-        var results = await _memoryStore!.SearchAsync(queryEmbedding, searchOptions);
+        var results = await _memoryStore.SearchAsync(queryEmbedding, searchOptions);
 
         // Assert
         results.Should().NotBeEmpty();
@@ -189,7 +181,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
 
         foreach (var content in memories)
         {
-            var embedding = await _model!.EmbedAsync(content);
+            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content);
             var memory = new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -197,7 +189,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
                 UserId = "test-user",
                 Embedding = embedding
             };
-            await _memoryStore!.StoreAsync(memory);
+            await _memoryStore.StoreAsync(memory);
         }
 
         // Test multiple queries
@@ -210,8 +202,8 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
 
         foreach (var (query, expectedKeywords) in queries)
         {
-            var queryEmbedding = await _model!.EmbedAsync(query);
-            var results = await _memoryStore!.SearchAsync(
+            var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(query);
+            var results = await _memoryStore.SearchAsync(
                 queryEmbedding,
                 new MemorySearchOptions { Limit = 2, UserId = "test-user" });
 
@@ -235,7 +227,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
     {
         // Arrange - Store a base memory
         var originalContent = "Machine learning is a subset of artificial intelligence.";
-        var originalEmbedding = await _model!.EmbedAsync(originalContent);
+        var originalEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(originalContent);
 
         var originalMemory = new MemoryUnit
         {
@@ -244,7 +236,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
             UserId = "test-user",
             Embedding = originalEmbedding
         };
-        await _memoryStore!.StoreAsync(originalMemory);
+        await _memoryStore.StoreAsync(originalMemory);
 
         // Test variations
         var variations = new[]
@@ -260,7 +252,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
 
         foreach (var (text, expectedSimilar) in variations)
         {
-            var embedding = await _model!.EmbedAsync(text);
+            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(text);
             var similarity = LocalEmbedder.LocalEmbedder.CosineSimilarity(originalEmbedding, embedding);
 
             var isSimilar = similarity > 0.6f; // Threshold for "similar"
@@ -284,7 +276,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
     {
         // Arrange - Store initial memory
         var initialContent = "Python is great for scripting.";
-        var initialEmbedding = await _model!.EmbedAsync(initialContent);
+        var initialEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(initialContent);
 
         var memory = new MemoryUnit
         {
@@ -293,18 +285,18 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
             UserId = "test-user",
             Embedding = initialEmbedding
         };
-        await _memoryStore!.StoreAsync(memory);
+        await _memoryStore.StoreAsync(memory);
 
         // Act - Update content and re-embed
         var updatedContent = "Python is excellent for machine learning and data science.";
-        var updatedEmbedding = await _model!.EmbedAsync(updatedContent);
+        var updatedEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(updatedContent);
 
         memory.Content = updatedContent;
         memory.Embedding = updatedEmbedding;
         await _memoryStore.UpdateAsync(memory);
 
         // Assert - Search should find the updated content
-        var queryEmbedding = await _model!.EmbedAsync("What is good for data science?");
+        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync("What is good for data science?");
         var results = await _memoryStore.SearchAsync(
             queryEmbedding,
             new MemorySearchOptions { Limit = 1, UserId = "test-user" });
@@ -328,14 +320,14 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
         var individualEmbeddings = new List<float[]>();
         foreach (var text in texts)
         {
-            individualEmbeddings.Add(await _model!.EmbedAsync(text));
+            individualEmbeddings.Add(await _fixture.EmbeddingModel!.EmbedAsync(text));
         }
         sw1.Stop();
         var individualTime = sw1.ElapsedMilliseconds;
 
         // Act - Batch embeddings
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var batchEmbeddings = await _model!.EmbedAsync(texts);
+        var batchEmbeddings = await _fixture.EmbeddingModel!.EmbedAsync(texts);
         sw2.Stop();
         var batchTime = sw2.ElapsedMilliseconds;
 
@@ -357,7 +349,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
     {
         // 1. Store
         var content = "Kubernetes is a container orchestration platform.";
-        var embedding = await _model!.EmbedAsync(content);
+        var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content);
         var memory = new MemoryUnit
         {
             Id = Guid.NewGuid(),
@@ -367,11 +359,11 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
             Embedding = embedding
         };
 
-        await _memoryStore!.StoreAsync(memory);
+        await _memoryStore.StoreAsync(memory);
         _output.WriteLine($"1. Stored: {memory.Id}");
 
         // 2. Search
-        var queryEmbedding = await _model!.EmbedAsync("container orchestration");
+        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync("container orchestration");
         var searchResults = await _memoryStore.SearchAsync(
             queryEmbedding,
             new MemorySearchOptions { UserId = "workflow-user", Limit = 1 });
@@ -388,7 +380,7 @@ public class LocalEmbeddingIntegrationTests : IAsyncLifetime
 
         // 4. Update
         retrieved.Content = "Kubernetes (K8s) is the leading container orchestration platform.";
-        retrieved.Embedding = await _model.EmbedAsync(retrieved.Content);
+        retrieved.Embedding = await _fixture.EmbeddingModel.EmbedAsync(retrieved.Content);
         var updated = await _memoryStore.UpdateAsync(retrieved);
         updated.Should().BeTrue();
         _output.WriteLine($"4. Updated content");

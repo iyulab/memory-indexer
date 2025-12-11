@@ -6,11 +6,13 @@ using MemoryIndexer.Intelligence.Chunking;
 using MemoryIndexer.Intelligence.Compression;
 using MemoryIndexer.Intelligence.ContextOptimization;
 using MemoryIndexer.Intelligence.Deduplication;
+using MemoryIndexer.Intelligence.Evaluation;
 using MemoryIndexer.Intelligence.KnowledgeGraph;
 using MemoryIndexer.Intelligence.Scoring;
 using MemoryIndexer.Intelligence.Search;
 using MemoryIndexer.Intelligence.SelfEditing;
 using MemoryIndexer.Intelligence.Security;
+using MemoryIndexer.Intelligence.Security.MultiTenant;
 using MemoryIndexer.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.Storage.InMemory;
@@ -141,7 +143,26 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IPiiDetector, RegexPiiDetector>();
         services.TryAddSingleton<IPromptInjectionDetector, PromptInjectionDetector>();
 
-        // Register observability services (Phase 4)
+        // Register rate limiting (Phase 4.2)
+        services.TryAddSingleton<RateLimitOptions>();
+        services.TryAddSingleton<IRateLimiter, SlidingWindowRateLimiter>();
+
+        // Register memory lineage tracking (Phase 4.2)
+        services.TryAddSingleton<IMemoryLineageTracker, InMemoryLineageTracker>();
+
+        // Register multi-tenant services (Phase 4.3)
+        services.TryAddSingleton<AsyncLocalTenantContextAccessor>();
+        services.TryAddSingleton<ITenantContext>(sp => sp.GetRequiredService<AsyncLocalTenantContextAccessor>());
+        services.TryAddSingleton<ITenantContextAccessor>(sp => sp.GetRequiredService<AsyncLocalTenantContextAccessor>());
+        services.TryAddSingleton<IAuthorizationService, DefaultAuthorizationService>();
+        services.TryAddSingleton<IAuditLogger, InMemoryAuditLogger>();
+
+        // Register evaluation services (Phase 4.4)
+        services.TryAddSingleton<QualityTargets>();
+        services.TryAddSingleton<IRetrievalEvaluator, DefaultRetrievalEvaluator>();
+        services.TryAddSingleton<ILoCoMoEvaluator, LoCoMoEvaluator>();
+
+        // Register observability services (Phase 4.5)
         services.TryAddSingleton<InstrumentedMemoryService>();
 
         return services;

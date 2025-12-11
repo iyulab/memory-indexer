@@ -29,6 +29,103 @@ public sealed class MemoryIndexerOptions
     /// Search configuration.
     /// </summary>
     public SearchOptions Search { get; set; } = new();
+
+    /// <summary>
+    /// Security configuration.
+    /// </summary>
+    public SecurityOptions Security { get; set; } = new();
+
+    /// <summary>
+    /// Multi-tenant configuration.
+    /// </summary>
+    public MultiTenantOptions MultiTenant { get; set; } = new();
+}
+
+/// <summary>
+/// Security configuration options.
+/// </summary>
+public sealed class SecurityOptions
+{
+    /// <summary>
+    /// Whether PII detection is enabled.
+    /// </summary>
+    public bool EnablePiiDetection { get; set; } = true;
+
+    /// <summary>
+    /// Minimum confidence for PII detection.
+    /// </summary>
+    public float PiiMinConfidence { get; set; } = 0.5f;
+
+    /// <summary>
+    /// Whether prompt injection detection is enabled.
+    /// </summary>
+    public bool EnableInjectionDetection { get; set; } = true;
+
+    /// <summary>
+    /// Maximum allowed risk level for inputs.
+    /// </summary>
+    public int MaxAllowedRiskLevel { get; set; } = 1; // Low
+
+    /// <summary>
+    /// Whether rate limiting is enabled.
+    /// </summary>
+    public bool EnableRateLimiting { get; set; } = true;
+
+    /// <summary>
+    /// Permits per minute for store operations.
+    /// </summary>
+    public int StorePermitsPerMinute { get; set; } = 60;
+
+    /// <summary>
+    /// Permits per minute for recall operations.
+    /// </summary>
+    public int RecallPermitsPerMinute { get; set; } = 100;
+
+    /// <summary>
+    /// Global permits per minute.
+    /// </summary>
+    public int GlobalPermitsPerMinute { get; set; } = 200;
+
+    /// <summary>
+    /// Whether audit logging is enabled.
+    /// </summary>
+    public bool EnableAuditLogging { get; set; } = true;
+
+    /// <summary>
+    /// Whether memory lineage tracking is enabled.
+    /// </summary>
+    public bool EnableLineageTracking { get; set; } = true;
+}
+
+/// <summary>
+/// Multi-tenant configuration options.
+/// </summary>
+public sealed class MultiTenantOptions
+{
+    /// <summary>
+    /// Whether multi-tenant mode is enabled.
+    /// </summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Header name for tenant identification.
+    /// </summary>
+    public string TenantHeaderName { get; set; } = "X-Tenant-Id";
+
+    /// <summary>
+    /// Whether to enforce tenant isolation.
+    /// </summary>
+    public bool EnforceIsolation { get; set; } = true;
+
+    /// <summary>
+    /// Default tenant ID when none is specified.
+    /// </summary>
+    public string? DefaultTenantId { get; set; }
+
+    /// <summary>
+    /// Whether to use per-tenant encryption.
+    /// </summary>
+    public bool EnablePerTenantEncryption { get; set; }
 }
 
 /// <summary>

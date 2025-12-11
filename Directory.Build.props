@@ -10,18 +10,19 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Authors>Memory Indexer Team</Authors>
-    <Company>Memory Indexer</Company>
+    <Authors>iyulab</Authors>
+    <Company>iyulab</Company>
     <Product>Memory Indexer</Product>
-    <Copyright>Copyright (c) 2025 Memory Indexer Team</Copyright>
-    <RepositoryUrl>https://github.com/memory-indexer/memory-indexer</RepositoryUrl>
+    <Copyright>Copyright (c) 2025 iyulab</Copyright>
+    <RepositoryUrl>https://github.com/iyulab/memory-indexer</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <PropertyGroup>
     <Version>0.1.0</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- PackageReadmeFile is set per project where README exists -->
+    <IsPackable>false</IsPackable> <!-- Default: only SDK is packable -->
   </PropertyGroup>
 
   <ItemGroup>

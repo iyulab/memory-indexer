@@ -1,0 +1,116 @@
+name: Publish NuGet Package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Directory.Build.props'
+  workflow_dispatch:
+    inputs:
+      force_publish:
+        description: 'Force publish even if version unchanged'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Extract Version from Directory.Build.props
+      id: version
+      run: |
+        VERSION=$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+
+    - name: Check if version changed
+      id: version_check
+      run: |
+        git diff HEAD~1 HEAD -- Directory.Build.props | grep -q '<Version>' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run CI-safe Tests
+      run: |
+        dotnet test tests/MemoryIndexer.Core.Tests --no-build --configuration Release --verbosity minimal
+        dotnet test tests/MemoryIndexer.Storage.Tests --no-build --configuration Release --verbosity minimal --filter "Category!=LocalModel"
+        dotnet test tests/MemoryIndexer.Intelligence.Tests --no-build --configuration Release --verbosity minimal --filter "Category!=LocalModel"
+
+    - name: Pack SDK
+      if: steps.version_check.outputs.changed == 'true' || github.event.inputs.force_publish == 'true'
+      run: |
+        dotnet pack src/MemoryIndexer.Sdk/MemoryIndexer.Sdk.csproj \
+          --no-build \
+          --configuration Release \
+          --output ./packages
+        echo "Package created:"
+        ls -la ./packages/
+
+    - name: Push to NuGet.org
+      if: (steps.version_check.outputs.changed == 'true' || github.event.inputs.force_publish == 'true') && github.ref == 'refs/heads/main'
+      env:
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      run: |
+        if [ -z "$NUGET_API_KEY" ]; then
+          echo "NUGET_API_KEY is not set. Skipping NuGet.org publish."
+          exit 0
+        fi
+        dotnet nuget push ./packages/*.nupkg \
+          --api-key $NUGET_API_KEY \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate
+
+    - name: Push to GitHub Packages
+      if: (steps.version_check.outputs.changed == 'true' || github.event.inputs.force_publish == 'true') && github.ref == 'refs/heads/main'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        dotnet nuget push ./packages/*.nupkg \
+          --api-key $GITHUB_TOKEN \
+          --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json \
+          --skip-duplicate
+
+    - name: Upload Package Artifact
+      if: steps.version_check.outputs.changed == 'true' || github.event.inputs.force_publish == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-packages-${{ steps.version.outputs.version }}
+        path: ./packages/*.nupkg
+        retention-days: 30
+
+    - name: Summary
+      run: |
+        echo "## 📦 NuGet Package Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Version Changed:** ${{ steps.version_check.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ steps.version_check.outputs.changed }}" == "true" ] || [ "${{ github.event.inputs.force_publish }}" == "true" ]; then
+          echo "✅ Package was built and published" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⏭️ Package build skipped (version unchanged)" >> $GITHUB_STEP_SUMMARY
+        fi
