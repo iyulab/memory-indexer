@@ -1,4 +1,4 @@
-using LocalEmbedder;
+using LocalAI.Embedder;
 using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Embedding.Providers;
@@ -56,7 +56,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
                 return;
 
             // Load the shared embedding model
-            EmbeddingModel = await LocalEmbedder.LocalEmbedder.LoadAsync(ModelId);
+            EmbeddingModel = await LocalEmbedder.LoadAsync(ModelId);
 
             // Create shared embedding service
             var options = new MemoryIndexerOptions
@@ -83,15 +83,19 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
         }
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        Dispose();
-        return Task.CompletedTask;
+        if (EmbeddingModel != null)
+        {
+            await EmbeddingModel.DisposeAsync();
+        }
+        MemoryCache.Dispose();
+        _initLock.Dispose();
     }
 
     public void Dispose()
     {
-        EmbeddingModel?.Dispose();
+        // IAsyncDisposable is handled in DisposeAsync
         MemoryCache.Dispose();
         _initLock.Dispose();
     }

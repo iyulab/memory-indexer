@@ -1,5 +1,5 @@
 using FluentAssertions;
-using LocalEmbedder;
+using LocalAI.Embedder;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
 using MemoryIndexer.Storage.InMemory;
@@ -38,17 +38,19 @@ public class ConversationSimulationTests : IAsyncLifetime
         _output.WriteLine("=== Initializing Conversation Simulation Tests ===");
         _output.WriteLine("Loading embedding model (all-MiniLM-L6-v2)...");
 
-        _model = await LocalEmbedder.LocalEmbedder.LoadAsync("all-MiniLM-L6-v2");
+        _model = await LocalEmbedder.LoadAsync("all-MiniLM-L6-v2");
         _memoryStore = new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance);
 
         _output.WriteLine($"Model loaded: {_model.ModelId}, Dimensions: {_model.Dimensions}");
         _output.WriteLine("");
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        _model?.Dispose();
-        return Task.CompletedTask;
+        if (_model != null)
+        {
+            await _model.DisposeAsync();
+        }
     }
 
     #region Short-Term Memory Tests (Single Session)

@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using LocalEmbedder;
+using LocalAI.Embedder;
 using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
@@ -10,14 +10,16 @@ using Microsoft.Extensions.Options;
 namespace MemoryIndexer.Embedding.Providers;
 
 /// <summary>
-/// Embedding service using LocalEmbedder for local ONNX-based model inference.
+/// Embedding service using LocalAI.Embedder for local ONNX-based model inference.
 /// Supports models like all-MiniLM-L6-v2 (384 dims), bge-small-en-v1.5 (384 dims),
 /// bge-base-en-v1.5 (768 dims), and other ONNX embedding models.
 /// </summary>
 /// <remarks>
-/// LocalEmbedder is an open-source library by iyulab that provides fast,
+/// LocalAI.Embedder is an open-source library by iyulab that provides fast,
 /// local embedding generation using ONNX Runtime. Models are downloaded
 /// automatically on first use and cached locally.
+///
+/// This package is the successor to the archived LocalEmbedder package.
 ///
 /// Note: This service doesn't extend CachedEmbeddingServiceBase because it requires
 /// IAsyncDisposable for model cleanup and has lazy model loading that differs
@@ -197,7 +199,7 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
             _logger.LogInformation("Loading local embedding model: {ModelId}", _modelId);
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            _model = await LocalEmbedder.LocalEmbedder.LoadAsync(_modelId);
+            _model = await LocalEmbedder.LoadAsync(_modelId);
 
             sw.Stop();
             _logger.LogInformation(
@@ -232,9 +234,10 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
             return;
 
         _disposed = true;
-        _model?.Dispose();
+        if (_model != null)
+        {
+            await _model.DisposeAsync();
+        }
         _initLock.Dispose();
-
-        await Task.CompletedTask;
     }
 }

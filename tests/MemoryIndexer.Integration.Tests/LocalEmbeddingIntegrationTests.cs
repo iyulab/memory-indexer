@@ -1,5 +1,5 @@
 using FluentAssertions;
-using LocalEmbedder;
+using LocalAI.Embedder;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
 using MemoryIndexer.Integration.Tests.Fixtures;
@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 namespace MemoryIndexer.Integration.Tests;
 
 /// <summary>
-/// Integration tests using LocalEmbedder for real embedding generation.
+/// Integration tests using LocalAI.Embedder for real embedding generation.
 /// These tests verify the full memory store workflow with actual vector embeddings.
 /// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
@@ -91,8 +91,8 @@ public class LocalEmbeddingIntegrationTests
         var similarEmbedding = await _fixture.EmbeddingModel.EmbedAsync(similarText);
         var unrelatedEmbedding = await _fixture.EmbeddingModel.EmbedAsync(unrelatedText);
 
-        var similarScore = LocalEmbedder.LocalEmbedder.CosineSimilarity(baseEmbedding, similarEmbedding);
-        var unrelatedScore = LocalEmbedder.LocalEmbedder.CosineSimilarity(baseEmbedding, unrelatedEmbedding);
+        var similarScore = LocalEmbedder.CosineSimilarity(baseEmbedding, similarEmbedding);
+        var unrelatedScore = LocalEmbedder.CosineSimilarity(baseEmbedding, unrelatedEmbedding);
 
         // Assert
         _output.WriteLine($"Base: '{baseText}'");
@@ -253,7 +253,7 @@ public class LocalEmbeddingIntegrationTests
         foreach (var (text, expectedSimilar) in variations)
         {
             var embedding = await _fixture.EmbeddingModel!.EmbedAsync(text);
-            var similarity = LocalEmbedder.LocalEmbedder.CosineSimilarity(originalEmbedding, embedding);
+            var similarity = LocalEmbedder.CosineSimilarity(originalEmbedding, embedding);
 
             var isSimilar = similarity > 0.6f; // Threshold for "similar"
             _output.WriteLine($"  [{similarity:F4}] {(isSimilar ? "SIMILAR" : "DIFFERENT")} - '{text}'");

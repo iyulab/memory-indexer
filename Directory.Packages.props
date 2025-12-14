@@ -34,7 +34,7 @@
     <PackageVersion Include="Qdrant.Client" Version="1.16.1" />
 
     <!-- Numerics -->
-    <PackageVersion Include="System.Numerics.Tensors" Version="10.0.0" />
+    <PackageVersion Include="System.Numerics.Tensors" Version="10.0.1" />
 
     <!-- Build -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
@@ -47,9 +47,9 @@
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
 
-    <!-- Local Embedding & Reranking (iyulab open source) -->
-    <PackageVersion Include="LocalEmbedder" Version="0.3.0" />
-    <PackageVersion Include="LocalReranker" Version="0.1.0" />
+    <!-- Local AI (iyulab open source - successor to LocalEmbedder/LocalReranker) -->
+    <PackageVersion Include="LocalAI.Embedder" Version="0.7.0" />
+    <PackageVersion Include="LocalAI.Reranker" Version="0.7.0" />
 
     <!-- OpenTelemetry Observability -->
     <PackageVersion Include="OpenTelemetry" Version="1.11.2" />

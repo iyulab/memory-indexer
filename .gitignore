@@ -94,6 +94,7 @@ appsettings.Local.json
 .serena/
 research-docs/
 local-docs/
-CLAUDE.local.md
+CLAUDE.md
+*.local.md
 .env
 nupkg/

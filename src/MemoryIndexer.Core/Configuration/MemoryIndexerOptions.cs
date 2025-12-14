@@ -325,7 +325,7 @@ public enum EmbeddingProvider
     Custom,
 
     /// <summary>
-    /// Local ONNX-based embedding using LocalEmbedder.
+    /// Local ONNX-based embedding using LocalAI.Embedder.
     /// </summary>
     Local
 }
