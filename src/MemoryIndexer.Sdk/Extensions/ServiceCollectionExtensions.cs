@@ -146,6 +146,9 @@ public static class ServiceCollectionExtensions
         // Register summarization services (Phase 3)
         services.TryAddSingleton<ISummarizationService, ExtractiveSummarizer>();
 
+        // Register parent-child chunk manager (Phase 6)
+        services.TryAddSingleton<IParentChildChunkManager, ParentChildChunkManager>();
+
         // Register compression services (Phase 3)
         services.TryAddSingleton<IPromptCompressor, LLMLinguaCompressor>();
 
