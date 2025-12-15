@@ -53,6 +53,16 @@ public static class ServiceCollectionExtensions
         // Register core services
         services.TryAddSingleton<MemoryService>();
 
+        // Register VCM services (Phase 5)
+        services.AddOptions<WorkingMemoryOptions>()
+            .BindConfiguration("MemoryIndexer:VCM:WorkingMemory");
+        services.AddOptions<VCMOptions>()
+            .BindConfiguration("MemoryIndexer:VCM");
+
+        services.TryAddSingleton<IWorkingMemory, WorkingMemoryService>();
+        services.TryAddSingleton<IMemoryPrimitives, MemoryPrimitivesService>();
+        services.TryAddSingleton<IVirtualContextManager, VirtualContextManager>();
+
         // Register storage based on configuration
         services.TryAddSingleton<IMemoryStore>(sp =>
         {

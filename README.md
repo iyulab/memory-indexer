@@ -1,44 +1,138 @@
 # Memory Indexer
 
-A .NET MCP server for LLM long-term memory management.
+**Cognitive Memory System for LLMs** — An MCP server implementing human-inspired memory architecture with 3-Tier Virtual Context Management.
 
 [![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
-[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-282%20passing-brightgreen)]()
 
-## Overview
+## Vision
 
-Memory Indexer is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that provides semantic memory storage and retrieval for LLM applications. It enables AI assistants to maintain persistent memory across conversations.
+LLMs face a fundamental constraint: **finite context windows**. Memory Indexer solves this by implementing a cognitive architecture inspired by human memory systems—where forgetting is not a bug, but a feature.
 
-### Key Benefits
+> *"The goal of memory is not to transmit the most accurate information over time, but to guide and optimize intelligent decision-making by only preserving valuable information."*
+> — Richards & Frankland (2017), "The Persistence and Transience of Memory"
 
-| Scenario | Without Memory | With Memory | Improvement |
-|----------|----------------|-------------|-------------|
-| **Short-term recall** | 50% | 83% | +33% |
-| **Cross-session recall** | 0% | 79% | **+79%** |
-| **Topic switching** | 0% | 93% | **+93%** |
+## Architecture
 
-See the full [Effectiveness Report](docs/EFFECTIVENESS_REPORT.md) for detailed analysis.
+### 3-Tier Virtual Context Management (VCM)
+
+Memory Indexer operates like an **operating system for LLM memory**, implementing virtual memory paging between three tiers:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  L1: Working Memory (In-Context)                                │
+│  ├─ Capacity: 4-7 chunks (Baddeley's Working Memory Model)      │
+│  ├─ Latency: ~microseconds                                      │
+│  ├─ Storage: IMemoryCache                                       │
+│  └─ Scope: Current task context                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  L2: Session Memory                                             │
+│  ├─ Capacity: Session-scoped                                    │
+│  ├─ Latency: ~milliseconds                                      │
+│  ├─ Storage: Vector DB (Qdrant/SQLite-vec)                      │
+│  └─ Scope: Current conversation session                         │
+├─────────────────────────────────────────────────────────────────┤
+│  L3: User Memory (Long-term)                                    │
+│  ├─ Capacity: Unlimited                                         │
+│  ├─ Latency: ~milliseconds to seconds                           │
+│  ├─ Storage: Hybrid (Vector + Knowledge Graph)                  │
+│  └─ Scope: Cross-session persistent knowledge                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Memory Primitives
+
+Twelve fundamental operations form the "instruction set" of the memory system:
+
+| Primitive | Description | Research Basis |
+|-----------|-------------|----------------|
+| **Encode** | Store new memory with embedding | Tulving's Encoding Specificity |
+| **Retrieve** | Semantic search with hybrid scoring | RRF + DAT |
+| **Update** | Modify existing memory content | Reconsolidation Theory |
+| **Delete** | Soft delete with tombstone | Intentional Forgetting |
+| **Label** | Classify memory type | Tulving's Memory Types |
+| **Split** | Decompose into semantic units | Chunking Theory |
+| **Merge** | Consolidate related memories | Memory Consolidation |
+| **Promote** | Move to higher tier (L2→L1) | Page-In |
+| **Demote** | Move to lower tier (L1→L2) | Page-Out |
+| **Lock** | Prevent automatic eviction | System Prompts |
+| **Summarize** | Compress while preserving essence | Gist Extraction |
+| **Expire** | TTL-based automatic cleanup | Temporal Decay |
+
+### Ebbinghaus Forgetting Curve
+
+Memory retention follows the exponential decay formula:
+
+```
+R = e^(-t/S)
+
+Where:
+  R = Retention score (0.0 to 1.0)
+  t = Time since last access (days)
+  S = Stability factor (based on memory stability level)
+```
+
+**Stability Levels:**
+
+| Level | Half-life | Description |
+|-------|-----------|-------------|
+| Volatile | ~1 day | Newly encoded, high forgetting rate |
+| Stabilizing | ~7 days | Accessed 2-3 times, moderate retention |
+| Stable | ~30 days | Frequently accessed, strong retention |
+| Consolidated | ~365 days | Core knowledge, minimal forgetting |
+| Permanent | ∞ | Locked memory, no decay |
+
+**Spacing Effect**: Repeated access increases stability:
+- 2+ accesses → Stabilizing
+- 5+ accesses → Stable
+- 10+ accesses → Consolidated
 
 ## Features
 
-- **Semantic Search** - Vector-based similarity search with hybrid retrieval (dense + sparse)
-- **Full-Text Search** - FTS5-based BM25 ranking with trigram tokenizer (CJK/multilingual)
-- **Hybrid Search** - RRF (Reciprocal Rank Fusion) combining vector and text search
-- **Query Expansion** - Automatic synonym and context expansion for better recall
-- **MCP Integration** - Standard MCP tools for Claude Desktop and other MCP clients
-- **Dual Storage** - SQLite-vec (local) and Qdrant (production) backends
-- **Local Embeddings** - Built-in support for local embedding models (all-MiniLM-L6-v2)
-- **SDK Package** - Embeddable NuGet package for .NET applications
+### Hybrid Search with Dynamic Alpha Tuning (DAT)
 
-## Quick Start
+Combines multiple retrieval strategies with query-adaptive weights:
 
-### Build & Run
+```
+Score = α·Semantic + β·Keyword + γ·Recency + δ·Importance
+
+Where α, β, γ, δ are dynamically tuned per query type.
+```
+
+### Memory Type Classification
+
+Based on Tulving's memory taxonomy:
+
+- **Episodic**: Event-based memories with temporal context
+- **Semantic**: Factual knowledge and concepts
+- **Procedural**: How-to knowledge and workflows
+- **Fact**: Structured assertions with confidence scores
+
+### Knowledge Graph Integration
+
+Temporal knowledge tracking with relation management:
+
+```csharp
+// Fact supersession chain
+Memory["CEO of Apple"] = "Tim Cook"  // SupersedesId: null
+Memory["CEO of Apple"] = "New CEO"   // SupersedesId: previous memory ID
+```
+
+## Installation
+
+### As MCP Server
 
 ```bash
+# Clone repository
+git clone https://github.com/iyulab/memory-indexer.git
+cd memory-indexer
+
+# Build
 dotnet build
+
+# Run MCP server
 dotnet run --project src/MemoryIndexer.Console
 ```
 
@@ -50,184 +144,130 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 {
   "mcpServers": {
     "memory-indexer": {
-      "command": "path/to/memory-indexer.exe"
+      "command": "dotnet",
+      "args": ["run", "--project", "path/to/MemoryIndexer.Console"]
     }
   }
 }
 ```
 
-## Storage Backend Selection
+### As SDK
 
-Memory Indexer supports multiple storage backends optimized for different use cases:
+```bash
+dotnet add package MemoryIndexer.Sdk
+```
 
-### Storage Options
+```csharp
+services.AddMemoryIndexer(options =>
+{
+    options.Storage.Type = StorageType.SqliteVec;
+    options.Embedding.Provider = EmbeddingProvider.Ollama;
+    options.Embedding.Model = "bge-m3";
+});
+```
 
-| Storage | Best For | Features | Dependencies |
-|---------|----------|----------|--------------|
-| **SQLite-vec** | Local dev, SDK embedded, MCP stdio | Single file, FTS5, hybrid search | Zero external |
-| **Qdrant** | Production, high-scale | HNSW index, distributed, BM42 | Qdrant server |
-| **InMemory** | Testing only | Fast, ephemeral | None |
+## MCP Tools
 
-### Usage Scenarios
+| Tool | Description |
+|------|-------------|
+| `memory_store` | Encode new memory with automatic embedding |
+| `memory_recall` | Hybrid semantic search with relevance scoring |
+| `memory_get` | Retrieve specific memory by ID |
+| `memory_list` | List memories with filtering options |
+| `memory_update` | Update memory content and metadata |
+| `memory_delete` | Soft delete memory |
 
-| Scenario | Recommended Storage | Configuration |
-|----------|---------------------|---------------|
-| **SDK embedded in app** | SQLite-vec | `appsettings.sdk-embedded.json` |
-| **MCP server (stdio)** | SQLite-vec | `appsettings.mcp-server.json` |
-| **Production deployment** | Qdrant | `appsettings.qdrant-production.json` |
-| **Unit testing** | InMemory | `Storage.Type = "InMemory"` |
-
-### SQLite-vec Configuration
+## Configuration
 
 ```json
 {
   "MemoryIndexer": {
     "Storage": {
       "Type": "SqliteVec",
-      "Sqlite": {
-        "DatabasePath": "memories.db",
-        "UseWalMode": true,
-        "FtsTokenizer": "trigram",
-        "CacheSizeKb": 2000,
-        "EnableVectorSearch": true,
-        "EnableFullTextSearch": true,
-        "BusyTimeoutMs": 5000
-      }
-    },
-    "Embedding": {
-      "Provider": "Local",
-      "Model": "all-MiniLM-L6-v2",
-      "Dimensions": 384
-    }
-  }
-}
-```
-
-### Qdrant Configuration
-
-```json
-{
-  "MemoryIndexer": {
-    "Storage": {
-      "Type": "Qdrant",
-      "Qdrant": {
-        "Host": "localhost",
-        "Port": 6334,
-        "ApiKey": null,
-        "CollectionName": "memories"
-      }
+      "ConnectionString": "Data Source=memory.db"
     },
     "Embedding": {
       "Provider": "Ollama",
-      "Model": "nomic-embed-text",
-      "Dimensions": 768,
-      "Endpoint": "http://localhost:11434"
+      "Model": "bge-m3",
+      "Dimensions": 1024
+    },
+    "VCM": {
+      "WorkingMemoryCapacity": 7,
+      "EvictionThreshold": 0.1,
+      "ConsolidationInterval": "01:00:00"
+    },
+    "Search": {
+      "DefaultLimit": 10,
+      "RRFConstant": 60,
+      "EnableDAT": true
     }
   }
 }
 ```
 
-### FTS5 Tokenizer Options
+## Research Foundation
 
-| Tokenizer | Use Case | Description |
-|-----------|----------|-------------|
-| `trigram` | CJK, multilingual | Best for Korean, Chinese, Japanese |
-| `unicode61` | Unicode standard | General multilingual support |
-| `porter` | English only | English stemming |
+Memory Indexer is built on established research in cognitive science and AI:
 
-## MCP Tools
+### Cognitive Science
+- **Baddeley's Working Memory Model** (1974) — 4-7 chunk capacity limitation
+- **Tulving's Memory Classification** (1972) — Episodic vs Semantic memory
+- **Ebbinghaus Forgetting Curve** (1885) — Exponential memory decay
+- **Spacing Effect** — Distributed practice strengthens retention
 
-| Tool | Description |
-|------|-------------|
-| `memory_store` | Store content with semantic indexing |
-| `memory_recall` | Search memories by semantic similarity |
-| `memory_get` | Retrieve a specific memory by ID |
-| `memory_list` | List memories with optional filters |
-| `memory_update` | Update memory content or metadata |
-| `memory_delete` | Delete a memory |
+### AI Memory Systems
+- **MemGPT** (2023) — Virtual context management inspiration
+- **Mem0** — Factual memory with temporal tracking
+- **Generative Agents** (Stanford, 2023) — Importance scoring via LLM
 
-## SDK Usage
+### Information Retrieval
+- **Reciprocal Rank Fusion** — Multi-signal result combination
+- **BGE-M3** — State-of-the-art multilingual embeddings
+- **Hybrid Search** — Vector + keyword complementary retrieval
 
-```csharp
-// Add Memory Indexer to your application
-services.AddMemoryIndexer(options =>
-{
-    options.Storage.Type = StorageType.SqliteVec;
-    options.Storage.Sqlite = new SqliteOptions
-    {
-        DatabasePath = "app_memories.db",
-        UseWalMode = true
-    };
-    options.Embedding.Provider = EmbeddingProvider.Local;
-    options.Embedding.Model = "all-MiniLM-L6-v2";
-    options.Embedding.Dimensions = 384;
-});
+## Project Structure
 
-// Use the memory service
-var memoryService = serviceProvider.GetRequiredService<MemoryService>();
-await memoryService.StoreAsync(new MemoryUnit
-{
-    UserId = "user-123",
-    Content = "User prefers dark mode",
-    Type = MemoryType.Semantic
-});
+```
+src/
+├── MemoryIndexer.Core/          # Domain models and interfaces
+│   ├── Models/                  # MemoryUnit, MemoryTier, enums
+│   ├── Interfaces/              # IMemoryStore, IVirtualContextManager
+│   └── Services/                # MemoryService orchestration
+├── MemoryIndexer.Storage/       # Storage implementations
+│   ├── InMemory/                # Development/testing
+│   ├── Sqlite/                  # SQLite-vec persistent storage
+│   └── Qdrant/                  # Production vector database
+├── MemoryIndexer.Intelligence/  # AI/ML integrations
+│   ├── Embedding/               # BGE-M3 via Ollama/LocalAI
+│   ├── Reranking/               # LocalAI.Reranker integration
+│   └── Classification/          # Memory type classifier
+├── MemoryIndexer.Mcp/           # MCP protocol layer
+│   └── Tools/                   # MCP tool implementations
+├── MemoryIndexer.Console/       # CLI entry point
+└── MemoryIndexer.Sdk/           # NuGet package for embedding
 ```
 
-## Search Configuration
+## Success Metrics
 
-### Hybrid Search Weights
+Based on research benchmarks:
 
-```json
-{
-  "Search": {
-    "DenseWeight": 0.6,
-    "SparseWeight": 0.4,
-    "RrfK": 60,
-    "MmrLambda": 0.7
-  }
-}
-```
-
-- `DenseWeight`: Weight for vector similarity (0.0-1.0)
-- `SparseWeight`: Weight for BM25 text match (0.0-1.0)
-- `RrfK`: RRF constant (typically 60)
-- `MmrLambda`: MMR diversity parameter (higher = more relevance, lower = more diversity)
+| Metric | Target | Description |
+|--------|--------|-------------|
+| Memory Reuse Rate | ≥58.6% | Ratio of retrieved vs stored memories |
+| Net Efficiency Gain | 17-18% | Task completion improvement |
+| Context Utilization | <85% | Avoid fragility tipping point |
+| Retrieval Latency | <100ms | P95 search response time |
 
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
-- [Effectiveness Report](docs/EFFECTIVENESS_REPORT.md)
-- [Roadmap](docs/ROADMAP.md)
-
-## Project Status
-
-**v0.1.0 Released**: Full-featured memory management SDK.
-
-### Features
-- 6 core MCP tools + advanced search tools
-- **SQLite-vec storage** with FTS5 hybrid search
-- **Qdrant integration** for production scale
-- Local embedding support (all-MiniLM-L6-v2, 384 dimensions)
-- Hybrid search with BM25 + dense vectors + RRF fusion
-- Query expansion for improved recall
-- **Knowledge Graph** with entity extraction
-- **Self-editing memory** management
-- **PII detection** and prompt injection defense
-- **Multi-tenant isolation** with CTE-based pre-filtering
-- **OpenTelemetry** observability (tracing & metrics)
-- **LoCoMo benchmark** evaluation suite
-
-### Test Coverage
-- 282 tests (Core, Storage, Intelligence, Integration)
-- Evaluation metrics: Recall, Precision, MRR, NDCG
-
-## Installation
-
-```bash
-# NuGet Package
-dotnet add package MemoryIndexer
-```
+- [Implementation Plan](local-docs/IMPLEMENTATION_PLAN.md)
+- [Refactoring Plan](local-docs/REFACTORING_PLAN_V2.md)
 
 ## License
 
 MIT
+
+---
+
+*"Memory is not about the past. It's about the future."* — Endel Tulving
