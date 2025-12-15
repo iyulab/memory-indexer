@@ -27,7 +27,6 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
-    private bool _initializationFailed;
     private string? _initializationError;
 
     /// <summary>
@@ -35,6 +34,11 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
     /// Returns false if ONNX tests are skipped or initialization failed.
     /// </summary>
     public bool IsAvailable { get; private set; }
+
+    /// <summary>
+    /// Gets whether initialization failed.
+    /// </summary>
+    public bool InitializationFailed { get; private set; }
 
     /// <summary>
     /// Gets the initialization error message if initialization failed.
@@ -77,7 +81,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
                 return;
 
 #if SKIP_ONNX_TESTS
-            _initializationFailed = true;
+            InitializationFailed = true;
             _initializationError = "ONNX tests are skipped due to native binary incompatibility with .NET 10. " +
                                    "The SKIP_ONNX_TESTS compile constant is defined.";
             IsAvailable = false;
@@ -111,7 +115,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
             }
             catch (Exception ex)
             {
-                _initializationFailed = true;
+                InitializationFailed = true;
                 _initializationError = $"Failed to initialize ONNX embedding model: {ex.Message}. " +
                                       "This is likely due to ONNX Runtime native binary incompatibility with the current .NET version.";
                 IsAvailable = false;
