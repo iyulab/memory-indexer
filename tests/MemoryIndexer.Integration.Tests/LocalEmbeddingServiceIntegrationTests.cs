@@ -1,3 +1,4 @@
+#if !SKIP_ONNX_TESTS
 using FluentAssertions;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
@@ -14,6 +15,10 @@ namespace MemoryIndexer.Integration.Tests;
 /// Tests the SDK's embedding service integration with LocalAI.Embedder.
 /// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
+/// <remarks>
+/// These tests are skipped when SKIP_ONNX_TESTS is defined due to ONNX Runtime
+/// native binary incompatibility with .NET 10.
+/// </remarks>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
 [Trait("Category", "LocalModel")]
@@ -36,6 +41,8 @@ public class LocalEmbeddingServiceIntegrationTests
     [Fact]
     public async Task EmbeddingService_ShouldBeResolvable()
     {
+        _fixture.EnsureAvailable();
+
         // Assert
         _fixture.EmbeddingService.Should().NotBeNull();
         _fixture.EmbeddingService!.Dimensions.Should().Be(384);
@@ -49,6 +56,8 @@ public class LocalEmbeddingServiceIntegrationTests
     [Fact]
     public async Task GenerateEmbedding_ThroughService_ReturnsValidVector()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange
         var text = "This is a test sentence for embedding generation via DI.";
 
@@ -66,6 +75,8 @@ public class LocalEmbeddingServiceIntegrationTests
     [Fact]
     public async Task GenerateBatchEmbeddings_ThroughService_ReturnsMultipleVectors()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange
         var texts = new[]
         {
@@ -90,6 +101,8 @@ public class LocalEmbeddingServiceIntegrationTests
     [Fact]
     public async Task EmbeddingCaching_WorksCorrectly()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange
         var text = $"This text should be cached for performance - {Guid.NewGuid()}.";
 
@@ -118,6 +131,8 @@ public class LocalEmbeddingServiceIntegrationTests
     [Fact]
     public async Task FullMemoryWorkflow_WithLocalEmbeddings()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange
         var memories = new[]
         {
@@ -169,6 +184,8 @@ public class LocalEmbeddingServiceIntegrationTests
     [Fact]
     public async Task SemanticSimilarity_ProducesExpectedResults()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange
         var baseText = "How to train a machine learning model?";
         var similarText = "What are the steps to build an ML model?";
@@ -196,6 +213,8 @@ public class LocalEmbeddingServiceIntegrationTests
     [Fact]
     public async Task ServiceDimensions_MatchModelConfiguration()
     {
+        _fixture.EnsureAvailable();
+
         // The configured model is all-MiniLM-L6-v2 with 384 dimensions
         _fixture.EmbeddingService!.Dimensions.Should().Be(384);
 
@@ -223,3 +242,4 @@ public class LocalEmbeddingServiceIntegrationTests
         return denominator == 0 ? 0 : dotProduct / denominator;
     }
 }
+#endif

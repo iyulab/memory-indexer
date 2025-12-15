@@ -1,3 +1,4 @@
+#if !SKIP_ONNX_TESTS
 using FluentAssertions;
 using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
@@ -20,6 +21,10 @@ namespace MemoryIndexer.Integration.Tests;
 /// Integration tests for enhanced search quality using QueryExpander and HybridSearch.
 /// Tests improvements over baseline vector-only search.
 /// </summary>
+/// <remarks>
+/// These tests are skipped when SKIP_ONNX_TESTS is defined due to ONNX Runtime
+/// native binary incompatibility with .NET 10.
+/// </remarks>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
 [Trait("Category", "QualityImprovement")]
@@ -557,3 +562,4 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         return (float)foundKeywords.Count / expectedKeywords.Length;
     }
 }
+#endif

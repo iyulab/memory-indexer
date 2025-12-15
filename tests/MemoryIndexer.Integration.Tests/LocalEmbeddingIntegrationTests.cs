@@ -1,3 +1,4 @@
+#if !SKIP_ONNX_TESTS
 using FluentAssertions;
 using LocalAI.Embedder;
 using MemoryIndexer.Core.Interfaces;
@@ -15,6 +16,10 @@ namespace MemoryIndexer.Integration.Tests;
 /// These tests verify the full memory store workflow with actual vector embeddings.
 /// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
+/// <remarks>
+/// These tests are skipped when SKIP_ONNX_TESTS is defined due to ONNX Runtime
+/// native binary incompatibility with .NET 10.
+/// </remarks>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
 [Trait("Category", "LocalModel")]
@@ -37,6 +42,9 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task GenerateEmbedding_ReturnsValidVector()
     {
+        // Skip if fixture not available
+        _fixture.EnsureAvailable();
+
         // Arrange
         var text = "This is a test sentence for embedding generation.";
 
@@ -57,6 +65,8 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task GenerateBatchEmbeddings_ReturnsMultipleVectors()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange
         var texts = new[]
         {
@@ -81,6 +91,8 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task SimilarTexts_ShouldHaveHigherCosineSimilarity()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange
         var baseText = "How to implement a REST API in Python?";
         var similarText = "What is the best way to create REST APIs using Python Flask?";
@@ -108,6 +120,8 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task MemoryStoreAndSearch_EndToEnd_WithRealEmbeddings()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange - Store memories with real embeddings
         var memories = new[]
         {
@@ -166,6 +180,8 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task SemanticSearch_MultipleQueries_ReturnsRelevantResults()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange - Store diverse memories
         var memories = new[]
         {
@@ -225,6 +241,8 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task DuplicateDetection_ByEmbeddingSimilarity()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange - Store a base memory
         var originalContent = "Machine learning is a subset of artificial intelligence.";
         var originalEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(originalContent);
@@ -274,6 +292,8 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task UpdateMemory_RecalculatesEmbedding()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange - Store initial memory
         var initialContent = "Python is great for scripting.";
         var initialEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(initialContent);
@@ -310,6 +330,8 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task PerformanceTest_BatchEmbeddingGeneration()
     {
+        _fixture.EnsureAvailable();
+
         // Arrange
         var texts = Enumerable.Range(1, 20)
             .Select(i => $"Sample text number {i} for testing batch embedding generation performance.")
@@ -347,6 +369,8 @@ public class LocalEmbeddingIntegrationTests
     [Fact]
     public async Task FullWorkflow_StoreSearchUpdateDelete()
     {
+        _fixture.EnsureAvailable();
+
         // 1. Store
         var content = "Kubernetes is a container orchestration platform.";
         var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content);
@@ -401,3 +425,4 @@ public class LocalEmbeddingIntegrationTests
         _output.WriteLine($"7. Verified deletion");
     }
 }
+#endif

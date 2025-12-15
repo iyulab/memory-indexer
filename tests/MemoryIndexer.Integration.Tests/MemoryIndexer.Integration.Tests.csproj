@@ -5,6 +5,11 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
+  <!-- Define constant for skipping ONNX-dependent tests until LocalAI/ONNX supports .NET 10 -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);SKIP_ONNX_TESTS</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\MemoryIndexer.Sdk\MemoryIndexer.Sdk.csproj" />
   </ItemGroup>

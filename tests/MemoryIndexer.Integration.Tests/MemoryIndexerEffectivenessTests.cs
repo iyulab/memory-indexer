@@ -1,3 +1,4 @@
+#if !SKIP_ONNX_TESTS
 using System.Text;
 using FluentAssertions;
 using MemoryIndexer.Core.Interfaces;
@@ -15,6 +16,10 @@ namespace MemoryIndexer.Integration.Tests;
 /// with and without Memory Indexer.
 /// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
+/// <remarks>
+/// These tests are skipped when SKIP_ONNX_TESTS is defined due to ONNX Runtime
+/// native binary incompatibility with .NET 10.
+/// </remarks>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
 [Trait("Category", "EffectivenessReport")]
@@ -49,6 +54,8 @@ public class MemoryIndexerEffectivenessTests
     [InlineData(500, "Extended")]
     public async Task ConversationLength_MetricsComparison(int messageCount, string lengthCategory)
     {
+        _fixture.EnsureAvailable();
+
         _output.WriteLine($"\n{'=',-80}");
         _output.WriteLine($" CONVERSATION LENGTH TEST: {lengthCategory} ({messageCount} messages)");
         _output.WriteLine($"{'=',-80}\n");
@@ -113,6 +120,8 @@ public class MemoryIndexerEffectivenessTests
     [Fact]
     public async Task ConversationLengthBands_ComprehensiveReport()
     {
+        _fixture.EnsureAvailable();
+
         _output.WriteLine("\n");
         _output.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
         _output.WriteLine("║       MEMORY INDEXER EFFECTIVENESS REPORT - CONVERSATION LENGTH BANDS       ║");
@@ -185,6 +194,8 @@ public class MemoryIndexerEffectivenessTests
     [Fact]
     public async Task ShortTermMemory_ImmediateRecall_Comparison()
     {
+        _fixture.EnsureAvailable();
+
         _output.WriteLine("\n");
         _output.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
         _output.WriteLine("║                    SHORT-TERM MEMORY COMPARISON                              ║");
@@ -284,6 +295,8 @@ public class MemoryIndexerEffectivenessTests
     [Fact]
     public async Task LongTermMemory_CrossSession_Comparison()
     {
+        _fixture.EnsureAvailable();
+
         _output.WriteLine("\n");
         _output.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
         _output.WriteLine("║                    LONG-TERM MEMORY COMPARISON                               ║");
@@ -404,6 +417,8 @@ public class MemoryIndexerEffectivenessTests
     [Fact]
     public async Task TopicSwitching_ContextMaintenance_Comparison()
     {
+        _fixture.EnsureAvailable();
+
         _output.WriteLine("\n");
         _output.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
         _output.WriteLine("║                    TOPIC SWITCHING COMPARISON                                ║");
@@ -531,6 +546,8 @@ public class MemoryIndexerEffectivenessTests
     [Fact]
     public async Task GenerateComprehensiveEffectivenessReport()
     {
+        _fixture.EnsureAvailable();
+
         var report = new StringBuilder();
 
         report.AppendLine();
@@ -813,3 +830,4 @@ public class MemoryIndexerEffectivenessTests
 
     #endregion
 }
+#endif

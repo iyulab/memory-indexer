@@ -1,3 +1,4 @@
+#if !SKIP_ONNX_TESTS
 using FluentAssertions;
 using LocalAI.Embedder;
 using MemoryIndexer.Core.Interfaces;
@@ -13,6 +14,10 @@ namespace MemoryIndexer.Integration.Tests;
 /// Comprehensive conversation simulation tests for evaluating memory quality.
 /// Tests short-term memory, long-term memory, topic switching, and recall accuracy.
 /// </summary>
+/// <remarks>
+/// These tests are skipped when SKIP_ONNX_TESTS is defined due to ONNX Runtime
+/// native binary incompatibility with .NET 10.
+/// </remarks>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
 [Trait("Category", "Simulation")]
@@ -728,3 +733,4 @@ public class ConversationSimulationTests : IAsyncLifetime
 
     #endregion
 }
+#endif
