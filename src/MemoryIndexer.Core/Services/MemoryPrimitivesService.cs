@@ -1,8 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
+using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MemoryIndexer.Core.Services;
 
@@ -19,6 +21,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
     private readonly IEmbeddingService _embeddingService;
     private readonly IScoringService _scoringService;
     private readonly IWorkingMemory _workingMemory;
+    private readonly IRerankerService? _rerankerService;
+    private readonly SearchOptions _searchOptions;
     private readonly ILogger<MemoryPrimitivesService> _logger;
 
     public MemoryPrimitivesService(
@@ -26,12 +30,16 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         IEmbeddingService embeddingService,
         IScoringService scoringService,
         IWorkingMemory workingMemory,
-        ILogger<MemoryPrimitivesService> logger)
+        IOptions<MemoryIndexerOptions> options,
+        ILogger<MemoryPrimitivesService> logger,
+        IRerankerService? rerankerService = null)
     {
         _memoryStore = memoryStore;
         _embeddingService = embeddingService;
         _scoringService = scoringService;
         _workingMemory = workingMemory;
+        _rerankerService = rerankerService;
+        _searchOptions = options.Value.Search;
         _logger = logger;
     }
 
@@ -447,12 +455,17 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         // Generate query embedding
         var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(request.Query, cancellationToken);
 
+        // Determine candidate limit based on re-ranking configuration
+        var candidateMultiplier = _searchOptions.EnableReranking && _rerankerService != null
+            ? _searchOptions.RerankCandidateMultiplier
+            : 2;
+
         // Build search options
         var searchOptions = new MemorySearchOptions
         {
             UserId = request.UserId,
             SessionId = request.SessionId,
-            Limit = request.Limit * 2, // Get extra for scoring/filtering
+            Limit = request.Limit * candidateMultiplier, // Get extra for re-ranking/scoring
             Types = request.Types,
             MinScore = request.MinScore
         };
@@ -462,20 +475,55 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         // Filter by tier if specified
         var filtered = request.Tiers != null
-            ? searchResults.Where(r => request.Tiers.Contains(r.Memory.Tier))
-            : searchResults;
+            ? searchResults.Where(r => request.Tiers.Contains(r.Memory.Tier)).ToList()
+            : searchResults.ToList();
+
+        // Apply cross-encoder re-ranking if enabled and available
+        IReadOnlyList<(MemorySearchResult Result, float RerankScore)>? rerankedResults = null;
+
+        if (_searchOptions.EnableReranking && _rerankerService != null && filtered.Count > 0)
+        {
+            _logger.LogDebug("Re-ranking {Count} candidates with cross-encoder", filtered.Count);
+
+            var candidates = filtered.Select(r => new RerankCandidate
+            {
+                Content = r.Memory.Content,
+                OriginalScore = r.Score,
+                MemoryId = r.Memory.Id,
+                Metadata = r
+            }).ToList();
+
+            var rerankResults = await _rerankerService.RerankAsync(
+                request.Query,
+                candidates,
+                Math.Min(request.Limit * 2, filtered.Count), // Get more than needed for final scoring
+                cancellationToken);
+
+            rerankedResults = rerankResults
+                .Select(rr => ((MemorySearchResult)rr.Metadata!, rr.Score))
+                .ToList();
+
+            _logger.LogDebug("Re-ranking complete. Top score: {TopScore:F4}",
+                rerankedResults.FirstOrDefault().RerankScore);
+        }
 
         // Calculate weights (DAT or manual)
         var weights = request.Weights ?? GetDefaultWeights();
 
-        // Re-rank with combined scoring
-        var results = filtered
-            .Select(r =>
+        // Build final results with combined scoring
+        var resultsSource = rerankedResults != null
+            ? rerankedResults.Select(rr => (rr.Result, RerankScore: (float?)rr.RerankScore))
+            : filtered.Select(r => (r, RerankScore: (float?)null));
+
+        var results = resultsSource
+            .Select(item =>
             {
-                var memory = r.Memory;
+                var memory = item.Item1.Memory;
+                var vectorScore = item.Item1.Score;
+                var rerankScore = item.RerankScore;
 
                 // Calculate individual scores
-                var semanticScore = r.Score;
+                var semanticScore = rerankScore ?? vectorScore; // Use rerank score if available
                 var recencyScore = CalculateRecencyScore(memory);
                 var importanceScore = memory.ImportanceScore;
                 var retentionScore = memory.CalculateRetention();
@@ -497,7 +545,9 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                         KeywordScore = 0, // TODO: Implement keyword scoring
                         RecencyScore = recencyScore,
                         ImportanceScore = importanceScore,
-                        RetentionScore = retentionScore
+                        RetentionScore = retentionScore,
+                        VectorScore = vectorScore,
+                        RerankScore = rerankScore
                     }
                 };
             })
@@ -516,7 +566,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             }
         }
 
-        _logger.LogDebug("Retrieved {Count} memories", results.Count);
+        _logger.LogDebug("Retrieved {Count} memories (reranking: {RerankEnabled})",
+            results.Count, rerankedResults != null);
 
         return results;
     }

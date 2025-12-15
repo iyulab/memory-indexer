@@ -409,4 +409,20 @@ public sealed class SearchOptions
     /// RRF k parameter for rank fusion.
     /// </summary>
     public int RrfK { get; set; } = 60;
+
+    /// <summary>
+    /// Model ID for re-ranking. Supported: bge-reranker-base, bge-reranker-large, bge-reranker-v2-m3.
+    /// </summary>
+    public string? RerankerModel { get; set; }
+
+    /// <summary>
+    /// Whether to enable re-ranking for search results.
+    /// </summary>
+    public bool EnableReranking { get; set; } = true;
+
+    /// <summary>
+    /// Initial candidate multiplier for re-ranking.
+    /// E.g., if topK=5 and multiplier=4, retrieves 20 candidates for re-ranking.
+    /// </summary>
+    public int RerankCandidateMultiplier { get; set; } = 4;
 }

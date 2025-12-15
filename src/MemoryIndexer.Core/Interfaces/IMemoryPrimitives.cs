@@ -560,7 +560,7 @@ public sealed class RetrieveResult
 public sealed class ScoreBreakdown
 {
     /// <summary>
-    /// Semantic similarity score.
+    /// Final semantic similarity score (rerank score if available, else vector score).
     /// </summary>
     public float SemanticScore { get; init; }
 
@@ -583,6 +583,16 @@ public sealed class ScoreBreakdown
     /// Retention score (from forgetting curve).
     /// </summary>
     public float RetentionScore { get; init; }
+
+    /// <summary>
+    /// Raw vector similarity score from embedding search.
+    /// </summary>
+    public float VectorScore { get; init; }
+
+    /// <summary>
+    /// Cross-encoder re-ranking score (null if reranking not applied).
+    /// </summary>
+    public float? RerankScore { get; init; }
 }
 
 /// <summary>

@@ -8,6 +8,7 @@ using MemoryIndexer.Intelligence.ContextOptimization;
 using MemoryIndexer.Intelligence.Deduplication;
 using MemoryIndexer.Intelligence.Evaluation;
 using MemoryIndexer.Intelligence.KnowledgeGraph;
+using MemoryIndexer.Intelligence.Reranking;
 using MemoryIndexer.Intelligence.Scoring;
 using MemoryIndexer.Intelligence.Search;
 using MemoryIndexer.Intelligence.SelfEditing;
@@ -126,6 +127,9 @@ public static class ServiceCollectionExtensions
 
         // Register scoring service
         services.TryAddSingleton<IScoringService, DefaultScoringService>();
+
+        // Register re-ranking service (Phase 5.4)
+        services.TryAddSingleton<IRerankerService, LocalRerankerService>();
 
         // Register intelligence services (Phase 2)
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();

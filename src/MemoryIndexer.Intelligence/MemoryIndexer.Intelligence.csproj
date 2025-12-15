@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="System.Numerics.Tensors" />
+    <PackageReference Include="LocalAI.Reranker" />
   </ItemGroup>
 
 </Project>
