@@ -9,11 +9,13 @@ namespace MemoryIndexer.Intelligence.Search;
 /// <summary>
 /// Hybrid search service combining dense (vector) and sparse (BM25) retrieval.
 /// Uses Reciprocal Rank Fusion (RRF) for score combination.
+/// Supports HyDE (Hypothetical Document Embeddings) for improved query understanding.
 /// </summary>
 public sealed class HybridSearchService : IHybridSearchService
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
+    private readonly IHydeQueryExpander? _hydeExpander;
     private readonly BM25Index _bm25Index;
     private readonly ILogger<HybridSearchService> _logger;
     private readonly SearchOptions _options;
@@ -22,10 +24,12 @@ public sealed class HybridSearchService : IHybridSearchService
         IMemoryStore memoryStore,
         IEmbeddingService embeddingService,
         IOptions<MemoryIndexerOptions> options,
-        ILogger<HybridSearchService> logger)
+        ILogger<HybridSearchService> logger,
+        IHydeQueryExpander? hydeExpander = null)
     {
         _memoryStore = memoryStore;
         _embeddingService = embeddingService;
+        _hydeExpander = hydeExpander;
         _options = options.Value.Search;
         _logger = logger;
         _bm25Index = new BM25Index();
@@ -44,13 +48,17 @@ public sealed class HybridSearchService : IHybridSearchService
         var limit = options.Limit ?? _options.DefaultLimit;
         var rrfK = options.RrfK ?? _options.RrfK;
 
-        _logger.LogDebug(
-            "Hybrid search: query='{Query}', denseWeight={DenseWeight}, sparseWeight={SparseWeight}",
-            query.Length > 50 ? query[..50] + "..." : query,
-            denseWeight, sparseWeight);
+        // Determine if HyDE should be used
+        var useHyde = options.UseHyde ?? _options.EnableHyde;
+        var hydeDocCount = options.HydeDocumentCount ?? _options.HydeDocumentCount;
 
-        // Run dense and sparse searches in parallel
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        _logger.LogDebug(
+            "Hybrid search: query='{Query}', denseWeight={DenseWeight}, sparseWeight={SparseWeight}, hyde={UseHyde}",
+            query.Length > 50 ? query[..50] + "..." : query,
+            denseWeight, sparseWeight, useHyde);
+
+        // Generate query embedding (with optional HyDE)
+        var queryEmbedding = await GenerateQueryEmbeddingAsync(query, useHyde, hydeDocCount, cancellationToken);
 
         var denseSearchOptions = new MemorySearchOptions
         {
@@ -254,6 +262,86 @@ public sealed class HybridSearchService : IHybridSearchService
         return magnitude > 0 ? dotProduct / magnitude : 0f;
     }
 
+    /// <summary>
+    /// Generates query embedding with optional HyDE enhancement.
+    /// </summary>
+    private async Task<ReadOnlyMemory<float>> GenerateQueryEmbeddingAsync(
+        string query,
+        bool useHyde,
+        int hydeDocCount,
+        CancellationToken cancellationToken)
+    {
+        // Check if HyDE should be used based on query characteristics
+        if (!useHyde || _hydeExpander is null)
+        {
+            return await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        }
+
+        // Check minimum query length for HyDE
+        var wordCount = query.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        if (wordCount < _options.HydeMinQueryWords)
+        {
+            _logger.LogDebug("Query too short for HyDE ({WordCount} words), using direct embedding", wordCount);
+            return await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        }
+
+        // Use HyDE: Generate hypothetical documents and average their embeddings
+        if (hydeDocCount <= 1)
+        {
+            // Single hypothetical document
+            return await _hydeExpander.GenerateHypotheticalEmbeddingAsync(query, cancellationToken);
+        }
+
+        // Ensemble: Average multiple hypothetical document embeddings
+        var hydeEmbeddings = await _hydeExpander.GenerateMultipleHypotheticalEmbeddingsAsync(
+            query, hydeDocCount, cancellationToken);
+
+        if (hydeEmbeddings.Count == 0)
+        {
+            _logger.LogWarning("HyDE generated no embeddings, falling back to direct embedding");
+            return await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        }
+
+        if (hydeEmbeddings.Count == 1)
+        {
+            return hydeEmbeddings[0];
+        }
+
+        // Average the embeddings
+        var dimensions = hydeEmbeddings[0].Length;
+        var averaged = new float[dimensions];
+
+        foreach (var embedding in hydeEmbeddings)
+        {
+            var span = embedding.Span;
+            for (var i = 0; i < dimensions; i++)
+            {
+                averaged[i] += span[i];
+            }
+        }
+
+        // Normalize by count and L2-normalize
+        var count = hydeEmbeddings.Count;
+        float norm = 0;
+        for (var i = 0; i < dimensions; i++)
+        {
+            averaged[i] /= count;
+            norm += averaged[i] * averaged[i];
+        }
+
+        norm = MathF.Sqrt(norm);
+        if (norm > 0)
+        {
+            for (var i = 0; i < dimensions; i++)
+            {
+                averaged[i] /= norm;
+            }
+        }
+
+        _logger.LogDebug("HyDE ensemble: averaged {Count} hypothetical embeddings", count);
+        return averaged;
+    }
+
     private sealed class FusionScore
     {
         public required MemoryUnit Memory { get; init; }
@@ -363,6 +451,16 @@ public sealed class HybridSearchOptions
     /// Include soft-deleted memories.
     /// </summary>
     public bool IncludeDeleted { get; set; }
+
+    /// <summary>
+    /// Whether to use HyDE (Hypothetical Document Embeddings) for query.
+    /// </summary>
+    public bool? UseHyde { get; set; }
+
+    /// <summary>
+    /// Number of hypothetical documents to generate for HyDE ensemble.
+    /// </summary>
+    public int? HydeDocumentCount { get; set; }
 }
 
 /// <summary>

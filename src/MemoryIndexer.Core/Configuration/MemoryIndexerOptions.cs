@@ -430,6 +430,22 @@ public sealed class SearchOptions
     /// E.g., if topK=5 and multiplier=4, retrieves 20 candidates for re-ranking.
     /// </summary>
     public int RerankCandidateMultiplier { get; set; } = 4;
+
+    /// <summary>
+    /// Whether to enable HyDE (Hypothetical Document Embeddings) for complex queries.
+    /// </summary>
+    public bool EnableHyde { get; set; }
+
+    /// <summary>
+    /// Number of hypothetical documents to generate for HyDE ensemble.
+    /// </summary>
+    public int HydeDocumentCount { get; set; } = 3;
+
+    /// <summary>
+    /// Minimum query length (words) to trigger HyDE.
+    /// Short queries may not benefit from hypothetical expansion.
+    /// </summary>
+    public int HydeMinQueryWords { get; set; } = 3;
 }
 
 /// <summary>

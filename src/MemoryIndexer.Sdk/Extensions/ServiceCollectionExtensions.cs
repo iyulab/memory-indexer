@@ -138,6 +138,7 @@ public static class ServiceCollectionExtensions
         // Register intelligence services (Phase 2)
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();
         services.TryAddSingleton<IQueryExpander, QueryExpander>();
+        services.TryAddSingleton<IHydeQueryExpander, HydeQueryExpander>();
         services.TryAddSingleton<DuplicateDetector>();
         services.TryAddSingleton<ImportanceAnalyzer>();
         services.TryAddSingleton<TopicSegmenter>();
