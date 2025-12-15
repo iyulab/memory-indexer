@@ -47,9 +47,10 @@
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
 
-    <!-- Local AI (iyulab open source - successor to LocalEmbedder/LocalReranker) -->
+    <!-- Local AI (iyulab-rnd open source - successor to LocalEmbedder/LocalReranker) -->
     <PackageVersion Include="LocalAI.Embedder" Version="0.7.0" />
     <PackageVersion Include="LocalAI.Reranker" Version="0.7.0" />
+    <PackageVersion Include="LocalAI.Generator" Version="0.7.0" />
 
     <!-- OpenTelemetry Observability -->
     <PackageVersion Include="OpenTelemetry" Version="1.11.2" />

@@ -2,6 +2,7 @@ using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Services;
 using MemoryIndexer.Embedding.Providers;
+using MemoryIndexer.Intelligence.Classification;
 using MemoryIndexer.Intelligence.Chunking;
 using MemoryIndexer.Intelligence.Compression;
 using MemoryIndexer.Intelligence.ContextOptimization;
@@ -130,6 +131,9 @@ public static class ServiceCollectionExtensions
 
         // Register re-ranking service (Phase 5.4)
         services.TryAddSingleton<IRerankerService, LocalRerankerService>();
+
+        // Register memory classifier (Phase 5.5)
+        services.TryAddSingleton<IMemoryClassifier, LocalMemoryClassifier>();
 
         // Register intelligence services (Phase 2)
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();

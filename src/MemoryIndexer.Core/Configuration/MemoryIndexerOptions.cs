@@ -39,6 +39,11 @@ public sealed class MemoryIndexerOptions
     /// Multi-tenant configuration.
     /// </summary>
     public MultiTenantOptions MultiTenant { get; set; } = new();
+
+    /// <summary>
+    /// Intelligence services configuration.
+    /// </summary>
+    public IntelligenceOptions Intelligence { get; set; } = new();
 }
 
 /// <summary>
@@ -425,4 +430,46 @@ public sealed class SearchOptions
     /// E.g., if topK=5 and multiplier=4, retrieves 20 candidates for re-ranking.
     /// </summary>
     public int RerankCandidateMultiplier { get; set; } = 4;
+}
+
+/// <summary>
+/// Intelligence services configuration options.
+/// </summary>
+public sealed class IntelligenceOptions
+{
+    /// <summary>
+    /// Whether intelligence services are enabled.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Model ID for memory classification. Supported: phi-3-mini, Qwen2.5-1.5B, Qwen2.5-3B, Llama-3.2-1B.
+    /// </summary>
+    public string? ClassifierModel { get; set; }
+
+    /// <summary>
+    /// Whether automatic classification is enabled for new memories.
+    /// </summary>
+    public bool ClassificationEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Whether to enable automatic fact extraction.
+    /// </summary>
+    public bool FactExtractionEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Whether to enable automatic summarization.
+    /// </summary>
+    public bool SummarizationEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Maximum tokens for generator output.
+    /// </summary>
+    public int MaxGeneratorTokens { get; set; } = 512;
+
+    /// <summary>
+    /// Temperature for generator output (0.0 - 1.0).
+    /// Lower values produce more deterministic output.
+    /// </summary>
+    public float GeneratorTemperature { get; set; } = 0.1f;
 }

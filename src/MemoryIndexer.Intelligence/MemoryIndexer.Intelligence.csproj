@@ -14,6 +14,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="System.Numerics.Tensors" />
     <PackageReference Include="LocalAI.Reranker" />
+    <!-- LocalAI.Generator reserved for future LLM-based classification -->
+    <!-- <PackageReference Include="LocalAI.Generator" /> -->
   </ItemGroup>
 
 </Project>
