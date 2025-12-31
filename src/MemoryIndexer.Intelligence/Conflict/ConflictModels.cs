@@ -163,31 +163,28 @@ public sealed class ResolutionResult
 
 /// <summary>
 /// Options for contradiction detection.
+/// All detection methods (semantic, temporal, rule-based) are always enabled.
 /// </summary>
 public sealed class ContradictionDetectionOptions
 {
     /// <summary>
-    /// Minimum semantic similarity threshold to consider items related.
+    /// Minimum semantic similarity threshold to consider items related (default: 0.7).
+    /// Higher values = stricter topic matching before contradiction check.
     /// </summary>
     public float SimilarityThreshold { get; init; } = 0.7f;
 
     /// <summary>
-    /// Minimum confidence to report a contradiction.
+    /// Minimum confidence to report a contradiction (default: 0.6).
     /// </summary>
     public float MinContradictionConfidence { get; init; } = 0.6f;
 
     /// <summary>
-    /// Whether to check for temporal contradictions.
+    /// Maximum number of existing items to compare against (default: 100).
     /// </summary>
-    public bool CheckTemporalContradictions { get; init; } = true;
+    public int MaxComparisonItems { get; init; } = 100;
 
     /// <summary>
-    /// Whether to use semantic (embedding-based) contradiction detection.
+    /// Point-in-time for temporal queries (default: now).
     /// </summary>
-    public bool UseSemanticDetection { get; init; } = true;
-
-    /// <summary>
-    /// Maximum number of existing items to compare against.
-    /// </summary>
-    public int MaxComparisonItems { get; init; } = 50;
+    public DateTime? AsOfDate { get; init; }
 }

@@ -43,11 +43,11 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
     /// <inheritdoc />
     public async Task<GraphTraversalResult> TraverseAsync(
         string startEntity,
-        int maxHops = 2,
         GraphTraversalOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         options ??= new GraphTraversalOptions();
+        var maxHops = options.MaxHops;
         var stopwatch = Stopwatch.StartNew();
 
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -334,8 +334,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
         {
             var traversal = await TraverseAsync(
                 entity,
-                options.GraphExpansionHops,
-                new GraphTraversalOptions { UserId = userId },
+                new GraphTraversalOptions { UserId = userId, MaxHops = options.GraphExpansionHops },
                 cancellationToken);
 
             foreach (var discovered in traversal.DiscoveredEntities)
@@ -372,10 +371,8 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
             .OrderByDescending(f => f.Confidence)
             .ToList();
 
-        // Format context for LLM
-        var formattedContext = options.IncludeGraphContext
-            ? FormatGraphContext(scoredEntities, graphContext)
-            : string.Empty;
+        // Always format context for LLM - core value proposition of hybrid retrieval
+        var formattedContext = FormatGraphContext(scoredEntities, graphContext);
 
         return new HybridGraphResult
         {
@@ -450,13 +447,10 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
         var asSubject = await _tripleStore.GetBySubjectAsync(entity, options.UserId, cancellationToken);
         var asObject = await _tripleStore.GetByObjectAsync(entity, options.UserId, cancellationToken);
 
-        var all = asSubject.Concat(asObject);
-
-        if (options.FilterByTemporalValidity)
-        {
-            var asOf = options.AsOfDate ?? DateTime.UtcNow;
-            all = all.Where(f => f.WasValidAt(asOf));
-        }
+        // Always filter by temporal validity - core functionality, not optional
+        var asOf = options.AsOfDate ?? DateTime.UtcNow;
+        var all = asSubject.Concat(asObject)
+            .Where(f => f.WasValidAt(asOf));
 
         return all.ToList();
     }

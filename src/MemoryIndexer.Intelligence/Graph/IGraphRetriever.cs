@@ -16,13 +16,11 @@ public interface IGraphRetriever
     /// Retrieves related entities within N hops from a starting entity.
     /// </summary>
     /// <param name="startEntity">The entity to start traversal from.</param>
-    /// <param name="maxHops">Maximum number of relationship hops.</param>
-    /// <param name="options">Traversal options.</param>
+    /// <param name="options">Traversal options including MaxHops (default: 2).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Graph traversal result with entities and paths.</returns>
     Task<GraphTraversalResult> TraverseAsync(
         string startEntity,
-        int maxHops = 2,
         GraphTraversalOptions? options = null,
         CancellationToken cancellationToken = default);
 
@@ -110,12 +108,8 @@ public sealed class GraphTraversalOptions
     public HashSet<string>? ExcludeRelationTypes { get; init; }
 
     /// <summary>
-    /// Whether to include temporal validity filtering.
-    /// </summary>
-    public bool FilterByTemporalValidity { get; init; } = true;
-
-    /// <summary>
     /// Point-in-time for temporal queries (default: now).
+    /// Temporal validity filtering is always enabled - only facts valid at this time are included.
     /// </summary>
     public DateTime? AsOfDate { get; init; }
 
@@ -376,12 +370,10 @@ public sealed class HybridGraphOptions
     /// Minimum similarity for semantic matches.
     /// </summary>
     public float MinSemanticScore { get; init; } = 0.5f;
-
-    /// <summary>
-    /// Include graph context in results.
-    /// </summary>
-    public bool IncludeGraphContext { get; init; } = true;
 }
+
+// Note: Graph context is always included in HybridGraphResult.
+// FormattedContext provides a ready-to-use string for LLM consumption.
 
 /// <summary>
 /// Result of hybrid graph retrieval.

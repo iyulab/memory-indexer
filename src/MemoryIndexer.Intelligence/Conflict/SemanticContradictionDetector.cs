@@ -190,73 +190,48 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
                 continue; // Same value, no contradiction
             }
 
-            // Check for temporal overlap if temporal detection is enabled
-            if (options.CheckTemporalContradictions)
+            // Always check for temporal overlap - this is core functionality, not optional
+            var newFrom = newTriple.ValidFrom ?? DateTime.MinValue;
+            var newTo = newTriple.ValidTo ?? DateTime.MaxValue;
+            var existingFrom = existing.ValidFrom ?? DateTime.MinValue;
+            var existingTo = existing.ValidTo ?? DateTime.MaxValue;
+
+            // Check for time period overlap
+            var hasTemporalOverlap = newFrom < existingTo && existingFrom < newTo;
+
+            if (hasTemporalOverlap)
             {
-                var newFrom = newTriple.ValidFrom ?? DateTime.MinValue;
-                var newTo = newTriple.ValidTo ?? DateTime.MaxValue;
-                var existingFrom = existing.ValidFrom ?? DateTime.MinValue;
-                var existingTo = existing.ValidTo ?? DateTime.MaxValue;
-
-                // Check for time period overlap
-                if (newFrom < existingTo && existingFrom < newTo)
-                {
-                    // Temporal overlap with different values = contradiction
-                    var confidence = CalculateTripleContradictionConfidence(newTriple, existing);
-
-                    if (confidence >= options.MinContradictionConfidence)
-                    {
-                        _logger.LogInformation(
-                            "Detected temporal contradiction for {Subject}.{Predicate}: '{OldValue}' vs '{NewValue}'",
-                            newTriple.Subject, newTriple.Predicate,
-                            existing.ObjectValue, newTriple.ObjectValue);
-
-                        return Task.FromResult(new ContradictionAnalysis
-                        {
-                            HasContradiction = true,
-                            NewItem = newTriple,
-                            ConflictingItem = existing,
-                            ContradictionConfidence = confidence,
-                            Type = ContradictionType.Temporal,
-                            ConflictDescription = $"Conflicting values for {newTriple.Subject}.{newTriple.Predicate}: " +
-                                                  $"'{existing.ObjectValue}' (v{existing.Version}) vs '{newTriple.ObjectValue}'",
-                            Context = new Dictionary<string, string>
-                            {
-                                ["ExistingTripleId"] = existing.Id.ToString(),
-                                ["ExistingVersion"] = existing.Version.ToString(),
-                                ["ExistingValue"] = existing.ObjectValue,
-                                ["NewValue"] = newTriple.ObjectValue,
-                                ["OverlapPeriod"] = $"{(newFrom > existingFrom ? newFrom : existingFrom):yyyy-MM-dd} to {(newTo < existingTo ? newTo : existingTo):yyyy-MM-dd}"
-                            }
-                        });
-                    }
-                }
-            }
-            else
-            {
-                // Non-temporal: any different value is a potential contradiction
+                // Temporal overlap with different values = contradiction
                 var confidence = CalculateTripleContradictionConfidence(newTriple, existing);
 
                 if (confidence >= options.MinContradictionConfidence)
                 {
+                    _logger.LogInformation(
+                        "Detected temporal contradiction for {Subject}.{Predicate}: '{OldValue}' vs '{NewValue}'",
+                        newTriple.Subject, newTriple.Predicate,
+                        existing.ObjectValue, newTriple.ObjectValue);
+
                     return Task.FromResult(new ContradictionAnalysis
                     {
                         HasContradiction = true,
                         NewItem = newTriple,
                         ConflictingItem = existing,
                         ContradictionConfidence = confidence,
-                        Type = ContradictionType.Factual,
-                        ConflictDescription = $"Different values for {newTriple.Subject}.{newTriple.Predicate}: " +
-                                              $"'{existing.ObjectValue}' vs '{newTriple.ObjectValue}'",
+                        Type = ContradictionType.Temporal,
+                        ConflictDescription = $"Conflicting values for {newTriple.Subject}.{newTriple.Predicate}: " +
+                                              $"'{existing.ObjectValue}' (v{existing.Version}) vs '{newTriple.ObjectValue}'",
                         Context = new Dictionary<string, string>
                         {
                             ["ExistingTripleId"] = existing.Id.ToString(),
+                            ["ExistingVersion"] = existing.Version.ToString(),
                             ["ExistingValue"] = existing.ObjectValue,
-                            ["NewValue"] = newTriple.ObjectValue
+                            ["NewValue"] = newTriple.ObjectValue,
+                            ["OverlapPeriod"] = $"{(newFrom > existingFrom ? newFrom : existingFrom):yyyy-MM-dd} to {(newTo < existingTo ? newTo : existingTo):yyyy-MM-dd}"
                         }
                     });
                 }
             }
+            // No temporal overlap means different time periods - not a contradiction
         }
 
         return Task.FromResult(new ContradictionAnalysis
