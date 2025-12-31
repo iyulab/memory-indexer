@@ -212,6 +212,10 @@ public static class ServiceCollectionExtensions
             .BindConfiguration(TriggerOptions.SectionName);
         services.TryAddSingleton<ISummarizationTrigger, ThresholdBasedTrigger>();
 
+        // Register summarization orchestrator (Phase 11)
+        services.TryAddSingleton<ISummarizationOrchestrator, SummarizationOrchestrator>();
+        services.TryAddSingleton<IRollingSummaryManager, RollingSummaryManager>();
+
         return services;
     }
 
