@@ -5,6 +5,7 @@ using MemoryIndexer.Embedding.Providers;
 using MemoryIndexer.Intelligence.Classification;
 using MemoryIndexer.Intelligence.Chunking;
 using MemoryIndexer.Intelligence.Conflict;
+using MemoryIndexer.Intelligence.Consolidation;
 using MemoryIndexer.Intelligence.Graph;
 using MemoryIndexer.Intelligence.Compression;
 using MemoryIndexer.Intelligence.ContextOptimization;
@@ -198,6 +199,9 @@ public static class ServiceCollectionExtensions
 
         // Register graph-based retrieval services (Phase 8.2)
         services.TryAddSingleton<IGraphRetriever, InMemoryGraphRetriever>();
+
+        // Register memory consolidation services (Phase 9)
+        services.TryAddSingleton<IMemoryConsolidator, SleepBasedConsolidator>();
 
         return services;
     }

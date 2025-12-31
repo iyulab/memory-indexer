@@ -28,5 +28,12 @@ public enum MemoryType
     /// Factual memory - specific verifiable facts.
     /// Example: "User's company is Acme Corp"
     /// </summary>
-    Fact = 3
+    Fact = 3,
+
+    /// <summary>
+    /// Reflection memory - higher-level inferences synthesized from other memories.
+    /// Generated during consolidation ("sleep") cycles.
+    /// Example: "User consistently prioritizes security over convenience"
+    /// </summary>
+    Reflection = 4
 }
