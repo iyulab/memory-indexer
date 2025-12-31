@@ -108,7 +108,28 @@
 - [x] Token budget, session end, and importance-based triggers
 - [x] Strategy recommendations (Extractive, Compression, Hybrid, Reflection, Archive)
 
-## Phase 11: Future Enhancements (Planned)
+## Phase 11: Session-aware Summarization ✅
+
+**Status**: Complete
+
+- [x] SummarizationOrchestrator integrating triggers with summarization services
+- [x] Rolling Summary Manager for periodic session summarization
+- [x] Turn-based, time-based, and token-threshold triggers
+- [x] Incremental updates using CoK-style merging
+- [x] Strategy-based summarization (Extractive, Compression, Hybrid, Reflection, Archive)
+
+## Phase 12: Entity Resolution Enhancement ✅
+
+**Status**: Complete
+
+- [x] Coreference resolution (ICoreferenceResolver, CoreferenceResolver)
+- [x] Pronoun resolution (he/she/it/they → entity)
+- [x] Possessive and reflexive pronoun support
+- [x] Text expansion (replace pronouns with entity names)
+- [x] Coreference chains for entity mention tracking
+- [x] Gender and number agreement validation
+
+## Phase 13: Future Enhancements (Planned)
 
 **Status**: Planned
 
