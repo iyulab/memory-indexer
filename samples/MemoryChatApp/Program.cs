@@ -45,8 +45,11 @@ static string? FindSolutionRoot(string filename)
     return null;
 }
 
-var gpuStackUrl = Environment.GetEnvironmentVariable("GPUSTACK_URL") ?? "http://localhost:11434/v1";
-var gpuStackApiKey = Environment.GetEnvironmentVariable("GPUSTACK_APIKEY") ?? "";
+// Check GpuStack configuration from environment
+var gpuStackUrl = Environment.GetEnvironmentVariable("GPUSTACK_URL");
+var gpuStackApiKey = Environment.GetEnvironmentVariable("GPUSTACK_APIKEY");
+var gpuStackModel = Environment.GetEnvironmentVariable("GPUSTACK_MODEL") ?? "Qwen3-8B";
+var useGpuStack = !string.IsNullOrWhiteSpace(gpuStackUrl) && !string.IsNullOrWhiteSpace(gpuStackApiKey);
 
 Console.Clear();
 PrintBanner();
@@ -59,20 +62,31 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
-// Configure Memory Indexer with SQLite storage and GpuStack embeddings
+// Configure Memory Indexer
 builder.Services.AddMemoryIndexer(options =>
 {
     // SQLite persistent storage
     options.Storage.Type = StorageType.SqliteVec;
     options.Storage.ConnectionString = "chat_memories.db";
-    options.Storage.VectorDimensions = 1024;
 
-    // GpuStack embedding (OpenAI-compatible)
-    options.Embedding.Provider = EmbeddingProvider.Custom;
-    options.Embedding.Endpoint = gpuStackUrl;
-    options.Embedding.ApiKey = gpuStackApiKey;
-    options.Embedding.Model = "bge-m3";
-    options.Embedding.Dimensions = 1024;
+    if (useGpuStack)
+    {
+        // GpuStack embedding (OpenAI-compatible API)
+        options.Embedding.Provider = EmbeddingProvider.Custom;
+        options.Embedding.Endpoint = gpuStackUrl!;
+        options.Embedding.ApiKey = gpuStackApiKey!;
+        options.Embedding.Model = "bge-m3";
+        options.Embedding.Dimensions = 1024;
+        options.Storage.VectorDimensions = 1024;
+    }
+    else
+    {
+        // Local LMSupply embedding (default)
+        options.Embedding.Provider = EmbeddingProvider.Local;
+        options.Embedding.Model = "bge-large-en-v1.5"; // 1024 dims
+        options.Embedding.Dimensions = 1024;
+        options.Storage.VectorDimensions = 1024;
+    }
 });
 
 var host = builder.Build();
@@ -83,11 +97,12 @@ var memoryStore = host.Services.GetRequiredService<IMemoryStore>();
 var embeddingService = host.Services.GetRequiredService<IEmbeddingService>();
 var summarizer = host.Services.GetRequiredService<ISummarizationService>();
 
-// HTTP client for LLM chat
-using var httpClient = new HttpClient();
-httpClient.BaseAddress = new Uri(gpuStackUrl.TrimEnd('/') + "/");
-if (!string.IsNullOrEmpty(gpuStackApiKey))
+// HTTP client for LLM chat (only if GpuStack is configured)
+HttpClient? httpClient = null;
+if (useGpuStack)
 {
+    httpClient = new HttpClient();
+    httpClient.BaseAddress = new Uri(gpuStackUrl!.TrimEnd('/') + "/");
     httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {gpuStackApiKey}");
 }
 
@@ -100,7 +115,16 @@ var chatCancellation = new CancellationTokenSource();
 
 Console.WriteLine($"Session ID: {sessionId}");
 Console.WriteLine($"Database: chat_memories.db");
-Console.WriteLine($"Embedding: {gpuStackUrl} (bge-m3)");
+if (useGpuStack)
+{
+    Console.WriteLine($"Embedding: GpuStack (bge-m3, 1024 dims)");
+    Console.WriteLine($"Chat LLM: {gpuStackModel}");
+}
+else
+{
+    Console.WriteLine($"Embedding: LMSupply Local (bge-large-en-v1.5, 1024 dims)");
+    Console.WriteLine($"Chat LLM: (none - echo mode)");
+}
 Console.WriteLine();
 
 // Main menu loop
@@ -325,6 +349,21 @@ string BuildContext(List<MemorySearchResult> memories, string currentQuery)
 
 async Task<string> GenerateResponseAsync(string context, string userMessage)
 {
+    // If no LLM configured, use echo mode with context display
+    if (httpClient == null)
+    {
+        var echoResponse = new StringBuilder();
+        echoResponse.AppendLine($"[Echo Mode - No LLM configured]");
+        echoResponse.AppendLine($"Your message: {userMessage}");
+        if (!string.IsNullOrEmpty(context))
+        {
+            echoResponse.AppendLine();
+            echoResponse.AppendLine("Context retrieved:");
+            echoResponse.AppendLine(context);
+        }
+        return echoResponse.ToString();
+    }
+
     var systemPrompt = $"""
 You are a helpful AI assistant with persistent memory capabilities.
 You remember previous conversations and facts about the user.
@@ -338,7 +377,7 @@ Keep responses concise but friendly.
 
     var request = new ChatRequest
     {
-        Model = "Qwen3-8B",
+        Model = gpuStackModel,
         Messages =
         [
             new ChatMessage { Role = "system", Content = systemPrompt },

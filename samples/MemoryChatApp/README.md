@@ -4,7 +4,10 @@ A simple chat application demonstrating Memory Indexer's short/mid/long-term mem
 
 ## Features
 
-- **Persistent Memory**: Uses SQLite with vector search (bge-m3 embeddings, 1024 dimensions)
+- **Persistent Memory**: Uses SQLite with vector search (1024 dimensions)
+- **Dual Embedding Support**:
+  - **Default**: LMSupply Local (bge-large-en-v1.5) - No API required
+  - **Optional**: GpuStack (bge-m3) - Requires API configuration
 - **Memory Types**:
   - Episodic (conversation history)
   - Semantic (user facts extracted automatically)
@@ -13,13 +16,18 @@ A simple chat application demonstrating Memory Indexer's short/mid/long-term mem
 
 ## Prerequisites
 
-1. **GpuStack API**: Configure `.env` file with:
-   ```
-   GPUSTACK_URL=http://your-gpustack-server/v1-openai
-   GPUSTACK_APIKEY=your-api-key
-   ```
+### Default Mode (LMSupply Local)
+- **.NET 10.0**: Required runtime
+- No additional configuration required
+- First run will download the embedding model (~400MB)
 
-2. **.NET 10.0**: Required runtime
+### GpuStack Mode (Optional)
+Configure `.env` file in solution root:
+```
+GPUSTACK_URL=http://your-gpustack-server/v1-openai
+GPUSTACK_APIKEY=your-api-key
+GPUSTACK_MODEL=Qwen3-8B
+```
 
 ## Usage
 
@@ -61,7 +69,7 @@ Displays:
 User Message → Store as Episodic Memory
             → Recall Relevant Memories (session + cross-session)
             → Build Context with Memories
-            → Generate LLM Response
+            → Generate LLM Response (or Echo Mode if no LLM)
             → Store Response as Memory
             → Extract Semantic Facts (if detected)
             → Update Rolling Summary (every 10 turns)
@@ -69,6 +77,21 @@ User Message → Store as Episodic Memory
 
 ## Configuration
 
-- **Database**: `chat_memories.db` (SQLite with vector extension)
-- **Embedding Model**: bge-m3 (1024 dimensions)
-- **Chat Model**: Qwen3-8B (via GpuStack)
+| Mode | Embedding | Chat LLM | Configuration |
+|------|-----------|----------|---------------|
+| Default | LMSupply bge-large-en-v1.5 (local) | Echo Mode | None |
+| GpuStack | bge-m3 (remote) | GPUSTACK_MODEL | .env file |
+
+## Embedding Models
+
+### LMSupply Local (Default)
+- Model: `bge-large-en-v1.5`
+- Dimensions: 1024
+- No API key required
+- Runs locally using ONNX Runtime
+
+### GpuStack (Optional)
+- Model: `bge-m3`
+- Dimensions: 1024
+- Requires GPUSTACK_URL and GPUSTACK_APIKEY
+- OpenAI-compatible API
