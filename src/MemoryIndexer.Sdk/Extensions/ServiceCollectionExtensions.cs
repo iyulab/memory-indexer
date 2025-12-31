@@ -12,6 +12,7 @@ using MemoryIndexer.Intelligence.ContextOptimization;
 using MemoryIndexer.Intelligence.Deduplication;
 using MemoryIndexer.Intelligence.Evaluation;
 using MemoryIndexer.Intelligence.KnowledgeGraph;
+using MemoryIndexer.Intelligence.Operations;
 using MemoryIndexer.Intelligence.Reranking;
 using MemoryIndexer.Intelligence.Scoring;
 using MemoryIndexer.Intelligence.Search;
@@ -202,6 +203,14 @@ public static class ServiceCollectionExtensions
 
         // Register memory consolidation services (Phase 9)
         services.TryAddSingleton<IMemoryConsolidator, SleepBasedConsolidator>();
+
+        // Register intelligent memory operations (Phase 10)
+        services.TryAddSingleton<IMemoryOperationDecider, SemanticOperationDecider>();
+
+        // Register summarization trigger (Phase 10)
+        services.AddOptions<TriggerOptions>()
+            .BindConfiguration(TriggerOptions.SectionName);
+        services.TryAddSingleton<ISummarizationTrigger, ThresholdBasedTrigger>();
 
         return services;
     }
