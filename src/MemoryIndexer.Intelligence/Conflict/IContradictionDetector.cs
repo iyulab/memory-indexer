@@ -16,7 +16,7 @@ public interface IContradictionDetector
     /// <param name="options">Detection options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Analysis result with any detected contradictions.</returns>
-    Task<ContradictionAnalysis> DetectMemoryContradictionAsync(
+    Task<ContradictionAnalysis<MemoryUnit>> DetectMemoryContradictionAsync(
         MemoryUnit newMemory,
         IReadOnlyList<MemoryUnit> existingMemories,
         ContradictionDetectionOptions? options = null,
@@ -30,7 +30,7 @@ public interface IContradictionDetector
     /// <param name="options">Detection options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Analysis result with any detected contradictions.</returns>
-    Task<ContradictionAnalysis> DetectTripleContradictionAsync(
+    Task<ContradictionAnalysis<EntityTriple>> DetectTripleContradictionAsync(
         EntityTriple newTriple,
         IReadOnlyList<EntityTriple> existingTriples,
         ContradictionDetectionOptions? options = null,
@@ -44,7 +44,7 @@ public interface IContradictionDetector
     /// <param name="options">Detection options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of analysis results for each new memory.</returns>
-    Task<IReadOnlyList<ContradictionAnalysis>> DetectBatchContradictionsAsync(
+    Task<IReadOnlyList<ContradictionAnalysis<MemoryUnit>>> DetectBatchContradictionsAsync(
         IReadOnlyList<MemoryUnit> newMemories,
         IReadOnlyList<MemoryUnit> existingMemories,
         ContradictionDetectionOptions? options = null,
@@ -57,34 +57,39 @@ public interface IContradictionDetector
 public interface IContradictionResolver
 {
     /// <summary>
-    /// Resolves a detected contradiction using the specified strategy.
+    /// Resolves a detected memory contradiction using the specified strategy.
     /// </summary>
-    /// <param name="analysis">The contradiction analysis to resolve.</param>
-    /// <param name="strategy">The resolution strategy to apply.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Result of the resolution attempt.</returns>
-    Task<ResolutionResult> ResolveAsync(
-        ContradictionAnalysis analysis,
+    Task<ResolutionResult<MemoryUnit>> ResolveMemoryAsync(
+        ContradictionAnalysis<MemoryUnit> analysis,
         ResolutionStrategy strategy = ResolutionStrategy.RecencyFirst,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Automatically determines and applies the best resolution strategy.
+    /// Resolves a detected triple contradiction using the specified strategy.
     /// </summary>
-    /// <param name="analysis">The contradiction analysis to resolve.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Result of the resolution attempt.</returns>
-    Task<ResolutionResult> AutoResolveAsync(
-        ContradictionAnalysis analysis,
+    Task<ResolutionResult<EntityTriple>> ResolveTripleAsync(
+        ContradictionAnalysis<EntityTriple> analysis,
+        ResolutionStrategy strategy = ResolutionStrategy.RecencyFirst,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Suggests the best resolution strategy for a given contradiction.
+    /// Automatically determines and applies the best resolution strategy for memories.
     /// </summary>
-    /// <param name="analysis">The contradiction analysis.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Recommended strategy with explanation.</returns>
-    Task<(ResolutionStrategy Strategy, string Explanation)> SuggestStrategyAsync(
-        ContradictionAnalysis analysis,
+    Task<ResolutionResult<MemoryUnit>> AutoResolveMemoryAsync(
+        ContradictionAnalysis<MemoryUnit> analysis,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Automatically determines and applies the best resolution strategy for triples.
+    /// </summary>
+    Task<ResolutionResult<EntityTriple>> AutoResolveTripleAsync(
+        ContradictionAnalysis<EntityTriple> analysis,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Suggests the best resolution strategy for a given contradiction type and confidence.
+    /// </summary>
+    (ResolutionStrategy Strategy, string Explanation) SuggestStrategy(
+        ContradictionType type,
+        float confidence);
 }

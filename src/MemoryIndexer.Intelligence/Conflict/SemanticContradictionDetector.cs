@@ -50,7 +50,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
     }
 
     /// <inheritdoc />
-    public async Task<ContradictionAnalysis> DetectMemoryContradictionAsync(
+    public async Task<ContradictionAnalysis<MemoryUnit>> DetectMemoryContradictionAsync(
         MemoryUnit newMemory,
         IReadOnlyList<MemoryUnit> existingMemories,
         ContradictionDetectionOptions? options = null,
@@ -60,7 +60,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
 
         if (existingMemories.Count == 0)
         {
-            return new ContradictionAnalysis
+            return new ContradictionAnalysis<MemoryUnit>
             {
                 HasContradiction = false,
                 NewItem = newMemory,
@@ -76,7 +76,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
                 newMemory.Content, cancellationToken);
         }
 
-        ContradictionAnalysis? bestMatch = null;
+        ContradictionAnalysis<MemoryUnit>? bestMatch = null;
         float highestContradictionScore = 0;
 
         // Limit comparison to avoid performance issues
@@ -115,7 +115,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
             if (hasContradiction && confidence > highestContradictionScore)
             {
                 highestContradictionScore = confidence;
-                bestMatch = new ContradictionAnalysis
+                bestMatch = new ContradictionAnalysis<MemoryUnit>
                 {
                     HasContradiction = true,
                     NewItem = newMemory,
@@ -139,12 +139,12 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
             _logger.LogInformation(
                 "Detected {Type} contradiction (confidence: {Confidence:P1}) between new memory and existing {ExistingId}",
                 bestMatch.Type, bestMatch.ContradictionConfidence,
-                ((MemoryUnit)bestMatch.ConflictingItem!).Id);
+                bestMatch.ConflictingItem!.Id);
 
             return bestMatch;
         }
 
-        return new ContradictionAnalysis
+        return new ContradictionAnalysis<MemoryUnit>
         {
             HasContradiction = false,
             NewItem = newMemory,
@@ -153,7 +153,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
     }
 
     /// <inheritdoc />
-    public Task<ContradictionAnalysis> DetectTripleContradictionAsync(
+    public Task<ContradictionAnalysis<EntityTriple>> DetectTripleContradictionAsync(
         EntityTriple newTriple,
         IReadOnlyList<EntityTriple> existingTriples,
         ContradictionDetectionOptions? options = null,
@@ -163,7 +163,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
 
         if (existingTriples.Count == 0)
         {
-            return Task.FromResult(new ContradictionAnalysis
+            return Task.FromResult(new ContradictionAnalysis<EntityTriple>
             {
                 HasContradiction = false,
                 NewItem = newTriple,
@@ -211,7 +211,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
                         newTriple.Subject, newTriple.Predicate,
                         existing.ObjectValue, newTriple.ObjectValue);
 
-                    return Task.FromResult(new ContradictionAnalysis
+                    return Task.FromResult(new ContradictionAnalysis<EntityTriple>
                     {
                         HasContradiction = true,
                         NewItem = newTriple,
@@ -234,7 +234,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
             // No temporal overlap means different time periods - not a contradiction
         }
 
-        return Task.FromResult(new ContradictionAnalysis
+        return Task.FromResult(new ContradictionAnalysis<EntityTriple>
         {
             HasContradiction = false,
             NewItem = newTriple,
@@ -243,13 +243,13 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ContradictionAnalysis>> DetectBatchContradictionsAsync(
+    public async Task<IReadOnlyList<ContradictionAnalysis<MemoryUnit>>> DetectBatchContradictionsAsync(
         IReadOnlyList<MemoryUnit> newMemories,
         IReadOnlyList<MemoryUnit> existingMemories,
         ContradictionDetectionOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var results = new List<ContradictionAnalysis>();
+        var results = new List<ContradictionAnalysis<MemoryUnit>>();
 
         foreach (var newMemory in newMemories)
         {

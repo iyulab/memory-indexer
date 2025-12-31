@@ -1,11 +1,10 @@
-using MemoryIndexer.Core.Models;
-
 namespace MemoryIndexer.Intelligence.Conflict;
 
 /// <summary>
 /// Represents the result of contradiction detection analysis.
 /// </summary>
-public sealed class ContradictionAnalysis
+/// <typeparam name="T">The type of item being analyzed (MemoryUnit or EntityTriple).</typeparam>
+public sealed class ContradictionAnalysis<T> where T : class
 {
     /// <summary>
     /// Whether a contradiction was detected.
@@ -13,14 +12,14 @@ public sealed class ContradictionAnalysis
     public bool HasContradiction { get; init; }
 
     /// <summary>
-    /// The new memory/triple being analyzed.
+    /// The new item being analyzed.
     /// </summary>
-    public required object NewItem { get; init; }
+    public required T NewItem { get; init; }
 
     /// <summary>
     /// The existing item that conflicts with the new one.
     /// </summary>
-    public object? ConflictingItem { get; init; }
+    public T? ConflictingItem { get; init; }
 
     /// <summary>
     /// Confidence score of the contradiction detection (0.0 to 1.0).
@@ -118,7 +117,8 @@ public enum ResolutionStrategy
 /// <summary>
 /// Result of contradiction resolution.
 /// </summary>
-public sealed class ResolutionResult
+/// <typeparam name="T">The type of item being resolved (MemoryUnit or EntityTriple).</typeparam>
+public sealed class ResolutionResult<T> where T : class
 {
     /// <summary>
     /// Whether the resolution was successful.
@@ -133,17 +133,17 @@ public sealed class ResolutionResult
     /// <summary>
     /// The item that was kept/preferred.
     /// </summary>
-    public object? KeptItem { get; init; }
+    public T? KeptItem { get; init; }
 
     /// <summary>
     /// The item that was superseded/archived.
     /// </summary>
-    public object? SupersededItem { get; init; }
+    public T? SupersededItem { get; init; }
 
     /// <summary>
     /// If a new merged item was created.
     /// </summary>
-    public object? MergedItem { get; init; }
+    public T? MergedItem { get; init; }
 
     /// <summary>
     /// Human-readable explanation of the resolution.
