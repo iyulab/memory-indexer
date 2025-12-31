@@ -4,6 +4,7 @@ using MemoryIndexer.Core.Services;
 using MemoryIndexer.Embedding.Providers;
 using MemoryIndexer.Intelligence.Classification;
 using MemoryIndexer.Intelligence.Chunking;
+using MemoryIndexer.Intelligence.Conflict;
 using MemoryIndexer.Intelligence.Compression;
 using MemoryIndexer.Intelligence.ContextOptimization;
 using MemoryIndexer.Intelligence.Deduplication;
@@ -186,6 +187,13 @@ public static class ServiceCollectionExtensions
 
         // Register observability services (Phase 4.5)
         services.TryAddSingleton<InstrumentedMemoryService>();
+
+        // Register temporal entity store (Phase 8.1)
+        services.TryAddSingleton<ITemporalEntityStore, InMemoryTemporalEntityStore>();
+
+        // Register contradiction detection and resolution services (Phase 8.1)
+        services.TryAddSingleton<IContradictionDetector, SemanticContradictionDetector>();
+        services.TryAddSingleton<IContradictionResolver, DefaultContradictionResolver>();
 
         return services;
     }
