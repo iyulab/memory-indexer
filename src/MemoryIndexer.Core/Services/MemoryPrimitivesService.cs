@@ -485,7 +485,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         {
             _logger.LogDebug("Re-ranking {Count} candidates with cross-encoder", filtered.Count);
 
-            var candidates = filtered.Select(r => new RerankCandidate
+            var candidates = filtered.Select(r => new RerankCandidate<MemorySearchResult>
             {
                 Content = r.Memory.Content,
                 OriginalScore = r.Score,
@@ -500,7 +500,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                 cancellationToken);
 
             rerankedResults = rerankResults
-                .Select(rr => ((MemorySearchResult)rr.Metadata!, rr.Score))
+                .Select(rr => (rr.Metadata!, rr.Score))
                 .ToList();
 
             _logger.LogDebug("Re-ranking complete. Top score: {TopScore:F4}",

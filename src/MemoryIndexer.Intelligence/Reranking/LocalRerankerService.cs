@@ -62,9 +62,9 @@ public sealed class LocalRerankerService : IRerankerService, IAsyncDisposable
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<RerankResult>> RerankAsync(
+    public async Task<IReadOnlyList<RerankResult<TMetadata>>> RerankAsync<TMetadata>(
         string query,
-        IReadOnlyList<RerankCandidate> candidates,
+        IReadOnlyList<RerankCandidate<TMetadata>> candidates,
         int topK = 5,
         CancellationToken cancellationToken = default)
     {
@@ -92,7 +92,7 @@ public sealed class LocalRerankerService : IRerankerService, IAsyncDisposable
 
         // Build results with original indices
         var results = candidates
-            .Select((candidate, index) => new RerankResult
+            .Select((candidate, index) => new RerankResult<TMetadata>
             {
                 Index = index,
                 Score = scores[index],

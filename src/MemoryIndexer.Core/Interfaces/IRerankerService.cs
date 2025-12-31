@@ -15,14 +15,15 @@ public interface IRerankerService
     /// <summary>
     /// Re-rank memories based on semantic relevance to query using cross-encoder scoring.
     /// </summary>
+    /// <typeparam name="TMetadata">Type of metadata to preserve through re-ranking.</typeparam>
     /// <param name="query">The search query.</param>
     /// <param name="candidates">Candidate memories from initial search.</param>
     /// <param name="topK">Number of top results to return.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Re-ranked memories ordered by relevance score.</returns>
-    Task<IReadOnlyList<RerankResult>> RerankAsync(
+    Task<IReadOnlyList<RerankResult<TMetadata>>> RerankAsync<TMetadata>(
         string query,
-        IReadOnlyList<RerankCandidate> candidates,
+        IReadOnlyList<RerankCandidate<TMetadata>> candidates,
         int topK = 5,
         CancellationToken cancellationToken = default);
 
@@ -40,9 +41,10 @@ public interface IRerankerService
 }
 
 /// <summary>
-/// Candidate for re-ranking.
+/// Candidate for re-ranking with typed metadata.
 /// </summary>
-public record RerankCandidate
+/// <typeparam name="TMetadata">Type of metadata to preserve through re-ranking.</typeparam>
+public record RerankCandidate<TMetadata>
 {
     /// <summary>
     /// Document content to score against query.
@@ -60,15 +62,16 @@ public record RerankCandidate
     public Guid? MemoryId { get; init; }
 
     /// <summary>
-    /// Optional metadata to preserve through re-ranking.
+    /// Typed metadata to preserve through re-ranking.
     /// </summary>
-    public object? Metadata { get; init; }
+    public TMetadata? Metadata { get; init; }
 }
 
 /// <summary>
-/// Result from re-ranking.
+/// Result from re-ranking with typed metadata.
 /// </summary>
-public record RerankResult
+/// <typeparam name="TMetadata">Type of metadata preserved from candidate.</typeparam>
+public record RerankResult<TMetadata>
 {
     /// <summary>
     /// Index of the candidate in original list.
@@ -96,7 +99,7 @@ public record RerankResult
     public Guid? MemoryId { get; init; }
 
     /// <summary>
-    /// Preserved metadata from candidate.
+    /// Typed metadata preserved from candidate.
     /// </summary>
-    public object? Metadata { get; init; }
+    public TMetadata? Metadata { get; init; }
 }
