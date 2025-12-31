@@ -86,6 +86,8 @@ $RECYCLE.BIN/
 # Memory Indexer specific
 memory.db
 memory.db-*
+chat_memories.db
+chat_memories.db-*
 *.vec
 appsettings.Development.json
 appsettings.Local.json

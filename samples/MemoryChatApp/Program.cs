@@ -180,13 +180,22 @@ async Task RunChatModeAsync()
                 break;
             }
 
-            // Store user message as episodic memory
-            await memoryService.StoreAsync(
-                userId,
-                $"[User said]: {userMessage}",
-                MemoryType.Episodic,
-                sessionId,
-                importance: 0.7f);
+            try
+            {
+                // Store user message as episodic memory
+                await memoryService.StoreAsync(
+                    userId,
+                    $"[User said]: {userMessage}",
+                    MemoryType.Episodic,
+                    sessionId,
+                    importance: 0.7f);
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"[Memory store warning: {ex.Message}]");
+                Console.ResetColor();
+            }
 
             // Recall relevant memories
             var memories = await RecallMemoriesAsync(userMessage);
@@ -203,16 +212,25 @@ async Task RunChatModeAsync()
             Console.WriteLine(response);
             Console.WriteLine();
 
-            // Store assistant response
-            await memoryService.StoreAsync(
-                userId,
-                $"[Assistant said]: {response}",
-                MemoryType.Episodic,
-                sessionId,
-                importance: 0.6f);
+            try
+            {
+                // Store assistant response
+                await memoryService.StoreAsync(
+                    userId,
+                    $"[Assistant said]: {response}",
+                    MemoryType.Episodic,
+                    sessionId,
+                    importance: 0.6f);
 
-            // Extract and store semantic memories if important info detected
-            await ExtractSemanticMemoriesAsync(userMessage, response);
+                // Extract and store semantic memories if important info detected
+                await ExtractSemanticMemoriesAsync(userMessage, response);
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"[Memory store warning: {ex.Message}]");
+                Console.ResetColor();
+            }
 
             // Update rolling summary periodically
             chatHistory.Add(new ChatMessage { Role = "user", Content = userMessage });

@@ -40,6 +40,12 @@ public sealed class OpenAIEmbeddingService : CachedEmbeddingServiceBase
             ? DefaultEndpoint
             : embeddingOptions.Endpoint;
 
+        // Ensure trailing slash for proper relative URL resolution
+        if (!endpoint.EndsWith('/'))
+        {
+            endpoint += '/';
+        }
+
         _httpClient.BaseAddress = new Uri(endpoint);
         _httpClient.Timeout = TimeSpan.FromSeconds(embeddingOptions.TimeoutSeconds);
 
@@ -101,7 +107,7 @@ public sealed class OpenAIEmbeddingService : CachedEmbeddingServiceBase
 
         Logger.LogDebug("Requesting {Count} embeddings from OpenAI", texts.Count);
 
-        var response = await _httpClient.PostAsJsonAsync("/embeddings", request, cancellationToken);
+        var response = await _httpClient.PostAsJsonAsync("embeddings", request, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
