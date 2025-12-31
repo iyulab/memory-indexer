@@ -19,6 +19,7 @@ using MemoryIndexer.Intelligence.Search;
 using MemoryIndexer.Intelligence.SelfEditing;
 using MemoryIndexer.Intelligence.Security;
 using MemoryIndexer.Intelligence.Security.MultiTenant;
+using MemoryIndexer.Intelligence.EntityResolution;
 using MemoryIndexer.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.Storage.InMemory;
@@ -215,6 +216,9 @@ public static class ServiceCollectionExtensions
         // Register summarization orchestrator (Phase 11)
         services.TryAddSingleton<ISummarizationOrchestrator, SummarizationOrchestrator>();
         services.TryAddSingleton<IRollingSummaryManager, RollingSummaryManager>();
+
+        // Register entity resolution services (Phase 12)
+        services.TryAddSingleton<ICoreferenceResolver, CoreferenceResolver>();
 
         return services;
     }
