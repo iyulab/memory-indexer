@@ -51,7 +51,7 @@
 **Status**: Complete
 
 - [x] LLMLingua-style compression strategies
-- [x] Cross-encoder reranking (LocalReranker with LocalAI.Reranker)
+- [x] Cross-encoder reranking (LocalReranker with LMSupply.Reranker)
 - [x] Heuristic memory classification
 - [x] 3-Tier VCM architecture (Working/Archival/Core memory)
 - [x] Memory primitives (insert, replace, search)

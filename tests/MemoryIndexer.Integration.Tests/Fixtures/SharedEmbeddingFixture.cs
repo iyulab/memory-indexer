@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using Xunit;
 
 #if !SKIP_ONNX_TESTS
-using LocalAI.Embedder;
+using LMSupply.Embedder;
 using MemoryIndexer.Embedding.Providers;
 #endif
 

@@ -1,4 +1,4 @@
-using LocalAI.Reranker;
+using LMSupply.Reranker;
 using MemoryIndexer.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,10 +7,10 @@ using MemoryIndexer.Core.Configuration;
 namespace MemoryIndexer.Intelligence.Reranking;
 
 /// <summary>
-/// Re-ranking service using LocalAI.Reranker for local ONNX-based cross-encoder inference.
+/// Re-ranking service using LMSupply.Reranker for local ONNX-based cross-encoder inference.
 /// </summary>
 /// <remarks>
-/// LocalAI.Reranker is an open-source library by iyulab that provides fast,
+/// LMSupply.Reranker is an open-source library by iyulab that provides fast,
 /// local re-ranking using ONNX Runtime cross-encoder models.
 /// Models are downloaded automatically on first use and cached locally.
 ///

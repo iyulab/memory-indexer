@@ -12,7 +12,7 @@ namespace MemoryIndexer.Integration.Tests;
 
 /// <summary>
 /// Integration tests for LocalEmbeddingService using shared fixture.
-/// Tests the SDK's embedding service integration with LocalAI.Embedder.
+/// Tests the SDK's embedding service integration with LMSupply.Embedder.
 /// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
 /// <remarks>

@@ -238,8 +238,8 @@ src/
 │   ├── Sqlite/                  # SQLite-vec persistent storage
 │   └── Qdrant/                  # Production vector database
 ├── MemoryIndexer.Intelligence/  # AI/ML integrations
-│   ├── Embedding/               # BGE-M3 via Ollama/LocalAI
-│   ├── Reranking/               # LocalAI.Reranker integration
+│   ├── Embedding/               # BGE-M3 via Ollama/LMSupply
+│   ├── Reranking/               # LMSupply.Reranker integration
 │   └── Classification/          # Memory type classifier
 ├── MemoryIndexer.Mcp/           # MCP protocol layer
 │   └── Tools/                   # MCP tool implementations

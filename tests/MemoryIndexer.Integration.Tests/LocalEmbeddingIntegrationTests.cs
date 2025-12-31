@@ -1,6 +1,6 @@
 #if !SKIP_ONNX_TESTS
 using FluentAssertions;
-using LocalAI.Embedder;
+using LMSupply.Embedder;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
 using MemoryIndexer.Integration.Tests.Fixtures;
@@ -12,7 +12,7 @@ using Xunit.Abstractions;
 namespace MemoryIndexer.Integration.Tests;
 
 /// <summary>
-/// Integration tests using LocalAI.Embedder for real embedding generation.
+/// Integration tests using LMSupply.Embedder for real embedding generation.
 /// These tests verify the full memory store workflow with actual vector embeddings.
 /// Uses shared embedding fixture for efficient resource usage.
 /// </summary>

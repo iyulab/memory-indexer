@@ -1,8 +1,8 @@
-# LocalAI Integration Strategy
+# LMSupply Integration Strategy
 
 ## Overview
 
-Memory Indexer의 새로운 비전에 따라, LocalAI 패키지들의 역할을 재정의합니다.
+Memory Indexer의 새로운 비전에 따라, LMSupply 패키지들의 역할을 재정의합니다.
 
 ---
 
@@ -10,21 +10,21 @@ Memory Indexer의 새로운 비전에 따라, LocalAI 패키지들의 역할을 
 
 | Package | Role in Memory Indexer | Layer | Priority |
 |---------|----------------------|-------|----------|
-| **LocalAI.Embedder** | 텍스트 임베딩 생성 | Core | ✅ **P0** (구현됨) |
-| **LocalAI.Reranker** | 검색 결과 시맨틱 재순위 | Core | ✅ **P1** (예정) |
-| **LocalAI.Generator** | 분류, 요약, 추출 | Intelligence | ✅ **P1** (예정) |
+| **LMSupply.Embedder** | 텍스트 임베딩 생성 | Core | ✅ **P0** (구현됨) |
+| **LMSupply.Reranker** | 검색 결과 시맨틱 재순위 | Core | ✅ **P1** (예정) |
+| **LMSupply.Generator** | 분류, 요약, 추출 | Intelligence | ✅ **P1** (예정) |
 
 ### Not Required
 
 | Package | Reason |
 |---------|--------|
-| LocalAI.Captioner | 이미지 처리 - 텍스트 전용 시스템 |
-| LocalAI.Ocr | 문서 OCR - 범위 외 |
-| LocalAI.Detector | 객체 감지 - 비전 기능 |
-| LocalAI.Segmenter | 이미지 분할 - 비전 기능 |
-| LocalAI.Translator | 다국어 임베딩 모델이 대체 |
-| LocalAI.Transcriber | 음성 처리 - 범위 외 |
-| LocalAI.Synthesizer | 음성 합성 - 범위 외 |
+| LMSupply.Captioner | 이미지 처리 - 텍스트 전용 시스템 |
+| LMSupply.Ocr | 문서 OCR - 범위 외 |
+| LMSupply.Detector | 객체 감지 - 비전 기능 |
+| LMSupply.Segmenter | 이미지 분할 - 비전 기능 |
+| LMSupply.Translator | 다국어 임베딩 모델이 대체 |
+| LMSupply.Transcriber | 음성 처리 - 범위 외 |
+| LMSupply.Synthesizer | 음성 합성 - 범위 외 |
 
 ---
 
@@ -38,7 +38,7 @@ Memory Indexer의 새로운 비전에 따라, LocalAI 패키지들의 역할을 
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │              Intelligence Layer (New)                      │ │
 │  │  ┌────────────────────────────────────────────────────┐   │ │
-│  │  │              LocalAI.Generator                      │   │ │
+│  │  │              LMSupply.Generator                      │   │ │
 │  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐           │   │ │
 │  │  │  │Classifier│ │Summarizer│ │Extractor │           │   │ │
 │  │  │  └──────────┘ └──────────┘ └──────────┘           │   │ │
@@ -48,7 +48,7 @@ Memory Indexer의 새로운 비전에 따라, LocalAI 패키지들의 역할을 
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │                    Core Layer (Current)                    │ │
 │  │  ┌────────────────────┐    ┌────────────────────┐         │ │
-│  │  │  LocalAI.Embedder  │    │  LocalAI.Reranker  │         │ │
+│  │  │  LMSupply.Embedder  │    │  LMSupply.Reranker  │         │ │
 │  │  │  (Text → Vector)   │    │  (Semantic Rerank) │         │ │
 │  │  └────────────────────┘    └────────────────────┘         │ │
 │  └────────────────────────────────────────────────────────────┘ │
@@ -58,7 +58,7 @@ Memory Indexer의 새로운 비전에 따라, LocalAI 패키지들의 역할을 
 
 ---
 
-## 1. LocalAI.Embedder (구현 완료)
+## 1. LMSupply.Embedder (구현 완료)
 
 ### Current Status: ✅ Integrated
 
@@ -88,7 +88,7 @@ public class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
 
 ---
 
-## 2. LocalAI.Reranker (예정)
+## 2. LMSupply.Reranker (예정)
 
 ### Purpose
 
@@ -159,7 +159,7 @@ public class LocalRerankerService : IRerankerService, IAsyncDisposable
 
 ---
 
-## 3. LocalAI.Generator (예정)
+## 3. LMSupply.Generator (예정)
 
 ### Purpose
 
@@ -407,17 +407,17 @@ public static IServiceCollection AddMemoryIndexerIntelligence(
 
 ```xml
 <!-- Local AI (iyulab open source) -->
-<PackageVersion Include="LocalAI.Embedder" Version="0.7.0" />
-<PackageVersion Include="LocalAI.Reranker" Version="0.7.0" />
-<PackageVersion Include="LocalAI.Generator" Version="0.7.0" />
+<PackageVersion Include="LMSupply.Embedder" Version="0.7.0" />
+<PackageVersion Include="LMSupply.Reranker" Version="0.7.0" />
+<PackageVersion Include="LMSupply.Generator" Version="0.7.0" />
 ```
 
 ### MemoryIndexer.Intelligence.csproj
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="LocalAI.Generator" />
-  <PackageReference Include="LocalAI.Reranker" />
+  <PackageReference Include="LMSupply.Generator" />
+  <PackageReference Include="LMSupply.Reranker" />
 </ItemGroup>
 ```
 
@@ -426,14 +426,14 @@ public static IServiceCollection AddMemoryIndexerIntelligence(
 ## Implementation Phases
 
 ### Phase 1: Reranker Integration
-- [ ] Add `LocalAI.Reranker` package reference
+- [ ] Add `LMSupply.Reranker` package reference
 - [ ] Implement `IRerankerService` interface
 - [ ] Integrate into `RecallAsync` pipeline
 - [ ] Add configuration options
 - [ ] Write tests
 
 ### Phase 2: Generator Integration (Classifier)
-- [ ] Add `LocalAI.Generator` package reference
+- [ ] Add `LMSupply.Generator` package reference
 - [ ] Implement `LocalGeneratorService` base
 - [ ] Implement `IMemoryClassifier`
 - [ ] Integrate into `IngestAsync` pipeline
@@ -518,8 +518,8 @@ public class ModelManager : IAsyncDisposable
 
 Memory Indexer의 새로운 비전을 실현하기 위해:
 
-1. **LocalAI.Embedder** ✅ - 이미 통합됨
-2. **LocalAI.Reranker** - 검색 품질 향상을 위해 필요
-3. **LocalAI.Generator** - Intelligence Layer의 핵심
+1. **LMSupply.Embedder** ✅ - 이미 통합됨
+2. **LMSupply.Reranker** - 검색 품질 향상을 위해 필요
+3. **LMSupply.Generator** - Intelligence Layer의 핵심
 
 이 세 패키지의 조합으로 **지능형 메모리 관리 시스템**을 구축할 수 있습니다.

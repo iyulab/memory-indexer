@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using LocalAI.Embedder;
+using LMSupply.Embedder;
 using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
@@ -10,12 +10,12 @@ using Microsoft.Extensions.Options;
 namespace MemoryIndexer.Embedding.Providers;
 
 /// <summary>
-/// Embedding service using LocalAI.Embedder for local ONNX-based model inference.
+/// Embedding service using LMSupply.Embedder for local ONNX-based model inference.
 /// Supports models like all-MiniLM-L6-v2 (384 dims), bge-small-en-v1.5 (384 dims),
 /// bge-base-en-v1.5 (768 dims), and other ONNX embedding models.
 /// </summary>
 /// <remarks>
-/// LocalAI.Embedder is an open-source library by iyulab that provides fast,
+/// LMSupply.Embedder is an open-source library by iyulab that provides fast,
 /// local embedding generation using ONNX Runtime. Models are downloaded
 /// automatically on first use and cached locally.
 ///

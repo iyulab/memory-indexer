@@ -5,7 +5,7 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <!-- Define constant for skipping ONNX-dependent tests until LocalAI/ONNX supports .NET 10 -->
+  <!-- Define constant for skipping ONNX-dependent tests until LMSupply/ONNX supports .NET 10 -->
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);SKIP_ONNX_TESTS</DefineConstants>
   </PropertyGroup>
@@ -27,8 +27,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <!-- Local AI embedding for integration tests (iyulab open source) -->
-    <PackageReference Include="LocalAI.Embedder" />
+    <!-- LMSupply embedding for integration tests (iyulab open source) -->
+    <PackageReference Include="LMSupply.Embedder" />
   </ItemGroup>
 
 </Project>

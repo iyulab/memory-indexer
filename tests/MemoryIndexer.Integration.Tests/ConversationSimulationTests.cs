@@ -1,6 +1,6 @@
 #if !SKIP_ONNX_TESTS
 using FluentAssertions;
-using LocalAI.Embedder;
+using LMSupply.Embedder;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
 using MemoryIndexer.Storage.InMemory;

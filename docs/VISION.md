@@ -380,20 +380,20 @@ await memory.end_session(session)
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### LocalAI Package Requirements (Revised)
+### LMSupply Package Requirements (Revised)
 
 | Package | Role | Necessity |
 |---------|------|-----------|
-| **LocalAI.Embedder** | 텍스트 → 벡터 변환 | ✅ **필수** |
-| **LocalAI.Reranker** | 검색 결과 재순위 | ✅ **필수** (Ranker) |
-| **LocalAI.Generator** | 요약, 분류, 추출 | ✅ **필수** (Intelligence) |
+| **LMSupply.Embedder** | 텍스트 → 벡터 변환 | ✅ **필수** |
+| **LMSupply.Reranker** | 검색 결과 재순위 | ✅ **필수** (Ranker) |
+| **LMSupply.Generator** | 요약, 분류, 추출 | ✅ **필수** (Intelligence) |
 
 ### Intelligence Layer Detail
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                  Intelligence Layer                          │
-│              (Powered by LocalAI.Generator)                  │
+│              (Powered by LMSupply.Generator)                  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌─────────────────────────────────────────────────────────┐│
@@ -572,7 +572,7 @@ Memory.Type:
 - 🔲 Working memory (in-memory tier)
 
 ### Phase 3: Intelligence
-- 🔲 LocalAI.Generator integration
+- 🔲 LMSupply.Generator integration
 - 🔲 Memory classifier
 - 🔲 Fact extractor
 - 🔲 Memory summarizer

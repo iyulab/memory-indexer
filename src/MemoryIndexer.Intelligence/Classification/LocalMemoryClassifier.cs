@@ -12,7 +12,7 @@ namespace MemoryIndexer.Intelligence.Classification;
 /// </summary>
 /// <remarks>
 /// This implementation uses pattern matching and heuristics for fast classification.
-/// It can be extended to use LocalAI.Generator for more sophisticated classification
+/// It can be extended to use LMSupply.Generator for more sophisticated classification
 /// when LLM resources are available.
 ///
 /// Classification is based on:
