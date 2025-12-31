@@ -114,6 +114,40 @@ public interface ITemporalEntityStore
         string userId,
         bool includeInactive = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all triples where the entity is the subject.
+    /// </summary>
+    /// <param name="subject">The subject entity name.</param>
+    /// <param name="userId">Optional user ID for filtering.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Triples with matching subject.</returns>
+    Task<IReadOnlyList<EntityTriple>> GetBySubjectAsync(
+        string subject,
+        string? userId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all triples where the entity is the object.
+    /// </summary>
+    /// <param name="objectValue">The object value to match.</param>
+    /// <param name="userId">Optional user ID for filtering.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Triples with matching object.</returns>
+    Task<IReadOnlyList<EntityTriple>> GetByObjectAsync(
+        string objectValue,
+        string? userId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all active triples (not superseded, not deleted).
+    /// </summary>
+    /// <param name="userId">Optional user ID for filtering.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>All active triples.</returns>
+    Task<IReadOnlyList<EntityTriple>> GetAllActiveAsync(
+        string? userId = null,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>

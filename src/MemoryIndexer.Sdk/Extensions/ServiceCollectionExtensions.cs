@@ -5,6 +5,7 @@ using MemoryIndexer.Embedding.Providers;
 using MemoryIndexer.Intelligence.Classification;
 using MemoryIndexer.Intelligence.Chunking;
 using MemoryIndexer.Intelligence.Conflict;
+using MemoryIndexer.Intelligence.Graph;
 using MemoryIndexer.Intelligence.Compression;
 using MemoryIndexer.Intelligence.ContextOptimization;
 using MemoryIndexer.Intelligence.Deduplication;
@@ -194,6 +195,9 @@ public static class ServiceCollectionExtensions
         // Register contradiction detection and resolution services (Phase 8.1)
         services.TryAddSingleton<IContradictionDetector, SemanticContradictionDetector>();
         services.TryAddSingleton<IContradictionResolver, DefaultContradictionResolver>();
+
+        // Register graph-based retrieval services (Phase 8.2)
+        services.TryAddSingleton<IGraphRetriever, InMemoryGraphRetriever>();
 
         return services;
     }

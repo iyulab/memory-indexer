@@ -191,6 +191,56 @@ public sealed class InMemoryTemporalEntityStore(ILogger<InMemoryTemporalEntitySt
         return Task.FromResult<IReadOnlyList<EntityTriple>>(results);
     }
 
+    /// <inheritdoc />
+    public Task<IReadOnlyList<EntityTriple>> GetBySubjectAsync(
+        string subject,
+        string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var results = _triples.Values
+            .Where(t => t.Subject.Equals(subject, StringComparison.OrdinalIgnoreCase))
+            .Where(t => string.IsNullOrEmpty(userId) || t.UserId == userId)
+            .Where(t => t.IsActive)
+            .OrderByDescending(t => t.Confidence)
+            .ThenByDescending(t => t.CreatedAt)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<EntityTriple>>(results);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<EntityTriple>> GetByObjectAsync(
+        string objectValue,
+        string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var results = _triples.Values
+            .Where(t => t.ObjectValue.Equals(objectValue, StringComparison.OrdinalIgnoreCase))
+            .Where(t => string.IsNullOrEmpty(userId) || t.UserId == userId)
+            .Where(t => t.IsActive)
+            .OrderByDescending(t => t.Confidence)
+            .ThenByDescending(t => t.CreatedAt)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<EntityTriple>>(results);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<EntityTriple>> GetAllActiveAsync(
+        string? userId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var results = _triples.Values
+            .Where(t => t.IsActive)
+            .Where(t => t.IsCurrentlyValid)
+            .Where(t => !IsSuperseded(t))
+            .Where(t => string.IsNullOrEmpty(userId) || t.UserId == userId)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<EntityTriple>>(results);
+    }
+
     /// <summary>
     /// Checks if a triple has been superseded by a newer version.
     /// </summary>
