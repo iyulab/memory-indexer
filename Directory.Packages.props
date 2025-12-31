@@ -52,6 +52,9 @@
     <PackageVersion Include="LMSupply.Reranker" Version="0.8.3" />
     <PackageVersion Include="LMSupply.Generator" Version="0.8.3" />
 
+    <!-- Environment -->
+    <PackageVersion Include="DotNetEnv" Version="3.1.1" />
+
     <!-- OpenTelemetry Observability -->
     <PackageVersion Include="OpenTelemetry" Version="1.14.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
