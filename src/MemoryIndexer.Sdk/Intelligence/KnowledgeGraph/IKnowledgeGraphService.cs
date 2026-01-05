@@ -1,3 +1,5 @@
+using MemoryIndexer.Models;
+
 namespace MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
 
 /// <summary>
@@ -101,71 +103,6 @@ public sealed class Entity
     public Dictionary<string, string> Metadata { get; init; } = [];
 }
 
-/// <summary>
-/// Types of entities that can be extracted.
-/// </summary>
-public enum EntityType
-{
-    /// <summary>
-    /// Person name.
-    /// </summary>
-    Person,
-
-    /// <summary>
-    /// Organization or company.
-    /// </summary>
-    Organization,
-
-    /// <summary>
-    /// Location or place.
-    /// </summary>
-    Location,
-
-    /// <summary>
-    /// Date or time expression.
-    /// </summary>
-    DateTime,
-
-    /// <summary>
-    /// Email address.
-    /// </summary>
-    Email,
-
-    /// <summary>
-    /// URL or web address.
-    /// </summary>
-    Url,
-
-    /// <summary>
-    /// Numeric value (currency, quantity, etc.).
-    /// </summary>
-    Numeric,
-
-    /// <summary>
-    /// Technical term or concept.
-    /// </summary>
-    Technical,
-
-    /// <summary>
-    /// Product or service name.
-    /// </summary>
-    Product,
-
-    /// <summary>
-    /// Event or meeting.
-    /// </summary>
-    Event,
-
-    /// <summary>
-    /// General concept or topic.
-    /// </summary>
-    Concept,
-
-    /// <summary>
-    /// Unknown or other type.
-    /// </summary>
-    Unknown
-}
 
 /// <summary>
 /// Represents a relationship between two entities.

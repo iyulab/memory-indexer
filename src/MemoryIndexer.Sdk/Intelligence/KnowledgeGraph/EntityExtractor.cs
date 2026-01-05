@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;

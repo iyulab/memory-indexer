@@ -1,3 +1,4 @@
+using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.EntityResolution;
 using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
 using Microsoft.Extensions.Logging.Abstractions;

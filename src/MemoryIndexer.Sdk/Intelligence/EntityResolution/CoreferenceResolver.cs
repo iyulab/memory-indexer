@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
 using Microsoft.Extensions.Logging;
 
