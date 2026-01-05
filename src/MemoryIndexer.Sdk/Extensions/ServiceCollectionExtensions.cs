@@ -228,6 +228,11 @@ public static class ServiceCollectionExtensions
         // Register buffer promotion services (Phase 14)
         services.TryAddSingleton<IBufferPromoter, BufferPromoterService>();
 
+        // Register working memory orchestrator (Phase 14.3)
+        services.AddOptions<WorkingMemoryOrchestratorOptions>()
+            .BindConfiguration("MemoryIndexer:VCM:WorkingOrchestrator");
+        services.TryAddSingleton<IWorkingMemoryOrchestrator, WorkingMemoryOrchestratorService>();
+
         return services;
     }
 
