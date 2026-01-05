@@ -1,0 +1,164 @@
+namespace MemoryIndexer.Models;
+
+/// <summary>
+/// Represents a raw memory item in the Recently buffer (Tier 0).
+/// This is a staging area for async processing before promotion to Working memory.
+/// </summary>
+/// <remarks>
+/// 4-Tier Architecture:
+/// - Recently (Buffer): Raw conversation, async staging
+/// - Working (L1): Summarized active context
+/// - Session (L2): Archived session summaries
+/// - User (L3): Profile dictionary
+/// </remarks>
+public sealed class RecentlyMemory
+{
+    /// <summary>
+    /// Unique identifier for this buffer item.
+    /// </summary>
+    public Guid Id { get; init; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Raw content of the memory.
+    /// </summary>
+    public required string Content { get; init; }
+
+    /// <summary>
+    /// The user this memory belongs to.
+    /// </summary>
+    public required string UserId { get; init; }
+
+    /// <summary>
+    /// Optional session identifier.
+    /// </summary>
+    public string? SessionId { get; init; }
+
+    /// <summary>
+    /// When this item was added to the buffer.
+    /// </summary>
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Estimated token count for this content.
+    /// Used for token-based promotion trigger.
+    /// </summary>
+    public int TokenCount { get; init; }
+
+    /// <summary>
+    /// Turn index within the current buffer sequence.
+    /// Used for turn-based promotion trigger.
+    /// </summary>
+    public int TurnIndex { get; init; }
+
+    /// <summary>
+    /// Role of the content (user, assistant, system).
+    /// </summary>
+    public string? Role { get; init; }
+
+    /// <summary>
+    /// Optional metadata for the buffer item.
+    /// </summary>
+    public Dictionary<string, string>? Metadata { get; init; }
+}
+
+/// <summary>
+/// Result of a promotion operation from Recently buffer.
+/// </summary>
+public sealed class PromotionResult
+{
+    /// <summary>
+    /// Whether the promotion was successful.
+    /// </summary>
+    public bool Success { get; init; }
+
+    /// <summary>
+    /// Number of items promoted.
+    /// </summary>
+    public int PromotedCount { get; init; }
+
+    /// <summary>
+    /// Total tokens in promoted items.
+    /// </summary>
+    public int TotalTokens { get; init; }
+
+    /// <summary>
+    /// Trigger that caused the promotion.
+    /// </summary>
+    public PromotionTriggerType Trigger { get; init; }
+
+    /// <summary>
+    /// IDs of the promoted items.
+    /// </summary>
+    public IReadOnlyList<Guid> PromotedIds { get; init; } = [];
+
+    /// <summary>
+    /// Error message if promotion failed.
+    /// </summary>
+    public string? Error { get; init; }
+
+    /// <summary>
+    /// Creates a successful promotion result.
+    /// </summary>
+    public static PromotionResult Succeeded(
+        int count,
+        int tokens,
+        PromotionTriggerType trigger,
+        IReadOnlyList<Guid> ids) => new()
+    {
+        Success = true,
+        PromotedCount = count,
+        TotalTokens = tokens,
+        Trigger = trigger,
+        PromotedIds = ids
+    };
+
+    /// <summary>
+    /// Creates a failed promotion result.
+    /// </summary>
+    public static PromotionResult Failed(string error) => new()
+    {
+        Success = false,
+        Error = error
+    };
+
+    /// <summary>
+    /// Creates an empty (no-op) result.
+    /// </summary>
+    public static PromotionResult Empty => new()
+    {
+        Success = true,
+        PromotedCount = 0,
+        TotalTokens = 0
+    };
+}
+
+/// <summary>
+/// Type of trigger that caused promotion.
+/// </summary>
+public enum PromotionTriggerType
+{
+    /// <summary>
+    /// No trigger (manual or default).
+    /// </summary>
+    None = 0,
+
+    /// <summary>
+    /// Triggered by idle timeout.
+    /// </summary>
+    IdleTimeout = 1,
+
+    /// <summary>
+    /// Triggered by token threshold.
+    /// </summary>
+    TokenThreshold = 2,
+
+    /// <summary>
+    /// Triggered by turn count.
+    /// </summary>
+    TurnThreshold = 3,
+
+    /// <summary>
+    /// Triggered by explicit flush request.
+    /// </summary>
+    Manual = 4
+}

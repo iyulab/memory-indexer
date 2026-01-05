@@ -44,6 +44,11 @@ public sealed class MemoryIndexerOptions
     /// Intelligence services configuration.
     /// </summary>
     public IntelligenceOptions Intelligence { get; set; } = new();
+
+    /// <summary>
+    /// Recently buffer (Tier 0) configuration.
+    /// </summary>
+    public RecentlyBufferOptions RecentlyBuffer { get; set; } = new();
 }
 
 /// <summary>
@@ -488,4 +493,70 @@ public sealed class IntelligenceOptions
     /// Lower values produce more deterministic output.
     /// </summary>
     public float GeneratorTemperature { get; set; } = 0.1f;
+}
+
+/// <summary>
+/// Recently buffer (Tier 0) configuration options.
+/// Controls the async staging area before memories are promoted to Working tier.
+/// </summary>
+/// <remarks>
+/// Multi-signal promotion triggers (OR logic):
+/// - IdleTimeout: Promotes when no activity for specified duration
+/// - TokenThreshold: Promotes when accumulated tokens exceed threshold
+/// - TurnThreshold: Promotes when turn count exceeds threshold
+/// </remarks>
+public sealed class RecentlyBufferOptions
+{
+    /// <summary>
+    /// Whether the Recently buffer is enabled.
+    /// When disabled, memories go directly to Working tier.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Idle timeout before triggering promotion.
+    /// Promotion occurs when no new content for this duration.
+    /// Default: 60 seconds.
+    /// </summary>
+    public TimeSpan IdleTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Token threshold for triggering promotion.
+    /// Promotion occurs when accumulated tokens exceed this value.
+    /// Default: 500 tokens.
+    /// </summary>
+    public int TokenThreshold { get; set; } = 500;
+
+    /// <summary>
+    /// Turn threshold for triggering promotion.
+    /// Promotion occurs when turn count exceeds this value.
+    /// Default: 3 turns.
+    /// </summary>
+    public int TurnThreshold { get; set; } = 3;
+
+    /// <summary>
+    /// Maximum buffer size per user.
+    /// When exceeded, oldest items are promoted regardless of triggers.
+    /// Default: 100 items.
+    /// </summary>
+    public int MaxBufferSize { get; set; } = 100;
+
+    /// <summary>
+    /// Maximum total tokens per user buffer.
+    /// When exceeded, oldest items are promoted.
+    /// Default: 10000 tokens.
+    /// </summary>
+    public int MaxBufferTokens { get; set; } = 10000;
+
+    /// <summary>
+    /// Interval for checking promotion triggers.
+    /// Default: 5 seconds.
+    /// </summary>
+    public TimeSpan TriggerCheckInterval { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Whether to enable async background promotion worker.
+    /// When disabled, promotion only occurs on explicit flush.
+    /// </summary>
+    public bool EnableBackgroundWorker { get; set; } = true;
 }

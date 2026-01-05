@@ -71,6 +71,9 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IMemoryPrimitives, MemoryPrimitivesService>();
         services.TryAddSingleton<IVirtualContextManager, VirtualContextManager>();
 
+        // Register Recently buffer (Tier 0) - Phase 14
+        services.TryAddSingleton<IRecentlyBuffer, RecentlyBufferService>();
+
         // Register storage based on configuration
         services.TryAddSingleton<IMemoryStore>(sp =>
         {
