@@ -55,18 +55,21 @@ jobs:
 
     - name: Run CI-safe Tests
       run: |
-        dotnet test tests/MemoryIndexer.Core.Tests --no-build --configuration Release --verbosity minimal
-        dotnet test tests/MemoryIndexer.Storage.Tests --no-build --configuration Release --verbosity minimal --filter "Category!=LocalModel"
-        dotnet test tests/MemoryIndexer.Intelligence.Tests --no-build --configuration Release --verbosity minimal --filter "Category!=LocalModel"
+        dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity minimal
+        dotnet test tests/MemoryIndexer.Sdk.Tests --no-build --configuration Release --verbosity minimal --filter "Category!=LocalModel&Category!=Heavy&Category!=GpuStack"
 
-    - name: Pack SDK
+    - name: Pack Packages
       if: steps.version_check.outputs.changed == 'true' || github.event.inputs.force_publish == 'true'
       run: |
+        dotnet pack src/MemoryIndexer/MemoryIndexer.csproj \
+          --no-build \
+          --configuration Release \
+          --output ./packages
         dotnet pack src/MemoryIndexer.Sdk/MemoryIndexer.Sdk.csproj \
           --no-build \
           --configuration Release \
           --output ./packages
-        echo "Package created:"
+        echo "Packages created:"
         ls -la ./packages/
 
     - name: Push to NuGet.org
@@ -109,8 +112,12 @@ jobs:
         echo "**Version Changed:** ${{ steps.version_check.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
         echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Packages:**" >> $GITHUB_STEP_SUMMARY
+        echo "- MemoryIndexer (Core)" >> $GITHUB_STEP_SUMMARY
+        echo "- MemoryIndexer.Sdk (Full SDK)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         if [ "${{ steps.version_check.outputs.changed }}" == "true" ] || [ "${{ github.event.inputs.force_publish }}" == "true" ]; then
-          echo "✅ Package was built and published" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Packages were built and published" >> $GITHUB_STEP_SUMMARY
         else
           echo "⏭️ Package build skipped (version unchanged)" >> $GITHUB_STEP_SUMMARY
         fi

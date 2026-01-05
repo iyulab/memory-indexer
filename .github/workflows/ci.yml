@@ -29,30 +29,14 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release
 
-    - name: Run Unit Tests (Core)
-      run: dotnet test tests/MemoryIndexer.Core.Tests --no-build --configuration Release --verbosity normal
+    - name: Run Core Tests
+      run: dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity normal
 
-    - name: Run Unit Tests (Storage - excluding LocalModel)
+    - name: Run SDK Tests (excluding LocalModel and Heavy)
       run: |
-        dotnet test tests/MemoryIndexer.Storage.Tests \
+        dotnet test tests/MemoryIndexer.Sdk.Tests \
           --no-build \
           --configuration Release \
           --verbosity normal \
-          --filter "Category!=LocalModel"
-
-    - name: Run Unit Tests (Intelligence - excluding LocalModel)
-      run: |
-        dotnet test tests/MemoryIndexer.Intelligence.Tests \
-          --no-build \
-          --configuration Release \
-          --verbosity normal \
-          --filter "Category!=LocalModel"
-
-    - name: Run Integration Tests (CI-safe only)
-      run: |
-        dotnet test tests/MemoryIndexer.Integration.Tests \
-          --no-build \
-          --configuration Release \
-          --verbosity normal \
-          --filter "Category!=Heavy&Category!=LocalModel&Category!=GpuStack"
+          --filter "Category!=LocalModel&Category!=Heavy&Category!=GpuStack"
       continue-on-error: true
