@@ -153,19 +153,6 @@ public async Task ReembedAllMemoriesAsync(
 }
 ```
 
-## Version Migration
-
-### v0.1.x to v0.2.x (Future)
-
-Breaking changes expected in v0.2:
-- `MemoryUnit.Tags` → `MemoryUnit.Topics`
-- `IMemoryStore.SearchByText()` removed (use `SearchAsync()`)
-
-Migration steps:
-1. Update NuGet package
-2. Replace deprecated APIs
-3. Run schema migration (if using SQLite)
-
 ## Environment-Specific Configuration
 
 ### Development
