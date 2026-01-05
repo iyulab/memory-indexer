@@ -20,6 +20,7 @@ using MemoryIndexer.Sdk.Intelligence.SelfEditing;
 using MemoryIndexer.Sdk.Intelligence.Security;
 using MemoryIndexer.Sdk.Intelligence.Security.MultiTenant;
 using MemoryIndexer.Sdk.Intelligence.EntityResolution;
+using MemoryIndexer.Sdk.Intelligence.Promotion;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.InMemory;
@@ -223,6 +224,9 @@ public static class ServiceCollectionExtensions
 
         // Register entity resolution services (Phase 12)
         services.TryAddSingleton<ICoreferenceResolver, CoreferenceResolver>();
+
+        // Register buffer promotion services (Phase 14)
+        services.TryAddSingleton<IBufferPromoter, BufferPromoterService>();
 
         return services;
     }
