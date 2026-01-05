@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -82,7 +83,8 @@ services.AddHttpClient("LLM", client =>
 {
     client.BaseAddress = new Uri("https://api.openai.com/v1/");
     client.DefaultRequestHeaders.Add("Authorization", $"Bearer {openAiApiKey}");
-    client.Timeout = TimeSpan.FromSeconds(30);
+    // Increased timeout to handle longer contexts in later rounds
+    client.Timeout = TimeSpan.FromSeconds(120);
 });
 
 var serviceProvider = services.BuildServiceProvider();
@@ -96,6 +98,10 @@ const int MAX_ROUNDS = 20;
 // Note: Score = (vector_similarity + combined_score) / 2, can exceed 1.0
 // Set high threshold to only catch near-identical questions
 const float HIGH_SIMILARITY_THRESHOLD = 1.75f;
+
+// Metrics tracking
+var metrics = new GameMetrics();
+var gameStopwatch = Stopwatch.StartNew();
 
 // Generate a random secret for Alpha
 var secrets = new[]
@@ -164,6 +170,9 @@ string lastAlphaResponse = "The game has started. Ask your first question!";
 
 for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
 {
+    var roundStopwatch = Stopwatch.StartNew();
+    var roundMetrics = new RoundMetrics { Round = round };
+
     Console.WriteLine($"══════════════════════════ Round {round}/{MAX_ROUNDS} ══════════════════════════");
     Console.WriteLine();
 
@@ -189,16 +198,20 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
     Console.ResetColor();
 
     // Beta recalls its own memories to understand game state
+    var betaRecallSw = Stopwatch.StartNew();
     var betaMemories = await memoryService.RecallAsync(
         BETA_USER_ID,
         $"game rules strategy previous questions answers deductions round {round}",
         limit: 15);
+    betaRecallSw.Stop();
+    roundMetrics.BetaRecallMs = betaRecallSw.ElapsedMilliseconds;
 
     var betaContext = string.Join("\n", betaMemories.Select(m =>
         $"[{m.Memory.Type}, score:{m.Score:F2}] {m.Memory.Content}"));
+    roundMetrics.BetaContextChars = betaContext.Length;
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
-    Console.WriteLine($"[BETA] Recalled {betaMemories.Count} memories:");
+    Console.WriteLine($"[BETA] Recalled {betaMemories.Count} memories (⏱️ {roundMetrics.BetaRecallMs}ms, 📝 {roundMetrics.BetaContextChars:N0} chars):");
     foreach (var mem in betaMemories.Take(5)) // Show top 5 memories
     {
         var shortContent = mem.Memory.Content.Length > 60
@@ -226,20 +239,25 @@ RULES:
     string betaUserMessage = lastAlphaResponse; // ONLY the last response!
 
     string betaQuestion;
+    LLMMetrics betaLlmMetrics;
     if (isFinalRound)
     {
-        betaQuestion = await CallLLMAsync(
+        (betaQuestion, betaLlmMetrics) = await CallLLMWithMetricsAsync(
             httpClientFactory, openAiModel,
             betaSystemPrompt,
             $"Alpha said: \"{betaUserMessage}\". This is your FINAL turn! Make your best guess: 'My final guess is: [answer]'");
     }
     else
     {
-        betaQuestion = await CallLLMAsync(
+        (betaQuestion, betaLlmMetrics) = await CallLLMWithMetricsAsync(
             httpClientFactory, openAiModel,
             betaSystemPrompt,
             $"Alpha said: \"{betaUserMessage}\". Based on your memories, ask ONE strategic yes/no question. Just write the question, nothing else:");
     }
+
+    roundMetrics.BetaLlmMs = betaLlmMetrics.DurationMs;
+    roundMetrics.BetaPromptTokens = betaLlmMetrics.PromptTokens;
+    roundMetrics.BetaCompletionTokens = betaLlmMetrics.CompletionTokens;
 
     // Handle LLM failure after all retries
     if (betaQuestion.StartsWith("Error:"))
@@ -253,6 +271,8 @@ RULES:
 
     Console.ForegroundColor = ConsoleColor.Yellow;
     Console.WriteLine($"[BETA] >>> {betaQuestion}");
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    Console.WriteLine($"       ⏱️ LLM: {roundMetrics.BetaLlmMs}ms | 🎯 Prompt: {roundMetrics.BetaPromptTokens} | 💬 Completion: {roundMetrics.BetaCompletionTokens}");
     Console.ResetColor();
 
     // Store Beta's question in Beta's memory
@@ -271,16 +291,20 @@ RULES:
     Console.ResetColor();
 
     // Alpha recalls its memories (secret, rules, previous Q&A)
+    var alphaRecallSw = Stopwatch.StartNew();
     var alphaMemories = await memoryService.RecallAsync(
         ALPHA_USER_ID,
         $"secret rules previous questions answers {betaQuestion}",
         limit: 15);
+    alphaRecallSw.Stop();
+    roundMetrics.AlphaRecallMs = alphaRecallSw.ElapsedMilliseconds;
 
     var alphaContext = string.Join("\n", alphaMemories.Select(m =>
         $"[{m.Memory.Type}, score:{m.Score:F2}] {m.Memory.Content}"));
+    roundMetrics.AlphaContextChars = alphaContext.Length;
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
-    Console.WriteLine($"[ALPHA] Recalled {alphaMemories.Count} memories:");
+    Console.WriteLine($"[ALPHA] Recalled {alphaMemories.Count} memories (⏱️ {roundMetrics.AlphaRecallMs}ms, 📝 {roundMetrics.AlphaContextChars:N0} chars):");
     foreach (var mem in alphaMemories.Take(3)) // Show top 3 memories
     {
         var shortContent = mem.Memory.Content.Length > 60
@@ -307,6 +331,10 @@ RULES:
             Console.ResetColor();
             betaWon = true;
             gameOver = true;
+
+            roundStopwatch.Stop();
+            roundMetrics.TotalRoundMs = roundStopwatch.ElapsedMilliseconds;
+            metrics.Rounds.Add(roundMetrics);
             break;
         }
         else
@@ -315,15 +343,23 @@ RULES:
             Console.WriteLine($"[ALPHA] >>> Wrong guess. Keep trying!");
             Console.ResetColor();
             lastAlphaResponse = "Wrong guess. Keep trying!";
+
+            roundStopwatch.Stop();
+            roundMetrics.TotalRoundMs = roundStopwatch.ElapsedMilliseconds;
+            metrics.Rounds.Add(roundMetrics);
+            PrintRoundSummary(roundMetrics);
             continue;
         }
     }
 
     // Check for duplicate questions using semantic similarity
+    var dupCheckSw = Stopwatch.StartNew();
     var duplicateCheck = await memoryService.RecallAsync(
         ALPHA_USER_ID,
         betaQuestion,
         limit: 5);
+    dupCheckSw.Stop();
+    roundMetrics.DuplicateCheckMs = dupCheckSw.ElapsedMilliseconds;
 
     var similarQuestion = duplicateCheck.FirstOrDefault(m =>
         m.Memory.Content.Contains("[QUESTION_R") &&
@@ -359,10 +395,15 @@ RULES:
 - If the question is not a proper yes/no question, say 'INVALID: [reason]'
 - Be honest based on your secret (which should be in your memories)";
 
-        alphaResponse = await CallLLMAsync(
+        LLMMetrics alphaLlmMetrics;
+        (alphaResponse, alphaLlmMetrics) = await CallLLMWithMetricsAsync(
             httpClientFactory, openAiModel,
             alphaSystemPrompt,
             betaQuestion); // ONLY the question!
+
+        roundMetrics.AlphaLlmMs = alphaLlmMetrics.DurationMs;
+        roundMetrics.AlphaPromptTokens = alphaLlmMetrics.PromptTokens;
+        roundMetrics.AlphaCompletionTokens = alphaLlmMetrics.CompletionTokens;
 
         // Normalize response
         alphaResponse = NormalizeResponse(alphaResponse);
@@ -377,6 +418,11 @@ RULES:
 
     Console.ForegroundColor = ConsoleColor.Green;
     Console.WriteLine($"[ALPHA] >>> {alphaResponse}");
+    if (roundMetrics.AlphaLlmMs > 0)
+    {
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"        ⏱️ LLM: {roundMetrics.AlphaLlmMs}ms | 🎯 Prompt: {roundMetrics.AlphaPromptTokens} | 💬 Completion: {roundMetrics.AlphaCompletionTokens}");
+    }
     Console.ResetColor();
 
     // Store the exchange in Beta's memory
@@ -407,9 +453,17 @@ RULES:
     // Update lastAlphaResponse for next round
     lastAlphaResponse = alphaResponse;
 
+    roundStopwatch.Stop();
+    roundMetrics.TotalRoundMs = roundStopwatch.ElapsedMilliseconds;
+    metrics.Rounds.Add(roundMetrics);
+
+    PrintRoundSummary(roundMetrics);
     Console.WriteLine();
     await Task.Delay(500);
 }
+
+gameStopwatch.Stop();
+metrics.TotalGameMs = gameStopwatch.ElapsedMilliseconds;
 
 // Game Over Summary
 Console.WriteLine();
@@ -442,6 +496,73 @@ Console.WriteLine($"  Alpha memories: {alphaMemoryCount}");
 Console.WriteLine($"  Beta memories:  {betaMemoryCount}");
 Console.WriteLine($"  Total:          {alphaMemoryCount + betaMemoryCount}");
 Console.WriteLine();
+
+// Performance Statistics
+Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
+Console.WriteLine("║  PERFORMANCE STATISTICS                                       ║");
+Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
+Console.WriteLine($"  Total game time:      {metrics.TotalGameMs:N0}ms ({metrics.TotalGameMs / 1000.0:F1}s)");
+Console.WriteLine($"  Rounds played:        {metrics.Rounds.Count}");
+Console.WriteLine($"  Avg round time:       {metrics.Rounds.Average(r => r.TotalRoundMs):N0}ms");
+Console.WriteLine();
+
+Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+Console.WriteLine("  │ RECALL PERFORMANCE                                          │");
+Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+Console.WriteLine($"  │ Total recall time:    {metrics.Rounds.Sum(r => r.BetaRecallMs + r.AlphaRecallMs):N0}ms");
+Console.WriteLine($"  │ Avg Beta recall:      {metrics.Rounds.Average(r => r.BetaRecallMs):N0}ms");
+Console.WriteLine($"  │ Avg Alpha recall:     {metrics.Rounds.Average(r => r.AlphaRecallMs):N0}ms");
+Console.WriteLine($"  │ Max recall time:      {metrics.Rounds.Max(r => Math.Max(r.BetaRecallMs, r.AlphaRecallMs)):N0}ms");
+Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
+Console.WriteLine();
+
+Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+Console.WriteLine("  │ LLM PERFORMANCE                                             │");
+Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+Console.WriteLine($"  │ Total LLM time:       {metrics.Rounds.Sum(r => r.BetaLlmMs + r.AlphaLlmMs):N0}ms ({metrics.Rounds.Sum(r => r.BetaLlmMs + r.AlphaLlmMs) / 1000.0:F1}s)");
+Console.WriteLine($"  │ Avg Beta LLM:         {metrics.Rounds.Average(r => r.BetaLlmMs):N0}ms");
+Console.WriteLine($"  │ Avg Alpha LLM:        {metrics.Rounds.Where(r => r.AlphaLlmMs > 0).DefaultIfEmpty(new RoundMetrics()).Average(r => r.AlphaLlmMs):N0}ms");
+Console.WriteLine($"  │ Max LLM time:         {metrics.Rounds.Max(r => Math.Max(r.BetaLlmMs, r.AlphaLlmMs)):N0}ms");
+Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
+Console.WriteLine();
+
+Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+Console.WriteLine("  │ TOKEN USAGE                                                 │");
+Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+var totalPromptTokens = metrics.Rounds.Sum(r => r.BetaPromptTokens + r.AlphaPromptTokens);
+var totalCompletionTokens = metrics.Rounds.Sum(r => r.BetaCompletionTokens + r.AlphaCompletionTokens);
+Console.WriteLine($"  │ Total prompt tokens:  {totalPromptTokens:N0}");
+Console.WriteLine($"  │ Total completion:     {totalCompletionTokens:N0}");
+Console.WriteLine($"  │ Total tokens:         {totalPromptTokens + totalCompletionTokens:N0}");
+Console.WriteLine($"  │ Avg prompt/round:     {metrics.Rounds.Average(r => r.BetaPromptTokens + r.AlphaPromptTokens):N0}");
+Console.WriteLine($"  │ Avg completion/round: {metrics.Rounds.Average(r => r.BetaCompletionTokens + r.AlphaCompletionTokens):N0}");
+Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
+Console.WriteLine();
+
+Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+Console.WriteLine("  │ CONTEXT SIZE (Characters)                                   │");
+Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+Console.WriteLine($"  │ Avg Beta context:     {metrics.Rounds.Average(r => r.BetaContextChars):N0} chars");
+Console.WriteLine($"  │ Avg Alpha context:    {metrics.Rounds.Average(r => r.AlphaContextChars):N0} chars");
+Console.WriteLine($"  │ Max context size:     {metrics.Rounds.Max(r => Math.Max(r.BetaContextChars, r.AlphaContextChars)):N0} chars");
+Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
+Console.WriteLine();
+
+// Per-round breakdown
+Console.WriteLine("  ┌───────┬──────────┬──────────┬──────────┬──────────┬──────────┐");
+Console.WriteLine("  │ Round │ Recall   │ LLM      │ Prompt   │ Complet. │ Total    │");
+Console.WriteLine("  ├───────┼──────────┼──────────┼──────────┼──────────┼──────────┤");
+foreach (var r in metrics.Rounds)
+{
+    var recallMs = r.BetaRecallMs + r.AlphaRecallMs;
+    var llmMs = r.BetaLlmMs + r.AlphaLlmMs;
+    var prompt = r.BetaPromptTokens + r.AlphaPromptTokens;
+    var completion = r.BetaCompletionTokens + r.AlphaCompletionTokens;
+    Console.WriteLine($"  │  {r.Round,2}   │ {recallMs,6}ms │ {llmMs,6}ms │ {prompt,6}   │ {completion,6}   │ {r.TotalRoundMs,6}ms │");
+}
+Console.WriteLine("  └───────┴──────────┴──────────┴──────────┴──────────┴──────────┘");
+Console.WriteLine();
+
 Console.WriteLine("  ┌────────────────────────────────────────────────────────┐");
 Console.WriteLine("  │ KEY DEMONSTRATION:                                     │");
 Console.WriteLine("  │ - Each LLM call received ONLY the opponent's last msg  │");
@@ -467,6 +588,17 @@ Console.WriteLine("\nThank you for playing!");
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+void PrintRoundSummary(RoundMetrics rm)
+{
+    var recallTotal = rm.BetaRecallMs + rm.AlphaRecallMs;
+    var llmTotal = rm.BetaLlmMs + rm.AlphaLlmMs;
+    var tokenTotal = rm.BetaPromptTokens + rm.AlphaPromptTokens + rm.BetaCompletionTokens + rm.AlphaCompletionTokens;
+
+    Console.ForegroundColor = ConsoleColor.DarkCyan;
+    Console.WriteLine($"  ⏱️ Round {rm.Round} Summary: Recall={recallTotal}ms, LLM={llmTotal}ms, Tokens={tokenTotal}, Total={rm.TotalRoundMs}ms");
+    Console.ResetColor();
+}
 
 string NormalizeResponse(string response)
 {
@@ -496,7 +628,7 @@ string NormalizeResponse(string response)
     return response.Length > 100 ? response[..100] + "..." : response;
 }
 
-async Task<string> CallLLMAsync(
+async Task<(string Response, LLMMetrics Metrics)> CallLLMWithMetricsAsync(
     IHttpClientFactory factory,
     string model,
     string systemPrompt,
@@ -504,13 +636,16 @@ async Task<string> CallLLMAsync(
     int maxRetries = 3)
 {
     var client = factory.CreateClient("LLM");
-    var baseDelay = TimeSpan.FromSeconds(1);
+    var baseDelay = TimeSpan.FromSeconds(2);
+    var metrics = new LLMMetrics();
+    var totalStopwatch = Stopwatch.StartNew();
 
     for (int attempt = 1; attempt <= maxRetries; attempt++)
     {
         try
         {
-            // GPT-5-nano: minimal parameters, let model use defaults
+            var attemptSw = Stopwatch.StartNew();
+
             var request = new
             {
                 model = model,
@@ -522,6 +657,8 @@ async Task<string> CallLLMAsync(
             };
 
             var response = await client.PostAsJsonAsync("chat/completions", request);
+            attemptSw.Stop();
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
@@ -531,10 +668,15 @@ async Task<string> CallLLMAsync(
             var result = await response.Content.ReadFromJsonAsync<LLMResponse>();
             var content = result?.Choices?.FirstOrDefault()?.Message?.Content?.Trim();
 
+            // Extract token usage
+            metrics.PromptTokens = result?.Usage?.PromptTokens ?? 0;
+            metrics.CompletionTokens = result?.Usage?.CompletionTokens ?? 0;
+            metrics.DurationMs = attemptSw.ElapsedMilliseconds;
+
             // Check for valid response
             if (!string.IsNullOrWhiteSpace(content) && content != "No response")
             {
-                return content;
+                return (content, metrics);
             }
 
             // Empty or invalid response - retry
@@ -544,6 +686,20 @@ async Task<string> CallLLMAsync(
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
                 Console.WriteLine($"[LLM] Empty response, retrying ({attempt}/{maxRetries}) in {delay.TotalSeconds:F1}s...");
                 Console.ResetColor();
+                await Task.Delay(delay);
+            }
+        }
+        catch (TaskCanceledException ex) when (ex.CancellationToken == default)
+        {
+            // Timeout
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[LLM] ⚠️ TIMEOUT after {totalStopwatch.ElapsedMilliseconds}ms (attempt {attempt}/{maxRetries})");
+            Console.ResetColor();
+
+            if (attempt < maxRetries)
+            {
+                var delay = baseDelay * Math.Pow(2, attempt - 1);
+                Console.WriteLine($"[LLM] Retrying in {delay.TotalSeconds:F1}s...");
                 await Task.Delay(delay);
             }
         }
@@ -566,17 +722,61 @@ async Task<string> CallLLMAsync(
         }
     }
 
-    return "Error: LLM call failed after all retries";
+    metrics.DurationMs = totalStopwatch.ElapsedMilliseconds;
+    return ("Error: LLM call failed after all retries", metrics);
 }
 
 // ============================================================================
 // Models
 // ============================================================================
 
+class GameMetrics
+{
+    public List<RoundMetrics> Rounds { get; } = new();
+    public long TotalGameMs { get; set; }
+}
+
+class RoundMetrics
+{
+    public int Round { get; set; }
+
+    // Recall timings
+    public long BetaRecallMs { get; set; }
+    public long AlphaRecallMs { get; set; }
+    public long DuplicateCheckMs { get; set; }
+
+    // LLM timings
+    public long BetaLlmMs { get; set; }
+    public long AlphaLlmMs { get; set; }
+
+    // Token usage
+    public int BetaPromptTokens { get; set; }
+    public int BetaCompletionTokens { get; set; }
+    public int AlphaPromptTokens { get; set; }
+    public int AlphaCompletionTokens { get; set; }
+
+    // Context sizes
+    public int BetaContextChars { get; set; }
+    public int AlphaContextChars { get; set; }
+
+    // Total
+    public long TotalRoundMs { get; set; }
+}
+
+class LLMMetrics
+{
+    public long DurationMs { get; set; }
+    public int PromptTokens { get; set; }
+    public int CompletionTokens { get; set; }
+}
+
 class LLMResponse
 {
     [JsonPropertyName("choices")]
     public List<LLMChoice>? Choices { get; set; }
+
+    [JsonPropertyName("usage")]
+    public LLMUsage? Usage { get; set; }
 }
 
 class LLMChoice
@@ -589,4 +789,16 @@ class LLMMessage
 {
     [JsonPropertyName("content")]
     public string? Content { get; set; }
+}
+
+class LLMUsage
+{
+    [JsonPropertyName("prompt_tokens")]
+    public int PromptTokens { get; set; }
+
+    [JsonPropertyName("completion_tokens")]
+    public int CompletionTokens { get; set; }
+
+    [JsonPropertyName("total_tokens")]
+    public int TotalTokens { get; set; }
 }
