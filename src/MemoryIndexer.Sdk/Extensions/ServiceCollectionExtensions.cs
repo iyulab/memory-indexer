@@ -20,6 +20,7 @@ using MemoryIndexer.Sdk.Intelligence.SelfEditing;
 using MemoryIndexer.Sdk.Intelligence.Security;
 using MemoryIndexer.Sdk.Intelligence.Security.MultiTenant;
 using MemoryIndexer.Sdk.Intelligence.EntityResolution;
+using MemoryIndexer.Sdk.Intelligence.Profile;
 using MemoryIndexer.Sdk.Intelligence.Promotion;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Observability;
@@ -232,6 +233,11 @@ public static class ServiceCollectionExtensions
         services.AddOptions<WorkingMemoryOrchestratorOptions>()
             .BindConfiguration("MemoryIndexer:VCM:WorkingOrchestrator");
         services.TryAddSingleton<IWorkingMemoryOrchestrator, WorkingMemoryOrchestratorService>();
+
+        // Register user profile service (Phase 14.4)
+        services.AddOptions<UserProfileOptions>()
+            .BindConfiguration("MemoryIndexer:VCM:UserProfile");
+        services.TryAddSingleton<IUserProfile, UserProfileService>();
 
         return services;
     }
