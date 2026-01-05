@@ -1,0 +1,433 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+}
+
+.hidden { display: none !important; }
+
+/* Login Screen */
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-container {
+  background: #16213e;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-container h1 {
+  color: #4ecdc4;
+  margin-bottom: 0.5rem;
+}
+
+.login-container .subtitle {
+  color: #888;
+  margin-bottom: 1.5rem;
+}
+
+.user-list {
+  margin-bottom: 1.5rem;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #0f0f23;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.user-item:hover {
+  background: #2d2d44;
+}
+
+.user-item .name {
+  font-weight: 600;
+}
+
+.user-item .meta {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.create-user {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.create-user input {
+  flex: 1;
+}
+
+/* Main App */
+#main-screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #0f0f23;
+  border-bottom: 1px solid #333;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+header h1 {
+  font-size: 1.25rem;
+  color: #4ecdc4;
+}
+
+#current-user {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+#config {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Main Layout */
+.main-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+  overflow: hidden;
+}
+
+/* Sessions Panel */
+#sessions-panel {
+  background: #16213e;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.panel-header h2 {
+  font-size: 0.9rem;
+  color: #4ecdc4;
+}
+
+#session-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.session-item {
+  padding: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 0.25rem;
+  transition: background 0.2s;
+}
+
+.session-item:hover {
+  background: #2d2d44;
+}
+
+.session-item.active {
+  background: #4ecdc4;
+  color: #1a1a2e;
+}
+
+.session-item .title {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-item .info {
+  font-size: 0.7rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.session-item.active .info {
+  color: #1a1a2e99;
+}
+
+/* Chat Area */
+#chat-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+#chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  max-width: 80%;
+}
+
+.message.user {
+  background: #4ecdc4;
+  color: #1a1a2e;
+  align-self: flex-end;
+}
+
+.message.assistant {
+  background: #333;
+  align-self: flex-start;
+}
+
+.message.system {
+  background: #2d2d44;
+  color: #888;
+  font-size: 0.85rem;
+  align-self: center;
+  max-width: 100%;
+}
+
+.message .meta {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.message.user .meta {
+  color: #1a1a2e99;
+}
+
+#chat-form {
+  display: flex;
+  padding: 1rem;
+  gap: 0.5rem;
+  background: #0f0f23;
+  border-top: 1px solid #333;
+}
+
+/* Monitor Panel */
+#monitor-panel {
+  background: #16213e;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#memory-stats {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  font-size: 0.8rem;
+}
+
+.stat-label {
+  color: #888;
+}
+
+.stat-value {
+  color: #4ecdc4;
+  font-weight: 600;
+}
+
+#memory-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+}
+
+#memory-list h3 {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+
+.memory-item {
+  font-size: 0.75rem;
+  padding: 0.5rem;
+  background: #0f0f23;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid #333;
+}
+
+.memory-item.Episodic {
+  border-left-color: #4ecdc4;
+}
+
+.memory-item.Semantic {
+  border-left-color: #f39c12;
+}
+
+.memory-item .type {
+  font-weight: 600;
+  color: #4ecdc4;
+}
+
+.memory-item.Semantic .type {
+  color: #f39c12;
+}
+
+.memory-item .content {
+  margin-top: 0.25rem;
+  color: #ccc;
+  word-break: break-word;
+}
+
+.memory-item .time {
+  font-size: 0.65rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.panel-footer {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #333;
+}
+
+/* Common Elements */
+input {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #1a1a2e;
+  color: #eee;
+  font-size: 0.9rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #4ecdc4;
+}
+
+#message-input {
+  flex: 1;
+}
+
+button {
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background: #4ecdc4;
+  color: #1a1a2e;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.9rem;
+}
+
+button:hover {
+  background: #45b7aa;
+}
+
+button:disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+button.small {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+button.danger {
+  background: #e74c3c;
+}
+
+button.danger:hover {
+  background: #c0392b;
+}
+
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  #sessions-panel,
+  #monitor-panel {
+    display: none;
+  }
+}

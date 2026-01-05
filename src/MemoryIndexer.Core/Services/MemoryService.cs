@@ -91,20 +91,21 @@ public class MemoryService(
 
         var results = await memoryStore.SearchAsync(queryEmbedding, searchOptions, cancellationToken);
 
-        // Re-rank using combined scoring
+        // Re-rank using hybrid scoring (semantic + keyword + content-type boost)
         var rerankedResults = results
             .Select(r =>
             {
                 // Record access
                 r.Memory.RecordAccess();
 
-                // Calculate combined score
-                var combinedScore = scoringService.CalculateScore(r.Memory, queryEmbedding);
+                // Calculate hybrid score (includes keyword matching and content-type boost)
+                var hybridScore = scoringService.CalculateHybridScore(r.Memory, query, queryEmbedding);
 
                 return new MemorySearchResult
                 {
                     Memory = r.Memory,
-                    Score = (r.Score + combinedScore) / 2 // Blend vector similarity with combined score
+                    // Blend vector similarity with hybrid score
+                    Score = (r.Score + hybridScore) / 2
                 };
             })
             .OrderByDescending(r => r.Score)

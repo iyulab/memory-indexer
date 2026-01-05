@@ -95,4 +95,86 @@ public sealed class DefaultScoringService : IScoringService
         // Convert from [-1, 1] to [0, 1] range
         return (similarity + 1) / 2;
     }
+
+    /// <inheritdoc />
+    public float CalculateKeywordBoost(string query, string memoryContent)
+    {
+        if (string.IsNullOrWhiteSpace(query) || string.IsNullOrWhiteSpace(memoryContent))
+            return 0f;
+
+        // Extract keywords from query (words with 3+ characters, excluding common stop words)
+        var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "the", "and", "for", "are", "but", "not", "you", "all", "can", "had",
+            "her", "was", "one", "our", "out", "has", "have", "been", "this", "that",
+            "what", "when", "where", "which", "who", "will", "with", "from", "they"
+        };
+
+        var queryWords = query
+            .Split([' ', ',', '.', '?', '!', ':', ';', '"', '\'', '[', ']', '(', ')'], StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length >= 3 && !stopWords.Contains(w))
+            .Select(w => w.ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        if (queryWords.Count == 0)
+            return 0f;
+
+        var contentLower = memoryContent.ToLowerInvariant();
+        var matchCount = queryWords.Count(w => contentLower.Contains(w));
+
+        // Normalize: matched keywords / total keywords
+        return (float)matchCount / queryWords.Count;
+    }
+
+    /// <inheritdoc />
+    public float CalculateContentTypeBoost(string memoryContent)
+    {
+        if (string.IsNullOrWhiteSpace(memoryContent))
+            return 0f;
+
+        var contentLower = memoryContent.ToLowerInvariant();
+
+        // High-value positive indicators (confirmed facts, positive answers)
+        var positiveIndicators = new[]
+        {
+            "confirmed", "yes", "correct", "true", "has the property",
+            "is a", "can be", "does have", "is edible", "is alive"
+        };
+
+        // Lower-value indicators (ruled out, negative answers)
+        var negativeIndicators = new[]
+        {
+            "ruled out", "no", "not", "does not", "cannot", "isn't", "doesn't"
+        };
+
+        // Check for positive indicators
+        if (positiveIndicators.Any(p => contentLower.Contains(p)))
+        {
+            return 0.3f; // Significant boost for confirmed/positive info
+        }
+
+        // Negative indicators get smaller boost (still useful info, just less actionable)
+        if (negativeIndicators.Any(n => contentLower.Contains(n)))
+        {
+            return 0.1f;
+        }
+
+        return 0f;
+    }
+
+    /// <inheritdoc />
+    public float CalculateHybridScore(MemoryUnit memory, string query, ReadOnlyMemory<float>? queryEmbedding = null)
+    {
+        // Base score from original formula
+        var baseScore = CalculateScore(memory, queryEmbedding);
+
+        // Add keyword matching boost (hybrid search component)
+        var keywordBoost = CalculateKeywordBoost(query, memory.Content) * 0.5f; // Weight: 0.5
+
+        // Add content-type boost
+        var contentTypeBoost = CalculateContentTypeBoost(memory.Content);
+
+        return baseScore + keywordBoost + contentTypeBoost;
+    }
 }

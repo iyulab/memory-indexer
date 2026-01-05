@@ -9,6 +9,13 @@
     <Title>Memory Indexer SDK</Title>
     <PackageProjectUrl>https://github.com/iyulab/memory-indexer</PackageProjectUrl>
     <PackageReleaseNotes>
+v0.2.0:
+- Hybrid scoring with keyword matching and content-type boosting
+- Improved recall relevance for positive/confirmed information
+- CONFIRMED memories prioritized over RULED OUT in retrieval
+- 26 new unit tests for scoring service
+- TwentyQuestionsGame sample demonstrating memory-only context
+
 v0.1.0:
 - Core memory storage with InMemory, SQLite-vec, and Qdrant backends
 - MCP tools for store, recall, get, list, update, delete operations

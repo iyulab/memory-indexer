@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory Chat</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Login Screen -->
+      <div id="login-screen" class="screen">
+        <div class="login-container">
+          <h1>Memory Chat</h1>
+          <p class="subtitle">Select or create a user</p>
+
+          <div id="user-list" class="user-list"></div>
+
+          <div class="create-user">
+            <input type="text" id="new-user-name" placeholder="Enter your name" />
+            <button id="create-user-btn">Create User</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main App -->
+      <div id="main-screen" class="screen hidden">
+        <header>
+          <div class="header-left">
+            <h1>Memory Chat</h1>
+            <span id="current-user"></span>
+            <button id="switch-user-btn" class="small">Switch User</button>
+          </div>
+          <div id="config"></div>
+        </header>
+
+        <div class="main-layout">
+          <!-- Sessions Sidebar -->
+          <aside id="sessions-panel">
+            <div class="panel-header">
+              <h2>Sessions</h2>
+              <button id="new-session-btn" class="small">+ New</button>
+            </div>
+            <div id="session-list"></div>
+          </aside>
+
+          <!-- Chat Area -->
+          <main id="chat-area">
+            <div id="no-session" class="empty-state">
+              <p>Select or create a session to start chatting</p>
+            </div>
+            <div id="chat-container" class="hidden">
+              <div id="messages"></div>
+              <form id="chat-form">
+                <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" />
+                <button type="submit">Send</button>
+              </form>
+            </div>
+          </main>
+
+          <!-- Memory Monitor -->
+          <aside id="monitor-panel">
+            <div class="panel-header">
+              <h2>Memory Monitor</h2>
+              <button id="refresh-status" class="small">Refresh</button>
+            </div>
+            <div id="memory-stats"></div>
+            <div id="memory-list">
+              <h3>Recent Memories</h3>
+              <div id="recent-memories"></div>
+            </div>
+            <div class="panel-footer">
+              <button id="clear-memories" class="danger small">Clear All Memories</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

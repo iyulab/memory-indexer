@@ -1,650 +1,414 @@
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using MemoryIndexer.Core.Configuration;
 using MemoryIndexer.Core.Interfaces;
 using MemoryIndexer.Core.Models;
 using MemoryIndexer.Core.Services;
-using MemoryIndexer.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Extensions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
-// Load .env file - try multiple locations
-var envSearchPaths = new[]
-{
+// Load .env file
+var envPaths = new[] {
     Path.Combine(Directory.GetCurrentDirectory(), ".env"),
-    Path.Combine(AppContext.BaseDirectory, ".env"),
-    // Look for solution root (up to 5 levels)
-    FindSolutionRoot(".env")
+    Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env")
 };
-
-foreach (var path in envSearchPaths.Where(p => !string.IsNullOrEmpty(p) && File.Exists(p)))
+foreach (var path in envPaths.Where(File.Exists))
 {
     DotNetEnv.Env.Load(path);
+    Console.WriteLine($"[ENV] Loaded: {path}");
     break;
 }
 
-static string? FindSolutionRoot(string filename)
-{
-    var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
-    while (dir != null)
-    {
-        var envFile = Path.Combine(dir.FullName, filename);
-        if (File.Exists(envFile)) return envFile;
-
-        // Check if this is the solution root
-        if (Directory.GetFiles(dir.FullName, "*.sln").Length > 0)
-        {
-            return File.Exists(envFile) ? envFile : null;
-        }
-        dir = dir.Parent;
-    }
-    return null;
-}
-
-// Check GpuStack configuration from environment
+// Configuration
 var gpuStackUrl = Environment.GetEnvironmentVariable("GPUSTACK_URL");
 var gpuStackApiKey = Environment.GetEnvironmentVariable("GPUSTACK_APIKEY");
-var gpuStackModel = Environment.GetEnvironmentVariable("GPUSTACK_MODEL") ?? "Qwen3-8B";
-var useGpuStack = !string.IsNullOrWhiteSpace(gpuStackUrl) && !string.IsNullOrWhiteSpace(gpuStackApiKey);
+var gpuStackModel = Environment.GetEnvironmentVariable("GPUSTACK_MODEL") ?? "gpt-oss-20b";
+var gpuStackEmbedModel = Environment.GetEnvironmentVariable("GPUSTACK_EMBED_MODEL");
+var useGpuStackChat = !string.IsNullOrWhiteSpace(gpuStackUrl) && !string.IsNullOrWhiteSpace(gpuStackApiKey);
+var useGpuStackEmbed = useGpuStackChat && !string.IsNullOrWhiteSpace(gpuStackEmbedModel);
 
-Console.Clear();
-PrintBanner();
+Console.WriteLine($"[CONFIG] Chat LLM: {(useGpuStackChat ? gpuStackModel : "Echo Mode")}");
+Console.WriteLine($"[CONFIG] Embedding: {(useGpuStackEmbed ? gpuStackEmbedModel : "LMSupply Local")}");
 
-// Build the host with Memory Indexer services
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
-// Configure logging to be minimal
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.SetMinimumLevel(LogLevel.Warning);
+// CORS for frontend
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+    });
+});
 
-// Configure Memory Indexer
+// Memory Indexer services
 builder.Services.AddMemoryIndexer(options =>
 {
-    // SQLite persistent storage
     options.Storage.Type = StorageType.SqliteVec;
     options.Storage.ConnectionString = "chat_memories.db";
 
-    if (useGpuStack)
+    if (useGpuStackEmbed)
     {
-        // GpuStack embedding (OpenAI-compatible API)
         options.Embedding.Provider = EmbeddingProvider.Custom;
         options.Embedding.Endpoint = gpuStackUrl!;
         options.Embedding.ApiKey = gpuStackApiKey!;
-        options.Embedding.Model = "bge-m3";
+        options.Embedding.Model = gpuStackEmbedModel!;
         options.Embedding.Dimensions = 1024;
         options.Storage.VectorDimensions = 1024;
     }
     else
     {
-        // Local LMSupply embedding (default)
         options.Embedding.Provider = EmbeddingProvider.Local;
-        options.Embedding.Model = "bge-large-en-v1.5"; // 1024 dims
+        options.Embedding.Model = "bge-large-en-v1.5";
         options.Embedding.Dimensions = 1024;
         options.Storage.VectorDimensions = 1024;
     }
 });
 
-var host = builder.Build();
-
-// Get services
-var memoryService = host.Services.GetRequiredService<MemoryService>();
-var memoryStore = host.Services.GetRequiredService<IMemoryStore>();
-var embeddingService = host.Services.GetRequiredService<IEmbeddingService>();
-var summarizer = host.Services.GetRequiredService<ISummarizationService>();
-
-// HTTP client for LLM chat (only if GpuStack is configured)
-HttpClient? httpClient = null;
-if (useGpuStack)
+// HTTP client for LLM
+if (useGpuStackChat)
 {
-    httpClient = new HttpClient();
-    httpClient.BaseAddress = new Uri(gpuStackUrl!.TrimEnd('/') + "/");
-    httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {gpuStackApiKey}");
-}
-
-// State
-var userId = "demo-user";
-var sessionId = Guid.NewGuid().ToString("N")[..8];
-var chatHistory = new List<ChatMessage>();
-var memorySummary = "";
-var chatCancellation = new CancellationTokenSource();
-
-Console.WriteLine($"Session ID: {sessionId}");
-Console.WriteLine($"Database: chat_memories.db");
-if (useGpuStack)
-{
-    Console.WriteLine($"Embedding: GpuStack (bge-m3, 1024 dims)");
-    Console.WriteLine($"Chat LLM: {gpuStackModel}");
-}
-else
-{
-    Console.WriteLine($"Embedding: LMSupply Local (bge-large-en-v1.5, 1024 dims)");
-    Console.WriteLine($"Chat LLM: (none - echo mode)");
-}
-Console.WriteLine();
-
-// Main menu loop
-while (true)
-{
-    Console.ForegroundColor = ConsoleColor.Cyan;
-    Console.WriteLine("=== Main Menu ===");
-    Console.ResetColor();
-    Console.WriteLine("1. chat   - Start interactive chat");
-    Console.WriteLine("2. status - View memory status");
-    Console.WriteLine("3. exit   - Exit application");
-    Console.WriteLine();
-    Console.Write("Select option: ");
-
-    var input = Console.ReadLine()?.Trim().ToLowerInvariant();
-
-    switch (input)
+    builder.Services.AddHttpClient("GpuStack", client =>
     {
-        case "1":
-        case "chat":
-            await RunChatModeAsync();
-            break;
-        case "2":
-        case "status":
-            await ShowStatusAsync();
-            break;
-        case "3":
-        case "exit":
-        case "quit":
-            Console.WriteLine("Goodbye!");
-            return;
-        default:
-            Console.WriteLine("Invalid option. Please try again.");
-            break;
-    }
-
-    Console.WriteLine();
+        client.BaseAddress = new Uri(gpuStackUrl!.TrimEnd('/') + "/");
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {gpuStackApiKey}");
+    });
 }
 
-async Task RunChatModeAsync()
+var app = builder.Build();
+app.UseCors();
+
+// Services
+var memoryService = app.Services.GetRequiredService<MemoryService>();
+var memoryStore = app.Services.GetRequiredService<IMemoryStore>();
+var httpClientFactory = app.Services.GetService<IHttpClientFactory>();
+
+// Simple in-memory storage for users and sessions
+var users = new Dictionary<string, UserInfo>();
+var sessions = new Dictionary<string, ChatSession>();
+
+// API Endpoints
+app.MapGet("/api/health", () =>
 {
-    Console.Clear();
-    Console.ForegroundColor = ConsoleColor.Green;
-    Console.WriteLine("=== Chat Mode ===");
-    Console.ResetColor();
-    Console.WriteLine("Type your message. Type 'exit' or press Ctrl+C to return to main menu.");
-    Console.WriteLine();
+    Console.WriteLine("[API] GET /api/health");
+    return Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow });
+});
 
-    // Reset cancellation token for new chat session
-    chatCancellation = new CancellationTokenSource();
+// === User Management ===
+app.MapGet("/api/users", () =>
+{
+    Console.WriteLine($"[API] GET /api/users -> {users.Count} users");
+    return Results.Ok(users.Values.OrderByDescending(u => u.LastActive));
+});
 
-    // Handle Ctrl+C
-    void OnCancelKeyPress(object? s, ConsoleCancelEventArgs e)
+app.MapPost("/api/users", (CreateUserRequest request) =>
+{
+    var userId = Guid.NewGuid().ToString("N")[..8];
+    var user = new UserInfo
     {
-        e.Cancel = true;
-        chatCancellation.Cancel();
-    }
-    Console.CancelKeyPress += OnCancelKeyPress;
+        Id = userId,
+        Name = request.Name,
+        CreatedAt = DateTime.UtcNow,
+        LastActive = DateTime.UtcNow
+    };
+    users[userId] = user;
+    Console.WriteLine($"[API] POST /api/users -> Created: {user.Name} ({userId})");
+    return Results.Ok(user);
+});
 
+app.MapGet("/api/users/{userId}", (string userId) =>
+{
+    if (!users.TryGetValue(userId, out var user))
+        return Results.NotFound(new { error = "User not found" });
+
+    Console.WriteLine($"[API] GET /api/users/{userId} -> {user.Name}");
+    return Results.Ok(user);
+});
+
+// === Session Management ===
+app.MapGet("/api/users/{userId}/sessions", (string userId) =>
+{
+    if (!users.ContainsKey(userId))
+        return Results.NotFound(new { error = "User not found" });
+
+    var userSessions = sessions.Values
+        .Where(s => s.UserId == userId)
+        .OrderByDescending(s => s.LastMessage)
+        .ToList();
+
+    Console.WriteLine($"[API] GET /api/users/{userId}/sessions -> {userSessions.Count} sessions");
+    return Results.Ok(userSessions);
+});
+
+app.MapPost("/api/users/{userId}/sessions", (string userId, CreateSessionRequest? request) =>
+{
+    if (!users.TryGetValue(userId, out var user))
+        return Results.NotFound(new { error = "User not found" });
+
+    var sessionId = Guid.NewGuid().ToString("N")[..8];
+    var session = new ChatSession
+    {
+        Id = sessionId,
+        UserId = userId,
+        Title = request?.Title ?? $"Chat {DateTime.Now:MMdd HH:mm}",
+        CreatedAt = DateTime.UtcNow,
+        LastMessage = DateTime.UtcNow
+    };
+    sessions[sessionId] = session;
+    user.LastActive = DateTime.UtcNow;
+
+    Console.WriteLine($"[API] POST /api/users/{userId}/sessions -> Created: {session.Title} ({sessionId})");
+    return Results.Ok(session);
+});
+
+app.MapGet("/api/sessions/{sessionId}", (string sessionId) =>
+{
+    if (!sessions.TryGetValue(sessionId, out var session))
+        return Results.NotFound(new { error = "Session not found" });
+
+    Console.WriteLine($"[API] GET /api/sessions/{sessionId} -> {session.Title}");
+    return Results.Ok(session);
+});
+
+app.MapDelete("/api/sessions/{sessionId}", async (string sessionId) =>
+{
+    if (!sessions.TryGetValue(sessionId, out var session))
+        return Results.NotFound(new { error = "Session not found" });
+
+    // Delete session memories
+    var allMemories = await memoryStore.GetAllAsync(session.UserId);
+    var sessionMemories = allMemories.Where(m => m.SessionId == sessionId).ToList();
+    foreach (var m in sessionMemories)
+        await memoryStore.DeleteAsync(m.Id);
+
+    sessions.Remove(sessionId);
+    Console.WriteLine($"[API] DELETE /api/sessions/{sessionId} -> Deleted {sessionMemories.Count} memories");
+    return Results.Ok(new { deleted = sessionMemories.Count });
+});
+
+// === Chat ===
+app.MapPost("/api/chat", async (ChatRequest request) =>
+{
+    Console.WriteLine($"[API] POST /api/chat - Session: {request.SessionId}, Message: {request.Message}");
+
+    if (!sessions.TryGetValue(request.SessionId, out var session))
+        return Results.NotFound(new { error = "Session not found" });
+
+    if (!users.TryGetValue(session.UserId, out var user))
+        return Results.NotFound(new { error = "User not found" });
+
+    var userId = session.UserId;
+    var sessionId = request.SessionId;
+
+    // Update timestamps
+    session.LastMessage = DateTime.UtcNow;
+    session.MessageCount++;
+    user.LastActive = DateTime.UtcNow;
+
+    // Store user message
     try
     {
-        while (!chatCancellation.Token.IsCancellationRequested)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write("You: ");
-            Console.ResetColor();
-
-            var userMessage = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(userMessage))
-            {
-                continue;
-            }
-
-            if (userMessage.Equals("exit", StringComparison.OrdinalIgnoreCase) ||
-                userMessage.Equals("quit", StringComparison.OrdinalIgnoreCase))
-            {
-                break;
-            }
-
-            try
-            {
-                // Store user message as episodic memory
-                await memoryService.StoreAsync(
-                    userId,
-                    $"[User said]: {userMessage}",
-                    MemoryType.Episodic,
-                    sessionId,
-                    importance: 0.7f);
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"[Memory store warning: {ex.Message}]");
-                Console.ResetColor();
-            }
-
-            // Recall relevant memories
-            var memories = await RecallMemoriesAsync(userMessage);
-
-            // Build context with memories
-            var context = BuildContext(memories, userMessage);
-
-            // Generate response
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.Write("Assistant: ");
-            Console.ResetColor();
-
-            var response = await GenerateResponseAsync(context, userMessage);
-            Console.WriteLine(response);
-            Console.WriteLine();
-
-            try
-            {
-                // Store assistant response
-                await memoryService.StoreAsync(
-                    userId,
-                    $"[Assistant said]: {response}",
-                    MemoryType.Episodic,
-                    sessionId,
-                    importance: 0.6f);
-
-                // Extract and store semantic memories if important info detected
-                await ExtractSemanticMemoriesAsync(userMessage, response);
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"[Memory store warning: {ex.Message}]");
-                Console.ResetColor();
-            }
-
-            // Update rolling summary periodically
-            chatHistory.Add(new ChatMessage { Role = "user", Content = userMessage });
-            chatHistory.Add(new ChatMessage { Role = "assistant", Content = response });
-
-            if (chatHistory.Count % 10 == 0)
-            {
-                await UpdateSummaryAsync();
-            }
-        }
-    }
-    finally
-    {
-        Console.CancelKeyPress -= OnCancelKeyPress;
-        Console.WriteLine();
-        Console.WriteLine("Returning to main menu...");
-    }
-}
-
-async Task<List<MemorySearchResult>> RecallMemoriesAsync(string query)
-{
-    var results = new List<MemorySearchResult>();
-
-    try
-    {
-        // Recent session memories (short-term)
-        var recentMemories = await memoryService.RecallAsync(
-            userId, query, limit: 3, sessionId: sessionId);
-        results.AddRange(recentMemories);
-
-        // Cross-session memories (long-term)
-        var longTermMemories = await memoryService.RecallAsync(
-            userId, query, limit: 3, sessionId: null);
-
-        // Add long-term memories that aren't duplicates
-        foreach (var mem in longTermMemories)
-        {
-            if (!results.Any(r => r.Memory.Id == mem.Memory.Id))
-            {
-                results.Add(mem);
-            }
-        }
+        await memoryService.StoreAsync(userId, $"[User]: {request.Message}", MemoryType.Episodic, sessionId, 0.7f);
+        Console.WriteLine($"[MEMORY] Stored user message");
     }
     catch (Exception ex)
     {
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        Console.WriteLine($"[Memory recall warning: {ex.Message}]");
-        Console.ResetColor();
+        Console.WriteLine($"[MEMORY] Store error: {ex.Message}");
     }
 
-    return results.OrderByDescending(r => r.Score).Take(5).ToList();
-}
-
-string BuildContext(List<MemorySearchResult> memories, string currentQuery)
-{
-    var sb = new StringBuilder();
-
-    if (!string.IsNullOrEmpty(memorySummary))
-    {
-        sb.AppendLine("## Conversation Summary");
-        sb.AppendLine(memorySummary);
-        sb.AppendLine();
-    }
-
-    if (memories.Count > 0)
-    {
-        sb.AppendLine("## Relevant Memories");
-        foreach (var mem in memories)
-        {
-            var age = DateTime.UtcNow - mem.Memory.CreatedAt;
-            var ageStr = age.TotalMinutes < 60
-                ? $"{age.TotalMinutes:F0}m ago"
-                : age.TotalHours < 24
-                    ? $"{age.TotalHours:F0}h ago"
-                    : $"{age.TotalDays:F0}d ago";
-
-            var typeIcon = mem.Memory.Type switch
-            {
-                MemoryType.Episodic => "[Episode]",
-                MemoryType.Semantic => "[Fact]",
-                MemoryType.Procedural => "[Procedure]",
-                _ => "[Memory]"
-            };
-
-            sb.AppendLine($"- {typeIcon} (score: {mem.Score:F2}, {ageStr}): {mem.Memory.Content}");
-        }
-        sb.AppendLine();
-    }
-
-    return sb.ToString();
-}
-
-async Task<string> GenerateResponseAsync(string context, string userMessage)
-{
-    // If no LLM configured, use echo mode with context display
-    if (httpClient == null)
-    {
-        var echoResponse = new StringBuilder();
-        echoResponse.AppendLine($"[Echo Mode - No LLM configured]");
-        echoResponse.AppendLine($"Your message: {userMessage}");
-        if (!string.IsNullOrEmpty(context))
-        {
-            echoResponse.AppendLine();
-            echoResponse.AppendLine("Context retrieved:");
-            echoResponse.AppendLine(context);
-        }
-        return echoResponse.ToString();
-    }
-
-    var systemPrompt = $"""
-You are a helpful AI assistant with persistent memory capabilities.
-You remember previous conversations and facts about the user.
-
-{context}
-
-Based on the memories above (if any), respond naturally to the user's message.
-If you don't have relevant memories, just respond helpfully.
-Keep responses concise but friendly.
-""";
-
-    var request = new ChatRequest
-    {
-        Model = gpuStackModel,
-        Messages =
-        [
-            new ChatMessage { Role = "system", Content = systemPrompt },
-            new ChatMessage { Role = "user", Content = userMessage }
-        ],
-        MaxTokens = 500,
-        Temperature = 0.7f
-    };
-
+    // Recall memories
+    var memories = new List<MemorySearchResult>();
     try
     {
-        var response = await httpClient.PostAsJsonAsync("chat/completions", request);
-        response.EnsureSuccessStatusCode();
-
-        var result = await response.Content.ReadFromJsonAsync<ChatResponse>();
-        return result?.Choices?.FirstOrDefault()?.Message?.Content ?? "I'm sorry, I couldn't generate a response.";
+        var sessionMemories = await memoryService.RecallAsync(userId, request.Message, 3, sessionId);
+        var longTermMemories = await memoryService.RecallAsync(userId, request.Message, 3);
+        memories.AddRange(sessionMemories);
+        foreach (var m in longTermMemories.Where(m => !memories.Any(x => x.Memory.Id == m.Memory.Id)))
+            memories.Add(m);
+        memories = memories.OrderByDescending(m => m.Score).Take(5).ToList();
+        Console.WriteLine($"[MEMORY] Recalled {memories.Count} memories");
     }
     catch (Exception ex)
     {
-        return $"[Error generating response: {ex.Message}]";
+        Console.WriteLine($"[MEMORY] Recall error: {ex.Message}");
     }
-}
 
-async Task ExtractSemanticMemoriesAsync(string userMessage, string response)
-{
-    // Simple heuristic: if user shares facts about themselves, store as semantic memory
-    var factPatterns = new[]
+    // Build context
+    var context = string.Join("\n", memories.Select(m =>
     {
-        "my name is", "i am", "i work", "i like", "i love", "i have", "i live",
-        "my favorite", "i prefer", "i usually", "i always", "i never"
-    };
+        var age = DateTime.UtcNow - m.Memory.CreatedAt;
+        var ageStr = age.TotalMinutes < 60 ? $"{age.TotalMinutes:F0}m" :
+                     age.TotalHours < 24 ? $"{age.TotalHours:F0}h" : $"{age.TotalDays:F0}d";
+        return $"[{m.Memory.Type}, {ageStr} ago, score:{m.Score:F2}] {m.Memory.Content}";
+    }));
 
-    var lowerMessage = userMessage.ToLowerInvariant();
-    if (factPatterns.Any(p => lowerMessage.Contains(p)))
+    // Generate response
+    string response;
+    if (useGpuStackChat && httpClientFactory != null)
     {
         try
         {
-            await memoryService.StoreAsync(
-                userId,
-                $"[User fact]: {userMessage}",
-                MemoryType.Semantic,
-                null, // No session - long-term memory
-                importance: 0.9f);
-        }
-        catch
-        {
-            // Ignore storage errors
-        }
-    }
-}
-
-async Task UpdateSummaryAsync()
-{
-    if (chatHistory.Count < 4) return;
-
-    try
-    {
-        // Create memory units from chat history for summarization
-        var recentMessages = chatHistory.TakeLast(10).ToList();
-        var content = string.Join("\n", recentMessages.Select(m => $"{m.Role}: {m.Content}"));
-
-        var memoryUnits = new List<MemoryUnit>
-        {
-            new()
+            var client = httpClientFactory.CreateClient("GpuStack");
+            var chatRequest = new
             {
-                Id = Guid.NewGuid(),
-                Content = content,
-                UserId = userId
-            }
-        };
-
-        var summary = await summarizer.SummarizeAsync(memoryUnits, new SummarizationOptions
-        {
-            TargetCompressionRatio = 0.3f,
-            Style = SummaryStyle.Extractive
-        });
-
-        memorySummary = summary.Content;
-    }
-    catch
-    {
-        // Ignore summarization errors
-    }
-}
-
-async Task ShowStatusAsync()
-{
-    Console.Clear();
-    Console.ForegroundColor = ConsoleColor.Blue;
-    Console.WriteLine("=== Memory Status ===");
-    Console.ResetColor();
-    Console.WriteLine();
-
-    try
-    {
-        // Get all memories
-        var allMemories = await memoryStore.GetAllAsync(userId);
-
-        // Statistics
-        Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("## Overview");
-        Console.ResetColor();
-        Console.WriteLine($"Total memories: {allMemories.Count}");
-        Console.WriteLine($"Current session: {sessionId}");
-        Console.WriteLine($"Database: chat_memories.db");
-        Console.WriteLine();
-
-        // By type
-        Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("## By Memory Type");
-        Console.ResetColor();
-        var byType = allMemories.GroupBy(m => m.Type).OrderByDescending(g => g.Count());
-        foreach (var group in byType)
-        {
-            var icon = group.Key switch
-            {
-                MemoryType.Episodic => "[Episode]",
-                MemoryType.Semantic => "[Fact]",
-                MemoryType.Procedural => "[Procedure]",
-                _ => "[Other]"
+                model = gpuStackModel,
+                messages = new[]
+                {
+                    new { role = "system", content = $"You are a helpful AI assistant talking to {user.Name}.\n\nRelevant memories:\n{context}" },
+                    new { role = "user", content = request.Message }
+                },
+                max_tokens = 500,
+                temperature = 0.7
             };
-            Console.WriteLine($"  {icon} {group.Key}: {group.Count()}");
+            var result = await client.PostAsJsonAsync("chat/completions", chatRequest);
+            result.EnsureSuccessStatusCode();
+            var chatResponse = await result.Content.ReadFromJsonAsync<ChatCompletionResponse>();
+            response = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content ?? "No response";
+            Console.WriteLine($"[LLM] Generated response: {response[..Math.Min(50, response.Length)]}...");
         }
-        Console.WriteLine();
-
-        // By session
-        Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("## By Session");
-        Console.ResetColor();
-        var bySession = allMemories.GroupBy(m => m.SessionId ?? "long-term").OrderByDescending(g => g.Count());
-        foreach (var group in bySession.Take(5))
+        catch (Exception ex)
         {
-            var label = group.Key == sessionId ? $"{group.Key} (current)" : group.Key;
-            Console.WriteLine($"  {label}: {group.Count()} memories");
+            Console.WriteLine($"[LLM] Error: {ex.Message}");
+            response = $"[LLM Error: {ex.Message}]";
         }
-        Console.WriteLine();
+    }
+    else
+    {
+        response = $"[Echo Mode]\nYour message: {request.Message}\n\nContext:\n{context}";
+        Console.WriteLine($"[ECHO] Response generated");
+    }
 
-        // Recent memories
-        Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("## Recent Memories (last 5)");
-        Console.ResetColor();
-        var recent = allMemories.OrderByDescending(m => m.CreatedAt).Take(5);
-        foreach (var mem in recent)
-        {
-            var age = DateTime.UtcNow - mem.CreatedAt;
-            var ageStr = age.TotalMinutes < 60
-                ? $"{age.TotalMinutes:F0}m ago"
-                : age.TotalHours < 24
-                    ? $"{age.TotalHours:F0}h ago"
-                    : $"{age.TotalDays:F0}d ago";
-
-            var preview = mem.Content.Length > 60
-                ? mem.Content[..60] + "..."
-                : mem.Content;
-
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.Write($"  [{ageStr}] ");
-            Console.ResetColor();
-            Console.WriteLine(preview);
-        }
-        Console.WriteLine();
-
-        // Important memories
-        Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("## High Importance Memories (score > 0.8)");
-        Console.ResetColor();
-        var important = allMemories.Where(m => m.ImportanceScore > 0.8f).OrderByDescending(m => m.ImportanceScore).Take(5);
-        foreach (var mem in important)
-        {
-            var preview = mem.Content.Length > 60
-                ? mem.Content[..60] + "..."
-                : mem.Content;
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.Write($"  [{mem.ImportanceScore:F2}] ");
-            Console.ResetColor();
-            Console.WriteLine(preview);
-        }
-        if (!important.Any())
-        {
-            Console.WriteLine("  (none)");
-        }
-        Console.WriteLine();
-
-        // Storage info
-        Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine("## Storage Details");
-        Console.ResetColor();
-        var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "chat_memories.db");
-        if (File.Exists(dbPath))
-        {
-            var fileInfo = new FileInfo(dbPath);
-            Console.WriteLine($"  Database size: {fileInfo.Length / 1024.0:F1} KB");
-            Console.WriteLine($"  Last modified: {fileInfo.LastWriteTime}");
-        }
-        Console.WriteLine($"  Vector dimensions: 1024 (bge-m3)");
-        Console.WriteLine();
-
-        // Current session summary
-        if (!string.IsNullOrEmpty(memorySummary))
-        {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("## Current Session Summary");
-            Console.ResetColor();
-            Console.WriteLine($"  {memorySummary}");
-            Console.WriteLine();
-        }
+    // Store assistant response
+    try
+    {
+        await memoryService.StoreAsync(userId, $"[Assistant]: {response}", MemoryType.Episodic, sessionId, 0.6f);
     }
     catch (Exception ex)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"Error loading status: {ex.Message}");
-        Console.ResetColor();
+        Console.WriteLine($"[MEMORY] Store response error: {ex.Message}");
     }
 
-    Console.WriteLine("Press any key to return to main menu...");
-    Console.ReadKey(true);
-}
+    // Extract semantic facts
+    var factPatterns = new[] { "my name is", "i am", "i work", "i like", "i love", "i have", "i live", "my favorite" };
+    if (factPatterns.Any(p => request.Message.ToLower().Contains(p)))
+    {
+        try
+        {
+            await memoryService.StoreAsync(userId, $"[Fact about {user.Name}]: {request.Message}", MemoryType.Semantic, null, 0.9f);
+            Console.WriteLine($"[MEMORY] Extracted semantic fact");
+        }
+        catch { }
+    }
 
-void PrintBanner()
+    // Update session title from first message
+    if (session.MessageCount == 1 && request.Message.Length > 3)
+    {
+        session.Title = request.Message.Length > 30
+            ? request.Message[..30] + "..."
+            : request.Message;
+    }
+
+    return Results.Ok(new
+    {
+        response,
+        memoriesUsed = memories.Count,
+        memories = memories.Select(m => new
+        {
+            content = m.Memory.Content,
+            type = m.Memory.Type.ToString(),
+            score = m.Score
+        })
+    });
+});
+
+// === Status ===
+app.MapGet("/api/users/{userId}/status", async (string userId) =>
 {
-    Console.ForegroundColor = ConsoleColor.Cyan;
-    Console.WriteLine(@"
-  __  __                                    _____ _           _
- |  \/  | ___ _ __ ___   ___  _ __ _   _   / ____| |__   __ _| |_
- | |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | | | |    | '_ \ / _` | __|
- | |  | |  __/ | | | | | (_) | |  | |_| | | |____| | | | (_| | |_
- |_|  |_|\___|_| |_| |_|\___/|_|   \__, |  \_____|_| |_|\__,_|\__|
-                                    __/ |
-                                   |___/   Memory-Indexer Demo
-");
-    Console.ResetColor();
-}
+    Console.WriteLine($"[API] GET /api/users/{userId}/status");
 
-// Chat API models
-public class ChatRequest
+    if (!users.TryGetValue(userId, out var user))
+        return Results.NotFound(new { error = "User not found" });
+
+    var allMemories = await memoryStore.GetAllAsync(userId);
+
+    var byType = allMemories.GroupBy(m => m.Type).ToDictionary(g => g.Key.ToString(), g => g.Count());
+    var bySession = allMemories.GroupBy(m => m.SessionId ?? "long-term").ToDictionary(g => g.Key, g => g.Count());
+    var recent = allMemories.OrderByDescending(m => m.CreatedAt).Take(10).Select(m => new
+    {
+        content = m.Content.Length > 100 ? m.Content[..100] + "..." : m.Content,
+        type = m.Type.ToString(),
+        createdAt = m.CreatedAt,
+        importance = m.ImportanceScore
+    });
+
+    return Results.Ok(new
+    {
+        user = user.Name,
+        total = allMemories.Count,
+        byType,
+        bySession,
+        recent,
+        config = new
+        {
+            embedding = useGpuStackEmbed ? gpuStackEmbedModel : "LMSupply Local (bge-large-en-v1.5)",
+            chatLlm = useGpuStackChat ? gpuStackModel : "Echo Mode"
+        }
+    });
+});
+
+app.MapDelete("/api/users/{userId}/memories", async (string userId) =>
 {
-    [JsonPropertyName("model")]
-    public string Model { get; set; } = "";
+    Console.WriteLine($"[API] DELETE /api/users/{userId}/memories");
 
-    [JsonPropertyName("messages")]
-    public List<ChatMessage> Messages { get; set; } = [];
+    if (!users.ContainsKey(userId))
+        return Results.NotFound(new { error = "User not found" });
 
-    [JsonPropertyName("max_tokens")]
-    public int MaxTokens { get; set; } = 500;
+    var all = await memoryStore.GetAllAsync(userId);
+    foreach (var m in all)
+        await memoryStore.DeleteAsync(m.Id);
+    Console.WriteLine($"[MEMORY] Deleted {all.Count} memories for user {userId}");
+    return Results.Ok(new { deleted = all.Count });
+});
 
-    [JsonPropertyName("temperature")]
-    public float Temperature { get; set; } = 0.7f;
-}
+Console.WriteLine($"[SERVER] Starting on http://localhost:5000");
+app.Run("http://localhost:5000");
 
-public class ChatMessage
+// Models
+record CreateUserRequest(string Name);
+record CreateSessionRequest(string? Title);
+record ChatRequest(string SessionId, string Message);
+
+class UserInfo
 {
-    [JsonPropertyName("role")]
-    public string Role { get; set; } = "";
-
-    [JsonPropertyName("content")]
-    public string Content { get; set; } = "";
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+    public DateTime LastActive { get; set; }
 }
 
-public class ChatResponse
+class ChatSession
+{
+    public string Id { get; set; } = "";
+    public string UserId { get; set; } = "";
+    public string Title { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+    public DateTime LastMessage { get; set; }
+    public int MessageCount { get; set; }
+}
+
+class ChatCompletionResponse
 {
     [JsonPropertyName("choices")]
     public List<ChatChoice>? Choices { get; set; }
 }
 
-public class ChatChoice
+class ChatChoice
 {
     [JsonPropertyName("message")]
     public ChatMessage? Message { get; set; }
+}
+
+class ChatMessage
+{
+    [JsonPropertyName("content")]
+    public string? Content { get; set; }
 }

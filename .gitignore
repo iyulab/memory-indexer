@@ -88,6 +88,8 @@ memory.db
 memory.db-*
 chat_memories.db
 chat_memories.db-*
+twenty_questions.db
+twenty_questions.db-*
 *.vec
 appsettings.Development.json
 appsettings.Local.json

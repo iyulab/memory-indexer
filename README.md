@@ -89,6 +89,12 @@ Where:
 - 5+ accesses → Stable
 - 10+ accesses → Consolidated
 
+## What's New in v0.2.0
+
+- **Hybrid Scoring**: Keyword matching combined with content-type boosting for improved recall
+- **CONFIRMED Memory Priority**: Positive/confirmed information ranks higher than ruled-out content
+- **TwentyQuestionsGame Sample**: Demonstrates memory-only context (no chat history passed to LLM)
+
 ## Features
 
 ### Hybrid Search with Dynamic Alpha Tuning (DAT)
@@ -96,9 +102,12 @@ Where:
 Combines multiple retrieval strategies with query-adaptive weights:
 
 ```
-Score = α·Semantic + β·Keyword + γ·Recency + δ·Importance
+BaseScore = α·Semantic + β·Recency + γ·Importance + δ·AccessFrequency
+HybridScore = BaseScore + KeywordBoost(0.5) + ContentTypeBoost(0.1~0.3)
 
-Where α, β, γ, δ are dynamically tuned per query type.
+Where:
+- KeywordBoost: Query word matching ratio (normalized 0-1, weighted 0.5)
+- ContentTypeBoost: CONFIRMED=+0.3, RULED OUT=+0.1 (prioritizes positive info)
 ```
 
 ### Memory Type Classification

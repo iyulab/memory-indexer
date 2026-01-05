@@ -2,6 +2,37 @@
 
 A simple chat application demonstrating Memory Indexer's short/mid/long-term memory capabilities.
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│  Frontend (Vite + TypeScript)                   │
+│  http://localhost:3000                          │
+│  - Chat UI with session management              │
+│  - Memory status sidebar                        │
+│  - Proxy to backend /api/*                      │
+└─────────────────────┬───────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────┐
+│  Backend (ASP.NET Minimal API)                  │
+│  http://localhost:5000                          │
+│  - /api/health - Health check                   │
+│  - /api/session - Create session                │
+│  - /api/chat - Send message                     │
+│  - /api/status - Get memory stats               │
+│  - /api/memories - Delete all memories          │
+└─────────────────────┬───────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────┐
+│  Memory Indexer                                 │
+│  - SQLite with vector search (1024 dims)        │
+│  - Episodic + Semantic memory types             │
+│  - Session-scoped + cross-session retrieval     │
+└─────────────────────────────────────────────────┘
+```
+
 ## Features
 
 - **Persistent Memory**: Uses SQLite with vector search (1024 dimensions)
@@ -14,56 +45,74 @@ A simple chat application demonstrating Memory Indexer's short/mid/long-term mem
 - **Session Management**: Short-term memory within session, long-term memory across sessions
 - **Memory Recall**: Automatically retrieves relevant memories for context-aware responses
 
-## Prerequisites
+## Quick Start
 
-### Default Mode (LMSupply Local)
-- **.NET 10.0**: Required runtime
-- No additional configuration required
-- First run will download the embedding model (~400MB)
+### Prerequisites
+- **.NET 10.0 SDK**
+- **Node.js 18+** (for frontend)
 
-### GpuStack Mode (Optional)
-Configure `.env` file in solution root:
-```
-GPUSTACK_URL=http://your-gpustack-server/v1-openai
-GPUSTACK_APIKEY=your-api-key
-GPUSTACK_MODEL=Qwen3-8B
+### Development Mode (Hot Reload)
+
+```powershell
+# Run from this directory
+.\start-dev.ps1
 ```
 
-## Usage
+This opens two console windows:
+- Backend: `http://localhost:5000` (dotnet watch)
+- Frontend: `http://localhost:3000` (Vite dev server)
+
+### Manual Start
 
 ```bash
-# Run from solution root
-dotnet run --project samples/MemoryChatApp
-
-# Or from this directory
+# Terminal 1: Backend
 dotnet run
+
+# Terminal 2: Frontend
+cd frontend
+npm install
+npm run dev
 ```
 
+### Production Build
+
+```bash
+# Build frontend
+cd frontend
+npm run build
+
+# Build backend
+dotnet build -c Release
+```
+
+## Configuration
+
+### Default Mode (LMSupply Local)
+- No configuration required
+- First run downloads embedding model (~400MB)
+- Chat runs in "Echo Mode" (no LLM)
+
+### GpuStack Mode (Optional)
+
+Create `.env` file in solution root:
+
+```env
+# Required for chat LLM
+GPUSTACK_URL=http://your-gpustack-server/v1
+GPUSTACK_APIKEY=your-api-key
+GPUSTACK_MODEL=gpt-oss-20b
+
+# Optional: If not set, uses LMSupply Local embedding
+# GPUSTACK_EMBED_MODEL=bge-m3
+```
+
+| Mode | Embedding | Chat LLM | Configuration |
+|------|-----------|----------|---------------|
+| Default | LMSupply bge-large-en-v1.5 (local) | Echo Mode | None |
+| GpuStack Chat | LMSupply bge-large-en-v1.5 (local) | GPUSTACK_MODEL | .env (no EMBED_MODEL) |
+| GpuStack Full | bge-m3 (remote) | GPUSTACK_MODEL | .env (with EMBED_MODEL) |
+
 ## App Flow
-
-### Main Menu
-- **1. chat**: Interactive chat mode with memory-augmented responses
-- **2. status**: View memory statistics and storage details
-- **3. exit**: Exit application
-
-### Chat Mode
-- Type your message and press Enter
-- Memory Indexer automatically:
-  - Stores your messages as episodic memories
-  - Extracts semantic facts (e.g., "My name is John")
-  - Recalls relevant past memories for context
-  - Generates rolling summaries periodically
-- Type `exit` or press `Ctrl+C` to return to main menu
-
-### Status Mode
-Displays:
-- Total memory count by type (Episodic/Semantic/Procedural)
-- Memory distribution by session
-- Recent memories with timestamps
-- High-importance memories
-- Database storage details
-
-## Architecture
 
 ```
 User Message → Store as Episodic Memory
@@ -72,15 +121,17 @@ User Message → Store as Episodic Memory
             → Generate LLM Response (or Echo Mode if no LLM)
             → Store Response as Memory
             → Extract Semantic Facts (if detected)
-            → Update Rolling Summary (every 10 turns)
 ```
 
-## Configuration
+## API Endpoints
 
-| Mode | Embedding | Chat LLM | Configuration |
-|------|-----------|----------|---------------|
-| Default | LMSupply bge-large-en-v1.5 (local) | Echo Mode | None |
-| GpuStack | bge-m3 (remote) | GPUSTACK_MODEL | .env file |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check |
+| POST | `/api/session` | Create new session |
+| POST | `/api/chat` | Send message |
+| GET | `/api/status` | Get memory statistics |
+| DELETE | `/api/memories` | Clear all memories |
 
 ## Embedding Models
 
@@ -93,5 +144,5 @@ User Message → Store as Episodic Memory
 ### GpuStack (Optional)
 - Model: `bge-m3`
 - Dimensions: 1024
-- Requires GPUSTACK_URL and GPUSTACK_APIKEY
+- Requires GPUSTACK_URL, GPUSTACK_APIKEY, GPUSTACK_EMBED_MODEL
 - OpenAI-compatible API

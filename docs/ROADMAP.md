@@ -129,7 +129,18 @@
 - [x] Coreference chains for entity mention tracking
 - [x] Gender and number agreement validation
 
-## Phase 13: Future Enhancements (Planned)
+## Phase 13: Hybrid Scoring & Samples ✅
+
+**Status**: Complete
+
+- [x] Keyword matching boost (query word matching ratio)
+- [x] Content-type boosting (CONFIRMED +0.3, RULED OUT +0.1)
+- [x] Hybrid score integration in RecallAsync
+- [x] TwentyQuestionsGame sample (memory-only context demonstration)
+- [x] MemoryChatApp sample with web frontend
+- [x] 26 new unit tests for scoring service
+
+## Phase 14: Future Enhancements (Planned)
 
 **Status**: Planned
 
@@ -158,4 +169,4 @@
 
 ---
 
-*Last Updated: 2025-12-31*
+*Last Updated: 2026-01-05*
