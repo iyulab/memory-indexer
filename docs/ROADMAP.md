@@ -140,14 +140,231 @@
 - [x] MemoryChatApp sample with web frontend
 - [x] 26 new unit tests for scoring service
 
-## Phase 14: Future Enhancements (Planned)
+## Phase 14: LLM-based Memory Summarization (Planned)
 
 **Status**: Planned
 
-- [ ] LLM-based operation decisions (for complex reasoning)
-- [ ] Real-time streaming summarization
-- [ ] Cross-session memory federation
-- [ ] Advanced temporal reasoning with decay curves
+**Goal**: Implement intelligent memory compression that preserves semantic meaning while reducing token usage by 90%+ (inspired by Mem0 research)
+
+### Core Components
+
+- [ ] **Extraction Phase** (Mem0-style)
+  - [ ] Entity extraction from raw conversations
+  - [ ] Relationship extraction (subject → relation → object)
+  - [ ] Fact extraction (atomic knowledge units)
+  - [ ] Temporal marker extraction (when, duration, validity)
+
+- [ ] **Update Phase** (Mem0-style)
+  - [ ] Memory state comparison (new vs existing)
+  - [ ] Conflict resolution for contradicting facts
+  - [ ] Memory evolution tracking (v1 → v2 → v3)
+  - [ ] Selective update decisions (ADD/UPDATE/DELETE)
+
+- [ ] **Recursive Summarization** (LangChain-inspired)
+  - [ ] ConversationSummaryBuffer pattern implementation
+  - [ ] Rolling summary with token budget management
+  - [ ] Summary + Recent raw messages hybrid retrieval
+  - [ ] Incremental summary updates (summary += new_content)
+
+- [ ] **Abstraction Levels** (H-MEM-inspired)
+  - [ ] Level 0: Raw conversation chunks
+  - [ ] Level 1: Session summaries (what happened)
+  - [ ] Level 2: Topic abstractions (what user cares about)
+  - [ ] Level 3: User profile (who user is)
+
+### Success Criteria
+- Token reduction: > 90% for long-term memories
+- Semantic preservation: > 95% (human eval)
+- Latency: < 200ms for summarization trigger
+
+---
+
+## Phase 15: Smart Tiered Retrieval (Planned)
+
+**Status**: Planned
+
+**Goal**: Return compressed meaning instead of full text, with adaptive context assembly based on query type
+
+### Retrieval Strategy
+
+- [ ] **Query Intent Classification**
+  - [ ] Factual recall ("what did I say about...")
+  - [ ] Contextual recall ("continue our conversation about...")
+  - [ ] Relational recall ("what's related to...")
+  - [ ] Temporal recall ("last week we discussed...")
+
+- [ ] **Adaptive Context Assembly**
+  - [ ] Summary-first retrieval (compressed understanding)
+  - [ ] Detail-on-demand expansion (drill down when needed)
+  - [ ] Relevance-weighted inclusion (most relevant = more detail)
+  - [ ] Token budget allocation (distribute across tiers)
+
+- [ ] **Tiered Response Structure**
+  ```
+  User Level:  "User enjoys art, particularly Japanese animation"
+  Session Level: "Discussing Ghibli films and their artistic style"
+  Recent Level: "Specific details about Spirited Away color palette"
+  ```
+
+- [ ] **Context Window Optimization**
+  - [ ] Dynamic tier selection based on available tokens
+  - [ ] Priority-based truncation (keep summaries, trim details)
+  - [ ] Query-aware expansion (expand relevant portions only)
+
+### Implementation Notes
+- Integrate with existing VirtualContextManager
+- Extend ContextWindowOptimizer for tiered optimization
+- Add retrieval mode parameter to RecallAsync
+
+### Success Criteria
+- Context size reduction: > 70% vs full-text retrieval
+- Answer quality preservation: > 90%
+- Retrieval latency: < 150ms
+
+---
+
+## Phase 16: Graph-based Memory Network (Planned)
+
+**Status**: Planned
+
+**Goal**: Implement Mem0g-style graph memory for relationship-aware retrieval
+
+### Graph Architecture
+
+- [ ] **Memory Graph Schema**
+  - [ ] Entity nodes (people, places, concepts)
+  - [ ] Memory nodes (conversation chunks)
+  - [ ] Relationship edges (typed connections)
+  - [ ] Temporal edges (sequence, causality)
+
+- [ ] **Graph Operations**
+  - [ ] Multi-hop traversal for context gathering
+  - [ ] Relationship-based similarity search
+  - [ ] Subgraph extraction for focused retrieval
+  - [ ] Community detection for topic clustering
+
+- [ ] **Integration with Existing Systems**
+  - [ ] Extend InMemoryGraphRetriever
+  - [ ] Add Qdrant graph layer (payload relationships)
+  - [ ] Connect EntityExtractor → Graph population
+  - [ ] Link CoreferenceResolver → Entity unification
+
+- [ ] **Query Expansion via Graph**
+  - [ ] Related entity inclusion
+  - [ ] Path-based context gathering
+  - [ ] Importance propagation (PageRank-style)
+
+### Success Criteria
+- Multi-hop accuracy: > 80%
+- Relationship recall: > 85%
+- Graph query latency: < 100ms
+
+---
+
+## Phase 17: Self-Directed Memory Management (Planned)
+
+**Status**: Planned
+
+**Goal**: MemGPT-inspired autonomous memory management with LLM-driven decisions
+
+### Autonomous Operations
+
+- [ ] **Memory Paging** (MemGPT-style)
+  - [ ] Main context (working memory, limited tokens)
+  - [ ] External context (archival storage, unlimited)
+  - [ ] Automatic page-in/page-out decisions
+  - [ ] LLM-triggered memory retrieval
+
+- [ ] **Self-Editing Capabilities**
+  - [ ] Memory importance re-evaluation
+  - [ ] Contradiction self-correction
+  - [ ] Redundancy elimination
+  - [ ] Proactive consolidation triggers
+
+- [ ] **Reflection Mechanism**
+  - [ ] Periodic memory review
+  - [ ] Pattern extraction from recent memories
+  - [ ] Insight generation and storage
+  - [ ] Memory quality self-assessment
+
+- [ ] **Agent Memory Interface**
+  - [ ] Tool-based memory access (store, retrieve, edit)
+  - [ ] Memory state visibility for agents
+  - [ ] Cross-agent memory sharing (optional)
+
+### Implementation Notes
+- Build on existing SelfEditingMemoryTools
+- Extend VirtualContextManager for paging
+- Add LLM integration for decision making
+
+### Success Criteria
+- Autonomous operation accuracy: > 90%
+- Memory freshness maintenance: automatic
+- Context relevance: > 95% (human eval)
+
+---
+
+## Phase 18: Production & Ecosystem (Planned)
+
+**Status**: Planned
+
+**Goal**: Production-ready deployment and ecosystem integration
+
+### Deployment
+
+- [ ] Kubernetes deployment patterns
+- [ ] Health check endpoints
+- [ ] Performance monitoring dashboards
+- [ ] Load testing and benchmarks
+- [ ] Memory usage optimization
+
+### Ecosystem
+
+- [ ] LangChain integration adapter
+- [ ] Semantic Kernel memory provider
+- [ ] OpenAI Assistants API compatibility
+- [ ] REST API wrapper (non-MCP clients)
+
+### Documentation
+
+- [ ] Architecture deep-dive guide
+- [ ] Configuration cookbook
+- [ ] Performance tuning guide
+- [ ] Migration guides (version upgrades)
+
+---
+
+## Research References
+
+### Key Papers & Projects
+
+| Reference | Key Insight | Applied To |
+|-----------|-------------|------------|
+| **MemGPT** | OS-inspired 2-tier paging, self-directed editing | Phase 17 |
+| **Mem0** | Extraction + Update phases, 91% latency reduction | Phase 14 |
+| **H-MEM** | Multi-level semantic abstraction, index routing | Phase 15 |
+| **LangChain** | ConversationSummaryBuffer pattern | Phase 14 |
+| **Recursive Summarization** | summary += new_content iteratively | Phase 14 |
+
+### Design Principles (from Research)
+
+1. **Tier count matters less than compression quality**
+   - 3-tier + strong summarization > 5-tier + weak summarization
+   - Focus on HOW to compress, not how many levels
+
+2. **Extraction + Update pattern is key**
+   - Don't just store raw text
+   - Extract meaning → Update state → Store compressed
+
+3. **Query-aware retrieval**
+   - Return summaries by default
+   - Expand to details only when needed
+   - Adaptive based on query intent
+
+4. **Self-directed management**
+   - Let LLM decide what to remember
+   - Autonomous consolidation and pruning
+   - Proactive relevance maintenance
 
 ## Success Metrics
 
