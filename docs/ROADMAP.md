@@ -140,42 +140,217 @@
 - [x] MemoryChatApp sample with web frontend
 - [x] 26 new unit tests for scoring service
 
+## 4-Tier Memory Architecture (Core Design)
+
+### Tier Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Tier 1: Recently (Buffer)                                      │
+│  ├── Raw conversation, full text                                │
+│  ├── Async processing staging area                              │
+│  └── TTL: 60s idle OR 500 tokens OR 3 turns                     │
+├─────────────────────────────────────────────────────────────────┤
+│  Tier 2: Working (Active Context)                               │
+│  ├── Summarized, topic-grouped                                  │
+│  ├── Changes on topic switch                                    │
+│  └── TTL: 10min OR 2K tokens OR 10 turns OR topic_change        │
+├─────────────────────────────────────────────────────────────────┤
+│  Tier 3: Session (Archive)                                      │
+│  ├── Session summary, key facts                                 │
+│  ├── Explicit new session OR 30min idle                         │
+│  └── Compressed representation                                  │
+├─────────────────────────────────────────────────────────────────┤
+│  Tier 4: User (Profile Dictionary)                              │
+│  ├── Structured facts: preferences, identity, relationships     │
+│  ├── Key-value with versioning                                  │
+│  └── Promotion: importance > 0.7 AND frequency >= 2             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Multi-Signal Promotion Triggers
+
+| Transition | Signal | Threshold | Logic |
+|------------|--------|-----------|-------|
+| Recently → Working | Time | 60s idle | OR |
+| | Tokens | 500 accumulated | OR |
+| | Turns | 3 conversation turns | OR |
+| Working → Session | Time | 10min since topic | OR |
+| | Tokens | 2000 in working | OR |
+| | Turns | 10 turns same topic | OR |
+| | Topic | Change detected | OR |
+| Session → User | Importance | > 0.7 score | AND |
+| | Frequency | Mentioned 2+ times | AND |
+| | Type | fact/preference/identity | AND |
+
+**Design Principle**:
+- **Lower promotions (Recently→Working→Session)**: OR logic — aggressive buffer cleanup
+- **Upper promotion (Session→User)**: AND logic — conservative, only important facts
+
+### Tier Data Models
+
+```csharp
+// Tier 1: Recently - Raw buffer
+record RecentlyMemory(
+    string Content,           // Full conversation text
+    DateTime Timestamp,
+    int TokenCount,
+    int TurnIndex
+);
+
+// Tier 2: Working - Summarized active context
+record WorkingMemory(
+    string Summary,           // Compressed representation
+    string Topic,             // Current topic label
+    List<string> KeyPoints,   // Extracted key points
+    DateTime TopicStarted,
+    int AccumulatedTokens
+);
+
+// Tier 3: Session - Archived session
+record SessionMemory(
+    string SessionId,
+    string Summary,           // Session-level summary
+    List<EntityTriple> Facts, // Extracted facts
+    DateTime StartTime,
+    DateTime EndTime,
+    Dictionary<string, float> TopicWeights
+);
+
+// Tier 4: User - Profile dictionary
+record UserMemory(
+    Dictionary<string, UserFact> Facts,  // Structured facts
+    DateTime LastUpdated
+);
+
+record UserFact(
+    string Value,
+    float Confidence,
+    int MentionCount,
+    DateTime FirstMentioned,
+    DateTime LastMentioned,
+    List<string> SourceSessions   // Provenance tracking
+);
+```
+
+### Async Processing Pipeline
+
+```
+[User Input]
+     │
+     ▼
+[Recently Buffer] ←─── Immediate storage (sync, <10ms)
+     │
+     ├─── Trigger check (async)
+     │         │
+     │         ▼
+     │    [Promotion Worker]
+     │         │
+     │         ├─ Extract entities (LLM async)
+     │         ├─ Generate summary (LLM async)
+     │         └─ Calculate importance (embedding async)
+     │
+     ▼
+[Working Memory] ←─── Topic-grouped summaries
+     │
+     ├─── Topic change detection (async)
+     │
+     ▼
+[Session Archive] ←─── Session summaries + facts
+     │
+     ├─── Importance filter (async)
+     │
+     ▼
+[User Profile] ←─── Structured dictionary
+```
+
+### Conflict Resolution (User Tier)
+
+```yaml
+conflict_strategy:
+  same_key_update:
+    rule: "Latest wins with version history"
+    example:
+      T1: user.coffee_preference = "loves coffee" (v1)
+      T2: user.coffee_preference = "quit coffee" (v2, current)
+    retention: "Keep last 3 versions for context"
+
+  contradicting_facts:
+    rule: "Higher confidence wins, flag for review if close"
+    threshold: 0.1 confidence difference
+    example:
+      fact1: "vegetarian" (confidence: 0.9)
+      fact2: "ate steak yesterday" (confidence: 0.8)
+      action: "Flag contradiction, keep both with notes"
+```
+
+---
+
 ## Phase 14: LLM-based Memory Summarization (Planned)
 
 **Status**: Planned
 
-**Goal**: Implement intelligent memory compression that preserves semantic meaning while reducing token usage by 90%+ (inspired by Mem0 research)
+**Goal**: Implement the 4-tier memory architecture with intelligent compression (90%+ token reduction)
 
-### Core Components
+### 14.1 Recently Tier Implementation
 
-- [ ] **Extraction Phase** (Mem0-style)
-  - [ ] Entity extraction from raw conversations
+- [ ] **Buffer Management**
+  - [ ] RecentlyMemoryBuffer with circular storage
+  - [ ] Token counting integration
+  - [ ] Turn tracking
+  - [ ] Async promotion trigger monitoring
+
+- [ ] **Promotion Triggers**
+  - [ ] Time-based trigger (60s idle detection)
+  - [ ] Token-based trigger (500 token threshold)
+  - [ ] Turn-based trigger (3 turn threshold)
+  - [ ] Multi-signal OR evaluation
+
+### 14.2 Working Tier Implementation
+
+- [ ] **Summarization Engine**
+  - [ ] LLM-based summarization (async)
+  - [ ] Topic extraction and labeling
+  - [ ] Key point extraction
+  - [ ] Incremental update (existing + new)
+
+- [ ] **Topic Management**
+  - [ ] Topic change detection (embedding similarity)
+  - [ ] Topic boundary markers
+  - [ ] Cross-topic reference handling
+
+### 14.3 Session Tier Implementation
+
+- [ ] **Session Lifecycle**
+  - [ ] Explicit session boundary detection
+  - [ ] Implicit timeout (30min idle)
+  - [ ] Session summary generation
+
+- [ ] **Fact Extraction** (Mem0-style)
+  - [ ] Entity extraction from session
   - [ ] Relationship extraction (subject → relation → object)
-  - [ ] Fact extraction (atomic knowledge units)
-  - [ ] Temporal marker extraction (when, duration, validity)
+  - [ ] Temporal marker extraction
+  - [ ] Importance scoring
 
-- [ ] **Update Phase** (Mem0-style)
-  - [ ] Memory state comparison (new vs existing)
-  - [ ] Conflict resolution for contradicting facts
-  - [ ] Memory evolution tracking (v1 → v2 → v3)
-  - [ ] Selective update decisions (ADD/UPDATE/DELETE)
+### 14.4 User Tier Implementation
 
-- [ ] **Recursive Summarization** (LangChain-inspired)
-  - [ ] ConversationSummaryBuffer pattern implementation
-  - [ ] Rolling summary with token budget management
-  - [ ] Summary + Recent raw messages hybrid retrieval
-  - [ ] Incremental summary updates (summary += new_content)
+- [ ] **Profile Dictionary**
+  - [ ] Structured fact storage (key-value)
+  - [ ] Version history tracking
+  - [ ] Confidence scoring
+  - [ ] Mention frequency tracking
 
-- [ ] **Abstraction Levels** (H-MEM-inspired)
-  - [ ] Level 0: Raw conversation chunks
-  - [ ] Level 1: Session summaries (what happened)
-  - [ ] Level 2: Topic abstractions (what user cares about)
-  - [ ] Level 3: User profile (who user is)
+- [ ] **Promotion Logic**
+  - [ ] Importance threshold (> 0.7)
+  - [ ] Frequency requirement (>= 2 mentions)
+  - [ ] Type filtering (fact/preference/identity)
+  - [ ] Conflict resolution
 
 ### Success Criteria
 - Token reduction: > 90% for long-term memories
 - Semantic preservation: > 95% (human eval)
-- Latency: < 200ms for summarization trigger
+- Promotion latency: < 200ms (async, non-blocking)
+- Buffer-to-User pipeline: < 5s end-to-end
 
 ---
 
