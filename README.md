@@ -106,11 +106,23 @@ Where:
 
 ## What's New in v0.3.0
 
+- **Self-Directed Memory Management** (Phase 17): MemGPT-inspired autonomous memory
+  - Heartbeat-based operation scheduling
+  - Memory self-correction with contradiction resolution
+  - Reflection engine for insight generation
+  - Agent memory tools integration
+- **Graph-based Memory Network** (Phase 16): Mem0g-style relationship-aware retrieval
+  - Community detection (Label Propagation)
+  - PageRank importance propagation
+  - Graph-enhanced query expansion
+- **Smart Tiered Retrieval** (Phase 15): H-MEM/AFM-inspired adaptive retrieval
+  - Query intent classification (Factual, Contextual, Temporal, Relational)
+  - Adaptive fidelity levels (Full, Compressed, Placeholder)
+  - Token budget allocation per tier
 - **4-Tier Memory Architecture**: Recently → Working → Session → User
 - **Multi-Signal Promotion**: Intelligent tier transitions with OR/AND logic
 - **User Profile Service**: Long-term fact storage with confirmation tracking
 - **Buffer Promotion Pipeline**: Async processing with topic segmentation
-- **Simplified Package Structure**: 2 packages (MemoryIndexer + MemoryIndexer.Sdk)
 
 ## Features
 
@@ -305,7 +317,7 @@ Based on research benchmarks:
 | Net Efficiency Gain | 17-18% | ✅ Achieved |
 | Context Utilization | <85% | ✅ Achieved |
 | Retrieval Latency | <100ms | ✅ Achieved |
-| Test Coverage | >500 tests | ✅ 504 tests |
+| Test Coverage | >500 tests | ✅ 638 tests |
 
 ## Documentation
 
