@@ -1,4 +1,4 @@
-using MemoryIndexer.Mcp.Tools;
+using MemoryIndexer.Sdk.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
 

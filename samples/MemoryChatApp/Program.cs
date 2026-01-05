@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using MemoryIndexer.Core.Configuration;
-using MemoryIndexer.Core.Interfaces;
-using MemoryIndexer.Core.Models;
-using MemoryIndexer.Core.Services;
+using MemoryIndexer.Configuration;
+using MemoryIndexer.Interfaces;
+using MemoryIndexer.Models;
+using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Extensions;
 
 // Load .env file

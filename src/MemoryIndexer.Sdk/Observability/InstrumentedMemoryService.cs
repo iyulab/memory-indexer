@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using MemoryIndexer.Core.Interfaces;
-using MemoryIndexer.Core.Models;
-using MemoryIndexer.Core.Services;
+using MemoryIndexer.Interfaces;
+using MemoryIndexer.Models;
+using MemoryIndexer.Services;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Observability;

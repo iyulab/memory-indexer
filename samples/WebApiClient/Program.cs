@@ -1,6 +1,6 @@
-using MemoryIndexer.Core.Configuration;
-using MemoryIndexer.Core.Interfaces;
-using MemoryIndexer.Core.Models;
+using MemoryIndexer.Configuration;
+using MemoryIndexer.Interfaces;
+using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);

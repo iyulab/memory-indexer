@@ -1,34 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Memory Indexer SDK - Long-term memory management for LLM applications via MCP (Model Context Protocol). Features semantic search, vector storage, PII detection, prompt injection defense, and OpenTelemetry observability.</Description>
+    <Description>Memory Indexer SDK - Full-featured long-term memory management for LLM applications via MCP. Includes SQLite/Qdrant storage, BGE-M3/Ollama/OpenAI embeddings, and OpenTelemetry observability.</Description>
     <PackageTags>mcp;memory;sdk;llm;ai;vector-search;semantic-search;opentelemetry;observability</PackageTags>
     <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageId>MemoryIndexer</PackageId>
+    <PackageId>MemoryIndexer.Sdk</PackageId>
     <Title>Memory Indexer SDK</Title>
     <PackageProjectUrl>https://github.com/iyulab/memory-indexer</PackageProjectUrl>
     <PackageReleaseNotes>
+v0.3.0:
+- Major restructuring: SDK now includes all implementations
+- Depends on MemoryIndexer core package for abstractions
+- Consolidated Storage, Embedding, Intelligence, MCP into single package
+- SQLite-vec and Qdrant storage backends
+- BGE-M3, Ollama, OpenAI embedding providers
+- Full MCP tool suite
+- OpenTelemetry observability
+
 v0.2.0:
 - Hybrid scoring with keyword matching and content-type boosting
-- Improved recall relevance for positive/confirmed information
-- CONFIRMED memories prioritized over RULED OUT in retrieval
-- 26 new unit tests for scoring service
 - TwentyQuestionsGame sample demonstrating memory-only context
 
 v0.1.0:
-- Core memory storage with InMemory, SQLite-vec, and Qdrant backends
-- MCP tools for store, recall, get, list, update, delete operations
-- Embedding support: Local, Ollama, OpenAI providers
-- Hybrid search with BM25 and vector similarity
-- Knowledge graph with entity extraction
-- Self-editing memory management
-- Context window optimization
-- PII detection and prompt injection defense
-- Multi-tenant data isolation with CTE-based pre-filtering
-- LoCoMo benchmark evaluation (SingleHop, MultiHop, Temporal, CrossSession, Factual)
-- RAGAS-style retrieval metrics (Recall, Precision, MRR, NDCG)
-- OpenTelemetry tracing and metrics
+- Initial release with core memory management features
     </PackageReleaseNotes>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -42,17 +37,29 @@ v0.1.0:
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MemoryIndexer.Core\MemoryIndexer.Core.csproj" />
-    <ProjectReference Include="..\MemoryIndexer.Storage\MemoryIndexer.Storage.csproj" />
-    <ProjectReference Include="..\MemoryIndexer.Embedding\MemoryIndexer.Embedding.csproj" />
-    <ProjectReference Include="..\MemoryIndexer.Intelligence\MemoryIndexer.Intelligence.csproj" />
-    <ProjectReference Include="..\MemoryIndexer.Mcp\MemoryIndexer.Mcp.csproj" />
+    <ProjectReference Include="..\MemoryIndexer\MemoryIndexer.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Storage -->
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Qdrant.Client" />
+
+    <!-- Embedding -->
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="LMSupply.Embedder" />
+
+    <!-- Intelligence -->
+    <PackageReference Include="LMSupply.Reranker" />
+
+    <!-- MCP -->
     <PackageReference Include="ModelContextProtocol" />
+
+    <!-- Hosting -->
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+
+    <!-- Observability -->
     <PackageReference Include="OpenTelemetry" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
