@@ -337,6 +337,51 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
         return (long)countResult;
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<MemoryType, int>> GetTypeCountsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureCollectionExistsAsync(cancellationToken);
+
+        var counts = new Dictionary<MemoryType, int>();
+
+        // Query count for each memory type
+        foreach (var type in Enum.GetValues<MemoryType>())
+        {
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "user_id",
+                            Match = new Match { Keyword = userId }
+                        }
+                    },
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "type",
+                            Match = new Match { Keyword = type.ToString() }
+                        }
+                    }
+                }
+            };
+
+            var countResult = await _client.CountAsync(_collectionName, filter: filter, cancellationToken: cancellationToken);
+            if (countResult > 0)
+            {
+                counts[type] = (int)countResult;
+            }
+        }
+
+        return counts;
+    }
+
     /// <summary>
     /// Gets collection information including health status.
     /// </summary>

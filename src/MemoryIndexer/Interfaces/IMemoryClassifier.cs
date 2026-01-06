@@ -50,9 +50,23 @@ public sealed class MemoryClassification
     public required MemoryTier Tier { get; init; }
 
     /// <summary>
-    /// Detected memory type.
+    /// Primary detected memory type (highest confidence).
     /// </summary>
     public required MemoryType Type { get; init; }
+
+    /// <summary>
+    /// Secondary memory types (confidence >= 0.3).
+    /// Enables multi-label classification for nuanced content.
+    /// Phase 23.1: Memory Type Distribution Balancing.
+    /// </summary>
+    public IReadOnlyList<MemoryType> SecondaryTypes { get; init; } = [];
+
+    /// <summary>
+    /// Confidence scores for each memory type (0.0 - 1.0).
+    /// Phase 23.1: Multi-score classification system.
+    /// </summary>
+    public IReadOnlyDictionary<MemoryType, float> TypeConfidences { get; init; } =
+        new Dictionary<MemoryType, float>();
 
     /// <summary>
     /// Importance score (0.0 - 1.0).

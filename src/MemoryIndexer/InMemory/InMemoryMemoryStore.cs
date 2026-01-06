@@ -203,6 +203,19 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyDictionary<MemoryType, int>> GetTypeCountsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var counts = _memories.Values
+            .Where(m => m.UserId == userId && !m.IsDeleted)
+            .GroupBy(m => m.Type)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return Task.FromResult<IReadOnlyDictionary<MemoryType, int>>(counts);
+    }
+
+    /// <inheritdoc />
     public Task EnsureCollectionExistsAsync(CancellationToken cancellationToken = default)
     {
         // No-op for in-memory store

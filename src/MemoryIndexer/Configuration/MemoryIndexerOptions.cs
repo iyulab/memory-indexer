@@ -1,4 +1,5 @@
 using MemoryIndexer.Interfaces;
+using MemoryIndexer.Models;
 
 namespace MemoryIndexer.Configuration;
 
@@ -69,6 +70,12 @@ public sealed class MemoryIndexerOptions
     /// Phase 22.2: Recall Latency Optimization.
     /// </summary>
     public LatencyOptions Latency { get; set; } = new();
+
+    /// <summary>
+    /// Memory type balancing configuration.
+    /// Phase 23.1: Memory Type Distribution Balancing.
+    /// </summary>
+    public TypeBalancerOptions TypeBalancing { get; set; } = new();
 }
 
 /// <summary>
@@ -817,4 +824,57 @@ public sealed class LatencyOptions
     /// Default: 3.
     /// </summary>
     public int EarlyTerminationMinResults { get; set; } = 3;
+}
+
+/// <summary>
+/// Memory type balancing configuration options.
+/// Phase 23.1: Memory Type Distribution Balancing.
+/// </summary>
+/// <remarks>
+/// Controls memory type distribution through:
+/// - Target distribution percentages for each memory type
+/// - Boost factors for underrepresented types in retrieval
+/// - Sensitivity control for adaptive weighting
+/// </remarks>
+public sealed class TypeBalancerOptions
+{
+    /// <summary>
+    /// Whether type balancing is enabled.
+    /// Default: true.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Target distribution percentages for memory types.
+    /// Values should sum to ~1.0 (100%).
+    /// </summary>
+    public Dictionary<MemoryType, float> TargetDistribution { get; set; } = new()
+    {
+        [MemoryType.Episodic] = 0.40f,    // 40% target
+        [MemoryType.Semantic] = 0.30f,    // 30% target
+        [MemoryType.Procedural] = 0.20f,  // 20% target
+        [MemoryType.Fact] = 0.10f,        // 10% target
+        [MemoryType.Reflection] = 0.0f    // Generated during consolidation, not direct classification
+    };
+
+    /// <summary>
+    /// Boost sensitivity factor.
+    /// Higher values = stronger correction for imbalanced types.
+    /// Default: 2.0 (e.g., 15% deviation → 30% boost).
+    /// </summary>
+    public float BoostSensitivity { get; set; } = 2.0f;
+
+    /// <summary>
+    /// Maximum boost factor allowed.
+    /// Prevents over-correction for severely underrepresented types.
+    /// Default: 0.5 (50% maximum boost).
+    /// </summary>
+    public float MaxBoost { get; set; } = 0.5f;
+
+    /// <summary>
+    /// Minimum number of memories required before applying balancing.
+    /// Prevents skewed distribution in early usage.
+    /// Default: 20 memories.
+    /// </summary>
+    public int MinMemoriesForBalancing { get; set; } = 20;
 }

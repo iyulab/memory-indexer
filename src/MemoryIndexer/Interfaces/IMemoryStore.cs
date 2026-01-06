@@ -94,6 +94,17 @@ public interface IMemoryStore
     Task<long> GetCountAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the count of memories by type for a user.
+    /// Phase 23.1: Memory Type Distribution Balancing.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Dictionary mapping MemoryType to count.</returns>
+    Task<IReadOnlyDictionary<MemoryType, int>> GetTypeCountsAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Ensures the storage collection/table exists.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>

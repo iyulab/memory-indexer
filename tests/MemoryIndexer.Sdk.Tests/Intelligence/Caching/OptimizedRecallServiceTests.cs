@@ -350,6 +350,9 @@ public class OptimizedRecallServiceTests
         public Task<long> GetCountAsync(string userId, CancellationToken cancellationToken = default)
             => Task.FromResult(0L);
 
+        public Task<IReadOnlyDictionary<MemoryType, int>> GetTypeCountsAsync(string userId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyDictionary<MemoryType, int>>(new Dictionary<MemoryType, int>());
+
         public Task EnsureCollectionExistsAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 

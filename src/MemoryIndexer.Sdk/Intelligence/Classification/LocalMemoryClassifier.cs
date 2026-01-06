@@ -8,41 +8,93 @@ using Microsoft.Extensions.Options;
 namespace MemoryIndexer.Sdk.Intelligence.Classification;
 
 /// <summary>
-/// Memory classifier using heuristic rules with optional LLM enhancement.
+/// Memory classifier using enhanced heuristic rules with multi-label support.
 /// </summary>
 /// <remarks>
-/// This implementation uses pattern matching and heuristics for fast classification.
-/// It can be extended to use LMSupply.Generator for more sophisticated classification
-/// when LLM resources are available.
+/// Phase 23.1: Enhanced with multi-score classification system to balance
+/// memory type distribution (Episodic, Semantic, Procedural, Fact).
 ///
-/// Classification is based on:
-/// - Content length and complexity
-/// - Presence of factual indicators (names, numbers, preferences)
-/// - Transient patterns (greetings, acknowledgments)
-/// - Topic extraction via keyword detection
+/// Classification improvements:
+/// - Multi-label support (primary + secondary types)
+/// - Expanded pattern detection (30+ procedural patterns, 20+ semantic patterns)
+/// - Type-specific scoring algorithms
+/// - Implicit procedural knowledge detection (tool usage, environment setup)
 /// </remarks>
 public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 {
     private readonly ILogger<LocalMemoryClassifier> _logger;
     private readonly IntelligenceOptions _options;
 
+    #region Pattern Definitions
+
     /// <summary>
     /// Patterns that indicate factual content about the user.
     /// </summary>
     private static readonly string[] FactIndicators =
     [
-        "my name is", "i am", "i'm", "i prefer", "i like", "i use",
-        "i work", "i live", "my favorite", "i always", "i never",
+        "my name is", "i am", "i'm", "i prefer", "i like", "i always",
+        "i work", "i live", "my favorite",
         "my email", "my phone", "my address", "i was born"
     ];
 
     /// <summary>
     /// Patterns that indicate procedural/how-to content.
+    /// Phase 23.1: Expanded from 8 to 30+ patterns.
     /// </summary>
     private static readonly string[] ProceduralIndicators =
     [
+        // Explicit procedures
         "how to", "step by step", "first,", "then,", "finally,",
-        "to do this", "you need to", "make sure to", "don't forget to"
+        "to do this", "you need to", "make sure to", "don't forget to",
+
+        // Tool/framework usage (NEW)
+        "use", "uses", "using", "built with", "configured with",
+        "based on", "running on", "powered by", "depends on",
+        "rely on", "leverage", "utilize",
+
+        // Environment/setup (NEW)
+        "installed", "set up", "deploy with", "package with",
+        "initialize", "configure", "install", "setup",
+
+        // Habitual patterns (NEW)
+        "always", "usually", "typically", "generally", "normally",
+        "prefer to", "tend to", "habit of", "practice of"
+    ];
+
+    /// <summary>
+    /// Patterns that indicate semantic/conceptual content.
+    /// Phase 23.1: Expanded from 4 to 20+ patterns.
+    /// </summary>
+    private static readonly string[] SemanticIndicators =
+    [
+        // Existing
+        "means", "definition", "concept", "principle",
+
+        // Knowledge/facts (NEW)
+        "is a", "refers to", "defined as", "known as",
+        "type of", "kind of", "category of", "class of",
+
+        // Explanations (NEW)
+        "because", "therefore", "thus", "hence", "consequently",
+        "reason", "cause", "effect", "purpose"
+    ];
+
+    /// <summary>
+    /// Patterns that indicate episodic/event-based content.
+    /// Phase 23.1: NEW - explicit episodic markers.
+    /// </summary>
+    private static readonly string[] EpisodicIndicators =
+    [
+        // Time markers
+        "yesterday", "today", "tomorrow", "last week", "next month",
+        "ago", "recently", "previously", "earlier", "later",
+
+        // Personal events
+        "i did", "we went", "i saw", "i met", "i talked",
+        "happened", "occurred", "took place", "experienced",
+
+        // Location markers
+        "at the", "in the", "where", "there", "here"
     ];
 
     /// <summary>
@@ -54,6 +106,20 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         "yes", "no", "sure", "got it", "understood", "bye", "goodbye",
         "see you", "hmm", "um", "uh", "well", "cool", "great", "nice"
     ];
+
+    /// <summary>
+    /// Common tool/framework keywords for procedural detection.
+    /// Phase 23.1: NEW - implicit procedural knowledge.
+    /// </summary>
+    private static readonly HashSet<string> ToolKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "react", "vue", "angular", "svelte",
+        "docker", "kubernetes", "k8s",
+        "pnpm", "npm", "yarn", "bun",
+        "typescript", "javascript", "python", "rust", "go",
+        "postgres", "mysql", "mongodb", "redis",
+        "aws", "azure", "gcp", "vercel", "netlify"
+    };
 
     /// <summary>
     /// Common topic keywords mapped to topics.
@@ -92,6 +158,8 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         ["dotnet"] = "dotnet"
     };
 
+    #endregion
+
     public LocalMemoryClassifier(
         IOptions<MemoryIndexerOptions> options,
         ILogger<LocalMemoryClassifier> logger)
@@ -99,7 +167,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         _logger = logger;
         _options = options.Value.Intelligence;
 
-        _logger.LogInformation("LocalMemoryClassifier initialized (heuristic mode)");
+        _logger.LogInformation("LocalMemoryClassifier initialized (Phase 23.1 multi-score mode)");
     }
 
     /// <inheritdoc />
@@ -116,8 +184,11 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         var classification = ClassifyHeuristic(content, context);
 
         _logger.LogDebug(
-            "Classified message: Tier={Tier}, Type={Type}, Importance={Importance:F2}, Persist={ShouldPersist}",
-            classification.Tier, classification.Type, classification.Importance, classification.ShouldPersist);
+            "Classified: Tier={Tier}, Primary={Type}, Secondary=[{Secondary}], Importance={Importance:F2}",
+            classification.Tier,
+            classification.Type,
+            string.Join(",", classification.SecondaryTypes),
+            classification.Importance);
 
         return Task.FromResult(classification);
     }
@@ -150,19 +221,27 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
             return MemoryClassification.Transient;
         }
 
-        // Determine memory type
-        var type = DetermineMemoryType(lower);
+        // Phase 23.1: Multi-score classification
+        var scores = CalculateTypeScores(lower, wordCount);
 
-        // Determine tier based on content characteristics
-        var tier = DetermineTier(lower, wordCount, type, context);
+        // Primary type = highest score
+        var primaryType = scores.OrderByDescending(x => x.Value).First().Key;
+
+        // Secondary types = scores >= 0.3 (excluding primary)
+        var secondaryTypes = scores
+            .Where(x => x.Key != primaryType && x.Value >= 0.3f)
+            .OrderByDescending(x => x.Value)
+            .Select(x => x.Key)
+            .ToList();
+
+        // Determine tier based on primary type and content
+        var tier = DetermineTier(lower, wordCount, primaryType, context);
 
         // Calculate importance
-        var importance = CalculateImportance(lower, wordCount, type, context);
+        var importance = CalculateImportance(lower, wordCount, primaryType, context);
 
-        // Extract topics
+        // Extract topics and entities
         var topics = ExtractTopics(lower);
-
-        // Extract entities (simplified)
         var entities = ExtractEntities(content);
 
         // Determine if should persist
@@ -171,15 +250,109 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return new MemoryClassification
         {
             Tier = tier,
-            Type = type,
+            Type = primaryType,
+            SecondaryTypes = secondaryTypes,
+            TypeConfidences = scores,
             Importance = importance,
             Topics = topics,
             Entities = entities,
             ShouldPersist = shouldPersist,
-            Confidence = 0.7f, // Heuristic confidence
-            Reason = $"Heuristic: {wordCount} words, type={type}"
+            Confidence = CalculateOverallConfidence(scores),
+            Reason = $"Multi-score: {primaryType}={scores[primaryType]:F2}, {wordCount} words"
         };
     }
+
+    #region Phase 23.1: Multi-Score Classification
+
+    private Dictionary<MemoryType, float> CalculateTypeScores(string lower, int wordCount)
+    {
+        return new Dictionary<MemoryType, float>
+        {
+            [MemoryType.Episodic] = CalculateEpisodicScore(lower, wordCount),
+            [MemoryType.Semantic] = CalculateSemanticScore(lower, wordCount),
+            [MemoryType.Procedural] = CalculateProceduralScore(lower, wordCount),
+            [MemoryType.Fact] = CalculateFactScore(lower, wordCount)
+        };
+    }
+
+    private float CalculateEpisodicScore(string lower, int wordCount)
+    {
+        float score = 0.2f; // Base score
+
+        // Time/location markers (+0.3 each, max 0.6)
+        int markerCount = EpisodicIndicators.Count(i => lower.Contains(i));
+        score += Math.Min(markerCount * 0.3f, 0.6f);
+
+        // Personal pronouns in past tense (+0.2)
+        if ((lower.Contains("i ") || lower.Contains("we ")) &&
+            (lower.Contains("did") || lower.Contains("was") || lower.Contains("were")))
+        {
+            score += 0.2f;
+        }
+
+        return Math.Clamp(score, 0f, 1f);
+    }
+
+    private float CalculateSemanticScore(string lower, int wordCount)
+    {
+        float score = 0.1f;
+
+        // Semantic indicators (+0.25 each, max 0.75)
+        int count = SemanticIndicators.Count(i => lower.Contains(i));
+        score += Math.Min(count * 0.25f, 0.75f);
+
+        // Definition pattern: "X is a Y" (+0.3) - stronger weight for definitions
+        if (Regex.IsMatch(lower, @"\b\w+ is a \w+"))
+        {
+            score += 0.3f;
+        }
+
+        return Math.Clamp(score, 0f, 1f);
+    }
+
+    private float CalculateProceduralScore(string lower, int wordCount)
+    {
+        float score = 0.1f;
+
+        // Procedural indicators (+0.2 each, max 0.6)
+        int count = ProceduralIndicators.Count(i => lower.Contains(i));
+        score += Math.Min(count * 0.2f, 0.6f);
+
+        // Tool/framework keywords (+0.3 if present)
+        if (ToolKeywords.Any(k => lower.Contains(k)))
+        {
+            score += 0.3f;
+        }
+
+        return Math.Clamp(score, 0f, 1f);
+    }
+
+    private float CalculateFactScore(string lower, int wordCount)
+    {
+        // Fact indicators (+0.2 each)
+        int count = FactIndicators.Count(i => lower.Contains(i));
+
+        if (count == 0)
+        {
+            return 0.1f; // Base score
+        }
+
+        return Math.Clamp(0.6f + count * 0.1f, 0f, 1f);
+    }
+
+    private static float CalculateOverallConfidence(Dictionary<MemoryType, float> scores)
+    {
+        // Confidence = max score (higher max = more confident classification)
+        var maxScore = scores.Values.Max();
+
+        // If max score is low, confidence should be low
+        // If max score is high, confidence should be high
+        return Math.Clamp(maxScore * 0.9f, 0.5f, 1.0f);
+    }
+
+    #endregion
+
+    #region Original Helper Methods
 
     private static bool IsTransientContent(string lower, int wordCount)
     {
@@ -202,37 +375,6 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         }
 
         return false;
-    }
-
-    private static MemoryType DetermineMemoryType(string lower)
-    {
-        // Check for factual content about user
-        foreach (var indicator in FactIndicators)
-        {
-            if (lower.Contains(indicator))
-            {
-                return MemoryType.Fact;
-            }
-        }
-
-        // Check for procedural content
-        foreach (var indicator in ProceduralIndicators)
-        {
-            if (lower.Contains(indicator))
-            {
-                return MemoryType.Procedural;
-            }
-        }
-
-        // Check for semantic/conceptual content
-        if (lower.Contains("means") || lower.Contains("definition") ||
-            lower.Contains("concept") || lower.Contains("principle"))
-        {
-            return MemoryType.Semantic;
-        }
-
-        // Default to episodic (conversation/event)
-        return MemoryType.Episodic;
     }
 
     private static MemoryTier DetermineTier(string lower, int wordCount, MemoryType type, ClassificationContext? context)
@@ -343,4 +485,6 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
     [GeneratedRegex(@"\b[A-Z][a-z]+\b")]
     private static partial Regex CapitalizedWordRegex();
+
+    #endregion
 }

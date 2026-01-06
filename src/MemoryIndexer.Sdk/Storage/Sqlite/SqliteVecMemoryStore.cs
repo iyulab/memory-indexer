@@ -520,6 +520,40 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         return Convert.ToInt64(result);
     }
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<MemoryType, int>> GetTypeCountsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureCollectionExistsAsync(cancellationToken);
+
+        var sql = $@"
+            SELECT type, COUNT(*) as count
+            FROM {TableName}
+            WHERE user_id = @user_id AND is_deleted = 0
+            GROUP BY type
+        ";
+
+        using var command = CreateCommand(sql);
+        command.Parameters.AddWithValue("@user_id", userId);
+
+        var counts = new Dictionary<MemoryType, int>();
+
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var typeStr = reader.GetString(0);
+            var count = reader.GetInt32(1);
+
+            if (Enum.TryParse<MemoryType>(typeStr, ignoreCase: true, out var type))
+            {
+                counts[type] = count;
+            }
+        }
+
+        return counts;
+    }
+
     /// <summary>
     /// Performs full-text search using FTS5 with BM25 ranking.
     /// </summary>
