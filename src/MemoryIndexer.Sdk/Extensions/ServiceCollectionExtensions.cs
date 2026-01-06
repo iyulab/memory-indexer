@@ -25,6 +25,7 @@ using MemoryIndexer.Sdk.Intelligence.Profile;
 using MemoryIndexer.Sdk.Intelligence.Promotion;
 using MemoryIndexer.Sdk.Intelligence.Quality;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
+using MemoryIndexer.Sdk.Intelligence.Caching;
 using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.InMemory;
 using MemoryIndexer.Mock;
@@ -150,6 +151,10 @@ public static class ServiceCollectionExtensions
 
         // Register memory growth monitor (Phase 22.1)
         services.TryAddSingleton<IMemoryGrowthMonitor, InMemoryGrowthMonitor>();
+
+        // Register latency profiler and caching (Phase 22.2)
+        services.TryAddSingleton<ILatencyProfiler, InMemoryLatencyProfiler>();
+        services.TryAddSingleton<OptimizedRecallService>();
 
         // Register re-ranking service (Phase 5.4)
         services.TryAddSingleton<IRerankerService, LocalRerankerService>();

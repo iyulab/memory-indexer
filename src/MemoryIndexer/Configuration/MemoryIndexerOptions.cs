@@ -63,6 +63,12 @@ public sealed class MemoryIndexerOptions
     /// Phase 22.1: Memory Growth Rate Control.
     /// </summary>
     public MemoryGrowthOptions MemoryGrowth { get; set; } = new();
+
+    /// <summary>
+    /// Latency optimization configuration.
+    /// Phase 22.2: Recall Latency Optimization.
+    /// </summary>
+    public LatencyOptions Latency { get; set; } = new();
 }
 
 /// <summary>
@@ -702,4 +708,113 @@ public sealed class MemoryGrowthOptions
     /// Default: 1.5 (MinImportanceForStorage * 1.5).
     /// </summary>
     public float HighPressureThresholdMultiplier { get; set; } = 1.5f;
+}
+
+/// <summary>
+/// Latency optimization configuration options.
+/// Phase 22.2: Recall Latency Optimization.
+/// </summary>
+/// <remarks>
+/// Controls recall latency through:
+/// - Embedding cache with LRU eviction
+/// - Batch query processing for parallel searches
+/// - Early termination for sufficient results
+/// - Query result caching with TTL
+/// - Per-tier latency budgets and timeout configuration
+/// </remarks>
+public sealed class LatencyOptions
+{
+    /// <summary>
+    /// Whether latency profiling is enabled.
+    /// Default: true.
+    /// </summary>
+    public bool ProfilingEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Latency budget for Working Memory tier (hot path).
+    /// Target: &lt; 100ms.
+    /// Default: 100ms.
+    /// </summary>
+    public double WorkingMemoryBudgetMs { get; set; } = 100.0;
+
+    /// <summary>
+    /// Latency budget for Session Memory tier (warm path).
+    /// Target: &lt; 300ms.
+    /// Default: 300ms.
+    /// </summary>
+    public double SessionMemoryBudgetMs { get; set; } = 300.0;
+
+    /// <summary>
+    /// Latency budget for User Profile tier (cold path).
+    /// Target: &lt; 500ms.
+    /// Default: 500ms.
+    /// </summary>
+    public double UserProfileBudgetMs { get; set; } = 500.0;
+
+    /// <summary>
+    /// Whether embedding cache is enabled.
+    /// Default: true.
+    /// </summary>
+    public bool EmbeddingCacheEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of cached embeddings (LRU eviction).
+    /// Default: 1000.
+    /// </summary>
+    public int EmbeddingCacheSize { get; set; } = 1000;
+
+    /// <summary>
+    /// Embedding cache TTL in minutes.
+    /// Default: 60 minutes.
+    /// </summary>
+    public int EmbeddingCacheTtlMinutes { get; set; } = 60;
+
+    /// <summary>
+    /// Whether query result cache is enabled.
+    /// Default: true.
+    /// </summary>
+    public bool QueryCacheEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of cached query results (LRU eviction).
+    /// Default: 500.
+    /// </summary>
+    public int QueryCacheSize { get; set; } = 500;
+
+    /// <summary>
+    /// Query result cache TTL in minutes.
+    /// Default: 10 minutes.
+    /// </summary>
+    public int QueryCacheTtlMinutes { get; set; } = 10;
+
+    /// <summary>
+    /// Whether batch query processing is enabled for parallel searches.
+    /// Default: true.
+    /// </summary>
+    public bool BatchProcessingEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Maximum batch size for parallel query processing.
+    /// Default: 10.
+    /// </summary>
+    public int MaxBatchSize { get; set; } = 10;
+
+    /// <summary>
+    /// Whether early termination is enabled when sufficient results are found.
+    /// Default: true.
+    /// </summary>
+    public bool EarlyTerminationEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Confidence threshold for early termination.
+    /// When average confidence of top results exceeds this, stop searching.
+    /// Default: 0.9 (90%).
+    /// </summary>
+    public float EarlyTerminationConfidence { get; set; } = 0.9f;
+
+    /// <summary>
+    /// Minimum results required before early termination can trigger.
+    /// Default: 3.
+    /// </summary>
+    public int EarlyTerminationMinResults { get; set; } = 3;
 }
