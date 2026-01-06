@@ -1,3 +1,5 @@
+using MemoryIndexer.Interfaces;
+
 namespace MemoryIndexer.Configuration;
 
 /// <summary>
@@ -49,6 +51,12 @@ public sealed class MemoryIndexerOptions
     /// Recently buffer (Tier 0) configuration.
     /// </summary>
     public RecentlyBufferOptions RecentlyBuffer { get; set; } = new();
+
+    /// <summary>
+    /// Deduplication configuration.
+    /// Phase 21: Smart Deduplication & Quality Control.
+    /// </summary>
+    public DeduplicationOptions Deduplication { get; set; } = new();
 }
 
 /// <summary>
@@ -575,4 +583,61 @@ public sealed class RecentlyBufferOptions
     /// When disabled, promotion only occurs on explicit flush.
     /// </summary>
     public bool EnableBackgroundWorker { get; set; } = true;
+}
+
+/// <summary>
+/// Deduplication configuration options.
+/// Phase 21: Smart Deduplication & Quality Control.
+/// </summary>
+public sealed class DeduplicationOptions
+{
+    /// <summary>
+    /// Whether deduplication is enabled.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Default similarity threshold for duplicate detection (0.0 - 1.0).
+    /// Default: 0.80 (80% similarity).
+    /// </summary>
+    public float DefaultSimilarityThreshold { get; set; } = 0.80f;
+
+    /// <summary>
+    /// Number of recent memories to check for duplicates.
+    /// 0 = check all memories (expensive). Recommended: 20-50.
+    /// Default: 20.
+    /// </summary>
+    public int LookbackWindow { get; set; } = 20;
+
+    /// <summary>
+    /// Exact duplicate threshold (>= 0.95): Skip.
+    /// Default: 0.95.
+    /// </summary>
+    public float ExactDuplicateThreshold { get; set; } = 0.95f;
+
+    /// <summary>
+    /// High similarity threshold (0.85-0.94): Merge.
+    /// Default: 0.85.
+    /// </summary>
+    public float HighSimilarityThreshold { get; set; } = 0.85f;
+
+    /// <summary>
+    /// Medium similarity threshold (0.75-0.84): Update.
+    /// Default: 0.75.
+    /// </summary>
+    public float MediumSimilarityThreshold { get; set; } = 0.75f;
+
+    /// <summary>
+    /// Low similarity threshold (0.65-0.74): AddWithRelation.
+    /// Below this: Add as new memory.
+    /// Default: 0.65.
+    /// </summary>
+    public float LowSimilarityThreshold { get; set; } = 0.65f;
+
+    /// <summary>
+    /// ContentType-aware deduplication rules.
+    /// Key: NewContentType, Value: Dictionary of ExistingContentType -> DuplicateAction.
+    /// Example: { "QUESTION": { "QUESTION": Skip, "CONFIRMED": AddWithRelation } }
+    /// </summary>
+    public Dictionary<string, Dictionary<string, DuplicateAction>>? ContentTypeRules { get; set; }
 }

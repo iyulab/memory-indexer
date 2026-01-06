@@ -52,10 +52,28 @@ public class MemGPTStyleMemoryManagerTests
 
         var scoringServiceMock = new Mock<IScoringService>();
 
+        var deduplicationServiceMock = new Mock<IDeduplicationService>();
+        deduplicationServiceMock
+            .Setup(x => x.CheckForDuplicateAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<float?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DuplicateCheckResult
+            {
+                IsDuplicate = false,
+                DuplicateType = DuplicateType.None,
+                RecommendedAction = DuplicateAction.Add,
+                SimilarityScore = 0f
+            });
+
         _memoryServiceMock = new Mock<MemoryService>(
             memoryStoreMock.Object,
             _embeddingServiceMock.Object,
-            scoringServiceMock.Object) { CallBase = true };
+            scoringServiceMock.Object,
+            deduplicationServiceMock.Object) { CallBase = true };
 
         _manager = new MemGPTStyleMemoryManager(
             _memoryServiceMock.Object,

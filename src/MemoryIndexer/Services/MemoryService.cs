@@ -12,7 +12,8 @@ namespace MemoryIndexer.Services;
 public class MemoryService(
     IMemoryStore memoryStore,
     IEmbeddingService embeddingService,
-    IScoringService scoringService)
+    IScoringService scoringService,
+    IDeduplicationService deduplicationService)
 {
     /// <summary>
     /// Stores a new memory with automatic embedding generation.
@@ -36,6 +37,64 @@ public class MemoryService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
+
+        // Phase 21.1: Check for duplicates before storing
+        var contentType = metadata?.GetValueOrDefault("ContentType");
+        var duplicateCheck = await deduplicationService.CheckForDuplicateAsync(
+            content,
+            userId,
+            contentType: contentType,
+            cancellationToken: cancellationToken);
+
+        // Handle duplicate detection results
+        if (duplicateCheck.IsDuplicate && duplicateCheck.ExistingMemory != null)
+        {
+            var existing = duplicateCheck.ExistingMemory;
+
+            switch (duplicateCheck.RecommendedAction)
+            {
+                case DuplicateAction.Skip:
+                    // Exact duplicate - return existing memory without modification
+                    return existing;
+
+                case DuplicateAction.Merge:
+                    // High similarity - merge content and update
+                    existing.Content = $"{existing.Content}\n\n[MERGED] {content}";
+                    existing.Embedding = await embeddingService.GenerateEmbeddingAsync(existing.Content, cancellationToken);
+                    existing.ContentHash = ComputeContentHash(existing.Content);
+                    existing.RecordAccess();
+                    existing.MarkUpdated();
+                    await memoryStore.UpdateAsync(existing, cancellationToken);
+                    return existing;
+
+                case DuplicateAction.Update:
+                    // Medium similarity - update with new content
+                    existing.Content = content;
+                    existing.Embedding = await embeddingService.GenerateEmbeddingAsync(content, cancellationToken);
+                    existing.ContentHash = ComputeContentHash(content);
+                    existing.RecordAccess();
+                    existing.MarkUpdated();
+                    if (importance.HasValue)
+                    {
+                        existing.ImportanceScore = importance.Value;
+                    }
+                    await memoryStore.UpdateAsync(existing, cancellationToken);
+                    return existing;
+
+                case DuplicateAction.AddWithRelation:
+                    // Low similarity - add as new but link to similar memory
+                    metadata ??= [];
+                    metadata["RelatedMemoryId"] = existing.Id.ToString();
+                    metadata["RelationshipType"] = "similar";
+                    metadata["SimilarityScore"] = duplicateCheck.SimilarityScore.ToString("F3");
+                    break;
+
+                case DuplicateAction.Add:
+                default:
+                    // No duplicate action - continue with normal storage
+                    break;
+            }
+        }
 
         // Generate embedding
         var embedding = await embeddingService.GenerateEmbeddingAsync(content, cancellationToken);
