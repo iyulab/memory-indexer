@@ -410,6 +410,9 @@ public class OptimizedRecallServiceTests
         public float CalculateHybridScore(MemoryUnit memory, string query, ReadOnlyMemory<float>? queryEmbedding = null)
             => 0.85f;
 
+        public float CalculateHybridScoreWithIntent(MemoryUnit memory, string query, QueryIntentResult intent, ReadOnlyMemory<float>? queryEmbedding = null)
+            => 0.85f;
+
         public IReadOnlyList<NormalizableMemory> ScoreAndNormalize(IReadOnlyList<MemoryUnit> memories, string query, ReadOnlyMemory<float>? queryEmbedding = null)
             => memories.Select(m => new NormalizableMemory
             {

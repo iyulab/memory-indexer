@@ -88,6 +88,12 @@ public sealed class QueryIntentResult
     public QueryIntent? SecondaryIntent { get; init; }
 
     /// <summary>
+    /// Query specificity score (0.0 to 1.0).
+    /// Higher values indicate more specific queries that should prioritize semantic relevance over importance.
+    /// </summary>
+    public required float Specificity { get; init; }
+
+    /// <summary>
     /// Extracted temporal reference if present (e.g., "last week", "yesterday").
     /// </summary>
     public string? TemporalReference { get; init; }

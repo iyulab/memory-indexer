@@ -185,6 +185,114 @@ public class LocalQueryIntentClassifierTests
 
     #endregion
 
+    #region Query Specificity Tests (Phase 22.3)
+
+    [Theory]
+    [InlineData("What is my name?", 0.3f, 0.5f)] // Generic, short query
+    [InlineData("Tell me about my favorite programming language and development environment", 0.6f, 1.0f)] // Long, many keywords
+    [InlineData("What is \"Machine Learning\" and how does it relate to my work?", 0.7f, 1.0f)] // Has quoted string, question
+    [InlineData("What did I say about \"TypeScript\" interfaces in our last conversation?", 0.8f, 1.0f)] // Very specific: quoted + question + rare words
+    [InlineData("Hi", 0.0f, 0.2f)] // Very generic
+    public async Task ClassifyAsync_CalculatesSpecificity_WithinExpectedRange(string query, float minSpecificity, float maxSpecificity)
+    {
+        // Act
+        var result = await _classifier.ClassifyAsync(query);
+
+        // Assert
+        result.Specificity.Should().BeGreaterThanOrEqualTo(minSpecificity);
+        result.Specificity.Should().BeLessThanOrEqualTo(maxSpecificity);
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_QuotedStrings_IncreaseSpecificity()
+    {
+        // Arrange
+        var genericQuery = "Tell me about machine learning";
+        var quotedQuery = "Tell me about \"Machine Learning\"";
+
+        // Act
+        var genericResult = await _classifier.ClassifyAsync(genericQuery);
+        var quotedResult = await _classifier.ClassifyAsync(quotedQuery);
+
+        // Assert
+        quotedResult.Specificity.Should().BeGreaterThan(genericResult.Specificity);
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_LongerQueries_HigherSpecificity()
+    {
+        // Arrange
+        var shortQuery = "What is Python?";
+        var longQuery = "What is Python programming language and how is it different from JavaScript in terms of syntax and performance?";
+
+        // Act
+        var shortResult = await _classifier.ClassifyAsync(shortQuery);
+        var longResult = await _classifier.ClassifyAsync(longQuery);
+
+        // Assert
+        longResult.Specificity.Should().BeGreaterThan(shortResult.Specificity);
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_EntityReferences_IncreaseSpecificity()
+    {
+        // Arrange
+        var genericQuery = "Tell me about programming";
+        var entityQuery = "Tell me about Python, TypeScript, and React";
+
+        // Act
+        var genericResult = await _classifier.ClassifyAsync(genericQuery);
+        var entityResult = await _classifier.ClassifyAsync(entityQuery);
+
+        // Assert
+        entityResult.Specificity.Should().BeGreaterThan(genericResult.Specificity);
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_QuestionMark_IncreasesSpecificity()
+    {
+        // Arrange
+        var statementQuery = "Tell me about Python";
+        var questionQuery = "What is Python?";
+
+        // Act
+        var statementResult = await _classifier.ClassifyAsync(statementQuery);
+        var questionResult = await _classifier.ClassifyAsync(questionQuery);
+
+        // Assert
+        questionResult.Specificity.Should().BeGreaterThan(statementResult.Specificity);
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_RareWords_IncreaseSpecificity()
+    {
+        // Arrange
+        var commonWords = "Tell me about the thing";
+        var rareWords = "Tell me about polymorphism and encapsulation";
+
+        // Act
+        var commonResult = await _classifier.ClassifyAsync(commonWords);
+        var rareResult = await _classifier.ClassifyAsync(rareWords);
+
+        // Assert
+        rareResult.Specificity.Should().BeGreaterThan(commonResult.Specificity);
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_SpecificityClampedToOneMaximum()
+    {
+        // Arrange - Very specific query with all factors
+        var query = "What is \"Machine Learning\" algorithms, \"Deep Learning\" frameworks, and how do they relate to artificial intelligence implementations?";
+
+        // Act
+        var result = await _classifier.ClassifyAsync(query);
+
+        // Assert
+        result.Specificity.Should().BeLessThanOrEqualTo(1.0f);
+    }
+
+    #endregion
+
     #region Edge Cases
 
     [Fact]

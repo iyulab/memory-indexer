@@ -333,7 +333,8 @@ public class AdaptiveContextAssemblerTests
             Intent = new QueryIntentResult
             {
                 Intent = QueryIntent.General,
-                Confidence = 0.5f
+                Confidence = 0.5f,
+                Specificity = 0.5f
             },
             MergedResults = memories
         };
@@ -349,7 +350,8 @@ public class AdaptiveContextAssemblerTests
             Intent = new QueryIntentResult
             {
                 Intent = QueryIntent.General,
-                Confidence = 0.5f
+                Confidence = 0.5f,
+                Specificity = 0.5f
             },
             MergedResults = memories,
             GraphContext = new GraphRetrievalContext

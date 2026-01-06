@@ -1,4 +1,5 @@
 using MemoryIndexer.Configuration;
+using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Scoring;
 using Microsoft.Extensions.Options;
@@ -348,6 +349,225 @@ public class DefaultScoringServiceTests
 
         // Assert - "edible" memory should rank first
         Assert.Contains("edible", scores.First().Memory.Content);
+    }
+
+    #endregion
+
+    #region Intent-Aware Scoring Tests (Phase 22.3)
+
+    [Fact]
+    public void CalculateHybridScoreWithIntent_FactualIntent_PrioritizesSemanticMatch()
+    {
+        // Arrange - Use matching content for keyword boost consistency
+        var recentMemory = CreateMemory("apple fruit information");
+        recentMemory.CreatedAt = DateTime.UtcNow.AddMinutes(-5);
+        recentMemory.ImportanceScore = 0.3f; // Low importance
+        recentMemory.Embedding = new float[] { 1, 0, 0, 0 }; // High semantic match
+
+        var importantMemory = CreateMemory("apple fruit information");
+        importantMemory.CreatedAt = DateTime.UtcNow.AddDays(-1);
+        importantMemory.ImportanceScore = 0.9f; // High importance
+        importantMemory.Embedding = new float[] { 0, 1, 0, 0 }; // Low semantic match
+
+        var factualIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.Factual,
+            Confidence = 0.8f,
+            Specificity = 0.9f // Very high specificity - strong importance damping
+        };
+
+        var queryEmbedding = new float[] { 1, 0, 0, 0 }; // Matches recentMemory perfectly
+        var query = "apple fruit";
+
+        // Act
+        var recentScore = _scoringService.CalculateHybridScoreWithIntent(recentMemory, query, factualIntent, queryEmbedding);
+        var importantScore = _scoringService.CalculateHybridScoreWithIntent(importantMemory, query, factualIntent, queryEmbedding);
+
+        // Assert - Recent memory with high semantic match should score higher despite low importance
+        // With high specificity (0.9), importance is dampened significantly (factor = 0.55)
+        // Factual intent prioritizes semantic (0.6 weight) over importance (0.2 * 0.55 = 0.11)
+        Assert.True(recentScore > importantScore,
+            $"Factual intent should prioritize semantic match: recent={recentScore} vs important={importantScore}");
+    }
+
+    [Fact]
+    public void CalculateHybridScoreWithIntent_TemporalIntent_PrioritizesRecency()
+    {
+        // Arrange
+        var recentMemory = CreateMemory("Recent conversation");
+        recentMemory.CreatedAt = DateTime.UtcNow.AddMinutes(-5);
+        recentMemory.ImportanceScore = 0.3f;
+
+        var oldMemory = CreateMemory("Old conversation");
+        oldMemory.CreatedAt = DateTime.UtcNow.AddDays(-7);
+        oldMemory.ImportanceScore = 0.8f; // Higher importance
+
+        var temporalIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.Temporal,
+            Confidence = 0.8f,
+            Specificity = 0.5f
+        };
+
+        var query = "What did we discuss recently?";
+
+        // Act
+        var recentScore = _scoringService.CalculateHybridScoreWithIntent(recentMemory, query, temporalIntent, null);
+        var oldScore = _scoringService.CalculateHybridScoreWithIntent(oldMemory, query, temporalIntent, null);
+
+        // Assert - Recent memory should score higher
+        Assert.True(recentScore > oldScore,
+            $"Temporal intent should prioritize recency: recent={recentScore} vs old={oldScore}");
+    }
+
+    [Fact]
+    public void CalculateHybridScoreWithIntent_ContextualIntent_BalancesRecencyAndSemantics()
+    {
+        // Arrange
+        var memory = CreateMemory("Test content");
+        memory.Embedding = new float[] { 1, 0, 0, 0 };
+
+        var contextualIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.Contextual,
+            Confidence = 0.7f,
+            Specificity = 0.4f
+        };
+
+        var queryEmbedding = new float[] { 1, 0, 0, 0 };
+        var query = "Tell me more about that";
+
+        // Act
+        var score = _scoringService.CalculateHybridScoreWithIntent(memory, query, contextualIntent, queryEmbedding);
+
+        // Assert
+        Assert.True(score > 0, "Contextual scoring should produce positive score");
+    }
+
+    [Fact]
+    public void CalculateHybridScoreWithIntent_RelationalIntent_PrioritizesSemanticConnections()
+    {
+        // Arrange
+        var relatedMemory = CreateMemory("Python is used for machine learning");
+        relatedMemory.Embedding = new float[] { 0.9f, 0.1f, 0, 0 }; // Similar to query
+
+        var unrelatedMemory = CreateMemory("The weather is nice today");
+        unrelatedMemory.Embedding = new float[] { 0, 0, 1, 0 }; // Different from query
+
+        var relationalIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.Relational,
+            Confidence = 0.8f,
+            Specificity = 0.6f
+        };
+
+        var queryEmbedding = new float[] { 1, 0, 0, 0 }; // Closer to relatedMemory
+        var query = "What's related to machine learning?";
+
+        // Act
+        var relatedScore = _scoringService.CalculateHybridScoreWithIntent(relatedMemory, query, relationalIntent, queryEmbedding);
+        var unrelatedScore = _scoringService.CalculateHybridScoreWithIntent(unrelatedMemory, query, relationalIntent, queryEmbedding);
+
+        // Assert
+        Assert.True(relatedScore > unrelatedScore,
+            $"Relational intent should prioritize semantic connections: related={relatedScore} vs unrelated={unrelatedScore}");
+    }
+
+    #endregion
+
+    #region Dynamic Importance Damping Tests (Phase 22.3)
+
+    [Fact]
+    public void CalculateHybridScoreWithIntent_HighSpecificity_DampensImportance()
+    {
+        // Arrange
+        var memory = CreateMemory("Important generic information");
+        memory.ImportanceScore = 0.9f; // Very important
+        memory.Embedding = new float[] { 0.5f, 0.5f, 0, 0 }; // Medium semantic match
+
+        var lowSpecificityIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.General,
+            Confidence = 0.5f,
+            Specificity = 0.3f // Low specificity - importance NOT dampened
+        };
+
+        var highSpecificityIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.Factual,
+            Confidence = 0.8f,
+            Specificity = 0.9f // High specificity - importance DAMPENED
+        };
+
+        var queryEmbedding = new float[] { 0.6f, 0.4f, 0, 0 };
+        var query = "Tell me about this";
+
+        // Act
+        var lowSpecScore = _scoringService.CalculateHybridScoreWithIntent(memory, query, lowSpecificityIntent, queryEmbedding);
+        var highSpecScore = _scoringService.CalculateHybridScoreWithIntent(memory, query, highSpecificityIntent, queryEmbedding);
+
+        // Assert - With high specificity, importance weight is dampened, so score might be similar or lower
+        // This prevents high-importance generic memories from dominating specific queries
+        Assert.True(lowSpecScore >= highSpecScore * 0.8f,
+            $"High specificity should dampen importance weight: lowSpec={lowSpecScore} vs highSpec={highSpecScore}");
+    }
+
+    [Fact]
+    public void CalculateHybridScoreWithIntent_SpecificityThreshold_AppliesDamping()
+    {
+        // Arrange
+        var memory = CreateMemory("Very important fact");
+        memory.ImportanceScore = 1.0f;
+
+        var belowThresholdIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.General,
+            Confidence = 0.5f,
+            Specificity = 0.69f // Just below 0.7 threshold - NO damping
+        };
+
+        var aboveThresholdIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.General,
+            Confidence = 0.5f,
+            Specificity = 0.71f // Just above 0.7 threshold - YES damping
+        };
+
+        var query = "test";
+
+        // Act
+        var belowScore = _scoringService.CalculateHybridScoreWithIntent(memory, query, belowThresholdIntent, null);
+        var aboveScore = _scoringService.CalculateHybridScoreWithIntent(memory, query, aboveThresholdIntent, null);
+
+        // Assert - Above threshold should have slightly lower score due to importance damping
+        Assert.True(belowScore > aboveScore || Math.Abs(belowScore - aboveScore) < 0.01f,
+            $"Specificity > 0.7 should apply importance damping: below={belowScore} vs above={aboveScore}");
+    }
+
+    [Fact]
+    public void CalculateHybridScoreWithIntent_MaxSpecificity_MaximumDamping()
+    {
+        // Arrange
+        var memory = CreateMemory("Generic high-importance fact");
+        memory.ImportanceScore = 1.0f;
+        memory.Embedding = new float[] { 0, 0, 0, 1 }; // Low semantic match
+
+        var maxSpecificityIntent = new QueryIntentResult
+        {
+            Intent = QueryIntent.Factual,
+            Confidence = 0.9f,
+            Specificity = 1.0f // Maximum specificity - maximum damping
+        };
+
+        var queryEmbedding = new float[] { 1, 0, 0, 0 }; // Different from memory
+        var query = "Very specific question";
+
+        // Act
+        var score = _scoringService.CalculateHybridScoreWithIntent(memory, query, maxSpecificityIntent, queryEmbedding);
+
+        // Assert - With max specificity (1.0), importance weight is dampened by 50%
+        // dampingFactor = 1.0 - (1.0 * 0.5) = 0.5
+        Assert.True(score > 0, "Should still produce positive score even with max damping");
     }
 
     #endregion

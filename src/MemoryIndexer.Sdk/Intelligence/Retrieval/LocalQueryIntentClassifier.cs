@@ -152,18 +152,22 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
         // Extract entity references
         var entities = ExtractEntityReferences(query); // Use original case
 
+        // Calculate query specificity
+        var specificity = CalculateQuerySpecificity(query, keywords, entities);
+
         // Determine tier priority based on intent
         var tierPriority = GetTierPriority(primaryIntent);
 
         _logger.LogDebug(
-            "Query '{Query}' classified as {Intent} with confidence {Confidence:F2}",
-            query, primaryIntent, primaryConfidence);
+            "Query '{Query}' classified as {Intent} with confidence {Confidence:F2}, specificity {Specificity:F2}",
+            query, primaryIntent, primaryConfidence, specificity);
 
         var result = new QueryIntentResult
         {
             Intent = primaryIntent,
             Confidence = primaryConfidence,
             SecondaryIntent = secondaryIntent,
+            Specificity = specificity,
             TemporalReference = temporalRef,
             EntityReferences = entities,
             Keywords = keywords,
@@ -268,4 +272,59 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
         QueryIntent.Relational => [MemoryTier.Session, MemoryTier.User, MemoryTier.Working],
         _ => [MemoryTier.Working, MemoryTier.Session, MemoryTier.User]
     };
+
+    /// <summary>
+    /// Calculates query specificity score based on multiple indicators.
+    /// Higher values indicate more specific queries that should prioritize semantic relevance.
+    /// </summary>
+    /// <param name="query">The original query text.</param>
+    /// <param name="keywords">Extracted keywords from the query.</param>
+    /// <param name="entities">Extracted entity references from the query.</param>
+    /// <returns>Specificity score from 0.0 (generic) to 1.0 (highly specific).</returns>
+    private static float CalculateQuerySpecificity(
+        string query,
+        IReadOnlyList<string> keywords,
+        IReadOnlyList<string> entities)
+    {
+        float specificity = 0f;
+
+        // 1. Length-based specificity: longer queries are more specific
+        var wordCount = query.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        specificity += Math.Clamp(wordCount / 20f, 0f, 0.3f); // Max 0.3 from length
+
+        // 2. Keyword density: more keywords indicate specificity
+        if (keywords.Count > 0)
+        {
+            specificity += Math.Clamp(keywords.Count / 10f, 0f, 0.25f); // Max 0.25
+        }
+
+        // 3. Entity references: entities indicate specific targets
+        if (entities.Count > 0)
+        {
+            specificity += Math.Clamp(entities.Count * 0.15f, 0f, 0.25f); // Max 0.25
+        }
+
+        // 4. Quoted strings: quotes indicate specific search terms
+        var quotedCount = Regex.Matches(query, @"""[^""]+""").Count;
+        if (quotedCount > 0)
+        {
+            specificity += Math.Clamp(quotedCount * 0.2f, 0f, 0.3f); // Max 0.3
+        }
+
+        // 5. Question marks: questions are more specific
+        if (query.Contains('?'))
+        {
+            specificity += 0.15f;
+        }
+
+        // 6. Rare words (3+ syllable or uncommon patterns): indicate specificity
+        var rareWordPattern = @"\b\w{8,}\b"; // 8+ character words are often rare/specific
+        var rareWordCount = Regex.Matches(query, rareWordPattern).Count;
+        if (rareWordCount > 0)
+        {
+            specificity += Math.Clamp(rareWordCount * 0.1f, 0f, 0.2f); // Max 0.2
+        }
+
+        return Math.Clamp(specificity, 0f, 1f);
+    }
 }

@@ -80,4 +80,20 @@ public interface IScoringService
         IReadOnlyList<MemoryUnit> memories,
         string query,
         ReadOnlyMemory<float>? queryEmbedding = null);
+
+    /// <summary>
+    /// Calculates combined score with query intent awareness.
+    /// Phase 22.3: Query Intent-Aware Retrieval Enhancement.
+    /// Applies intent-specific weight distributions and dynamic importance damping.
+    /// </summary>
+    /// <param name="memory">The memory to score.</param>
+    /// <param name="query">The search query text for keyword matching.</param>
+    /// <param name="intent">Query intent classification result with specificity.</param>
+    /// <param name="queryEmbedding">Optional query embedding for semantic similarity.</param>
+    /// <returns>The combined score with intent-aware weighting.</returns>
+    float CalculateHybridScoreWithIntent(
+        MemoryUnit memory,
+        string query,
+        QueryIntentResult intent,
+        ReadOnlyMemory<float>? queryEmbedding = null);
 }

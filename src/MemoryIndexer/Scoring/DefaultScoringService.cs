@@ -220,6 +220,88 @@ public sealed class DefaultScoringService : IScoringService
         return _normalizer.Normalize(scoredMemories);
     }
 
+    /// <inheritdoc />
+    public float CalculateHybridScoreWithIntent(
+        MemoryUnit memory,
+        string query,
+        QueryIntentResult intent,
+        ReadOnlyMemory<float>? queryEmbedding = null)
+    {
+        // Calculate individual components
+        var recency = CalculateRecencyScore(memory);
+        var importance = memory.ImportanceScore;
+        var accessFrequency = CalculateAccessFrequencyScore(memory);
+
+        float relevance;
+        if (queryEmbedding.HasValue && memory.Embedding.HasValue)
+        {
+            relevance = CalculateCosineSimilarity(queryEmbedding.Value, memory.Embedding.Value);
+        }
+        else
+        {
+            relevance = 0.5f;
+        }
+
+        // Get intent-specific weights
+        var (semanticWeight, recencyWeight, importanceWeight, accessWeight) = GetIntentWeights(intent.Intent);
+
+        // Apply dynamic importance damping for specific queries
+        // When specificity > 0.7, reduce importance weight to prioritize semantic relevance
+        if (intent.Specificity > 0.7f)
+        {
+            var dampingFactor = 1.0f - (intent.Specificity * 0.5f);
+            importanceWeight *= dampingFactor;
+        }
+
+        // Calculate base score with intent-specific weights
+        var baseScore = semanticWeight * relevance
+                      + recencyWeight * recency
+                      + importanceWeight * importance
+                      + accessWeight * accessFrequency;
+
+        // Add keyword matching boost
+        var keywordBoost = CalculateKeywordBoost(query, memory.Content) * 0.5f;
+
+        // Add content-type boost from metadata
+        var metadataBoost = CalculateMetadataTypeBoost(memory);
+
+        // Add content-type boost from text analysis
+        var contentTypeBoost = CalculateContentTypeBoost(memory.Content);
+
+        return baseScore + keywordBoost + metadataBoost + contentTypeBoost;
+    }
+
+    /// <summary>
+    /// Gets intent-specific weight distribution.
+    /// Phase 22.3: Query Intent-Aware Retrieval Enhancement.
+    /// </summary>
+    /// <param name="intent">The query intent type.</param>
+    /// <returns>Tuple of (semantic, recency, importance, access) weights.</returns>
+    private static (float Semantic, float Recency, float Importance, float Access) GetIntentWeights(QueryIntent intent)
+    {
+        return intent switch
+        {
+            // Factual queries: prioritize semantic match and importance
+            // "What is my favorite color?" → boost semantic relevance
+            QueryIntent.Factual => (0.6f, 0.1f, 0.2f, 0.1f),
+
+            // Contextual queries: prioritize recency and working memory
+            // "Tell me more about that" → boost recent mentions
+            QueryIntent.Contextual => (0.3f, 0.4f, 0.2f, 0.1f),
+
+            // Temporal queries: heavily prioritize recency
+            // "What did we discuss last week?" → boost temporal relevance
+            QueryIntent.Temporal => (0.2f, 0.6f, 0.1f, 0.1f),
+
+            // Relational queries: prioritize semantic connections
+            // "What's related to X?" → boost semantic similarity
+            QueryIntent.Relational => (0.5f, 0.2f, 0.2f, 0.1f),
+
+            // General/unknown: use balanced distribution
+            _ => (0.4f, 0.3f, 0.2f, 0.1f)
+        };
+    }
+
     /// <summary>
     /// Calculates content-type boost based on Metadata ContentType field.
     /// Phase 20.2: Query Intent-Aware Boosting.

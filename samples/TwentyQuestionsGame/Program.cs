@@ -144,22 +144,45 @@ await memoryService.StoreAsync(
     MemoryType.Procedural,
     importance: 1.0f);
 
-// Initialize Beta's memory with game rules
+// Initialize Beta's memory with game rules and strategy phases
 await memoryService.StoreAsync(
     BETA_USER_ID,
-    "[GAME_RULES] I am Beta, the Guesser playing 20 Questions. " +
-    "I must guess Alpha's secret in 20 questions. " +
-    "I ask yes/no questions to narrow down possibilities. " +
-    "On round 20, I MUST make a final guess no matter what.",
+    @"[GAME_RULES] I am Beta, the Guesser in 20 Questions.
+Goal: Identify Alpha's secret within 20 yes/no questions.
+Strategy: Use binary search to halve possibilities each round.
+Round 20: MUST make final guess regardless of certainty.",
     MemoryType.Procedural,
     importance: 1.0f);
 
 await memoryService.StoreAsync(
     BETA_USER_ID,
-    "[STRATEGY] Start broad: Is it alive? Is it man-made? Is it bigger than a car? " +
-    "Then narrow down based on Yes/No answers.",
+    @"[STRATEGY_PHASE1] Rounds 1-3: Establish category
+- Alive vs non-living
+- Natural vs man-made
+- Physical object vs place/concept
+These questions split the entire possibility space.",
+    MemoryType.Procedural,
+    importance: 0.95f);
+
+await memoryService.StoreAsync(
+    BETA_USER_ID,
+    @"[STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+- Size comparisons (bigger than X?)
+- Location (indoors/outdoors, specific regions)
+- Common usage patterns
+Each question should eliminate ~50% of remaining options.",
     MemoryType.Procedural,
     importance: 0.9f);
+
+await memoryService.StoreAsync(
+    BETA_USER_ID,
+    @"[DEDUCTION_TEMPLATE] After each answer, I record:
+- Yes → CONFIRMED: secret HAS this property
+- No → RULED OUT: secret does NOT have this property
+- Maybe → UNCERTAIN: need different angle
+I must check these before each question to avoid redundancy.",
+    MemoryType.Procedural,
+    importance: 0.85f);
 
 Console.WriteLine("[INIT] Game initialized. Starting rounds...\n");
 
@@ -212,29 +235,36 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
     Console.WriteLine($"[BETA] Recalled {betaMemories.Count} memories (⏱️ {roundMetrics.BetaRecallMs}ms, 📝 {roundMetrics.BetaContextChars:N0} chars):");
-    foreach (var mem in betaMemories.Take(5)) // Show top 5 memories
+    foreach (var mem in betaMemories) // Show ALL memories
     {
-        var shortContent = mem.Memory.Content.Length > 60
-            ? mem.Memory.Content[..60] + "..."
+        var shortContent = mem.Memory.Content.Length > 200
+            ? mem.Memory.Content[..200] + "..."
             : mem.Memory.Content;
         Console.WriteLine($"       [{mem.Score:F2}] {shortContent}");
     }
-    if (betaMemories.Count > 5) Console.WriteLine($"       ... and {betaMemories.Count - 5} more");
     Console.ResetColor();
 
     // Beta generates a question using ONLY last message + recalled memories
     bool isFinalRound = round == MAX_ROUNDS;
     string betaSystemPrompt = $@"You are Beta, playing 20 Questions.
 
-YOUR MEMORIES (recalled from memory-indexer):
+YOUR RECALLED MEMORIES:
 {betaContext}
 
-RULES:
-- You just received Alpha's response: ""{lastAlphaResponse}""
-- You have NO access to previous conversation - only your memories above
-- {(isFinalRound ? "This is round 20 - you MUST make your final guess NOW!" : $"This is round {round}. Ask a strategic yes/no question.")}
-- Do NOT repeat questions you've already asked (check your memories)
-- Build on previous Yes/No answers to narrow down";
+CURRENT SITUATION:
+- Round {round}/{MAX_ROUNDS}
+- Alpha's last response: ""{lastAlphaResponse}""
+
+YOUR TASK:
+{(isFinalRound ?
+    @"This is round 20 - FINAL ROUND! You MUST make your final guess.
+Format: ""My final guess is: [your answer]""
+Look at your memories for CONFIRMED (Yes) and RULED OUT (No) facts." :
+    $@"Ask ONE strategic yes/no question to narrow down the secret.
+Use your memories to build on what you already know.
+Start broad (category), then narrow down (features).")}
+
+Output ONLY the question or guess. No explanations.";
 
     string betaUserMessage = lastAlphaResponse; // ONLY the last response!
 
@@ -305,10 +335,10 @@ RULES:
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
     Console.WriteLine($"[ALPHA] Recalled {alphaMemories.Count} memories (⏱️ {roundMetrics.AlphaRecallMs}ms, 📝 {roundMetrics.AlphaContextChars:N0} chars):");
-    foreach (var mem in alphaMemories.Take(3)) // Show top 3 memories
+    foreach (var mem in alphaMemories) // Show ALL memories
     {
-        var shortContent = mem.Memory.Content.Length > 60
-            ? mem.Memory.Content[..60] + "..."
+        var shortContent = mem.Memory.Content.Length > 200
+            ? mem.Memory.Content[..200] + "..."
             : mem.Memory.Content;
         Console.WriteLine($"        [{mem.Score:F2}] {shortContent}");
     }
@@ -385,15 +415,22 @@ RULES:
         // Alpha generates response using ONLY the question + recalled memories
         string alphaSystemPrompt = $@"You are Alpha, the QuizMaster in 20 Questions.
 
-YOUR MEMORIES (recalled from memory-indexer):
+YOUR RECALLED MEMORIES:
 {alphaContext}
 
-RULES:
-- You just received this question: ""{betaQuestion}""
-- You have NO access to previous conversation - only your memories above
-- Answer ONLY: 'Yes', 'No', or 'Maybe'
-- If the question is not a proper yes/no question, say 'INVALID: [reason]'
-- Be honest based on your secret (which should be in your memories)";
+THE QUESTION:
+""{betaQuestion}""
+
+YOUR TASK:
+Answer the question based on your secret (in your memories).
+Respond with ONLY one of: Yes, No, Maybe, or INVALID: [reason]
+
+- Yes: The property is true for your secret
+- No: The property is false for your secret
+- Maybe: Only if genuinely ambiguous
+- INVALID: If not a proper yes/no question
+
+Be honest and consistent with your previous answers.";
 
         LLMMetrics alphaLlmMetrics;
         (alphaResponse, alphaLlmMetrics) = await CallLLMWithMetricsAsync(
@@ -485,16 +522,67 @@ else
 Console.ResetColor();
 Console.WriteLine();
 
-// Show memory statistics
-var alphaMemoryCount = (await memoryService.GetAllAsync(ALPHA_USER_ID)).Count;
-var betaMemoryCount = (await memoryService.GetAllAsync(BETA_USER_ID)).Count;
+// Show memory statistics with Phase 20 validation
+var allAlphaMemories = await memoryService.GetAllAsync(ALPHA_USER_ID);
+var allBetaMemories = await memoryService.GetAllAsync(BETA_USER_ID);
+var alphaMemoryCount = allAlphaMemories.Count;
+var betaMemoryCount = allBetaMemories.Count;
+var totalMemories = alphaMemoryCount + betaMemoryCount;
+
+// Expected memory count calculation (for Phase 20 validation)
+int expectedMinMemories = 2 + 4; // Alpha: 2 initial, Beta: 4 initial
+int expectedRoundMemories = metrics.Rounds.Count * 4; // Per round: ROUND, MY_QUESTION, QA, DEDUCTION
+int expectedMaxMemories = expectedMinMemories + expectedRoundMemories;
+int expectedWithDedup = (int)(expectedMaxMemories * 0.66); // Phase 20: 34% reduction target
 
 Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
-Console.WriteLine("║  MEMORY STATISTICS                                            ║");
+Console.WriteLine("║  MEMORY SYSTEM VALIDATION (Phase 20)                         ║");
 Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
-Console.WriteLine($"  Alpha memories: {alphaMemoryCount}");
-Console.WriteLine($"  Beta memories:  {betaMemoryCount}");
-Console.WriteLine($"  Total:          {alphaMemoryCount + betaMemoryCount}");
+Console.WriteLine($"  Alpha memories:        {alphaMemoryCount}");
+Console.WriteLine($"  Beta memories:         {betaMemoryCount}");
+Console.WriteLine($"  Total memories:        {totalMemories}");
+Console.WriteLine();
+Console.WriteLine($"  Expected (no dedup):   ~{expectedMaxMemories} memories");
+Console.WriteLine($"  Expected (with dedup): ~{expectedWithDedup} memories (34% reduction)");
+Console.WriteLine($"  Actual reduction:      {(1 - (float)totalMemories / expectedMaxMemories) * 100:F1}%");
+Console.WriteLine();
+
+// Analyze recall quality
+var avgBetaRecallScore = metrics.Rounds
+    .Where(r => r.BetaContextChars > 0)
+    .Average(r => r.BetaContextChars / 100.0); // Rough quality estimate
+var avgAlphaRecallScore = metrics.Rounds
+    .Where(r => r.AlphaContextChars > 0)
+    .Average(r => r.AlphaContextChars / 100.0);
+
+Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+Console.WriteLine("  │ RECALL QUALITY ANALYSIS                                     │");
+Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+Console.WriteLine($"  │ Avg Beta recall size:  {metrics.Rounds.Average(r => r.BetaContextChars):N0} chars");
+Console.WriteLine($"  │ Avg Alpha recall size: {metrics.Rounds.Average(r => r.AlphaContextChars):N0} chars");
+Console.WriteLine($"  │ Memories recalled/query: 15 (configured limit)              │");
+Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
+Console.WriteLine();
+
+// Check for memory types distribution
+var betaMemoryTypes = allBetaMemories.GroupBy(m => m.Type).ToDictionary(g => g.Key, g => g.Count());
+var alphaMemoryTypes = allAlphaMemories.GroupBy(m => m.Type).ToDictionary(g => g.Key, g => g.Count());
+
+Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+Console.WriteLine("  │ MEMORY TYPE DISTRIBUTION                                    │");
+Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+Console.WriteLine("  │ Beta:                                                       │");
+foreach (var kvp in betaMemoryTypes.OrderByDescending(x => x.Value))
+{
+    Console.WriteLine($"  │   {kvp.Key,-12} {kvp.Value,3} memories ({100.0 * kvp.Value / betaMemoryCount:F1}%)");
+}
+Console.WriteLine("  │                                                             │");
+Console.WriteLine("  │ Alpha:                                                      │");
+foreach (var kvp in alphaMemoryTypes.OrderByDescending(x => x.Value))
+{
+    Console.WriteLine($"  │   {kvp.Key,-12} {kvp.Value,3} memories ({100.0 * kvp.Value / alphaMemoryCount:F1}%)");
+}
+Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
 Console.WriteLine();
 
 // Performance Statistics
