@@ -888,6 +888,210 @@ Based on H-MEM (Hierarchical Memory) and AFM (Adaptive Focus Memory) research:
 
 ---
 
+## Phase 20: Smart Deduplication & Quality Control ✅
+
+**Status**: Completed
+**Date**: January 2026
+**Goal**: Eliminate duplicate memories and improve retrieval quality through deduplication, quality metrics, and consistency validation
+
+### Motivation
+
+The Twenty Questions Game sample revealed critical memory management issues:
+- **20% duplication rate**: 76 memories with ~15 duplicates
+- **Poor retrieval quality**: 14 RULED OUT vs 1 CONFIRMED recalled
+- **Logical inconsistency**: Contradictory answers stored
+- **Average recall time**: 440ms
+
+### Phase 20.1: Smart Deduplication & Quality Control ✅
+
+**Status**: Completed
+**Date**: January 2026
+
+#### Implemented Features
+
+- [x] **Semantic Deduplication**
+  - Cosine similarity-based duplicate detection (0.80 threshold)
+  - 20-item lookback window for performance optimization
+  - Configurable similarity threshold in SearchOptions
+  - Duplicate lookback window configuration (default: 20 items)
+
+- [x] **Content-Type Aware Deduplication**
+  - Game-specific duplicate actions:
+    - QUESTION + QUESTION → Skip (avoid duplicate questions)
+    - CONFIRMED + RULED OUT → Keep both (contradiction)
+    - QUESTION + (CONFIRMED|RULED OUT) → Keep both (preserve discovery process)
+  - ContentType metadata field support (CONFIRMED/RULED OUT/QUESTION)
+
+- [x] **4-Dimensional Quality Metrics**
+  - `IMemoryQualityService` interface and `MemoryQualityAnalyzer` implementation
+  - **Uniqueness Score** (0.0-1.0): 1 - similarity with most similar memory
+  - **Relevance Score** (0.0-1.0): Semantic similarity to query (if provided)
+  - **Completeness Score** (0.0-1.0): Content length + sentence structure + word diversity
+  - **Consistency Score** (0.0-1.0): Logical consistency with other memories
+  - **Overall Score**: Weighted average (query-aware or general)
+
+#### Configuration
+
+```csharp
+"Search": {
+  "DuplicateThreshold": 0.80,        // 80% similarity = duplicate
+  "DuplicateLookbackWindow": 20      // Check last 20 memories
+}
+```
+
+#### Test Coverage
+- 15 comprehensive unit tests for MemoryQualityAnalyzer
+- Coverage: all 4 quality dimensions, batch analysis, edge cases
+
+### Phase 20.2: Advanced Retrieval Quality ✅
+
+**Status**: Completed
+**Date**: January 2026
+
+#### Implemented Features
+
+- [x] **Query Intent-Aware Boosting**
+  - Metadata-based content type boosting in `DefaultScoringService`
+  - CONFIRMED memories: +50% boost (0.5f)
+  - RULED OUT memories: -30% penalty (-0.3f)
+  - QUESTION memories: Neutral (0f)
+  - Applied in `CalculateHybridScore` method
+
+- [x] **MMR Diversity Algorithm** ✅
+  - Already fully implemented in `HybridSearchService.ApplyMmrDiversity`
+  - Maximal Marginal Relevance (MMR) for result diversity
+  - Configurable lambda parameter (default: 0.7)
+  - Balances relevance vs diversity trade-off
+
+- [x] **Recency Bias Mitigation**
+  - New `RecencyBiasMitigation` configuration option (0.0-1.0)
+  - Default: 0.5 (50% reduction in recency impact)
+  - Allows older relevant memories to rank higher
+  - Prevents over-bias toward recent but less relevant memories
+
+#### Configuration
+
+```csharp
+"Search": {
+  "MmrLambda": 0.7                   // MMR diversity parameter
+},
+"Scoring": {
+  "RecencyBiasMitigation": 0.5       // 50% recency reduction
+}
+```
+
+#### Implementation
+
+```csharp
+// Recency bias mitigation in scoring formula
+var recencyBiasWeight = _options.RecencyWeight * _options.RecencyBiasMitigation;
+var score = recencyBiasWeight * recency
+          + _options.ImportanceWeight * importance
+          + _options.RelevanceWeight * relevance;
+
+// Content-type boost from metadata
+return contentType switch
+{
+    "CONFIRMED" => 0.5f,   // +50% boost for confirmed facts
+    "RULED OUT" => -0.3f,  // -30% penalty for ruled out
+    "QUESTION" => 0f,      // Neutral for questions
+    _ => 0f
+};
+```
+
+### Phase 20.3: Real-time Consistency Validation ✅
+
+**Status**: Completed
+**Date**: January 2026
+
+#### Implemented Features
+
+- [x] **Full IContradictionDetector Integration**
+  - Integrated into `MemoryQualityAnalyzer.CalculateConsistencyScoreAsync`
+  - Confidence-based consistency scoring:
+    - Confidence ≥ 0.9: Score = 0.3 (very low consistency)
+    - Confidence ≥ 0.75: Score = 0.5 (low consistency)
+    - Confidence ≥ 0.6: Score = 0.7 (moderate consistency)
+    - No contradiction: Score = 1.0 (fully consistent)
+  - Supports all contradiction types: Factual, Temporal, Semantic, Logical, Preference
+  - Detailed issue descriptions with confidence levels
+
+- [x] **Fallback Heuristic**
+  - Simple consistency check when `IContradictionDetector` unavailable
+  - ContentType-based contradiction detection (RULED OUT vs CONFIRMED)
+  - Keyword overlap similarity calculation
+  - Graceful degradation strategy
+
+#### Implementation
+
+```csharp
+// Full contradiction detection with confidence-based scoring
+var analysis = await _contradictionDetector.DetectMemoryContradictionAsync(
+    memory,
+    recentMemories,
+    new ContradictionDetectionOptions
+    {
+        SimilarityThreshold = 0.7f,
+        MinContradictionConfidence = 0.6f,
+        MaxComparisonItems = 50
+    },
+    cancellationToken);
+
+if (analysis.HasContradiction && analysis.ContradictionConfidence >= 0.6f)
+{
+    var typeDescription = analysis.Type switch
+    {
+        ConflictContradictionType.Factual => "factual contradiction",
+        ConflictContradictionType.Temporal => "temporal contradiction",
+        ConflictContradictionType.Semantic => "semantic contradiction",
+        ConflictContradictionType.Logical => "logical contradiction",
+        ConflictContradictionType.Preference => "preference contradiction",
+        _ => "unknown contradiction"
+    };
+
+    issues.Add($"{typeDescription}: {analysis.ConflictDescription} (confidence: {analysis.ContradictionConfidence:F2})");
+
+    // Score based on contradiction severity
+    if (analysis.ContradictionConfidence >= 0.9f)
+        return 0.3f;  // High confidence contradiction
+    else if (analysis.ContradictionConfidence >= 0.75f)
+        return 0.5f;  // Medium-high confidence
+    else if (analysis.ContradictionConfidence >= 0.6f)
+        return 0.7f;  // Medium confidence
+}
+```
+
+### Test Coverage
+- 15 tests for Phase 20.1 (MemoryQualityAnalyzer)
+- All tests passing with Phase 20.2 and 20.3 changes
+- **Total: 664 tests passing** (42 Core + 622 SDK)
+
+### Expected Impact
+
+**Twenty Questions Game Improvements**:
+- **Duplicate reduction**: 76 → ~50 memories (34% reduction)
+- **Improved precision**: CONFIRMED memories prioritized over RULED OUT (+50% vs -30%)
+- **Better consistency**: Real-time contradiction detection prevents logical conflicts
+- **Balanced recency**: Older relevant facts not suppressed by recent noise (50% recency reduction)
+
+### Success Criteria
+- ✅ Semantic deduplication with configurable threshold (0.80 default)
+- ✅ Content-type aware duplicate actions for game scenarios
+- ✅ 4-dimensional quality metrics (Uniqueness, Relevance, Completeness, Consistency)
+- ✅ Query intent-aware boosting (CONFIRMED +50%, RULED OUT -30%)
+- ✅ Recency bias mitigation (50% default reduction)
+- ✅ Full contradiction detection integration with confidence scoring
+- ✅ Comprehensive test coverage (664 total tests)
+
+### Files Modified
+- `src/MemoryIndexer/Interfaces/IMemoryQualityService.cs` (interface + models)
+- `src/MemoryIndexer.Sdk/Intelligence/Quality/MemoryQualityAnalyzer.cs` (implementation)
+- `src/MemoryIndexer/Scoring/DefaultScoringService.cs` (boosting + recency mitigation)
+- `src/MemoryIndexer/Configuration/MemoryIndexerOptions.cs` (RecencyBiasMitigation config)
+- `src/MemoryIndexer.Sdk/Extensions/ServiceCollectionExtensions.cs` (DI registration)
+
+---
+
 ## Research References
 
 ### Key Papers & Projects

@@ -188,8 +188,10 @@ public sealed class AdvancedMemoryTools
         var result = await _duplicateDetector.CheckForDuplicateAsync(
             content,
             DefaultUserId,
-            Math.Clamp(threshold, 0.5f, 0.99f),
-            cancellationToken);
+            similarityThreshold: Math.Clamp(threshold, 0.5f, 0.99f),
+            contentType: null,
+            lookbackWindow: null,
+            cancellationToken: cancellationToken);
 
         return new CheckDuplicateResult
         {

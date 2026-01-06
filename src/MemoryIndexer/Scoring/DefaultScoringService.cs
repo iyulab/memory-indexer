@@ -35,8 +35,10 @@ public sealed class DefaultScoringService : IScoringService
             relevance = 0.5f; // Default relevance when no query
         }
 
-        // Generative Agents formula: α × recency + β × importance + γ × relevance
-        var score = _options.RecencyWeight * recency
+        // Generative Agents formula with recency bias mitigation (Phase 20.2)
+        // RecencyBiasMitigation reduces recency impact to prevent over-bias toward recent memories
+        var recencyBiasWeight = _options.RecencyWeight * _options.RecencyBiasMitigation;
+        var score = recencyBiasWeight * recency
                   + _options.ImportanceWeight * importance
                   + _options.RelevanceWeight * relevance;
 
@@ -172,9 +174,36 @@ public sealed class DefaultScoringService : IScoringService
         // Add keyword matching boost (hybrid search component)
         var keywordBoost = CalculateKeywordBoost(query, memory.Content) * 0.5f; // Weight: 0.5
 
-        // Add content-type boost
+        // Add content-type boost from metadata (Phase 20.2)
+        var metadataBoost = CalculateMetadataTypeBoost(memory);
+
+        // Add content-type boost from text analysis (legacy)
         var contentTypeBoost = CalculateContentTypeBoost(memory.Content);
 
-        return baseScore + keywordBoost + contentTypeBoost;
+        return baseScore + keywordBoost + metadataBoost + contentTypeBoost;
+    }
+
+    /// <summary>
+    /// Calculates content-type boost based on Metadata ContentType field.
+    /// Phase 20.2: Query Intent-Aware Boosting.
+    /// </summary>
+    /// <param name="memory">The memory to analyze.</param>
+    /// <returns>Boost multiplier: CONFIRMED=+50%, RULED OUT=-30%, others=0%</returns>
+    private static float CalculateMetadataTypeBoost(MemoryUnit memory)
+    {
+        if (memory.Metadata == null ||
+            !memory.Metadata.TryGetValue("ContentType", out var contentTypeObj) ||
+            contentTypeObj is not string contentType)
+        {
+            return 0f;
+        }
+
+        return contentType switch
+        {
+            "CONFIRMED" => 0.5f,   // +50% boost for confirmed facts
+            "RULED OUT" => -0.3f,  // -30% penalty for ruled out
+            "QUESTION" => 0f,      // Neutral for questions
+            _ => 0f
+        };
     }
 }

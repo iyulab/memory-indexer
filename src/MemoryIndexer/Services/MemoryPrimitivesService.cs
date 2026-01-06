@@ -22,6 +22,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
     private readonly IScoringService _scoringService;
     private readonly IWorkingMemory _workingMemory;
     private readonly IRerankerService? _rerankerService;
+    private readonly IDeduplicationService? _deduplicationService;
     private readonly SearchOptions _searchOptions;
     private readonly ILogger<MemoryPrimitivesService> _logger;
 
@@ -32,13 +33,15 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         IWorkingMemory workingMemory,
         IOptions<MemoryIndexerOptions> options,
         ILogger<MemoryPrimitivesService> logger,
-        IRerankerService? rerankerService = null)
+        IRerankerService? rerankerService = null,
+        IDeduplicationService? deduplicationService = null)
     {
         _memoryStore = memoryStore;
         _embeddingService = embeddingService;
         _scoringService = scoringService;
         _workingMemory = workingMemory;
         _rerankerService = rerankerService;
+        _deduplicationService = deduplicationService;
         _searchOptions = options.Value.Search;
         _logger = logger;
     }
@@ -53,6 +56,66 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Content);
 
         _logger.LogDebug("Encoding new memory for user {UserId}", request.UserId);
+
+        // Phase 20.1: Check for duplicates before expensive embedding generation
+        if (_deduplicationService != null)
+        {
+            var contentType = request.Metadata?.TryGetValue("ContentType", out var ctValue) == true
+                ? ctValue?.ToString()
+                : null;
+
+            var dupCheck = await _deduplicationService.CheckForDuplicateAsync(
+                request.Content,
+                request.UserId,
+                contentType: contentType,
+                cancellationToken: cancellationToken);
+
+            if (dupCheck.IsDuplicate)
+            {
+                _logger.LogDebug("Duplicate detected: {Type}, Action: {Action}",
+                    dupCheck.DuplicateType, dupCheck.RecommendedAction);
+
+                switch (dupCheck.RecommendedAction)
+                {
+                    case DuplicateAction.Skip:
+                        _logger.LogInformation("Skipping duplicate memory (similarity: {Score:F3})",
+                            dupCheck.SimilarityScore);
+                        return dupCheck.ExistingMemory!;
+
+                    case DuplicateAction.Update:
+                        _logger.LogInformation("Updating existing memory {Id} with new content",
+                            dupCheck.ExistingMemory!.Id);
+                        return await UpdateAsync(new UpdateRequest
+                        {
+                            MemoryId = dupCheck.ExistingMemory.Id,
+                            Content = request.Content,
+                            RegenerateEmbedding = true
+                        }, cancellationToken) ?? dupCheck.ExistingMemory;
+
+                    case DuplicateAction.Merge:
+                        _logger.LogInformation("Merging with existing memory {Id}",
+                            dupCheck.ExistingMemory!.Id);
+                        // Boost importance and update access count
+                        dupCheck.ExistingMemory.ImportanceScore = Math.Min(1.0f,
+                            dupCheck.ExistingMemory.ImportanceScore + 0.1f);
+                        dupCheck.ExistingMemory.RecordAccess();
+                        await _memoryStore.UpdateAsync(dupCheck.ExistingMemory, cancellationToken);
+                        return dupCheck.ExistingMemory;
+
+                    case DuplicateAction.AddWithRelation:
+                        // Continue to store but add relation metadata
+                        // Note: Metadata is added during memory creation (lines below)
+                        _logger.LogDebug("Adding memory with relation to {Id} (similarity: {Score:F3})",
+                            dupCheck.ExistingMemory!.Id, dupCheck.SimilarityScore);
+                        break;
+
+                    case DuplicateAction.Add:
+                    default:
+                        // Continue with normal encoding
+                        break;
+                }
+            }
+        }
 
         // Generate embedding
         var embedding = await _embeddingService.GenerateEmbeddingAsync(request.Content, cancellationToken);

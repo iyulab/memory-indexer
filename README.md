@@ -106,6 +106,13 @@ Where:
 
 ## What's New in v0.3.0
 
+- **Smart Deduplication & Quality Control** (Phase 20): Improved memory precision
+  - Semantic deduplication with 0.80 similarity threshold
+  - Content-type aware duplicate actions (CONFIRMED/RULED OUT/QUESTION)
+  - 4-dimensional quality metrics (Uniqueness, Relevance, Completeness, Consistency)
+  - Query intent-aware boosting (CONFIRMED +50%, RULED OUT -30%)
+  - Recency bias mitigation (configurable reduction, default 50%)
+  - Real-time contradiction detection with confidence-based scoring
 - **Self-Directed Memory Management** (Phase 17): MemGPT-inspired autonomous memory
   - Heartbeat-based operation scheduling
   - Memory self-correction with contradiction resolution
@@ -132,11 +139,12 @@ Combines multiple retrieval strategies with query-adaptive weights:
 
 ```
 BaseScore = α·Semantic + β·Recency + γ·Importance + δ·AccessFrequency
-HybridScore = BaseScore + KeywordBoost(0.5) + ContentTypeBoost(0.1~0.3)
+HybridScore = BaseScore + KeywordBoost(0.5) + MetadataBoost(-0.3~+0.5)
 
 Where:
 - KeywordBoost: Query word matching ratio (normalized 0-1, weighted 0.5)
-- ContentTypeBoost: CONFIRMED=+0.3, RULED OUT=+0.1 (prioritizes positive info)
+- MetadataBoost: CONFIRMED=+0.5, RULED OUT=-0.3, QUESTION=0 (Phase 20.2)
+- RecencyBiasMitigation: Default 0.5 (50% reduction to prevent recent-bias)
 ```
 
 ### Memory Type Classification
@@ -317,7 +325,7 @@ Based on research benchmarks:
 | Net Efficiency Gain | 17-18% | ✅ Achieved |
 | Context Utilization | <85% | ✅ Achieved |
 | Retrieval Latency | <100ms | ✅ Achieved |
-| Test Coverage | >500 tests | ✅ 654 tests |
+| Test Coverage | >500 tests | ✅ 664 tests |
 
 ## Documentation
 

@@ -372,6 +372,16 @@ public sealed class ScoringOptions
     /// Maximum expected access count for normalization.
     /// </summary>
     public int MaxExpectedAccessCount { get; set; } = 100;
+
+    /// <summary>
+    /// Recency bias mitigation factor (0.0 - 1.0).
+    /// Lower values reduce recency impact, allowing older relevant memories to rank higher.
+    /// 0.0 = No recency bias (recency ignored)
+    /// 0.5 = Balanced (50% recency reduction)
+    /// 1.0 = Full recency (default behavior)
+    /// Phase 20.2: Prevents over-bias toward recent memories.
+    /// </summary>
+    public float RecencyBiasMitigation { get; set; } = 0.5f;
 }
 
 /// <summary>
@@ -414,6 +424,12 @@ public sealed class SearchOptions
     /// Similarity threshold for duplicate detection.
     /// </summary>
     public float DuplicateThreshold { get; set; } = 0.80f;
+
+    /// <summary>
+    /// Number of recent memories to check for duplicates on encode.
+    /// 0 = check all memories (expensive). Recommended: 20-50.
+    /// </summary>
+    public int DuplicateLookbackWindow { get; set; } = 20;
 
     /// <summary>
     /// RRF k parameter for rank fusion.

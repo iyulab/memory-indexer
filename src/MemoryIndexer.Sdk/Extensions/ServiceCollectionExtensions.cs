@@ -22,6 +22,7 @@ using MemoryIndexer.Sdk.Intelligence.Security.MultiTenant;
 using MemoryIndexer.Sdk.Intelligence.EntityResolution;
 using MemoryIndexer.Sdk.Intelligence.Profile;
 using MemoryIndexer.Sdk.Intelligence.Promotion;
+using MemoryIndexer.Sdk.Intelligence.Quality;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.InMemory;
@@ -150,7 +151,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();
         services.TryAddSingleton<IQueryExpander, QueryExpander>();
         services.TryAddSingleton<IHydeQueryExpander, HydeQueryExpander>();
-        services.TryAddSingleton<DuplicateDetector>();
+        services.TryAddSingleton<IDeduplicationService, DuplicateDetector>();
+        services.TryAddSingleton<IMemoryQualityService, MemoryQualityAnalyzer>();
         services.TryAddSingleton<ImportanceAnalyzer>();
         services.TryAddSingleton<TopicSegmenter>();
 
