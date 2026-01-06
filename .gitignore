@@ -94,6 +94,9 @@ twenty_questions.db-*
 appsettings.Development.json
 appsettings.Local.json
 
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
+
 # Local
 .serena/
 research-docs/

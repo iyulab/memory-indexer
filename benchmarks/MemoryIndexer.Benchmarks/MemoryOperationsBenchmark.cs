@@ -5,6 +5,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Extensions;
 using MemoryIndexer.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MemoryIndexer.Benchmarks;
@@ -26,7 +27,9 @@ public class MemoryOperationsBenchmark
     [GlobalSetup]
     public void Setup()
     {
+        var configuration = new ConfigurationBuilder().Build();
         var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(configuration);
         services.AddMemoryIndexer(options =>
         {
             options.Storage.Type = StorageType.InMemory;
