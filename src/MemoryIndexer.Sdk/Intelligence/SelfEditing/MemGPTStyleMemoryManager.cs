@@ -134,9 +134,9 @@ public sealed class MemGPTStyleMemoryManager : ISelfEditingMemoryService
                 Content = r.Memory.Content,
                 RelevanceScore = r.Score,
                 CreatedAt = r.Memory.CreatedAt,
-                Metadata = r.Memory.Metadata.ToDictionary(
+                Metadata = r.Memory.Metadata?.ToDictionary(
                     kvp => kvp.Key,
-                    kvp => kvp.Value?.ToString() ?? string.Empty)
+                    kvp => kvp.Value?.ToString() ?? string.Empty) ?? new Dictionary<string, string>()
             })
             .ToList();
 

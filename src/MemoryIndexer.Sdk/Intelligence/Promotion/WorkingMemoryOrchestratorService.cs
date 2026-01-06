@@ -425,9 +425,12 @@ public sealed class WorkingMemoryOrchestratorService : IWorkingMemoryOrchestrato
         var topics = new HashSet<string> { "session_summary" };
         foreach (var memory in memories)
         {
-            foreach (var topic in memory.Topics)
+            if (memory.Topics != null)
             {
-                topics.Add(topic);
+                foreach (var topic in memory.Topics)
+                {
+                    topics.Add(topic);
+                }
             }
         }
         return [.. topics];

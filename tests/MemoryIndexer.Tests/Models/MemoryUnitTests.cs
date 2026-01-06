@@ -20,9 +20,9 @@ public class MemoryUnitTests
         memory.AccessCount.Should().Be(0);
         memory.Type.Should().Be(MemoryType.Episodic);
         memory.IsDeleted.Should().BeFalse();
-        memory.Topics.Should().BeEmpty();
-        memory.Entities.Should().BeEmpty();
-        memory.Metadata.Should().BeEmpty();
+        memory.Topics.Should().BeNull();
+        memory.Entities.Should().BeNull();
+        memory.Metadata.Should().BeNull();
     }
 
     [Fact]

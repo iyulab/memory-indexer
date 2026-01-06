@@ -405,7 +405,8 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
     private static List<string> ExtractTopics(List<MemoryUnit> memories)
     {
         return memories
-            .SelectMany(m => m.Topics)
+            .Where(m => m.Topics != null)
+            .SelectMany(m => m.Topics!)
             .GroupBy(t => t.ToLowerInvariant())
             .OrderByDescending(g => g.Count())
             .Take(10)

@@ -123,21 +123,24 @@ public sealed class MemoryUnit
 
     /// <summary>
     /// Topic labels extracted from the content.
+    /// Null when no topics have been extracted (saves memory allocation).
     /// </summary>
     [VectorStoreData]
-    public List<string> Topics { get; set; } = [];
+    public List<string>? Topics { get; set; }
 
     /// <summary>
     /// Named entities extracted from the content.
+    /// Null when no entities have been extracted (saves memory allocation).
     /// </summary>
     [VectorStoreData]
-    public List<string> Entities { get; set; } = [];
+    public List<string>? Entities { get; set; }
 
     /// <summary>
     /// Additional metadata stored as key-value pairs.
+    /// Null when no metadata is present (saves memory allocation).
     /// </summary>
     [VectorStoreData]
-    public Dictionary<string, string> Metadata { get; set; } = [];
+    public Dictionary<string, string>? Metadata { get; set; }
 
     /// <summary>
     /// Soft delete flag.

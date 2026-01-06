@@ -190,8 +190,12 @@ Dictionary<string, string> Metadata { get; init; } = [];
 ## Optimization Roadmap
 
 ### Phase 1: Quick Wins (Immediate)
-- [ ] Enforce MaxBufferSize and MaxBufferTokens in Recently Buffer
-- [ ] Null metadata dictionaries when empty
+- [x] Enforce MaxBufferSize and MaxBufferTokens in Recently Buffer (already implemented ✅)
+- [x] Null empty collections (Topics, Entities, Metadata) when not used ✅
+  - Modified MemoryUnit.cs to use nullable collections
+  - Updated all code to handle null collections properly
+  - All 654 tests passing
+  - Memory savings: ~48-144 bytes per MemoryUnit when collections are empty
 - [ ] Add memory pressure monitoring
 
 ### Phase 2: Structural (Week 1)

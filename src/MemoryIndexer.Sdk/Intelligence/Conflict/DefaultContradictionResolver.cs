@@ -187,8 +187,8 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         var newItem = analysis.NewItem;
         var existing = analysis.ConflictingItem!;
 
-        var newHasSource = newItem.Metadata.Count > 0 || !string.IsNullOrEmpty(newItem.SessionId);
-        var existingHasSource = existing.Metadata.Count > 0 || !string.IsNullOrEmpty(existing.SessionId);
+        var newHasSource = (newItem.Metadata != null && newItem.Metadata.Count > 0) || !string.IsNullOrEmpty(newItem.SessionId);
+        var existingHasSource = (existing.Metadata != null && existing.Metadata.Count > 0) || !string.IsNullOrEmpty(existing.SessionId);
 
         MemoryUnit kept, superseded;
         string explanation;

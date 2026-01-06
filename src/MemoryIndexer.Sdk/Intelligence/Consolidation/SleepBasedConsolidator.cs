@@ -154,8 +154,8 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
 
         // Group memories by topic for reflection
         var topicGroups = recentMemories
-            .Where(m => m.Topics.Count > 0)
-            .SelectMany(m => m.Topics.Select(t => (Topic: t, Memory: m)))
+            .Where(m => m.Topics != null && m.Topics.Count > 0)
+            .SelectMany(m => m.Topics!.Select(t => (Topic: t, Memory: m)))
             .GroupBy(x => x.Topic)
             .Where(g => g.Count() >= 2)
             .ToList();
@@ -401,7 +401,8 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
     {
         // Extract all topics
         var allTopics = importantMemories
-            .SelectMany(m => m.Topics)
+            .Where(m => m.Topics != null)
+            .SelectMany(m => m.Topics!)
             .Distinct()
             .Take(5)
             .ToList();

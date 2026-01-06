@@ -169,7 +169,8 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
         };
 
         // Look for sibling chunks based on metadata
-        if (childMemory.Metadata.TryGetValue("chunk_index", out var chunkIndexStr) &&
+        if (childMemory.Metadata != null &&
+            childMemory.Metadata.TryGetValue("chunk_index", out var chunkIndexStr) &&
             int.TryParse(chunkIndexStr?.ToString(), out var chunkIndex) &&
             childMemory.Metadata.TryGetValue("parent_id", out var parentId))
         {
@@ -189,7 +190,8 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
 
                 foreach (var sibling in siblings.Select(s => s.Memory))
                 {
-                    if (sibling.Metadata.TryGetValue("parent_id", out var siblingParent) &&
+                    if (sibling.Metadata != null &&
+                        sibling.Metadata.TryGetValue("parent_id", out var siblingParent) &&
                         siblingParent?.ToString() == parentId?.ToString() &&
                         sibling.Metadata.TryGetValue("chunk_index", out var siblingIndexStr) &&
                         int.TryParse(siblingIndexStr?.ToString(), out var siblingIndex))
@@ -208,10 +210,10 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
 
                 // Sort by chunk index
                 result.PrecedingChunks = result.PrecedingChunks
-                    .OrderBy(c => int.TryParse(c.Metadata["chunk_index"]?.ToString(), out var i) ? i : 0)
+                    .OrderBy(c => int.TryParse(c.Metadata?["chunk_index"]?.ToString(), out var i) ? i : 0)
                     .ToList();
                 result.FollowingChunks = result.FollowingChunks
-                    .OrderBy(c => int.TryParse(c.Metadata["chunk_index"]?.ToString(), out var i) ? i : 0)
+                    .OrderBy(c => int.TryParse(c.Metadata?["chunk_index"]?.ToString(), out var i) ? i : 0)
                     .ToList();
             }
         }

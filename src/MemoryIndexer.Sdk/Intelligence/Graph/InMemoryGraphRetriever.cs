@@ -318,7 +318,8 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
         // Step 2: Extract entities from query and results
         var queryEntities = ExtractEntitiesFromText(query);
         var resultEntities = semanticResults
-            .SelectMany(r => r.Entities)
+            .Where(r => r.Entities != null)
+            .SelectMany(r => r.Entities!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 

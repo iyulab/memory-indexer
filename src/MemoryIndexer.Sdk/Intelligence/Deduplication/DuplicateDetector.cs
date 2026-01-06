@@ -224,12 +224,15 @@ public sealed class DuplicateDetector
             group.Duplicates.Max(m => m.ImportanceScore));
 
         // Merge topics
-        var allTopics = new HashSet<string>(primary.Topics);
+        var allTopics = new HashSet<string>(primary.Topics ?? []);
         foreach (var dup in group.Duplicates)
         {
-            allTopics.UnionWith(dup.Topics);
+            if (dup.Topics != null)
+            {
+                allTopics.UnionWith(dup.Topics);
+            }
         }
-        primary.Topics = allTopics.ToList();
+        primary.Topics = allTopics.Count > 0 ? allTopics.ToList() : null;
 
         // Update primary
         await _memoryStore.UpdateAsync(primary, cancellationToken);
@@ -275,6 +278,7 @@ public sealed class DuplicateDetector
             cancellationToken);
 
         return memories.FirstOrDefault(m =>
+            m.Metadata != null &&
             m.Metadata.TryGetValue("ContentHash", out var hash) &&
             hash?.ToString() == contentHash);
     }
