@@ -196,6 +196,7 @@ Dictionary<string, string> Metadata { get; init; } = [];
   - Updated all code to handle null collections properly
   - All 654 tests passing
   - Memory savings: ~48-144 bytes per MemoryUnit when collections are empty
+  - Note: Benchmark measurements deferred (baseline will be established in future optimization phases)
 - [ ] Add memory pressure monitoring
 
 ### Phase 2: Structural (Week 1)
