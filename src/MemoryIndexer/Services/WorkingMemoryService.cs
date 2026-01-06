@@ -8,27 +8,31 @@ namespace MemoryIndexer.Services;
 
 /// <summary>
 /// Implementation of L1 Working Memory using IMemoryCache.
-/// Manages fast, limited-capacity in-context memory.
+/// Manages fast, limited-capacity in-context memory with memory-pressure aware eviction.
 /// </summary>
 /// <remarks>
 /// Research reference: research-03.md, research-04.md
 /// - Capacity: 4-7 chunks (Baddeley's Working Memory Model)
-/// - Eviction: Least relevant first
+/// - Eviction: Least relevant first, memory-pressure aware
 /// - Access tracking for relevance updates
+/// - Adaptive eviction based on system memory pressure
 /// </remarks>
 public sealed class WorkingMemoryService : IWorkingMemory
 {
     private readonly IMemoryCache _cache;
     private readonly ConcurrentDictionary<Guid, WorkingMemoryEntry> _entries;
     private readonly WorkingMemoryOptions _options;
+    private readonly IMemoryPressureMonitor? _pressureMonitor;
     private readonly object _lock = new();
 
     public WorkingMemoryService(
         IMemoryCache cache,
-        IOptions<WorkingMemoryOptions> options)
+        IOptions<WorkingMemoryOptions> options,
+        IMemoryPressureMonitor? pressureMonitor = null)
     {
         _cache = cache;
         _options = options.Value;
+        _pressureMonitor = pressureMonitor;
         _entries = new ConcurrentDictionary<Guid, WorkingMemoryEntry>();
     }
 
@@ -59,10 +63,24 @@ public sealed class WorkingMemoryService : IWorkingMemory
                 return Task.FromResult<MemoryUnit?>(null);
             }
 
+            // Memory-pressure aware capacity management
+            var effectiveCapacity = GetEffectiveCapacity();
+
             // If at capacity, evict lowest relevance
-            if (Count >= Capacity)
+            if (Count >= effectiveCapacity)
             {
                 evicted = EvictLowestRelevance();
+
+                // Under high pressure, proactively evict additional items
+                if (_pressureMonitor?.IsUnderPressure(MemoryPressureLevel.High) == true)
+                {
+                    // Evict one more item to free up space
+                    while (Count >= effectiveCapacity - 1)
+                    {
+                        var additional = EvictLowestRelevance();
+                        if (additional == null) break;
+                    }
+                }
             }
 
             // Add to working memory
@@ -71,8 +89,16 @@ public sealed class WorkingMemoryService : IWorkingMemory
                 Memory = memory,
                 PromotedAt = DateTime.UtcNow,
                 LastAccessed = DateTime.UtcNow,
-                RelevanceScore = memory.ImportanceScore
+                RelevanceScore = memory.ImportanceScore,
+                OriginalEmbedding = memory.Embedding // Store original for restoration
             };
+
+            // Lazy embedding loading: Clear embedding from Working Memory to save space
+            // Embeddings are only needed for search, not for in-context usage
+            if (_options.LazyEmbeddingLoading && memory.Embedding.HasValue)
+            {
+                memory.Embedding = null;
+            }
 
             _entries[memory.Id] = newEntry;
             UpdateCache(memory.Id, newEntry);
@@ -94,6 +120,13 @@ public sealed class WorkingMemoryService : IWorkingMemory
             if (_entries.TryRemove(memoryId, out var entry))
             {
                 _cache.Remove(GetCacheKey(memoryId));
+
+                // Restore original embedding if it was cleared for lazy loading
+                if (_options.LazyEmbeddingLoading && entry.OriginalEmbedding.HasValue)
+                {
+                    entry.Memory.Embedding = entry.OriginalEmbedding;
+                }
+
                 entry.Memory.Tier = MemoryTier.Session;
                 return Task.FromResult<MemoryUnit?>(entry.Memory);
             }
@@ -208,6 +241,25 @@ public sealed class WorkingMemoryService : IWorkingMemory
         return null;
     }
 
+    /// <summary>
+    /// Gets effective capacity based on memory pressure.
+    /// Under memory pressure, reduces capacity to free up resources.
+    /// </summary>
+    private int GetEffectiveCapacity()
+    {
+        if (_pressureMonitor == null) return Capacity;
+
+        var pressure = _pressureMonitor.CurrentPressure;
+
+        return pressure switch
+        {
+            MemoryPressureLevel.Critical => Math.Max(1, Capacity / 2), // 50% reduction
+            MemoryPressureLevel.High => Math.Max(2, Capacity * 2 / 3), // 33% reduction
+            MemoryPressureLevel.Medium => Math.Max(3, Capacity * 4 / 5), // 20% reduction
+            _ => Capacity // Normal capacity
+        };
+    }
+
     private void UpdateCache(Guid id, WorkingMemoryEntry entry)
     {
         var cacheOptions = new MemoryCacheEntryOptions()
@@ -232,6 +284,7 @@ public sealed class WorkingMemoryService : IWorkingMemory
         public DateTime PromotedAt { get; init; }
         public DateTime LastAccessed { get; set; }
         public float RelevanceScore { get; set; }
+        public ReadOnlyMemory<float>? OriginalEmbedding { get; set; }
     }
 }
 
@@ -255,4 +308,11 @@ public sealed class WorkingMemoryOptions
     /// Absolute expiration for cache entries.
     /// </summary>
     public TimeSpan AbsoluteExpiration { get; set; } = TimeSpan.FromHours(2);
+
+    /// <summary>
+    /// Enable lazy embedding loading to reduce memory footprint.
+    /// When true, embeddings are cleared from Working Memory and restored only when needed.
+    /// Memory savings: ~3KB per memory unit (768 floats × 4 bytes).
+    /// </summary>
+    public bool LazyEmbeddingLoading { get; set; } = false;
 }
