@@ -321,9 +321,19 @@ Based on research benchmarks:
 
 ## Documentation
 
+### Getting Started
+- [Quick Start Guide](docs/QUICKSTART.md) — 5-minute setup guide
+- [Common Patterns](docs/PATTERNS.md) — Practical usage patterns and cookbook
+- [LLM Integrations](docs/INTEGRATIONS.md) — Semantic Kernel, LangChain, AutoGen
+
+### Architecture & Operations
 - [Architecture](docs/ARCHITECTURE.md) — System design and 4-tier VCM
-- [Roadmap](docs/ROADMAP.md) — Feature timeline and status
+- [Best Practices](docs/BEST_PRACTICES.md) — Production deployment guidelines
+- [Memory Optimization](docs/MEMORY_OPTIMIZATION.md) — Performance tuning guide
 - [Migration Guide](docs/MIGRATION_GUIDE.md) — Version and storage migration
+
+### Project Information
+- [Roadmap](docs/ROADMAP.md) — Feature timeline and status
 - [Vision](docs/VISION.md) — Long-term goals and philosophy
 
 ## License
