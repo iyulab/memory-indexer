@@ -1,9 +1,11 @@
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Intelligence.SelfEditing;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -49,6 +51,12 @@ public class MemGPTStyleMemoryManagerTests
                 It.IsAny<MemorySearchOptions>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
+        memoryStoreMock
+            .Setup(x => x.GetAllAsync(
+                It.IsAny<string>(),
+                It.IsAny<MemoryFilterOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var scoringServiceMock = new Mock<IScoringService>();
 
@@ -69,11 +77,42 @@ public class MemGPTStyleMemoryManagerTests
                 SimilarityScore = 0f
             });
 
+        var pressureMonitorMock = new Mock<IMemoryPressureMonitor>();
+        pressureMonitorMock
+            .Setup(x => x.GetMemoryInfo())
+            .Returns(new MemoryPressureInfo
+            {
+                Level = MemoryPressureLevel.Low,
+                UtilizationPercentage = 0.5,
+                TotalAvailableMemoryBytes = 1000000000,
+                MemoryLoadBytes = 500000000,
+                HeapSizeBytes = 500000000,
+                Gen0Collections = 0,
+                Gen1Collections = 0,
+                Gen2Collections = 0
+            });
+
+        var growthMonitorMock = new Mock<IMemoryGrowthMonitor>();
+        growthMonitorMock
+            .Setup(x => x.RecordMemoryStorageAsync(
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var optionsMock = Options.Create(new MemoryIndexerOptions
+        {
+            MemoryGrowth = new MemoryGrowthOptions()
+        });
+
         _memoryServiceMock = new Mock<MemoryService>(
             memoryStoreMock.Object,
             _embeddingServiceMock.Object,
             scoringServiceMock.Object,
-            deduplicationServiceMock.Object) { CallBase = true };
+            deduplicationServiceMock.Object,
+            pressureMonitorMock.Object,
+            growthMonitorMock.Object,
+            optionsMock) { CallBase = true };
 
         _manager = new MemGPTStyleMemoryManager(
             _memoryServiceMock.Object,

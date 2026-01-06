@@ -1250,40 +1250,56 @@ public enum NormalizationStrategy
 
 ---
 
-## Phase 22: Memory Growth & Query Performance ✅
+## Phase 22: Memory Growth & Query Performance 🔄
 
-**Status**: Planned
+**Status**: In Progress (Phase 22.1 Complete)
 **Priority**: 🟡 High
-**Date**: TBD
+**Date**: Phase 22.1 completed January 2026
 
 **Goal**: Control memory growth rate and optimize query-aware retrieval performance
 
-### Phase 22.1: Memory Growth Rate Control
+### Phase 22.1: Memory Growth Rate Control ✅
 
-**Status**: Planned
+**Status**: Complete
+**Date**: January 6, 2026
 
-**Current Issue**: 6.8 memories/round vs 4.0 expected (70% overgrowth)
+**Current Issue**: 6.8 memories/round vs 4.0 expected (70% overgrowth) - RESOLVED
 
-- [ ] **Growth Rate Analysis**
-  - [ ] Identify sources of excessive memory creation
-  - [ ] Measure per-tier growth rates
-  - [ ] Analyze promotion trigger effectiveness
+- [x] **Growth Rate Analysis**
+  - [x] Identify sources of excessive memory creation
+  - [x] Measure per-tier growth rates
+  - [x] Analyze promotion trigger effectiveness
 
-- [ ] **Adaptive Storage Policies**
-  - [ ] Implement importance-based storage filtering (skip low-importance memories)
-  - [ ] Add topic-based deduplication before storage
-  - [ ] Dynamic promotion thresholds based on memory pressure
-  - [ ] Configurable growth limits per tier
+- [x] **Adaptive Storage Policies**
+  - [x] Implement importance-based storage filtering (skip low-importance memories)
+  - [x] Add topic-based deduplication before storage
+  - [x] Dynamic promotion thresholds based on memory pressure
+  - [x] Configurable growth limits per tier
 
-- [ ] **Configuration**
+- [x] **Configuration**
   ```csharp
   "MemoryGrowth": {
     "MaxGrowthRatePerRound": 4.0,      // Target rate
     "MinImportanceForStorage": 0.3,    // Filter threshold
     "TopicBasedDedup": true,           // Deduplicate by topic before storage
-    "DynamicThresholds": true          // Adjust based on pressure
+    "DynamicThresholds": true,         // Adjust based on pressure
+    "LowPressureThresholdMultiplier": 0.8,   // < 50% utilization
+    "HighPressureThresholdMultiplier": 1.5   // > 80% utilization
   }
   ```
+
+**Implementation Details**:
+- New `MemoryGrowthOptions` configuration class
+- `IMemoryGrowthMonitor` interface for growth rate tracking
+- `InMemoryGrowthMonitor` implementation with per-user state tracking
+- Importance-based filtering with dynamic threshold adjustment
+- Topic extraction (first sentence or 50 chars) for pre-storage deduplication
+- Memory pressure integration for adaptive filtering
+- Growth metrics tracking (stored/filtered counts, filter reasons)
+- Round-based growth rate monitoring
+
+**Test Coverage**: 16 new tests (7 for InMemoryGrowthMonitor, 9 for MemoryService Phase 22.1)
+**Total Tests**: 706 passing (49 MemoryIndexer + 657 MemoryIndexer.Sdk)
 
 ### Phase 22.2: Recall Latency Optimization
 

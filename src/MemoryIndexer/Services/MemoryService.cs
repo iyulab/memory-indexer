@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
+using Microsoft.Extensions.Options;
 
 namespace MemoryIndexer.Services;
 
@@ -13,7 +15,10 @@ public class MemoryService(
     IMemoryStore memoryStore,
     IEmbeddingService embeddingService,
     IScoringService scoringService,
-    IDeduplicationService deduplicationService)
+    IDeduplicationService deduplicationService,
+    IMemoryPressureMonitor pressureMonitor,
+    IMemoryGrowthMonitor growthMonitor,
+    IOptions<MemoryIndexerOptions> options)
 {
     /// <summary>
     /// Stores a new memory with automatic embedding generation.
@@ -37,6 +42,90 @@ public class MemoryService(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
+
+        // Phase 22.1: Importance-based filtering with dynamic thresholds
+        var importanceScore = importance ?? 0.5f;
+        var growthOptions = options.Value.MemoryGrowth;
+
+        // Calculate dynamic threshold based on memory pressure
+        float effectiveThreshold = growthOptions.MinImportanceForStorage;
+        if (growthOptions.DynamicThresholds)
+        {
+            var memoryInfo = pressureMonitor.GetMemoryInfo();
+            var utilizationPercent = memoryInfo.UtilizationPercentage * 100;
+
+            effectiveThreshold = utilizationPercent switch
+            {
+                < 50 => growthOptions.MinImportanceForStorage * growthOptions.LowPressureThresholdMultiplier,
+                > 80 => growthOptions.MinImportanceForStorage * growthOptions.HighPressureThresholdMultiplier,
+                _ => growthOptions.MinImportanceForStorage
+            };
+        }
+
+        // Filter out low-importance memories
+        if (importanceScore < effectiveThreshold)
+        {
+            var reason = $"ImportanceScore {importanceScore:F3} < threshold {effectiveThreshold:F3}";
+
+            // Phase 22.1: Record filtered memory for growth monitoring
+            await growthMonitor.RecordMemoryStorageAsync(userId, filtered: true, reason, cancellationToken);
+
+            // Return a "filtered" memory without storing (metadata marker)
+            return new MemoryUnit
+            {
+                UserId = userId,
+                SessionId = sessionId,
+                Content = content,
+                Type = type,
+                ImportanceScore = importanceScore,
+                ContentHash = ComputeContentHash(content),
+                Metadata = new Dictionary<string, string>
+                {
+                    ["Filtered"] = "true",
+                    ["Reason"] = reason,
+                    ["MemoryPressure"] = pressureMonitor.GetMemoryInfo().UtilizationPercentage.ToString("F3")
+                }
+            };
+        }
+
+        // Phase 22.1: Topic-based pre-storage deduplication
+        string? topic = null;
+        if (growthOptions.TopicBasedDedup)
+        {
+            topic = ExtractTopic(content);
+
+            // Check if memory with same topic already exists for this user
+            var existingMemories = await memoryStore.GetAllAsync(userId, cancellationToken: cancellationToken);
+            var duplicateTopic = existingMemories.FirstOrDefault(m =>
+                m.Metadata.TryGetValue("Topic", out var existingTopic) &&
+                existingTopic.Equals(topic, StringComparison.OrdinalIgnoreCase));
+
+            if (duplicateTopic != null)
+            {
+                var reason = $"Duplicate topic: '{topic}'";
+
+                // Phase 22.1: Record filtered memory for growth monitoring
+                await growthMonitor.RecordMemoryStorageAsync(userId, filtered: true, reason, cancellationToken);
+
+                // Same topic exists - return filtered memory
+                return new MemoryUnit
+                {
+                    UserId = userId,
+                    SessionId = sessionId,
+                    Content = content,
+                    Type = type,
+                    ImportanceScore = importanceScore,
+                    ContentHash = ComputeContentHash(content),
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["Filtered"] = "true",
+                        ["Reason"] = reason,
+                        ["ExistingMemoryId"] = duplicateTopic.Id.ToString(),
+                        ["Topic"] = topic
+                    }
+                };
+            }
+        }
 
         // Phase 21.1: Check for duplicates before storing
         var contentType = metadata?.GetValueOrDefault("ContentType");
@@ -99,6 +188,13 @@ public class MemoryService(
         // Generate embedding
         var embedding = await embeddingService.GenerateEmbeddingAsync(content, cancellationToken);
 
+        // Prepare metadata with topic (Phase 22.1)
+        metadata ??= [];
+        if (topic != null)
+        {
+            metadata["Topic"] = topic;
+        }
+
         // Create memory unit
         var memory = new MemoryUnit
         {
@@ -107,12 +203,17 @@ public class MemoryService(
             Content = content,
             Embedding = embedding,
             Type = type,
-            ImportanceScore = importance ?? 0.5f,
+            ImportanceScore = importanceScore, // Use calculated score from Phase 22.1 filtering
             ContentHash = ComputeContentHash(content),
-            Metadata = metadata ?? []
+            Metadata = metadata
         };
 
-        return await memoryStore.StoreAsync(memory, cancellationToken);
+        var result = await memoryStore.StoreAsync(memory, cancellationToken);
+
+        // Phase 22.1: Record successful storage for growth monitoring
+        await growthMonitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: cancellationToken);
+
+        return result;
     }
 
     /// <summary>
@@ -282,5 +383,35 @@ public class MemoryService(
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Extracts a topic from content for topic-based deduplication.
+    /// Phase 22.1: Simple implementation using first sentence or first 50 characters.
+    /// </summary>
+    private static string ExtractTopic(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return string.Empty;
+        }
+
+        // Remove extra whitespace and normalize
+        var normalized = content.Trim();
+
+        // Try to extract first sentence (ending with ., ?, !, or newline)
+        var sentenceEnd = normalized.IndexOfAny(['.', '?', '!', '\n']);
+        if (sentenceEnd > 0 && sentenceEnd <= 100)
+        {
+            return normalized[..sentenceEnd].Trim();
+        }
+
+        // If no sentence end found or sentence too long, take first 50 chars
+        if (normalized.Length > 50)
+        {
+            return normalized[..50].Trim();
+        }
+
+        return normalized;
     }
 }

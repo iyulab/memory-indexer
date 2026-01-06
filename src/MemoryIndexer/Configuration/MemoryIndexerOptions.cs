@@ -57,6 +57,12 @@ public sealed class MemoryIndexerOptions
     /// Phase 21: Smart Deduplication & Quality Control.
     /// </summary>
     public DeduplicationOptions Deduplication { get; set; } = new();
+
+    /// <summary>
+    /// Memory growth control configuration.
+    /// Phase 22.1: Memory Growth Rate Control.
+    /// </summary>
+    public MemoryGrowthOptions MemoryGrowth { get; set; } = new();
 }
 
 /// <summary>
@@ -640,4 +646,60 @@ public sealed class DeduplicationOptions
     /// Example: { "QUESTION": { "QUESTION": Skip, "CONFIRMED": AddWithRelation } }
     /// </summary>
     public Dictionary<string, Dictionary<string, DuplicateAction>>? ContentTypeRules { get; set; }
+}
+
+/// <summary>
+/// Memory growth control configuration options.
+/// Phase 22.1: Intelligent Memory Growth Management.
+/// </summary>
+/// <remarks>
+/// Controls memory growth rate through:
+/// - Importance-based filtering: Prevents low-value memories from storage
+/// - Topic-based deduplication: Reduces redundant topic storage
+/// - Dynamic thresholds: Adapts filtering based on memory pressure
+/// - Growth rate monitoring: Tracks and controls memories/round metric
+/// </remarks>
+public sealed class MemoryGrowthOptions
+{
+    /// <summary>
+    /// Maximum allowed growth rate (memories per round).
+    /// Target: 4.0 memories/round (41% reduction from 6.8 baseline).
+    /// Default: 4.0.
+    /// </summary>
+    public float MaxGrowthRatePerRound { get; set; } = 4.0f;
+
+    /// <summary>
+    /// Minimum importance score required for storage (0.0 - 1.0).
+    /// Memories below this threshold are filtered out during storage.
+    /// Default: 0.3 (30% importance threshold).
+    /// </summary>
+    public float MinImportanceForStorage { get; set; } = 0.3f;
+
+    /// <summary>
+    /// Whether topic-based pre-storage deduplication is enabled.
+    /// Prevents duplicate topics from being stored multiple times.
+    /// Default: true.
+    /// </summary>
+    public bool TopicBasedDedup { get; set; } = true;
+
+    /// <summary>
+    /// Whether dynamic threshold adjustment is enabled.
+    /// Adapts MinImportanceForStorage based on memory pressure.
+    /// Default: true.
+    /// </summary>
+    public bool DynamicThresholds { get; set; } = true;
+
+    /// <summary>
+    /// Threshold multiplier under low memory pressure (&lt; 50% capacity).
+    /// Lower threshold = accept more memories when space available.
+    /// Default: 0.8 (MinImportanceForStorage * 0.8).
+    /// </summary>
+    public float LowPressureThresholdMultiplier { get; set; } = 0.8f;
+
+    /// <summary>
+    /// Threshold multiplier under high memory pressure (> 80% capacity).
+    /// Higher threshold = stricter filtering when space constrained.
+    /// Default: 1.5 (MinImportanceForStorage * 1.5).
+    /// </summary>
+    public float HighPressureThresholdMultiplier { get; set; } = 1.5f;
 }

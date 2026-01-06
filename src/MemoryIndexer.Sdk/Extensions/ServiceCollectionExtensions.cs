@@ -145,6 +145,12 @@ public static class ServiceCollectionExtensions
         // Register score normalizer (Phase 21.2)
         services.TryAddSingleton<IScoreNormalizer, AdaptiveScoreNormalizer>();
 
+        // Register memory pressure monitor (Phase 21)
+        services.TryAddSingleton<IMemoryPressureMonitor, MemoryPressureMonitorService>();
+
+        // Register memory growth monitor (Phase 22.1)
+        services.TryAddSingleton<IMemoryGrowthMonitor, InMemoryGrowthMonitor>();
+
         // Register re-ranking service (Phase 5.4)
         services.TryAddSingleton<IRerankerService, LocalRerankerService>();
 
