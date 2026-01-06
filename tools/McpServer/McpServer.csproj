@@ -17,6 +17,10 @@
   <ItemGroup>
     <!-- ASP.NET Core Web SDK includes all hosting/config dependencies -->
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <!-- OpenAPI/Swagger -->
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.OpenApi" />
   </ItemGroup>
 
   <ItemGroup>

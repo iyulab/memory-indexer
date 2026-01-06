@@ -88,6 +88,11 @@ static async Task RunHttpServer(string[] args, int port)
     // Add Health Checks
     builder.Services.AddMemoryIndexerHealthChecks();
 
+    // Add REST API Controllers
+    builder.Services.AddControllers();
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+
     // Configure MCP Server with HTTP transport
     builder.Services
         .AddMcpServer(options =>
@@ -110,8 +115,19 @@ static async Task RunHttpServer(string[] args, int port)
 
     var app = builder.Build();
 
+    // Enable Swagger middleware
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Memory Indexer API v1");
+        c.RoutePrefix = "swagger";
+    });
+
     // Map MCP endpoints
     app.MapMcp("/mcp");
+
+    // Map REST API controllers
+    app.MapControllers();
 
     // Health Check Endpoints (Kubernetes-compatible)
     app.MapHealthChecks("/health", new HealthCheckOptions
@@ -171,17 +187,26 @@ static async Task RunHttpServer(string[] args, int port)
         endpoints = new
         {
             mcp = "/mcp",
+            restApi = "/api/memory",
+            swagger = "/swagger",
             health = "/health",
             healthReady = "/health/ready",
             healthLive = "/health/live",
             healthStartup = "/health/startup",
             healthByTier = "/health/tier/{tier}"
         },
-        instructions = "Connect to /mcp endpoint using MCP client with HTTP transport"
+        instructions = new
+        {
+            mcp = "Connect to /mcp endpoint using MCP client with HTTP transport",
+            restApi = "Use /api/memory endpoints for REST API access (see /swagger for documentation)",
+            swagger = "Visit /swagger for interactive API documentation"
+        }
     }));
 
     Console.WriteLine($"Memory Indexer MCP Server (HTTP/SSE) starting on http://localhost:{port}");
     Console.WriteLine($"  MCP Endpoint: http://localhost:{port}/mcp");
+    Console.WriteLine($"  REST API: http://localhost:{port}/api/memory");
+    Console.WriteLine($"  Swagger UI: http://localhost:{port}/swagger");
     Console.WriteLine($"  Health Check: http://localhost:{port}/health");
     Console.WriteLine();
     Console.WriteLine("Press Ctrl+C to stop the server.");
