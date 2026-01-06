@@ -1092,6 +1092,415 @@ if (analysis.HasContradiction && analysis.ContradictionConfidence >= 0.6f)
 
 ---
 
+## Phase 21: Deduplication & Score Distribution Fix ✅
+
+**Status**: Planned
+**Priority**: 🔴 Critical
+**Date**: TBD
+
+**Goal**: Fix critical deduplication failure and narrow score distribution issues identified in Twenty Questions Game testing
+
+### Motivation
+
+Testing with Twenty Questions Game revealed critical issues:
+- **Deduplication failure**: -58.1% increase vs 34% reduction target (150 → 237 memories)
+- **Narrow score distribution**: All scores 1.10-1.69 (0.59 spread) limiting ranking effectiveness
+- **Impact**: Poor memory quality, ineffective prioritization, context pollution
+
+### Phase 21.1: Deduplication Target Fix
+
+**Status**: Planned
+
+- [ ] **Root Cause Analysis**
+  - [ ] Review current similarity threshold (0.80 may be too high)
+  - [ ] Analyze ContentType-aware logic effectiveness
+  - [ ] Investigate batch deduplication absence
+
+- [ ] **Implementation Improvements**
+  - [ ] Lower similarity threshold to 0.70-0.75 for aggressive deduplication
+  - [ ] Implement batch deduplication at session boundaries
+  - [ ] Add periodic cleanup jobs for historical duplicates
+  - [ ] Improve ContentType-aware merge strategies
+  - [ ] Add deduplication metrics and monitoring
+
+- [ ] **Configuration Updates**
+  ```csharp
+  "Deduplication": {
+    "SimilarityThreshold": 0.70,        // More aggressive (was 0.80)
+    "BatchDeduplication": true,         // Enable batch processing
+    "CleanupInterval": "00:05:00",      // Periodic cleanup every 5min
+    "MaxBatchSize": 100                 // Process 100 memories at a time
+  }
+  ```
+
+### Phase 21.2: Score Distribution Normalization
+
+**Status**: Planned
+
+- [ ] **Statistical Analysis**
+  - [ ] Measure current score distribution patterns
+  - [ ] Identify clustering causes (time decay, fixed weights)
+  - [ ] Analyze z-score normalization feasibility
+
+- [ ] **Score Normalization System**
+  - [ ] Implement percentile-based ranking
+  - [ ] Add z-score normalization option
+  - [ ] Dynamic score range adjustment (target: 0.0-2.0 spread)
+  - [ ] Configurable normalization strategies (Raw, Percentile, ZScore, MinMax)
+
+- [ ] **Enhanced Scoring Factors**
+  - [ ] Review time decay parameters (currently too strong)
+  - [ ] Adjust semantic similarity weights
+  - [ ] Add content quality signals (completeness, specificity)
+  - [ ] Implement dynamic weight adjustment based on memory type
+
+### Expected Impact
+
+**Deduplication**:
+- 237 memories → ~150 memories (37% reduction, meeting target)
+- Reduced storage and recall overhead
+- Improved memory quality
+
+**Score Distribution**:
+- 0.59 spread → 1.5+ spread (2.5x improvement)
+- More effective ranking and prioritization
+- Better distinction between important/unimportant memories
+
+### Test Coverage
+- [ ] Unit tests for batch deduplication
+- [ ] Integration tests for periodic cleanup
+- [ ] Score normalization unit tests
+- [ ] Statistical distribution validation tests
+
+### Success Criteria
+- ✅ Achieve 30-40% deduplication rate consistently
+- ✅ Score distribution spread ≥ 1.5 (current: 0.59)
+- ✅ No regression in recall quality metrics
+- ✅ Deduplication metrics available in health checks
+
+---
+
+## Phase 22: Memory Growth & Query Performance ✅
+
+**Status**: Planned
+**Priority**: 🟡 High
+**Date**: TBD
+
+**Goal**: Control memory growth rate and optimize query-aware retrieval performance
+
+### Phase 22.1: Memory Growth Rate Control
+
+**Status**: Planned
+
+**Current Issue**: 6.8 memories/round vs 4.0 expected (70% overgrowth)
+
+- [ ] **Growth Rate Analysis**
+  - [ ] Identify sources of excessive memory creation
+  - [ ] Measure per-tier growth rates
+  - [ ] Analyze promotion trigger effectiveness
+
+- [ ] **Adaptive Storage Policies**
+  - [ ] Implement importance-based storage filtering (skip low-importance memories)
+  - [ ] Add topic-based deduplication before storage
+  - [ ] Dynamic promotion thresholds based on memory pressure
+  - [ ] Configurable growth limits per tier
+
+- [ ] **Configuration**
+  ```csharp
+  "MemoryGrowth": {
+    "MaxGrowthRatePerRound": 4.0,      // Target rate
+    "MinImportanceForStorage": 0.3,    // Filter threshold
+    "TopicBasedDedup": true,           // Deduplicate by topic before storage
+    "DynamicThresholds": true          // Adjust based on pressure
+  }
+  ```
+
+### Phase 22.2: Recall Latency Optimization
+
+**Status**: Planned
+
+**Current Issue**: 10x latency variance (77ms to 867ms), average 440ms
+
+- [ ] **Latency Profiling**
+  - [ ] Identify bottlenecks (embedding generation, vector search, reranking)
+  - [ ] Measure per-tier recall latency
+  - [ ] Analyze cache effectiveness
+
+- [ ] **Performance Improvements**
+  - [ ] Implement embedding cache with LRU eviction
+  - [ ] Add batch query processing for parallel searches
+  - [ ] Optimize vector index parameters
+  - [ ] Implement early termination for sufficient results
+  - [ ] Add query result caching with TTL
+
+- [ ] **Latency Budgets**
+  - [ ] Working Memory: < 100ms (hot path)
+  - [ ] Session Memory: < 300ms (warm path)
+  - [ ] User Profile: < 500ms (cold path)
+  - [ ] Timeout configuration per tier
+
+### Phase 22.3: Query Intent-Aware Retrieval Enhancement
+
+**Status**: Planned
+
+**Current Issue**: Generic queries work, specific queries don't boost relevant memories
+
+- [ ] **Intent Classification Improvements**
+  - [ ] Enhance LocalQueryIntentClassifier with more patterns
+  - [ ] Add domain-specific intent detection (game, conversation, facts)
+  - [ ] Implement confidence scoring for intent classification
+  - [ ] Add multi-intent support (primary + secondary)
+
+- [ ] **Metadata-based Boosting**
+  - [ ] Expand ContentType taxonomy (beyond CONFIRMED/RULED OUT/QUESTION)
+  - [ ] Add entity-based boosting (query entity matches memory entity)
+  - [ ] Implement temporal relevance boosting (recent vs historical)
+  - [ ] Context-aware score adjustments
+
+- [ ] **Adaptive Retrieval Strategies**
+  - [ ] Intent-specific K values (factual: 5, contextual: 10, temporal: 15)
+  - [ ] Dynamic tier weight adjustment based on query type
+  - [ ] Query expansion for sparse results
+  - [ ] Fallback strategies for low-confidence intent
+
+### Expected Impact
+
+**Memory Growth**:
+- 6.8/round → 4.0/round (41% reduction)
+- Reduced storage and processing overhead
+- Better memory quality through filtering
+
+**Recall Latency**:
+- Average: 440ms → <200ms (54% improvement)
+- P95: 867ms → <500ms (42% improvement)
+- More consistent performance
+
+**Query Intent**:
+- Improved precision for specific queries
+- Better ranking of relevant memories
+- Enhanced user experience
+
+### Test Coverage
+- [ ] Memory growth rate unit tests
+- [ ] Latency benchmark tests
+- [ ] Intent classification accuracy tests
+- [ ] End-to-end retrieval quality tests
+
+### Success Criteria
+- ✅ Memory growth rate ≤ 4.5/round
+- ✅ Average recall latency < 200ms
+- ✅ P95 recall latency < 500ms
+- ✅ Intent classification accuracy > 85%
+- ✅ Query-specific boosting effectiveness measured
+
+---
+
+## Phase 23: Memory Type Balance & Observability ✅
+
+**Status**: Planned
+**Priority**: 🟢 Medium
+**Date**: TBD
+
+**Goal**: Balance memory type distribution and enhance debugging capabilities
+
+### Phase 23.1: Memory Type Distribution Balancing
+
+**Status**: Planned
+
+**Current Issue**: Episodic 73-96%, Procedural 2-5% (severe imbalance)
+
+- [ ] **Distribution Analysis**
+  - [ ] Investigate classification logic in MemoryClassifier
+  - [ ] Identify bias sources (keyword matching, heuristics)
+  - [ ] Measure optimal distribution for different use cases
+
+- [ ] **Classification Improvements**
+  - [ ] Enhanced procedural pattern detection (how-to, steps, instructions)
+  - [ ] Semantic type classification using embeddings
+  - [ ] Confidence-based type assignment
+  - [ ] Multi-label support (memory can be both Episodic + Semantic)
+
+- [ ] **Adaptive Type Weighting**
+  - [ ] Dynamic importance adjustment based on type scarcity
+  - [ ] Type-aware retrieval (boost underrepresented types when relevant)
+  - [ ] Configurable type distribution targets
+
+- [ ] **Configuration**
+  ```csharp
+  "MemoryType": {
+    "TargetDistribution": {
+      "Episodic": 0.50,    // 50% target
+      "Semantic": 0.30,    // 30% target
+      "Procedural": 0.20   // 20% target
+    },
+    "AdaptiveWeighting": true,
+    "MultiLabelSupport": true
+  }
+  ```
+
+### Phase 23.2: Context Growth Pattern Optimization
+
+**Status**: Planned
+
+**Current Issue**: 2-3x growth in first 10 rounds, then stable
+
+- [ ] **Growth Pattern Analysis**
+  - [ ] Measure context size evolution per tier
+  - [ ] Identify optimal context window sizes
+  - [ ] Analyze impact on LLM performance
+
+- [ ] **Adaptive Context Management**
+  - [ ] Implement rolling context windows with overlap
+  - [ ] Add context size limits with smart truncation
+  - [ ] Progressive summarization for long contexts
+  - [ ] Configurable growth rate limits
+
+- [ ] **Context Compression Strategies**
+  - [ ] Apply LLMLingua-2 compression at boundaries
+  - [ ] Extract key facts periodically
+  - [ ] Maintain context metadata (summary, entity list)
+  - [ ] Implement context quality metrics
+
+### Phase 23.3: Observability & Debugging Enhancement
+
+**Status**: Planned
+
+**Current Issue**: Limited introspection into recall decisions
+
+- [ ] **Recall Decision Tracing**
+  - [ ] Add MemoryRecallExplanation model (why recalled, score breakdown)
+  - [ ] Per-tier recall decision logging
+  - [ ] Query intent detection visibility
+  - [ ] Score component breakdown (recency, relevance, importance, boost)
+
+- [ ] **Memory Lifecycle Tracking**
+  - [ ] Promotion event logging (Recently→Working→Session→User)
+  - [ ] Deduplication action logging
+  - [ ] Eviction reason tracking
+  - [ ] Memory modification history
+
+- [ ] **Metrics & Dashboards**
+  - [ ] OpenTelemetry metrics for recall decisions
+  - [ ] Memory growth rate metrics
+  - [ ] Type distribution metrics
+  - [ ] Latency percentile tracking
+  - [ ] Deduplication effectiveness metrics
+
+- [ ] **Debug Tools**
+  - [ ] Memory inspector tool (MCP or CLI)
+  - [ ] Recall simulation tool (test queries)
+  - [ ] Score calculator tool (explain scoring)
+  - [ ] Memory diff tool (compare snapshots)
+
+### Expected Impact
+
+**Memory Type Balance**:
+- Episodic: 73-96% → ~50% (better balance)
+- Procedural: 2-5% → ~20% (4x improvement)
+- Semantic: Implicit increase to ~30%
+
+**Context Growth**:
+- More predictable growth patterns
+- Reduced context pollution
+- Better LLM performance
+
+**Observability**:
+- Complete visibility into recall decisions
+- Faster debugging and optimization
+- Better understanding of system behavior
+
+### Test Coverage
+- [ ] Type classification unit tests
+- [ ] Context growth simulation tests
+- [ ] Tracing infrastructure tests
+- [ ] Metrics collection tests
+
+### Success Criteria
+- ✅ Memory type distribution within 10% of targets
+- ✅ Context growth rate < 2.5x in first 10 rounds
+- ✅ All recall decisions traceable with explanations
+- ✅ Comprehensive metrics dashboard available
+
+---
+
+## Phase 24: Advanced Analytics & Type Diversity ✅
+
+**Status**: Planned
+**Priority**: 🔵 Low
+**Date**: TBD
+
+**Goal**: Add cache performance metrics and memory type diversity optimization
+
+### Phase 24.1: Cache Performance Analytics
+
+**Status**: Planned
+
+**Current Issue**: Cache hit/miss rates unmeasured
+
+- [ ] **Cache Instrumentation**
+  - [ ] Embedding cache hit/miss tracking
+  - [ ] Query result cache effectiveness
+  - [ ] LRU eviction analytics
+  - [ ] Cache size vs performance correlation
+
+- [ ] **Cache Optimization**
+  - [ ] Dynamic cache sizing based on memory pressure
+  - [ ] Predictive cache warming for common queries
+  - [ ] Multi-level cache hierarchy (L1: in-memory, L2: Redis)
+  - [ ] Cache eviction policy tuning (LRU vs LFU vs FIFO)
+
+- [ ] **Metrics**
+  - [ ] Cache hit rate (target: > 70%)
+  - [ ] Average cache latency (0-3ms)
+  - [ ] Cache memory usage
+  - [ ] Eviction rate and patterns
+
+### Phase 24.2: Memory Type Diversity Optimization
+
+**Status**: Planned
+
+**Current Issue**: Procedural memories always score higher (type clustering)
+
+- [ ] **Type-Aware Scoring**
+  - [ ] Separate scoring models per memory type
+  - [ ] Type-specific importance factors
+  - [ ] Diversity-aware reranking (boost underrepresented types)
+
+- [ ] **Type Diversity Metrics**
+  - [ ] Shannon entropy for type distribution
+  - [ ] Type diversity in recall results
+  - [ ] Type-specific recall quality
+
+- [ ] **Adaptive Type Promotion**
+  - [ ] Boost rare types during retrieval
+  - [ ] Type-aware MMR diversity
+  - [ ] Configurable type diversity targets
+
+### Expected Impact
+
+**Cache Performance**:
+- Cache hit rate: 0% → > 70%
+- Reduced embedding generation load
+- Lower average latency (440ms → < 300ms)
+
+**Type Diversity**:
+- More balanced recall results
+- Better coverage of memory types
+- Improved retrieval quality
+
+### Test Coverage
+- [ ] Cache metrics unit tests
+- [ ] Type diversity calculation tests
+- [ ] Type-aware scoring tests
+
+### Success Criteria
+- ✅ Cache hit rate > 70%
+- ✅ Type diversity in recall results (Shannon entropy > 0.8)
+- ✅ Cache metrics available in observability dashboard
+- ✅ Type-specific scoring models operational
+
+---
+
 ## Research References
 
 ### Key Papers & Projects
@@ -1147,4 +1556,4 @@ if (analysis.HasContradiction && analysis.ContradictionConfidence >= 0.6f)
 
 ---
 
-*Last Updated: 2026-01-06*
+*Last Updated: 2026-01-06 (Phases 21-24 added from Twenty Questions Game analysis)*
