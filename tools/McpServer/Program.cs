@@ -1,5 +1,8 @@
 using MemoryIndexer.Sdk.Extensions;
+using MemoryIndexer.Sdk.Health;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -82,6 +85,9 @@ static async Task RunHttpServer(string[] args, int port)
     // Add Memory Indexer services
     builder.Services.AddMemoryIndexer();
 
+    // Add Health Checks
+    builder.Services.AddMemoryIndexerHealthChecks();
+
     // Configure MCP Server with HTTP transport
     builder.Services
         .AddMcpServer(options =>
@@ -89,7 +95,7 @@ static async Task RunHttpServer(string[] args, int port)
             options.ServerInfo = new()
             {
                 Name = "memory-indexer",
-                Version = "0.1.0"
+                Version = "0.3.0"
             };
             options.ServerInstructions = GetServerInstructions();
         })
@@ -107,19 +113,69 @@ static async Task RunHttpServer(string[] args, int port)
     // Map MCP endpoints
     app.MapMcp("/mcp");
 
-    // Add a simple health check endpoint
-    app.MapGet("/health", () => Results.Ok(new { status = "healthy", server = "memory-indexer", version = "0.1.0" }));
+    // Health Check Endpoints (Kubernetes-compatible)
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = HealthCheckResponseWriter.WriteResponse,
+        Predicate = _ => true
+    });
+
+    app.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        ResponseWriter = HealthCheckResponseWriter.WriteResponse,
+        Predicate = check => check.Tags.Contains("critical")
+    });
+
+    app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        ResponseWriter = HealthCheckResponseWriter.WriteResponse,
+        Predicate = _ => true  // All checks for liveness
+    });
+
+    app.MapHealthChecks("/health/startup", new HealthCheckOptions
+    {
+        ResponseWriter = HealthCheckResponseWriter.WriteResponse,
+        Predicate = check => check.Tags.Contains("infrastructure")
+    });
+
+    // Health check by tier
+    app.MapGet("/health/tier/{tier}", async (string tier, HealthCheckService healthCheckService) =>
+    {
+        var result = await healthCheckService.CheckHealthAsync(
+            check => check.Tags.Contains($"tier:{tier}"),
+            CancellationToken.None);
+
+        var status = result.Status == HealthStatus.Healthy ? 200 :
+                     result.Status == HealthStatus.Degraded ? 200 : 503;
+
+        return Results.Json(new
+        {
+            status = result.Status.ToString(),
+            tier,
+            checks = result.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                data = e.Value.Data
+            })
+        }, statusCode: status);
+    });
 
     // Add info endpoint
     app.MapGet("/", () => Results.Ok(new
     {
         name = "Memory Indexer MCP Server",
-        version = "0.1.0",
+        version = "0.3.0",
         transport = "HTTP/SSE",
         endpoints = new
         {
             mcp = "/mcp",
-            health = "/health"
+            health = "/health",
+            healthReady = "/health/ready",
+            healthLive = "/health/live",
+            healthStartup = "/health/startup",
+            healthByTier = "/health/tier/{tier}"
         },
         instructions = "Connect to /mcp endpoint using MCP client with HTTP transport"
     }));

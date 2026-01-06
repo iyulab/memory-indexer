@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## Vision
@@ -317,7 +317,7 @@ Based on research benchmarks:
 | Net Efficiency Gain | 17-18% | ✅ Achieved |
 | Context Utilization | <85% | ✅ Achieved |
 | Retrieval Latency | <100ms | ✅ Achieved |
-| Test Coverage | >500 tests | ✅ 638 tests |
+| Test Coverage | >500 tests | ✅ 654 tests |
 
 ## Documentation
 
