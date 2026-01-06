@@ -15,6 +15,7 @@ using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
 using MemoryIndexer.Sdk.Intelligence.Operations;
 using MemoryIndexer.Sdk.Intelligence.Reranking;
 using MemoryIndexer.Scoring;
+using MemoryIndexer.Sdk.Intelligence.Scoring;
 using MemoryIndexer.Sdk.Intelligence.Search;
 using MemoryIndexer.Sdk.Intelligence.SelfEditing;
 using MemoryIndexer.Sdk.Intelligence.Security;
@@ -141,6 +142,9 @@ public static class ServiceCollectionExtensions
         // Register scoring service
         services.TryAddSingleton<IScoringService, DefaultScoringService>();
 
+        // Register score normalizer (Phase 21.2)
+        services.TryAddSingleton<IScoreNormalizer, AdaptiveScoreNormalizer>();
+
         // Register re-ranking service (Phase 5.4)
         services.TryAddSingleton<IRerankerService, LocalRerankerService>();
 
@@ -151,7 +155,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();
         services.TryAddSingleton<IQueryExpander, QueryExpander>();
         services.TryAddSingleton<IHydeQueryExpander, HydeQueryExpander>();
-        services.TryAddSingleton<IDeduplicationService, DuplicateDetector>();
+        services.TryAddSingleton<IDeduplicationService, DeduplicationService>();
         services.TryAddSingleton<IMemoryQualityService, MemoryQualityAnalyzer>();
         services.TryAddSingleton<ImportanceAnalyzer>();
         services.TryAddSingleton<TopicSegmenter>();

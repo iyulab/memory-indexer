@@ -13,10 +13,14 @@ namespace MemoryIndexer.Scoring;
 public sealed class DefaultScoringService : IScoringService
 {
     private readonly ScoringOptions _options;
+    private readonly IScoreNormalizer? _normalizer;
 
-    public DefaultScoringService(IOptions<MemoryIndexerOptions> options)
+    public DefaultScoringService(
+        IOptions<MemoryIndexerOptions> options,
+        IScoreNormalizer? normalizer = null)
     {
         _options = options.Value.Scoring;
+        _normalizer = normalizer;
     }
 
     /// <inheritdoc />
@@ -181,6 +185,39 @@ public sealed class DefaultScoringService : IScoringService
         var contentTypeBoost = CalculateContentTypeBoost(memory.Content);
 
         return baseScore + keywordBoost + metadataBoost + contentTypeBoost;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<NormalizableMemory> ScoreAndNormalize(
+        IReadOnlyList<MemoryUnit> memories,
+        string query,
+        ReadOnlyMemory<float>? queryEmbedding = null)
+    {
+        if (memories.Count == 0)
+        {
+            return Array.Empty<NormalizableMemory>();
+        }
+
+        // Calculate raw scores for all memories
+        var scoredMemories = memories.Select(memory => new NormalizableMemory
+        {
+            Memory = memory,
+            RawScore = CalculateHybridScore(memory, query, queryEmbedding),
+            NormalizedScore = 0f // Will be set by normalizer
+        }).ToList();
+
+        // If no normalizer is configured, just return with raw scores as normalized scores
+        if (_normalizer == null)
+        {
+            foreach (var scored in scoredMemories)
+            {
+                scored.NormalizedScore = scored.RawScore;
+            }
+            return scoredMemories;
+        }
+
+        // Apply normalization
+        return _normalizer.Normalize(scoredMemories);
     }
 
     /// <summary>

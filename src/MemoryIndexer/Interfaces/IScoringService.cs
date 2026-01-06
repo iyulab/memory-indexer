@@ -67,4 +67,17 @@ public interface IScoringService
     /// <param name="queryEmbedding">Optional query embedding for semantic similarity.</param>
     /// <returns>The combined score including all boost factors.</returns>
     float CalculateHybridScore(MemoryUnit memory, string query, ReadOnlyMemory<float>? queryEmbedding = null);
+
+    /// <summary>
+    /// Scores and normalizes a collection of memories.
+    /// Phase 21.2: Score Distribution Normalization.
+    /// </summary>
+    /// <param name="memories">The memories to score and normalize.</param>
+    /// <param name="query">The search query text for hybrid scoring.</param>
+    /// <param name="queryEmbedding">Optional query embedding for semantic similarity.</param>
+    /// <returns>Normalized scored memories with improved distribution.</returns>
+    IReadOnlyList<NormalizableMemory> ScoreAndNormalize(
+        IReadOnlyList<MemoryUnit> memories,
+        string query,
+        ReadOnlyMemory<float>? queryEmbedding = null);
 }
