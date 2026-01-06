@@ -289,6 +289,8 @@ Registers (intelligence):
 - `ISummarizationService` → `ExtractiveSummarizer`
 - `IRerankerService` → `LocalRerankerService`
 - `IContradictionDetector` → `SemanticContradictionDetector`
+- `IDeduplicationService` → `DeduplicationService`
+- `IScoreNormalizer` → `AdaptiveScoreNormalizer`
 
 ## Vector Search
 
@@ -368,5 +370,19 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
 ### Memory Operations
 
 - **SemanticOperationDecider**: ADD/UPDATE/DELETE/MERGE decisions
-- **DuplicateDetector**: Semantic deduplication
+- **DeduplicationService**: Tiered semantic deduplication with content-type awareness
+  - Exact duplicates (≥0.95): Skip storage
+  - High similarity (0.85-0.94): Merge content
+  - Medium similarity (0.75-0.84): Update existing
+  - Low similarity (0.65-0.74): Add with relation
 - **ImportanceAnalyzer**: Value assessment scoring
+
+### Score Normalization
+
+- **AdaptiveScoreNormalizer**: Auto-selects normalization strategy based on score distribution
+  - Narrow spread (< 0.3): Percentile ranking for forced separation
+  - High variance (CV > 0.5): Z-score for outlier handling
+  - Normal distribution: MinMax linear scaling
+- **MinMaxScoreNormalizer**: Linear 0-1 scaling for well-distributed scores
+- **PercentileScoreNormalizer**: Rank-based normalization forcing full 0-1 spread
+- **ZScoreNormalizer**: Mean/stddev based normalization (±3σ → 0-1 mapping)
