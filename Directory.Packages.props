@@ -47,6 +47,9 @@
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
 
+    <!-- Benchmarking -->
+    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+
     <!-- LMSupply (iyulab-rnd open source) -->
     <PackageVersion Include="LMSupply.Embedder" Version="0.8.3" />
     <PackageVersion Include="LMSupply.Reranker" Version="0.8.3" />
