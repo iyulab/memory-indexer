@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-indexer
+  namespace: default
+  labels:
+    app: memory-indexer
+    version: v0.3.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: memory-indexer
+  template:
+    metadata:
+      labels:
+        app: memory-indexer
+        version: v0.3.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: memory-indexer
+        image: memory-indexer:0.3.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: health
+          containerPort: 8081
+          protocol: TCP
+
+        # Environment variables from ConfigMap and Secrets
+        envFrom:
+        - configMapRef:
+            name: memory-indexer-config
+        - secretRef:
+            name: memory-indexer-secrets
+            optional: true
+
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+
+        # Resource limits and requests
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+        # Health check probes using Phase 18.1 health endpoints
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: health
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: health
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: health
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 12  # Allow up to 60 seconds for startup
+
+        # Volume mounts for data persistence
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+        - name: logs
+          mountPath: /app/logs
+
+      # Volumes
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: memory-indexer-data
+      - name: logs
+        emptyDir: {}
+
+      # Pod disruption budget settings
+      terminationGracePeriodSeconds: 30
+
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      # Restart policy
+      restartPolicy: Always
+
+      # DNS policy
+      dnsPolicy: ClusterFirst
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: memory-indexer-data
+  namespace: default
+  labels:
+    app: memory-indexer
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard

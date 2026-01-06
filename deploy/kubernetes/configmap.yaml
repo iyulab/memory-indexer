@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: memory-indexer-config
+  namespace: default
+  labels:
+    app: memory-indexer
+data:
+  # Storage configuration
+  MEMORYINDEXER__STORAGE__TYPE: "Qdrant"
+  MEMORYINDEXER__STORAGE__CONNECTIONSTRING: "http://qdrant:6334"
+
+  # Embedding configuration
+  MEMORYINDEXER__EMBEDDING__PROVIDER: "Ollama"
+  MEMORYINDEXER__EMBEDDING__MODEL: "bge-m3"
+  MEMORYINDEXER__EMBEDDING__DIMENSIONS: "1024"
+  MEMORYINDEXER__EMBEDDING__BASEURL: "http://ollama:11434"
+
+  # VCM (Virtual Context Manager) configuration
+  MEMORYINDEXER__VCM__WORKINGMEMORY__CAPACITY: "7"
+  MEMORYINDEXER__VCM__WORKINGMEMORY__DEFAULTTTL: "00:10:00"
+  MEMORYINDEXER__VCM__WORKINGMEMORY__LAZYEMBEDDINGLOADING: "true"
+
+  MEMORYINDEXER__VCM__RECENTLYBUFFER__MAXIDLESECONDS: "60"
+  MEMORYINDEXER__VCM__RECENTLYBUFFER__TOKENTHRESHOLD: "500"
+  MEMORYINDEXER__VCM__RECENTLYBUFFER__TURNTHRESHOLD: "3"
+
+  MEMORYINDEXER__VCM__USERPROFILE__MINCONFIRMATIONCOUNT: "3"
+  MEMORYINDEXER__VCM__USERPROFILE__MINCONFIDENCETHRESHOLD: "0.8"
+
+  # Health check configuration
+  MEMORYINDEXER__HEALTH__RECENTLYBUFFER__TOKENWARNING: "2000"
+  MEMORYINDEXER__HEALTH__RECENTLYBUFFER__TOKENCRITICAL: "5000"
+  MEMORYINDEXER__HEALTH__WORKINGMEMORY__UTILIZATIONWARNING: "0.85"
+  MEMORYINDEXER__HEALTH__WORKINGMEMORY__UTILIZATIONCRITICAL: "0.95"
+
+  # Logging configuration
+  LOGGING__LOGLEVEL__DEFAULT: "Information"
+  LOGGING__LOGLEVEL__MICROSOFT: "Warning"
+  LOGGING__LOGLEVEL__MEMORYINDEXER: "Debug"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: memory-indexer-secrets
+  namespace: default
+  labels:
+    app: memory-indexer
+type: Opaque
+stringData:
+  # OpenAI API key (if using OpenAI embedding provider)
+  MEMORYINDEXER__EMBEDDING__APIKEY: "your-openai-api-key-here"
+
+  # Qdrant API key (if using Qdrant Cloud)
+  MEMORYINDEXER__STORAGE__APIKEY: "your-qdrant-api-key-here"
+
+  # Custom connection strings (for production environments)
+  # MEMORYINDEXER__STORAGE__CONNECTIONSTRING: "https://qdrant-prod:6334"
