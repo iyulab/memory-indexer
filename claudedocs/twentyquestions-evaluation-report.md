@@ -819,6 +819,282 @@ Threshold Issue:
 
 ---
 
+### Phase 40: Duplicate Detection Fix + Memory Storage Investigation
+
+**실행일**: 2026-01-07
+**Secret**: "a penguin" (living thing, animal, bird, flightless)
+**Beta 최종 추측**: "chair" (❌ completely wrong category!)
+**결과**: ❌ Alpha 승리 (Beta 0% 승률 유지)
+
+#### 구현된 변경사항
+
+| 항목 | Before (Phase 39) | After (Phase 40) | 상태 |
+|------|-------------------|------------------|------|
+| **HIGH_SIMILARITY_THRESHOLD** | 0.85 | 0.92 | ✅ 구현 |
+| **DB Inspection Code** | None | SQLite direct queries for memory counts | ✅ 추가 |
+| **Expected vs Actual Logging** | Basic | Detailed breakdown by type | ✅ 추가 |
+| **SDK Deduplication Check** | None | DEDUCTION_R retrieval test | ✅ 추가 |
+| **Using Statement** | None | `using Microsoft.Data.Sqlite;` | ✅ 추가 |
+
+#### 실행 결과 비교
+
+| 지표 | Phase 39 | Phase 40 | 변화 | 목표 | 달성 여부 |
+|------|----------|----------|------|------|----------|
+| **Beta 평균 컨텍스트** | 883 chars | 1,048 chars | **+19%** 📈 | 1,200+ chars | ⚠️ 개선 중 |
+| **Alpha 평균 컨텍스트** | 356 chars | 396 chars | +11% | 유지 | ✅ |
+| **Round 19 Recalled Memories (Beta)** | 6개 | 5개 | **-17%** ⚠️ | 15+ 개 | ❌ |
+| **중복 질문** | 2회 (INVALID) | 0회 | **-100%** 🎉 | 2회 이하 | ✅ |
+| **최종 추측 성공률** | 0% | 0% | **변화 없음** ❌ | 20%+ | ❌ |
+| **총 게임 시간** | 193.1s | 197.3s | +2% | 유지 | ✅ |
+| **총 토큰** | 14,495 | 15,795 | +9% | 유지 | ✅ |
+| **Memories Stored** | 7 | 13 | **+86%** 📈 | 80+ | ❌ |
+
+#### ✅ Major Success: Duplicate Detection Fix
+
+**Threshold 0.92 효과 확인**:
+```yaml
+Round 1:
+  Question: "Is it a living thing?"
+  Answer: "Yes"
+  Deduction: [DEDUCTION_R1] CONFIRMED: living thing ✅
+
+Round 2:
+  Question: "Is it an animal?"
+  Similarity: 0.85 with "Is it a living thing?"
+  Result: VALID (NOT duplicate!) ✅ ← Phase 40 fix working!
+  Answer: "Yes"
+  Deduction: [DEDUCTION_R2] CONFIRMED: animal ✅
+```
+
+**결과**:
+- ✅ "Is it an animal?" NOT marked as duplicate (threshold 0.92 > 0.85)
+- ✅ DEDUCTION_R2 successfully created
+- ✅ Beta asked good hierarchical questions: living thing → animal → ...
+- ✅ 중복 질문 0회 (Phase 39: 2회 → Phase 40: 0회)
+
+**Beta 질문 품질 향상**:
+- Round 1: "Is it a living thing?" → Yes
+- Round 2: "Is it an animal?" → Yes (hierarchical, valid!)
+- Round 3-18: Continued refinement questions
+- **Hierarchical questioning restored** 🎉
+
+#### 🔍 Memory Storage Investigation Results
+
+**1. Direct DB Query 결과**:
+```yaml
+DB File: twenty_questions.db (300 KB)
+Total Memories in DB: 13
+
+Memory Type Distribution (Direct Query):
+  - null: 13 memories (100%) ← 🔴 CRITICAL FINDING!
+
+Expected Memories: 84
+  - GAME_RULES: 1
+  - STRATEGY_PHASE*: 3
+  - MY_QUESTION_R*: 20
+  - DEDUCTION_R*: 20 (Semantic)
+  - QUESTION_R* (Alpha): 20
+  - ANSWER_R* (Alpha): 20
+
+Actual Stored: 13 memories
+Loss Rate: 84.5% (71 memories missing!)
+```
+
+**2. SDK Retrieval Test 결과**:
+```yaml
+Query: "DEDUCTION_R" (MinScore: 0.0)
+Results: 8 / 20 expected deductions
+
+Top Results:
+  [0.83] [DEDUCTION_R11] RULED OUT: NOT electronic...
+  [0.81] [DEDUCTION_TEMPLATE] After each answer, I record...
+  [0.74] [ROUND] Current round: 1/20...
+  [0.74] [MY_QUESTION_R20] I asked: My final guess is: chair
+  [0.71] [QA_R8] Q: Is it something you would typically find outdoors...
+  ... and 3 more
+```
+
+**3. Memory Type Distribution (SDK API)**:
+```yaml
+Beta (8 memories):
+  - Episodic: 5 (62.5%)
+  - Procedural: 3 (37.5%)
+  - Semantic: 0 ← Still missing!
+
+Alpha (5 memories):
+  - Episodic: 3 (60.0%)
+  - Semantic: 1 (20.0%)
+  - Procedural: 1 (20.0%)
+```
+
+#### 🔴 ROOT CAUSE IDENTIFIED: MemoryType = NULL in DB
+
+**Critical Finding**:
+```yaml
+Problem: All 13 memories have MemoryType = "null" in metadata
+
+Evidence:
+  Direct DB Query: json_extract(metadata, '$.MemoryType') returns "null" for all rows
+  SDK API: Shows Episodic/Semantic/Procedural types correctly
+
+Hypothesis:
+  1. MemoryType metadata is NOT being written to DB correctly
+  2. OR metadata JSON structure is wrong (missing MemoryType field)
+  3. SDK retrieval applies MemoryType filtering AFTER DB query (in-memory)
+  4. DB stores all memories but SDK filters out most due to null MemoryType
+
+Impact:
+  - DB has 13 memories but 84.5% are "lost" (actually filtered out)
+  - Only memories with valid MemoryType pass SDK filtering
+  - Semantic deductions exist in DB but have MemoryType = null
+```
+
+**Code Location for Investigation**:
+```csharp
+// MemoryIndexer.Sdk: Check where MemoryType is set in metadata
+// Look for json_extract patterns and metadata serialization
+
+// TwentyQuestionsGame: Check EncodeRequest metadata
+await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    UserId = BETA_USER_ID,
+    Content = deduction,
+    Type = MemoryType.Semantic,  // ← Is this being serialized to metadata?
+    ...
+});
+```
+
+#### 🐛 DB Inspection Code Bug
+
+**Error**: "An open reader is associated with this command"
+```csharp
+// Phase 40 code bug (Program.cs:1005-1010)
+using var cmd = connection.CreateCommand();
+cmd.CommandText = "SELECT ...";
+using var reader = cmd.ExecuteReader();
+// ... read rows ...
+
+cmd.CommandText = "SELECT COUNT(*) FROM memories";  // ← ERROR: reader still open!
+using var reader2 = cmd.ExecuteReader();
+```
+
+**Fix Needed for Phase 41**: Close reader before reusing command, or create separate commands.
+
+#### ❌ Candidate Generation Still Wrong
+
+**Beta Round 19 candidates**:
+```yaml
+Expected (animal, bird, penguin-like):
+  - penguin ✅ (correct answer)
+  - ostrich (flightless bird)
+  - emu (flightless bird)
+  - kiwi (flightless bird)
+  - chicken (common bird)
+
+Actual:
+  1. Rock (non-living!) ❌
+  2. Bicycle (man-made!) ❌
+  3. Chair (man-made!) ❌ ← Beta's final guess
+  4. Apple (plant, not animal!) ❌
+  5. Dog (animal, but not bird) ⚠️
+```
+
+**Analysis**:
+- Beta still failed to recall "living thing" or "animal" deductions
+- Round 19 recalled only 5 memories (vs 15+ target)
+- DEDUCTION_R1, DEDUCTION_R2 NOT in recalled set
+- Candidates show no awareness of "living" or "animal" constraints
+
+**Round 19 Recalled Memories (Beta, 5 total)**:
+```
+[0.87] [GAME_RULES] I am Beta, the Guesser...
+[0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category...
+[0.80] [DEDUCTION_R11] RULED OUT: NOT electronic...
+[0.78] [DEDUCTION_TEMPLATE] After each answer, I record...
+[0.73] [ROUND] Current round: 1/20...
+```
+
+**Missing Critical Deductions**:
+- ❌ DEDUCTION_R1: "CONFIRMED: living thing"
+- ❌ DEDUCTION_R2: "CONFIRMED: animal"
+- These should have highest relevance for candidate generation!
+
+#### 🎯 Phase 40 구현 효과 종합
+
+**✅ 성공 (40%)**:
+1. **Duplicate Detection Fix**:
+   - ✅ Threshold 0.92 working perfectly
+   - ✅ Hierarchical questions allowed (living thing → animal)
+   - ✅ Zero false positives (0 INVALID questions)
+   - ✅ DEDUCTION_R2 successfully created
+
+2. **DB Investigation Tools**:
+   - ✅ DB inspection code working (except one bug)
+   - ✅ Root cause identified: MemoryType = null
+   - ✅ SDK deduplication check reveals filtering issue
+
+3. **Memory Count Improvement**:
+   - ✅ 7 → 13 memories (+86%)
+   - ✅ Some progress toward 84 target
+
+**❌ 실패 (60%)**:
+1. **Recall Quality**:
+   - ❌ 6 → 5 recalled memories (-17%)
+   - ❌ Critical deductions still missing in recall
+   - ❌ 평균 컨텍스트 1,048 chars (목표: 1,200+)
+
+2. **Win Rate**:
+   - ❌ 0% 유지 (no improvement)
+   - ❌ Beta guessed "chair" for "penguin" (wrong category)
+
+3. **Memory Storage**:
+   - ❌ 13/84 memories (84.5% loss)
+   - ❌ MemoryType = null for all DB rows
+   - ❌ Semantic deductions not properly stored/filtered
+
+**Critical Issues**:
+1. 🔴 **MemoryType metadata serialization bug** (root cause)
+2. 🔴 **SDK filtering too aggressive** (based on null MemoryType)
+3. 🔴 **Recall query embedding quality** (DEDUCTION_R1/R2 not recalled)
+
+#### 다음 Phase 제안
+
+**Phase 41: MemoryType Metadata Fix + Recall Quality Enhancement**
+
+**Priority 1 (Critical - MemoryType Bug)**:
+1. **Investigate MemoryType serialization**:
+   - Check `MemoryIndexer.Sdk` metadata JSON structure
+   - Verify `EncodeRequest.Type` → metadata.MemoryType mapping
+   - Fix serialization if broken, or update DB schema if needed
+
+2. **Verify storage backend**:
+   - SQLiteVec metadata column structure
+   - Ensure MemoryType field is being written
+   - Test with direct DB insert to isolate issue
+
+**Priority 2 (Important - Recall Quality)**:
+1. **Query embedding optimization**:
+   - Improve Round 19 query to explicitly mention "living thing", "animal"
+   - Test different query formulations for better DEDUCTION recall
+   - Consider using DEDUCTION tags in query: "[DEDUCTION_R1] [DEDUCTION_R2]"
+
+2. **Increase MinScore threshold test**:
+   - Current: 0.3 (might be too low, noise)
+   - Test: 0.5, 0.6 to see if quality improves
+
+**Priority 3 (Nice-to-Have)**:
+1. Fix DB inspection code bug (close readers properly)
+2. Add memory type null detection and warning
+3. Implement metadata validation on encode
+
+**Expected Outcome**:
+- MemoryType fix → 13 → 80+ memories stored
+- Better recall → 5 → 15+ memories in Round 19
+- Candidate quality → animals/birds instead of chairs/bicycles
+- Win rate → 0% → 20%+ (finally!)
+
+---
+
 ## 📈 성능 벤치마크 비교
 
 ### 전통적 방식 (가상 추정) vs Memory-Only 방식 (실제)

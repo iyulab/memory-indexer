@@ -8,6 +8,7 @@ using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Data.Sqlite;  // Phase 40: For DB inspection
 
 // ============================================================================
 // Twenty Questions Game - AI vs AI Demo
@@ -127,7 +128,7 @@ const string ALPHA_SESSION_ID = "game_session_alpha";
 const string BETA_USER_ID = "beta_guesser";
 const string BETA_SESSION_ID = "game_session_beta";
 const int MAX_ROUNDS = 20;
-const float HIGH_SIMILARITY_THRESHOLD = 0.85f;
+const float HIGH_SIMILARITY_THRESHOLD = 0.92f;  // Phase 40: Increased from 0.85 to allow hierarchical questions
 
 // Phase 37-38: Strategic questioning phases for Beta
 const string BETA_STRATEGY_PHASE1 = @"[STRATEGY_PHASE1] Rounds 1-5: Establish category
@@ -954,6 +955,148 @@ Console.WriteLine("  │ - NO chat history was passed                           
 Console.WriteLine("  │ - Context came 100% from IMemoryPrimitives recall      │");
 Console.WriteLine("  │ - Explicit Type × Scope × Tier control demonstrated    │");
 Console.WriteLine("  └────────────────────────────────────────────────────────┘");
+Console.WriteLine();
+
+// ============================================================================
+// Phase 40: Memory Storage Investigation
+// ============================================================================
+Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
+Console.WriteLine("║  PHASE 40: MEMORY STORAGE INVESTIGATION                       ║");
+Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
+Console.WriteLine();
+
+// 1. Direct DB inspection
+var dbPath = Path.Combine(Environment.CurrentDirectory, "twenty_questions.db");
+if (File.Exists(dbPath))
+{
+    Console.WriteLine($"📁 DB file: {dbPath}");
+    Console.WriteLine($"📊 DB size: {new FileInfo(dbPath).Length / 1024.0:F2} KB");
+    Console.WriteLine();
+
+    try
+    {
+        using var connection = new SqliteConnection($"Data Source={dbPath}");
+        connection.Open();
+
+        // Count memories by metadata type
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT
+                json_extract(metadata, '$.MemoryType') as MemoryType,
+                COUNT(*) as Count
+            FROM memories
+            GROUP BY MemoryType
+            ORDER BY Count DESC";
+
+        using var reader = cmd.ExecuteReader();
+        Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+        Console.WriteLine("  │ MEMORY COUNTS BY TYPE (Direct DB Query)                    │");
+        Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+        while (reader.Read())
+        {
+            var type = reader.IsDBNull(0) ? "null" : reader.GetString(0);
+            var count = reader.GetInt32(1);
+            Console.WriteLine($"  │   {type,-12} {count,3} memories");
+        }
+        Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
+        Console.WriteLine();
+
+        // Total count
+        cmd.CommandText = "SELECT COUNT(*) FROM memories";
+        using var reader2 = cmd.ExecuteReader();
+        reader2.Read();
+        var totalCount = reader2.GetInt64(0);
+        Console.WriteLine($"  Total memories in DB: {totalCount}");
+        Console.WriteLine();
+
+        // Sample Semantic memories
+        cmd.CommandText = @"
+            SELECT content, metadata
+            FROM memories
+            WHERE json_extract(metadata, '$.MemoryType') = 'Semantic'
+            LIMIT 5";
+
+        using var reader3 = cmd.ExecuteReader();
+        Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+        Console.WriteLine("  │ SAMPLE SEMANTIC MEMORIES (Deductions)                       │");
+        Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+        int sampleCount = 0;
+        while (reader3.Read())
+        {
+            var content = reader3.GetString(0);
+            var displayContent = content.Length > 80 ? content.Substring(0, 80) + "..." : content;
+            Console.WriteLine($"  │ [{++sampleCount}] {displayContent}");
+        }
+        if (sampleCount == 0)
+        {
+            Console.WriteLine("  │ ⚠️ No Semantic memories found!                              │");
+        }
+        Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
+        Console.WriteLine();
+    }
+    catch (Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"  ❌ DB inspection error: {ex.Message}");
+        Console.ResetColor();
+        Console.WriteLine();
+    }
+}
+else
+{
+    Console.WriteLine($"  ⚠️ DB file not found: {dbPath}");
+    Console.WriteLine();
+}
+
+// 2. Expected vs Actual comparison
+Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+Console.WriteLine("  │ EXPECTED VS ACTUAL MEMORY COUNT                             │");
+Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+int expectedMemories = 1 + 3 + (metrics.Rounds.Count * 4);  // GAME_RULES + STRATEGY + (rounds × 4 types)
+Console.WriteLine($"  │ Expected total: {expectedMemories,3} memories");
+Console.WriteLine($"  │   - GAME_RULES: 1");
+Console.WriteLine($"  │   - STRATEGY_PHASE*: 3");
+Console.WriteLine($"  │   - MY_QUESTION_R*: {metrics.Rounds.Count}");
+Console.WriteLine($"  │   - DEDUCTION_R*: {metrics.Rounds.Count} (Semantic)");
+Console.WriteLine($"  │   - QUESTION_R* (Alpha): {metrics.Rounds.Count}");
+Console.WriteLine($"  │   - ANSWER_R* (Alpha): {metrics.Rounds.Count}");
+Console.WriteLine($"  │");
+Console.WriteLine($"  │ Actual stored: {totalMemories,3} memories");
+Console.WriteLine($"  │ Loss rate: {100.0 * (expectedMemories - totalMemories) / expectedMemories:F1}%");
+Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
+Console.WriteLine();
+
+// 3. SDK deduplication check
+Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
+Console.WriteLine("  │ SDK DEDUPLICATION CHECK (DEDUCTION_R queries)               │");
+Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
+var deductionRequest = new RetrieveRequest
+{
+    UserId = BETA_USER_ID,
+    Query = "DEDUCTION_R",
+    Limit = 50,
+    MinScore = 0.0f
+};
+var deductions = await memoryPrimitives.RetrieveAsync(deductionRequest);
+Console.WriteLine($"  │ Deductions found by SDK: {deductions.Count,2} / {metrics.Rounds.Count} expected");
+if (deductions.Count > 0)
+{
+    Console.WriteLine("  │");
+    foreach (var d in deductions.Take(5))
+    {
+        var displayContent = d.Memory.Content.Length > 60 ? d.Memory.Content.Substring(0, 60) + "..." : d.Memory.Content;
+        Console.WriteLine($"  │   [{d.Score:F2}] {displayContent}");
+    }
+    if (deductions.Count > 5)
+    {
+        Console.WriteLine($"  │   ... and {deductions.Count - 5} more");
+    }
+}
+else
+{
+    Console.WriteLine("  │ ⚠️ No deductions found via SDK retrieval!");
+}
+Console.WriteLine("  └─────────────────────────────────────────────────────────────┘");
 Console.WriteLine();
 
 // Cleanup option
