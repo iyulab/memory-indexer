@@ -1,0 +1,817 @@
+╔══════════════════════════════════════════════════════════════╗
+║          Twenty Questions Game - Memory Demo                  ║
+║          AI vs AI: 상대 응답 1개만 + Memory Recall            ║
+║          API: IMemoryPrimitives (3-Axis Model)                ║
+╚══════════════════════════════════════════════════════════════╝
+
+[ENV] Loaded: D:\data\memory-indexer\samples\TwentyQuestionsGame\..\..\.env
+[CONFIG] LLM: OpenAI gpt-5.2
+[CONFIG] Embedding: OpenAI text-embedding-3-small
+[CONFIG] Memory Log: Full (set MEMORY_LOG_MODE=full|summary)
+[CONFIG] API: IMemoryPrimitives (Expert API with 3-Axis control)
+
+╔══════════════════════════════════════════════════════════════╗
+║  GAME START                                                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+[SECRET] Alpha is thinking of: "a red apple" (hidden from Beta)
+
+[INIT] Clearing previous game memories...
+[INIT] Game initialized. Starting rounds...
+
+══════════════════════════ Round 1/20 ══════════════════════════
+
+[BETA] Received from Alpha: "The game has started. Ask your first question!"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 301ms, 📝 801 chars):
+       [0.93] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.86] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.85] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.72] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it a living thing?
+       ⏱️ LLM: 947ms | 🎯 Prompt: 489 | 💬 Completion: 9
+[ALPHA] Received question: "Is it a living thing?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 552ms, 📝 357 chars):
+       [0.90] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.72] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 1304ms | 🎯 Prompt: 233 | 💬 Completion: 4
+  ⏱️ Round 1 Summary: Recall=853ms, LLM=2251ms, Tokens=735, Total=11088ms
+
+══════════════════════════ Round 2/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 400ms, 📝 648 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.86] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.72] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it man-made?
+       ⏱️ LLM: 664ms | 🎯 Prompt: 440 | 💬 Completion: 8
+[ALPHA] Received question: "Is it man-made?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 4 memories (⏱️ 330ms, 📝 428 chars):
+       [0.90] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.83] [QUESTION_R1] Beta asked: Is it a living thing?
+       [0.70] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 927ms | 🎯 Prompt: 256 | 💬 Completion: 4
+  ⏱️ Round 2 Summary: Recall=730ms, LLM=1591ms, Tokens=708, Total=10149ms
+
+══════════════════════════ Round 3/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 341ms, 📝 648 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.86] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.84] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.72] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it man-made?
+       ⏱️ LLM: 3770ms | 🎯 Prompt: 440 | 💬 Completion: 8
+[ALPHA] Received question: "Is it man-made?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 4 memories (⏱️ 401ms, 📝 428 chars):
+       [0.90] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.90] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.71] [ROUND] Current round: 1/20
+[ALPHA] >>> INVALID: duplicate question (already asked this round)
+        ⏱️ LLM: 831ms | 🎯 Prompt: 259 | 💬 Completion: 13
+  ⏱️ Round 3 Summary: Recall=742ms, LLM=4601ms, Tokens=720, Total=7398ms
+
+══════════════════════════ Round 4/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: duplicate question (already asked this round)"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 636ms, 📝 648 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.86] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.84] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.75] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it man-made?
+       ⏱️ LLM: 697ms | 🎯 Prompt: 457 | 💬 Completion: 8
+[ALPHA] Received question: "Is it man-made?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 4 memories (⏱️ 445ms, 📝 428 chars):
+       [0.91] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.73] [ROUND] Current round: 1/20
+[ALPHA] >>> INVALID: duplicate question (already asked)
+        ⏱️ LLM: 1070ms | 🎯 Prompt: 259 | 💬 Completion: 11
+  ⏱️ Round 4 Summary: Recall=1081ms, LLM=1767ms, Tokens=735, Total=5862ms
+
+══════════════════════════ Round 5/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: duplicate question (already asked)"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 345ms, 📝 648 chars):
+       [0.93] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.86] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.84] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.78] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it man-made?
+       ⏱️ LLM: 1014ms | 🎯 Prompt: 453 | 💬 Completion: 8
+[ALPHA] Received question: "Is it man-made?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 4 memories (⏱️ 269ms, 📝 428 chars):
+       [0.90] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.90] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.74] [ROUND] Current round: 1/20
+[ALPHA] >>> INVALID: duplicate question
+        ⏱️ LLM: 689ms | 🎯 Prompt: 259 | 💬 Completion: 7
+  ⏱️ Round 5 Summary: Recall=614ms, LLM=1703ms, Tokens=727, Total=4574ms
+
+══════════════════════════ Round 6/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: duplicate question"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 450ms, 📝 648 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.83] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it man-made?
+       ⏱️ LLM: 723ms | 🎯 Prompt: 379 | 💬 Completion: 8
+[ALPHA] Received question: "Is it man-made?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 4 memories (⏱️ 359ms, 📝 428 chars):
+       [0.90] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.73] [ROUND] Current round: 1/20
+[ALPHA] >>> INVALID: duplicate question (already asked in this round)
+        ⏱️ LLM: 1130ms | 🎯 Prompt: 259 | 💬 Completion: 14
+  ⏱️ Round 6 Summary: Recall=809ms, LLM=1853ms, Tokens=660, Total=4994ms
+
+══════════════════════════ Round 7/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: duplicate question (already asked in this round)"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 556ms, 📝 648 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.84] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it something you can hold in one hand?
+       ⏱️ LLM: 872ms | 🎯 Prompt: 392 | 💬 Completion: 13
+[ALPHA] Received question: "Is it something you can hold in one hand?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 4 memories (⏱️ 331ms, 📝 428 chars):
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.77] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.77] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 888ms | 🎯 Prompt: 269 | 💬 Completion: 4
+  ⏱️ Round 7 Summary: Recall=887ms, LLM=1760ms, Tokens=678, Total=9416ms
+
+══════════════════════════ Round 8/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 323ms, 📝 778 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.83] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it an electronic device?
+       ⏱️ LLM: 860ms | 🎯 Prompt: 413 | 💬 Completion: 9
+[ALPHA] Received question: "Is it an electronic device?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 5 memories (⏱️ 293ms, 📝 519 chars):
+       [0.90] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.82] [QUESTION_R7] Beta asked: Is it something you can hold in one hand?
+       [0.81] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.73] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 670ms | 🎯 Prompt: 290 | 💬 Completion: 4
+  ⏱️ Round 8 Summary: Recall=616ms, LLM=1530ms, Tokens=716, Total=9334ms
+
+══════════════════════════ Round 9/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 323ms, 📝 778 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.85] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it made primarily of metal?
+       ⏱️ LLM: 757ms | 🎯 Prompt: 413 | 💬 Completion: 10
+[ALPHA] Received question: "Is it made primarily of metal?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 5 memories (⏱️ 270ms, 📝 505 chars):
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [QUESTION_R8] Beta asked: Is it an electronic device?
+       [0.85] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.82] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.74] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 628ms | 🎯 Prompt: 288 | 💬 Completion: 4
+  ⏱️ Round 9 Summary: Recall=593ms, LLM=1385ms, Tokens=715, Total=8952ms
+
+══════════════════════════ Round 10/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 392ms, 📝 778 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.85] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it made primarily of metal?
+       ⏱️ LLM: 794ms | 🎯 Prompt: 413 | 💬 Completion: 10
+[ALPHA] Received question: "Is it made primarily of metal?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 5 memories (⏱️ 343ms, 📝 508 chars):
+       [0.93] [QUESTION_R9] Beta asked: Is it made primarily of metal?
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.82] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.75] [ROUND] Current round: 1/20
+[ALPHA] Duplicate detected! Similarity: 0.98
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+  ⏱️ Round 10 Summary: Recall=735ms, LLM=794ms, Tokens=423, Total=2886ms
+
+══════════════════════════ Round 11/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 0.98. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 493ms, 📝 941 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.80] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it electronic (does it use electricity or a battery)?
+       ⏱️ LLM: 898ms | 🎯 Prompt: 503 | 💬 Completion: 15
+[ALPHA] Received question: "Is it electronic (does it use electricity or a battery)?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 5 memories (⏱️ 386ms, 📝 508 chars):
+       [0.90] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.81] [QUESTION_R9] Beta asked: Is it made primarily of metal?
+       [0.79] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.74] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 767ms | 🎯 Prompt: 300 | 💬 Completion: 4
+  ⏱️ Round 11 Summary: Recall=879ms, LLM=1665ms, Tokens=822, Total=10475ms
+
+══════════════════════════ Round 12/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 448ms, 📝 941 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.80] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it something you would typically find in a kitchen?
+       ⏱️ LLM: 786ms | 🎯 Prompt: 463 | 💬 Completion: 14
+[ALPHA] Received question: "Is it something you would typically find in a kitchen?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 5 memories (⏱️ 394ms, 📝 535 chars):
+       [0.88] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.80] [QUESTION_R11] Beta asked: Is it electronic (does it use electricity or a battery)?
+       [0.79] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.74] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 658ms | 🎯 Prompt: 302 | 💬 Completion: 4
+  ⏱️ Round 12 Summary: Recall=842ms, LLM=1444ms, Tokens=783, Total=10250ms
+
+══════════════════════════ Round 13/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 544ms, 📝 941 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.80] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it primarily used for writing or drawing?
+       ⏱️ LLM: 889ms | 🎯 Prompt: 478 | 💬 Completion: 12
+[ALPHA] Received question: "Is it primarily used for writing or drawing?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 4 memories (⏱️ 669ms, 📝 462 chars):
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.80] [QUESTION_R12] Beta asked: Is it something you would typically find in a kitchen?
+       [0.74] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 581ms | 🎯 Prompt: 269 | 💬 Completion: 4
+  ⏱️ Round 13 Summary: Recall=1213ms, LLM=1470ms, Tokens=763, Total=9452ms
+
+══════════════════════════ Round 14/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 347ms, 📝 941 chars):
+       [0.91] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.80] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it something people commonly use to write or draw (like a pen or pencil)?
+       ⏱️ LLM: 965ms | 🎯 Prompt: 478 | 💬 Completion: 20
+[ALPHA] Received question: "Is it something people commonly use to write or draw (like a pen or pencil)?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 6 memories (⏱️ 311ms, 📝 628 chars):
+       [0.90] [QUESTION_R13] Beta asked: Is it primarily used for writing or drawing?
+       [0.88] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.81] [QUESTION_R12] Beta asked: Is it something you would typically find in a kitchen?
+       [0.78] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.77] [ROUND] Current round: 1/20
+[ALPHA] Duplicate detected! Similarity: 0.94
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 0.94. Ask something different.
+  ⏱️ Round 14 Summary: Recall=658ms, LLM=965ms, Tokens=498, Total=3286ms
+
+══════════════════════════ Round 15/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 0.94. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 653ms, 📝 941 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+       [0.80] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+[BETA] >>> Is it something primarily used for writing or drawing?
+       ⏱️ LLM: 762ms | 🎯 Prompt: 518 | 💬 Completion: 13
+[ALPHA] Received question: "Is it something primarily used for writing or drawing?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 6 memories (⏱️ 456ms, 📝 628 chars):
+       [0.94] [QUESTION_R13] Beta asked: Is it primarily used for writing or drawing?
+       [0.88] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.80] [QUESTION_R12] Beta asked: Is it something you would typically find in a kitchen?
+       [0.80] [ROUND] Current round: 1/20
+       [0.78] [ANSWER_R2] I answered 'No' to: Is it man-made?
+[ALPHA] Duplicate detected! Similarity: 1.02
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 1.02. Ask something different.
+  ⏱️ Round 15 Summary: Recall=1109ms, LLM=762ms, Tokens=531, Total=4013ms
+
+══════════════════════════ Round 16/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 1.02. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 299ms, 📝 941 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.84] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.81] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.80] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+[BETA] >>> Is it primarily used for writing or drawing?
+       ⏱️ LLM: 786ms | 🎯 Prompt: 518 | 💬 Completion: 12
+[ALPHA] Received question: "Is it primarily used for writing or drawing?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 6 memories (⏱️ 632ms, 📝 628 chars):
+       [0.93] [QUESTION_R13] Beta asked: Is it primarily used for writing or drawing?
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.80] [ROUND] Current round: 1/20
+       [0.79] [QUESTION_R12] Beta asked: Is it something you would typically find in a kitchen?
+       [0.76] [ANSWER_R2] I answered 'No' to: Is it man-made?
+[ALPHA] Duplicate detected! Similarity: 1.03
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 1.03. Ask something different.
+  ⏱️ Round 16 Summary: Recall=931ms, LLM=786ms, Tokens=530, Total=3589ms
+
+══════════════════════════ Round 17/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 1.03. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 381ms, 📝 941 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.84] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+[BETA] >>> Is it primarily used for writing or drawing?
+       ⏱️ LLM: 882ms | 🎯 Prompt: 518 | 💬 Completion: 12
+[ALPHA] Received question: "Is it primarily used for writing or drawing?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 6 memories (⏱️ 286ms, 📝 628 chars):
+       [0.93] [QUESTION_R13] Beta asked: Is it primarily used for writing or drawing?
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.80] [ROUND] Current round: 1/20
+       [0.79] [QUESTION_R12] Beta asked: Is it something you would typically find in a kitchen?
+       [0.77] [ANSWER_R2] I answered 'No' to: Is it man-made?
+[ALPHA] Duplicate detected! Similarity: 1.03
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 1.03. Ask something different.
+  ⏱️ Round 17 Summary: Recall=667ms, LLM=882ms, Tokens=530, Total=2865ms
+
+══════════════════════════ Round 18/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 1.03. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 301ms, 📝 941 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.85] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+[BETA] >>> Is it used primarily for writing or drawing?
+       ⏱️ LLM: 811ms | 🎯 Prompt: 518 | 💬 Completion: 12
+[ALPHA] Received question: "Is it used primarily for writing or drawing?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 6 memories (⏱️ 382ms, 📝 628 chars):
+       [0.93] [QUESTION_R13] Beta asked: Is it primarily used for writing or drawing?
+       [0.89] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.86] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.80] [ROUND] Current round: 1/20
+       [0.80] [QUESTION_R12] Beta asked: Is it something you would typically find in a kitchen?
+       [0.77] [ANSWER_R2] I answered 'No' to: Is it man-made?
+[ALPHA] Duplicate detected! Similarity: 1.03
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 1.03. Ask something different.
+  ⏱️ Round 18 Summary: Recall=683ms, LLM=811ms, Tokens=530, Total=3864ms
+
+══════════════════════════ Round 19/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 1.03. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 309ms, 📝 941 chars):
+       [0.92] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.84] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.83] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [DEDUCTION_R7] CONFIRMED: The secret HAS the property asked in 'Is it something you can hold in one hand?'
+       [0.81] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+[BETA] >>> **CONFIRMED (from memories):**
+- It is **not a living thing**.
+- It is **something you can hold in one hand**.
+
+**RULED OUT (from memories):**
+- It is **not living**.
+
+**Candidates (must be non-living + one-hand holdable):**
+1. **Key**
+2. **Coin**
+3. **Smartphone**
+4. **Pen**
+5. **Spoon**
+
+My candidates are: **key, coin, smartphone, pen, spoon**.  
+**Final question:** *Does it have moving parts (like hinges, buttons, or a switch) that are meant to be operated?*
+       ⏱️ LLM: 3632ms | 🎯 Prompt: 824 | 💬 Completion: 139
+[ALPHA] Received question: "**CONFIRMED (from memories):**
+- It is **not a living thing**.
+- It is **something you can hold in one hand**.
+
+**RULED OUT (from memories):**
+- It is **not living**.
+
+**Candidates (must be non-living + one-hand holdable):**
+1. **Key**
+2. **Coin**
+3. **Smartphone**
+4. **Pen**
+5. **Spoon**
+
+My candidates are: **key, coin, smartphone, pen, spoon**.  
+**Final question:** *Does it have moving parts (like hinges, buttons, or a switch) that are meant to be operated?*"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 5 memories (⏱️ 861ms, 📝 533 chars):
+       [0.87] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.81] [QUESTION_R12] Beta asked: Is it something you would typically find in a kitchen?
+       [0.80] [ANSWER_R2] I answered 'No' to: Is it man-made?
+       [0.78] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 741ms | 🎯 Prompt: 552 | 💬 Completion: 4
+  ⏱️ Round 19 Summary: Recall=1170ms, LLM=4373ms, Tokens=1519, Total=12639ms
+
+══════════════════════════ Round 20/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 797ms, 📝 1,327 chars):
+       [0.94] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.84] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.84] [DEDUCTION_R1] RULED OUT: The secret does NOT have the property asked in 'Is it a living thing?'
+       [0.83] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [QA_R10] Q: Is it made primarily of metal? -> A: INVALID: This is too similar to a previous question. Score: 0.98. Ask something different.
+       [0.81] [MY_QUESTION_R19] I asked: **CONFIRMED (from memories):**
+       - It is **not a living thing**.
+       - It is **something you can hold in one hand**.
+       
+       **RULED OUT (from memories):**
+       - It is **not living**.
+       
+       **Candidates (must be non-living + one-hand holdable):**
+       1. **Key**
+       2. **Coin**
+       3. **Smartphone**
+       4. **Pen**
+       5. **Spoon**
+       
+       My candidates are: **key, coin, smartphone, pen, spoon**.  
+       **Final question:** *Does it have moving parts (like hinges, buttons, or a switch) that are meant to be operated?*
+[BETA] >>> My final guess is: coin
+       ⏱️ LLM: 618ms | 🎯 Prompt: 935 | 💬 Completion: 9
+[ALPHA] Received question: "My final guess is: coin"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 4 memories (⏱️ 342ms, 📝 873 chars):
+       [0.90] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.88] [GAME_SECRET] My secret answer is: a red apple. I must not reveal this directly.
+       [0.86] [ROUND] Current round: 1/20
+       [0.85] [QUESTION_R19] Beta asked: **CONFIRMED (from memories):**
+       - It is **not a living thing**.
+       - It is **something you can hold in one hand**.
+       
+       **RULED OUT (from memories):**
+       - It is **not living**.
+       
+       **Candidates (must be non-living + one-hand holdable):**
+       1. **Key**
+       2. **Coin**
+       3. **Smartphone**
+       4. **Pen**
+       5. **Spoon**
+       
+       My candidates are: **key, coin, smartphone, pen, spoon**.  
+       **Final question:** *Does it have moving parts (like hinges, buttons, or a switch) that are meant to be operated?*
+[ALPHA] >>> Wrong guess. Keep trying!
+  ⏱️ Round 20 Summary: Recall=1139ms, LLM=618ms, Tokens=944, Total=2834ms
+
+╔══════════════════════════════════════════════════════════════╗
+║  GAME OVER                                                    ║
+╚══════════════════════════════════════════════════════════════╝
+
+  👑 ALPHA WINS! Beta failed to guess: a red apple
+
+╔══════════════════════════════════════════════════════════════╗
+║  MEMORY SYSTEM STATISTICS                                     ║
+╚══════════════════════════════════════════════════════════════╝
+  Alpha memories:        7
+  Beta memories:         9
+  Total memories:        16
+
+  Expected (no dedup):   ~86 memories
+  Actual stored:         16 memories
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ RECALL QUALITY ANALYSIS                                     │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Avg Beta recall size:  841 chars
+  │ Avg Alpha recall size: 525 chars
+  │ Memories recalled/query: 15 (configured limit)              │
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ MEMORY TYPE DISTRIBUTION (3-Axis Model)                     │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Beta:                                                       │
+  │   Episodic       6 memories (66.7%)
+  │   Procedural     3 memories (33.3%)
+  │                                                             │
+  │ Alpha:                                                      │
+  │   Episodic       5 memories (71.4%)
+  │   Procedural     1 memories (14.3%)
+  │   Semantic       1 memories (14.3%)
+  └─────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════╗
+║  PERFORMANCE STATISTICS                                       ║
+╚══════════════════════════════════════════════════════════════╝
+  Total game time:      152,288ms (152.3s)
+  Rounds played:        20
+  Avg round time:       6,896ms
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ RECALL PERFORMANCE                                          │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Total recall time:    16,951ms
+  │ Avg Beta recall:      432ms
+  │ Avg Alpha recall:     416ms
+  │ Max recall time:      861ms
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ LLM PERFORMANCE                                             │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Total LLM time:       33,011ms (33.0s)
+  │ Avg Beta LLM:         1,106ms
+  │ Avg Alpha LLM:        837ms
+  │ Max LLM time:         3,770ms
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ TOKEN USAGE                                                 │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Total prompt tokens:  13,837
+  │ Total completion:     430
+  │ Total tokens:         14,267
+  │ Avg prompt/round:     692
+  │ Avg completion/round: 22
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ CONTEXT SIZE (Characters)                                   │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Avg Beta context:     841 chars
+  │ Avg Alpha context:    525 chars
+  │ Max context size:     1,327 chars
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌───────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+  │ Round │ Recall   │ LLM      │ Prompt   │ Complet. │ Total    │
+  ├───────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+  │   1   │    853ms │   2251ms │    722   │     13   │  11088ms │
+  │   2   │    730ms │   1591ms │    696   │     12   │  10149ms │
+  │   3   │    742ms │   4601ms │    699   │     21   │   7398ms │
+  │   4   │   1081ms │   1767ms │    716   │     19   │   5862ms │
+  │   5   │    614ms │   1703ms │    712   │     15   │   4574ms │
+  │   6   │    809ms │   1853ms │    638   │     22   │   4994ms │
+  │   7   │    887ms │   1760ms │    661   │     17   │   9416ms │
+  │   8   │    616ms │   1530ms │    703   │     13   │   9334ms │
+  │   9   │    593ms │   1385ms │    701   │     14   │   8952ms │
+  │  10   │    735ms │    794ms │    413   │     10   │   2886ms │
+  │  11   │    879ms │   1665ms │    803   │     19   │  10475ms │
+  │  12   │    842ms │   1444ms │    765   │     18   │  10250ms │
+  │  13   │   1213ms │   1470ms │    747   │     16   │   9452ms │
+  │  14   │    658ms │    965ms │    478   │     20   │   3286ms │
+  │  15   │   1109ms │    762ms │    518   │     13   │   4013ms │
+  │  16   │    931ms │    786ms │    518   │     12   │   3589ms │
+  │  17   │    667ms │    882ms │    518   │     12   │   2865ms │
+  │  18   │    683ms │    811ms │    518   │     12   │   3864ms │
+  │  19   │   1170ms │   4373ms │   1376   │    143   │  12639ms │
+  │  20   │   1139ms │    618ms │    935   │      9   │   2834ms │
+  └───────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+
+  ┌────────────────────────────────────────────────────────┐
+  │ KEY DEMONSTRATION (3-Axis Model):                      │
+  │ - Each LLM call received ONLY the opponent's last msg  │
+  │ - NO chat history was passed                           │
+  │ - Context came 100% from IMemoryPrimitives recall      │
+  │ - Explicit Type × Scope × Tier control demonstrated    │
+  └────────────────────────────────────────────────────────┘
+
+Delete game memories? (y/N): 
+Thank you for playing!

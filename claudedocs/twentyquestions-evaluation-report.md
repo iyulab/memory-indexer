@@ -468,6 +468,206 @@ Round 2에서 INVALID 처리 (similarity 0.85)
 
 ---
 
+## 🔄 Phase 38 Before/After 비교
+
+### 개선사항 요약
+
+**Phase 38**: Final Deduction Reasoning & Early Classification (2026-01-07 구현)
+
+| 개선 항목 | Before | After | 상태 |
+|-----------|--------|-------|------|
+| **PHASE1 전략** | Living/Non-living/Man-made만 | Animal/Plant 구분 명시 | ✅ 구현 완료 |
+| **Round 19 Strategy** | 일반 질문 | Candidate Generation 단계 | ✅ 구현 완료 |
+| **Round 20 Strategy** | 단순 최종 추측 | Scoring 기반 선택 | ✅ 구현 완료 |
+| **GetBetaSystemPrompt()** | 인라인 prompt 생성 | 메서드로 리팩토링 | ✅ 구현 완료 |
+| **Few-shot Example** | 없음 | DEDUCTION_EXAMPLE 추가 | ✅ 구현 완료 |
+
+---
+
+### 게임 결과 비교
+
+#### Before (Phase 37)
+```yaml
+게임_결과:
+  secret: "a sunflower"
+  beta_guess: "a rock"
+  winner: Alpha
+  rounds: 20/20
+
+관찰:
+  - Recall limit 30으로 증가
+  - 중복 질문 3회 감지
+  - 최종 추측 완전히 실패 (sunflower ≠ rock)
+```
+
+#### After (Phase 38)
+```yaml
+게임_결과:
+  secret: "a red apple"
+  beta_guess: "coin"
+  winner: Alpha
+  rounds: 20/20
+
+긍정적_변화:
+  - Round 19에서 candidate generation 작동 ✅
+  - Candidates 명시적 생성: key, coin, smartphone, pen, spoon
+  - Final question 생성: "Does it have moving parts...?"
+  - Completion tokens 143 (vs 평균 15) - 상세 분석 증거
+
+심각한_문제:
+  - "Is it man-made?" 질문을 R3, R4, R5, R6에서 반복 ❌
+  - Round 2 deduction 누락 ("Is it man-made?" → "No") ❌
+  - Candidates 모두 man-made인데 정답은 natural (apple) ❌
+  - Beta가 6개 메모리만 recall, DEDUCTION_R2 없음 ❌
+```
+
+---
+
+### 메트릭스 비교
+
+| 지표 | Phase 37 | Phase 38 | 변화 |
+|------|----------|----------|------|
+| **총 게임 시간** | 152.1s | 152.3s | +0.1% (거의 동일) |
+| **평균 라운드 시간** | 6.9s | 6.9s | 동일 |
+| **Round 19 Tokens** | 15 | 143 | **+853%** 🎯 |
+| **Round 20 Tokens** | 9 | 9 | 동일 |
+| **총 토큰 사용** | 13,320 | 14,267 | +7% |
+| **평균 컨텍스트 (Beta)** | 1,072 chars | 841 chars | -22% ⚠️ |
+| **최종 추측 성공** | 0% | 0% | **변화 없음** ❌ |
+| **중복 질문 발생** | 3회 | 4회 (R3-6) | +33% ⚠️ |
+
+**분석**:
+- ✅ **Round 19 강화 성공**: 143 tokens로 candidate generation 작동
+- ✅ **구조화된 추론**: Candidates 명시적 생성 및 final question 도출
+- ❌ **메모리 recall 품질 저하**: Beta context 22% 감소
+- ❌ **중복 질문 증가**: "Is it man-made?" 4회 반복 (R2, R3, R4, R5, R6)
+- ❌ **Deduction 누락**: DEDUCTION_R2가 recall되지 않음
+
+---
+
+### Round 19 Candidate Generation 분석
+
+#### Beta의 Round 19 출력 (Phase 38)
+```
+**CONFIRMED (from memories):**
+- It is **not a living thing**.
+- It is **something you can hold in one hand**.
+
+**RULED OUT (from memories):**
+- It is **not living**.
+
+**Candidates (must be non-living + one-hand holdable):**
+1. **Key**
+2. **Coin**
+3. **Smartphone**
+4. **Pen**
+5. **Spoon**
+
+My candidates are: **key, coin, smartphone, pen, spoon**.
+**Final question:** *Does it have moving parts (like hinges, buttons, or a switch) that are meant to be operated?*
+```
+
+#### 문제점
+1. **"Not man-made" deduction 누락**:
+   - Round 2에서 "Is it man-made?" → "No" 확인
+   - 하지만 DEDUCTION_R2가 메모리에서 recall되지 않음
+   - 결과: Candidates가 모두 man-made objects (정답은 natural!)
+
+2. **Recalled memories 부족**:
+   - Beta가 6개 메모리만 recall (Limit 30인데도)
+   - DEDUCTION_R1만 있고 R2-R18 deduction 누락
+   - Recall query가 "previous deductions"를 제대로 찾지 못함
+
+3. **Candidate 선정 오류**:
+   - 정답: "a red apple" (natural, not man-made, edible)
+   - Beta candidates: coin, key, smartphone (모두 man-made)
+   - Natural objects 완전히 배제됨
+
+---
+
+### Round 20 Final Guess 분석
+
+#### Beta의 Round 20 출력
+```
+My final guess is: coin
+```
+
+#### Alpha의 답변
+```
+Wrong guess. Keep trying!
+```
+
+**분석**:
+- ✅ Format 정확: "My final guess is: [answer]"
+- ❌ Scoring 없음: Candidates scoring 과정 생략
+- ❌ 잘못된 선택: 5개 candidates 중 "coin" 선택 (정답 "apple"과 무관)
+
+---
+
+### 근본 원인 분석
+
+#### 🔴 Critical: Memory Recall Quality 문제
+
+**증상**:
+```
+Beta's Round 19 recall (6 memories):
+- [0.94] GAME_RULES
+- [0.84] STRATEGY_PHASE1
+- [0.84] DEDUCTION_R1  ← R1만 있음!
+- [0.83] ROUND
+- [0.81] DEDUCTION_R7
+- [0.81] QA_R10
+
+Missing: DEDUCTION_R2 ("Is it man-made?" → "No")
+```
+
+**원인 가설**:
+1. **Recall Limit vs Actual**: Limit 30이지만 실제로 6개만 return
+2. **Query 부적합**: "previous deductions" query가 R2-R18 놓침
+3. **ImportanceScore**: DEDUCTION_R2의 score가 낮아서 누락?
+4. **Embedding Quality**: "man-made" deduction이 잘 embed되지 않음
+
+#### 🟡 Important: 중복 질문 반복
+
+**패턴**:
+```
+Round 2: "Is it man-made?" → No
+Round 3: "Is it man-made?" → INVALID (duplicate)
+Round 4: "Is it man-made?" → INVALID (duplicate)
+Round 5: "Is it man-made?" → INVALID (duplicate)
+Round 6: "Is it man-made?" → INVALID (duplicate)
+Round 7: (다른 질문)
+```
+
+**원인**: Beta가 MY_QUESTION_R2를 recall하지 못함
+
+---
+
+### Phase 38 구현 효과 종합
+
+#### ✅ 성공한 개선
+1. **Round 19 Candidate Generation**: 작동 확인 (143 tokens)
+2. **Structured Reasoning**: CONFIRMED/RULED OUT 명시적 정리
+3. **Few-shot Example**: DEDUCTION_EXAMPLE 추가로 패턴 학습
+4. **GetBetaSystemPrompt()**: 코드 리팩토링 성공
+
+#### ❌ 실패한 개선
+1. **최종 추측 성공률**: 여전히 0%
+2. **Candidate 선정**: 완전히 잘못된 category (man-made vs natural)
+3. **Memory Recall**: Phase 37보다 더 악화 (1,072 chars → 841 chars)
+4. **중복 질문**: 3회 → 4회로 증가
+
+#### 🎯 다음 Phase 제안
+**Phase 39**: Memory Recall Quality Recovery
+1. Recall query 개선: "deductions from round 2 to 18" 명시
+2. ImportanceScore 상향: Deductions 0.95 → 0.98
+3. Recall limit 증가: 30 → 50 (더 많은 context)
+4. Deduction storage 강화: "RULED OUT: man-made" 형태로 명시적 저장
+
+**예상 효과**: Recall quality 회복 → Candidate 선정 정확도 향상 → 승률 0% → 20%+
+
+---
+
 ## 📈 성능 벤치마크 비교
 
 ### 전통적 방식 (가상 추정) vs Memory-Only 방식 (실제)

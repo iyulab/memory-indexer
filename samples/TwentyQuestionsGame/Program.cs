@@ -129,12 +129,19 @@ const string BETA_SESSION_ID = "game_session_beta";
 const int MAX_ROUNDS = 20;
 const float HIGH_SIMILARITY_THRESHOLD = 0.85f;
 
-// Phase 37: Strategic questioning phases for Beta
+// Phase 37-38: Strategic questioning phases for Beta
 const string BETA_STRATEGY_PHASE1 = @"[STRATEGY_PHASE1] Rounds 1-5: Establish category
-- Alive vs non-living
-- Natural vs man-made
-- Physical object vs place/concept
-Split the entire possibility space into broad categories.";
+
+Priority sequence:
+1. **Living vs Non-living**: ""Is it a living thing?""
+2. **IF LIVING → Animal vs Plant**: ""Is it an animal?"" OR ""Is it a plant?""
+   - This distinction is CRITICAL for living things!
+3. **Natural vs Man-made**: ""Is it man-made?""
+4. **Physical vs Abstract**: ""Is it a physical object?""
+5. **Broad category confirmation**: Confirm the established category
+
+Split the entire possibility space into broad categories.
+Each question should eliminate ~50% of remaining possibilities.";
 
 const string BETA_STRATEGY_PHASE2 = @"[STRATEGY_PHASE2] Rounds 6-12: Physical properties
 - Size: hand-held, room-sized, larger?
@@ -150,11 +157,67 @@ const string BETA_STRATEGY_PHASE3 = @"[STRATEGY_PHASE3] Rounds 13-18: Usage and 
 - Necessity: essential, luxury, optional?
 Focus on how and why the object is used.";
 
-const string BETA_STRATEGY_PHASE4 = @"[STRATEGY_PHASE4] Rounds 19-20: Final deduction
-- Review ALL confirmed and ruled-out properties
-- Generate 3-5 candidate objects matching criteria
-- Rank by probability based on common objects
-- Round 20: MUST make final guess (best candidate)";
+const string BETA_STRATEGY_PHASE4 = @"[STRATEGY_PHASE4] Round 19: Candidate Generation
+
+**Round 19 - CANDIDATE GENERATION**:
+You MUST explicitly:
+1. List ALL CONFIRMED properties from your memories
+2. List ALL RULED OUT properties from your memories
+3. Generate 3-5 specific candidates that match CONFIRMED and avoid RULED OUT
+4. Ask final clarifying question to distinguish between candidates
+
+Format your question like:
+""My candidates are: [list 3-5 items]. Final question: [strategic yes/no question]""
+
+Example:
+- CONFIRMED: living, natural, grows in soil, has petals
+- RULED OUT: animal, edible, used indoors
+- Candidates: sunflower, rose, tulip, daisy, lily
+- Final question: ""Is it typically yellow?""
+
+Output: Your candidates list and ONE final clarifying yes/no question.";
+
+const string BETA_STRATEGY_PHASE4_FINAL = @"[STRATEGY_PHASE4_FINAL] Round 20: Final Guess with Scoring
+
+**Round 20 - MANDATORY FINAL GUESS**:
+This is your LAST chance. You MUST make your best guess.
+
+STEP-BY-STEP PROCESS:
+1. Review Round 19 candidates and Alpha's last response
+2. Score each candidate against ALL confirmed/ruled-out properties
+3. Pick the HIGHEST scoring candidate
+4. Format: ""My final guess is: [your answer]""
+
+Example scoring:
+- Candidate A: 8/10 properties match → Score 0.8
+- Candidate B: 6/10 properties match → Score 0.6
+- Candidate C: 9/10 properties match → Score 0.9 ← PICK THIS
+
+CRITICAL: Your guess MUST be consistent with ALL confirmed properties!
+If it was confirmed as ""living thing"", DO NOT guess non-living objects!
+
+Output ONLY: ""My final guess is: [your answer]""";
+
+// Few-shot example for successful deduction
+const string DEDUCTION_EXAMPLE = @"
+EXAMPLE OF SUCCESSFUL DEDUCTION:
+Round 1-18 findings:
+  CONFIRMED: living thing, natural, grows from ground, has petals, colorful, found in gardens
+  RULED OUT: animal, edible, tree, used indoors, needs daily care
+
+Round 19 candidates:
+  1. Sunflower (living, petals, colorful, garden, natural) → Score: 6/6 ✅
+  2. Rose (living, petals, colorful, garden, natural) → Score: 6/6 ✅
+  3. Cactus (living, natural, garden, but no typical petals) → Score: 4/6
+  4. Rock (non-living) → Score: 0/6 ❌
+  5. Plastic flower (man-made) → Score: 0/6 ❌
+
+Round 19 question: ""Does it typically grow very tall?"" → ""Yes""
+Round 20 final scoring:
+  - Sunflower: tall, petals, colorful → PICK THIS ✅
+  - Rose: not typically very tall → eliminate
+
+Final guess: ""My final guess is: a sunflower"" → CORRECT!";
 
 // Metrics tracking
 var metrics = new GameMetrics();
@@ -363,33 +426,12 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
     PrintRecalledMemories("BETA", betaMemories, roundMetrics.BetaRecallMs, roundMetrics.BetaContextChars, isFullMemoryLog);
 
     // Beta generates a question using ONLY last message + recalled memories
-    bool isFinalRound = round == MAX_ROUNDS;
-    var currentStrategy = GetStrategyPhase(round);
-    string betaSystemPrompt = $@"You are Beta, playing 20 Questions.
-
-YOUR RECALLED MEMORIES:
-{betaContext}
-
-CURRENT SITUATION:
-- Round {round}/{MAX_ROUNDS}
-- Alpha's last response: ""{lastAlphaResponse}""
-
-CURRENT STRATEGY PHASE:
-{currentStrategy}
-
-YOUR TASK:
-{(isFinalRound ?
-    @"This is round 20 - FINAL ROUND! You MUST make your final guess.
-Format: ""My final guess is: [your answer]""
-Review ALL CONFIRMED and RULED OUT properties from your memories.
-Generate 3-5 candidates matching criteria, pick the most probable." :
-    $@"Ask ONE strategic yes/no question following the current strategy phase.
-Use your memories to avoid repeating questions.
-Each question should eliminate ~50% of remaining possibilities.")}
-
-Output ONLY the question or guess. No explanations.";
-
+    // Phase 38: Use GetBetaSystemPrompt() for round-specific prompting
+    string betaSystemPrompt = GetBetaSystemPrompt(round, betaContext, lastAlphaResponse);
     string betaUserMessage = lastAlphaResponse; // ONLY the last response!
+
+    bool isFinalRound = round == MAX_ROUNDS;
+    bool isCandidateGeneration = round == MAX_ROUNDS - 1;
 
     string betaQuestion;
     LLMMetrics betaLlmMetrics;
@@ -398,7 +440,14 @@ Output ONLY the question or guess. No explanations.";
         (betaQuestion, betaLlmMetrics) = await CallLLMWithMetricsAsync(
             httpClientFactory, openAiModel,
             betaSystemPrompt,
-            $"Alpha said: \"{betaUserMessage}\". This is your FINAL turn! Make your best guess: 'My final guess is: [answer]'");
+            $"Alpha said: \"{betaUserMessage}\". This is your FINAL turn! Score your candidates and make your best guess: 'My final guess is: [answer]'");
+    }
+    else if (isCandidateGeneration)
+    {
+        (betaQuestion, betaLlmMetrics) = await CallLLMWithMetricsAsync(
+            httpClientFactory, openAiModel,
+            betaSystemPrompt,
+            $"Alpha said: \"{betaUserMessage}\". Review your memories, list candidates, and ask ONE final clarifying yes/no question.");
     }
     else
     {
@@ -958,6 +1007,72 @@ string GetStrategyPhase(int round)
         return BETA_STRATEGY_PHASE3;
     else
         return BETA_STRATEGY_PHASE4;
+}
+
+string GetBetaSystemPrompt(int round, string betaContext, string lastAlphaResponse)
+{
+    bool isFinalRound = round == MAX_ROUNDS;
+    bool isCandidateGeneration = round == MAX_ROUNDS - 1; // Round 19
+
+    if (isFinalRound)
+    {
+        // Round 20: Final guess with scoring
+        return $@"You are Beta, playing 20 Questions.
+
+YOUR RECALLED MEMORIES:
+{betaContext}
+
+CURRENT SITUATION:
+- Round {round}/{MAX_ROUNDS} - FINAL ROUND
+- Alpha's last response: ""{lastAlphaResponse}""
+
+{BETA_STRATEGY_PHASE4_FINAL}
+
+{DEDUCTION_EXAMPLE}
+
+Output ONLY your final guess. Format: ""My final guess is: [answer]""";
+    }
+    else if (isCandidateGeneration)
+    {
+        // Round 19: Generate candidates
+        return $@"You are Beta, playing 20 Questions.
+
+YOUR RECALLED MEMORIES:
+{betaContext}
+
+CURRENT SITUATION:
+- Round {round}/{MAX_ROUNDS} - Candidate Generation Round
+- Alpha's last response: ""{lastAlphaResponse}""
+
+{BETA_STRATEGY_PHASE4}
+
+{DEDUCTION_EXAMPLE}
+
+Output your candidates and final clarifying question.";
+    }
+    else
+    {
+        // Regular rounds: Use current strategy phase
+        var currentStrategy = GetStrategyPhase(round);
+        return $@"You are Beta, playing 20 Questions.
+
+YOUR RECALLED MEMORIES:
+{betaContext}
+
+CURRENT SITUATION:
+- Round {round}/{MAX_ROUNDS}
+- Alpha's last response: ""{lastAlphaResponse}""
+
+CURRENT STRATEGY PHASE:
+{currentStrategy}
+
+YOUR TASK:
+Ask ONE strategic yes/no question following the current strategy phase.
+Use your memories to avoid repeating questions.
+Each question should eliminate ~50% of remaining possibilities.
+
+Output ONLY the question. No explanations.";
+    }
 }
 
 void PrintRecalledMemories(

@@ -3970,9 +3970,139 @@ Despite improvements, Beta still failed final guess:
 
 ---
 
-## Overall Phase 32-37 Summary
+## Phase 38: Final Deduction Reasoning & Early Classification
 
-**Combined Timeline**: 4 weeks (Phase 32) + 17 days (Phase 33) + 17 days (Phase 34) + 17 days (Phase 35) + 17 days (Phase 36) + 1 day (Phase 37) = **~11 weeks total**
+**Status**: ✅ Complete (2026-01-07)
+**Type**: Sample Quality Enhancement
+**Scope**: TwentyQuestionsGame sample improvements
+**Timeline**: 1 day
+
+### Goal
+
+Improve Beta's final deduction logic with:
+1. Round 19 candidate generation
+2. Round 20 scoring-based selection
+3. Plant vs Animal distinction in PHASE1
+4. Few-shot deduction examples
+
+### Implementation Summary
+
+**Core Changes**:
+1. **PHASE1 Strategy Enhanced**:
+   - Added "IF LIVING → Animal vs Plant" priority
+   - Explicit "This distinction is CRITICAL" guidance
+   - Priority sequence: Living → Animal/Plant → Man-made → Physical
+
+2. **Round 19: Candidate Generation**:
+   - New `BETA_STRATEGY_PHASE4` for candidate generation
+   - CONFIRMED/RULED OUT properties listing
+   - 3-5 candidates generation requirement
+   - Final clarifying question generation
+
+3. **Round 20: Final Scoring**:
+   - New `BETA_STRATEGY_PHASE4_FINAL` for scoring logic
+   - Step-by-step scoring process
+   - Consistency check with confirmed properties
+   - Format enforcement: "My final guess is: [answer]"
+
+4. **Few-Shot Learning**:
+   - Added `DEDUCTION_EXAMPLE` constant
+   - Sunflower example with scoring process
+   - Demonstrates successful deduction pattern
+
+5. **Code Refactoring**:
+   - New `GetBetaSystemPrompt()` method
+   - Round-specific prompt generation (19, 20, regular)
+   - Cleaner separation of concerns
+
+### Measured Results
+
+| Metric | Phase 37 | Phase 38 | Change |
+|--------|----------|----------|--------|
+| Final guess success | 0% | 0% | **No improvement** ❌ |
+| Round 19 tokens | 15 | 143 | **+853%** ✅ |
+| Candidate generation | N/A | Working ✅ | **New feature** |
+| Duplicate questions | 3 | 4 | +33% ⚠️ |
+| Avg context (Beta) | 1,072 chars | 841 chars | -22% ⚠️ |
+| Total tokens | 13,320 | 14,267 | +7% |
+
+**Game Result (Phase 38)**:
+- Secret: "a red apple"
+- Beta guess: "coin"
+- Winner: Alpha
+- Rounds: 20/20
+
+**Positive Findings**:
+- ✅ Round 19 candidate generation working (143 tokens output)
+- ✅ Structured reasoning: CONFIRMED/RULED OUT explicitly listed
+- ✅ 5 candidates generated: key, coin, smartphone, pen, spoon
+- ✅ Final question generated: "Does it have moving parts...?"
+
+**Critical Issues**:
+- ❌ Wrong candidate category: all man-made (answer is natural)
+- ❌ DEDUCTION_R2 missing from recall ("Is it man-made?" → "No")
+- ❌ Beta recalled only 6 memories (limit 30)
+- ❌ Duplicate questions increased (R3-R6: "Is it man-made?")
+
+### Root Cause Analysis
+
+**Memory Recall Quality Degradation**:
+```
+Beta's Round 19 recall (only 6 of 30):
+- [0.94] GAME_RULES
+- [0.84] STRATEGY_PHASE1
+- [0.84] DEDUCTION_R1  ← Only R1!
+- [0.83] ROUND
+- [0.81] DEDUCTION_R7
+- [0.81] QA_R10
+
+Missing: DEDUCTION_R2, R3, R4, R5, R6, R8, ... R18
+```
+
+**Hypothesis**:
+1. Recall query "previous deductions" too vague
+2. ImportanceScore 0.95 insufficient for deductions
+3. Embedding quality issue with "man-made" concept
+4. Limit 30 not effectively utilized
+
+### Outstanding Issues
+
+1. **🔴 Critical**: Beta cannot recall mid-game deductions (R2-R18)
+2. **🔴 Critical**: Candidate selection completely wrong category
+3. **🟡 Important**: Duplicate question rate increased
+4. **🟢 Minor**: Round 20 scoring logic not executed
+
+### Proposed Phase 39
+
+**Focus**: Memory Recall Quality Recovery
+1. Recall query refinement: "all previous questions and deductions" with round numbers
+2. ImportanceScore increase: 0.95 → 0.98
+3. Recall limit increase: 30 → 50
+4. Deduction format: "RULED OUT: man-made" (more explicit)
+
+**Expected**: Recall quality recovery → Correct candidate generation → 20%+ win rate
+
+### Files Modified
+
+- `samples/TwentyQuestionsGame/Program.cs` (7 changes)
+  - BETA_STRATEGY_PHASE1 enhanced
+  - BETA_STRATEGY_PHASE4 updated (R19)
+  - BETA_STRATEGY_PHASE4_FINAL added (R20)
+  - DEDUCTION_EXAMPLE added
+  - GetBetaSystemPrompt() method added
+  - Round 19/20 LLM call logic added
+
+### Documentation Updated
+
+- `claudedocs/phase38-final-deduction-reasoning.md` (new)
+- `claudedocs/twentyquestions-evaluation-report.md` (Phase 38 section added)
+- `docs/ROADMAP.md` (this entry)
+
+---
+
+## Overall Phase 32-38 Summary
+
+**Combined Timeline**: 4 weeks (Phase 32) + 17 days (Phase 33) + 17 days (Phase 34) + 17 days (Phase 35) + 17 days (Phase 36) + 1 day (Phase 37) + 1 day (Phase 38) = **~11 weeks total**
 
 **Deliverables**:
 - ⏳ 3-Axis Memory Model (Type × Scope × Tier) — Phase 32
@@ -3981,7 +4111,8 @@ Despite improvements, Beta still failed final guess:
 - ⏳ Domain Profiles (Chat, TwentyQuestions, RAG) — Phase 35
 - ⏳ Topic auto-detection & Type auto-classification — Phase 36
 - ⏳ Performance optimization (caching, indexing) — Phase 36
-- ✅ TwentyQuestionsGame sample quality improvements — Phase 37
+- ✅ TwentyQuestionsGame memory recall quality improvements — Phase 37
+- ✅ TwentyQuestionsGame final deduction logic & candidate generation — Phase 38
 
 **Test Growth**:
 - Phase 32: 848 → 1068+ tests (+220)
