@@ -110,11 +110,25 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
                 _logger.LogDebug("Generated {Count} reflections", reflections.Count);
             }
 
+            // Phase 5: Apply time-series compression (Phase 29)
+            var memoriesCompressed = 0;
+            if (options.ApplyTimeSeriesCompression && options.TimeSeriesMetadataKeys?.Count > 0)
+            {
+                foreach (var key in options.TimeSeriesMetadataKeys)
+                {
+                    var compressedMemories = await ConsolidateTimeSeriesAsync(
+                        memories, key, options.TimeSeriesStrategy, cancellationToken);
+                    memoriesCompressed += compressedMemories.Count(m =>
+                        m.Metadata?.ContainsKey(key) == true);
+                }
+                _logger.LogDebug("Compressed time-series metadata in {Count} memories", memoriesCompressed);
+            }
+
             stopwatch.Stop();
 
             _logger.LogInformation(
-                "Consolidation complete: {Processed} processed, {Reflections} reflections, {Merged} merged, {Decayed} decayed",
-                memories.Count, reflections.Count, memoriesMerged, memoriesDecayed);
+                "Consolidation complete: {Processed} processed, {Reflections} reflections, {Merged} merged, {Decayed} decayed, {Compressed} time-series compressed",
+                memories.Count, reflections.Count, memoriesMerged, memoriesDecayed, memoriesCompressed);
 
             return new ConsolidationResult
             {
@@ -458,5 +472,111 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
         }
 
         return content[..maxLength] + "...";
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<MemoryUnit>> ConsolidateTimeSeriesAsync(
+        IReadOnlyList<MemoryUnit> memories,
+        string metadataKey,
+        TimeSeriesCompressionStrategy strategy = TimeSeriesCompressionStrategy.Range,
+        CancellationToken cancellationToken = default)
+    {
+        var result = new List<MemoryUnit>();
+        var compressed = 0;
+
+        foreach (var memory in memories)
+        {
+            if (memory.Metadata == null || !memory.Metadata.TryGetValue(metadataKey, out var value))
+            {
+                result.Add(memory); // No metadata to compress
+                continue;
+            }
+
+            var compressedValue = CompressTimeSeries(value, strategy);
+            if (compressedValue != value)
+            {
+                memory.Metadata[metadataKey] = compressedValue;
+                await _memoryStore.UpdateAsync(memory, cancellationToken);
+                compressed++;
+            }
+            result.Add(memory);
+        }
+
+        _logger.LogDebug("Compressed time-series metadata '{Key}' in {Count}/{Total} memories",
+            metadataKey, compressed, memories.Count);
+
+        return result;
+    }
+
+    private static string CompressTimeSeries(string value, TimeSeriesCompressionStrategy strategy)
+    {
+        return strategy switch
+        {
+            TimeSeriesCompressionStrategy.Range => CompressRange(value),
+            TimeSeriesCompressionStrategy.Statistical => CompressStatistical(value),
+            TimeSeriesCompressionStrategy.Windowed => CompressWindowed(value),
+            _ => value // None strategy
+        };
+    }
+
+    private static string CompressRange(string value)
+    {
+        // Parse comma-separated values: "1, 2, 3, 4, 5"
+        var parts = value.Split(',').Select(s => s.Trim()).ToList();
+        if (parts.Count <= 2) return value; // Not worth compressing
+
+        // Try to parse as integers for range detection
+        if (parts.All(p => int.TryParse(p, out _)))
+        {
+            var numbers = parts.Select(int.Parse).OrderBy(n => n).ToList();
+            var ranges = new List<string>();
+            var start = numbers[0];
+            var end = numbers[0];
+
+            for (int i = 1; i < numbers.Count; i++)
+            {
+                if (numbers[i] == end + 1)
+                {
+                    end = numbers[i]; // Continue range
+                }
+                else
+                {
+                    ranges.Add(start == end ? $"{start}" : $"{start}-{end}");
+                    start = numbers[i];
+                    end = numbers[i];
+                }
+            }
+            ranges.Add(start == end ? $"{start}" : $"{start}-{end}");
+
+            return string.Join(", ", ranges);
+        }
+
+        return value; // Can't compress non-numeric
+    }
+
+    private static string CompressStatistical(string value)
+    {
+        var parts = value.Split(',').Select(s => s.Trim()).ToList();
+        if (parts.Count <= 2) return value;
+
+        if (parts.All(p => double.TryParse(p, out _)))
+        {
+            var numbers = parts.Select(double.Parse).ToList();
+            return $"Count: {numbers.Count}, Min: {numbers.Min()}, Max: {numbers.Max()}, Avg: {numbers.Average():F2}";
+        }
+
+        return value;
+    }
+
+    private static string CompressWindowed(string value, int windowSize = 5)
+    {
+        var parts = value.Split(',').Select(s => s.Trim()).ToList();
+        if (parts.Count <= windowSize) return value;
+
+        var recent = parts.TakeLast(windowSize);
+        var older = parts.Take(parts.Count - windowSize).ToList();
+
+        var olderCompressed = CompressRange(string.Join(", ", older));
+        return $"{olderCompressed}, {string.Join(", ", recent)}";
     }
 }

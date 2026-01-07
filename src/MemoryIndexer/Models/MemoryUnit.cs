@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.VectorData;
 
 namespace MemoryIndexer.Models;
@@ -251,5 +252,59 @@ public sealed class MemoryUnit
         if (IsLocked) return false;
         if (Stability == MemoryStability.Permanent) return false;
         return CalculateRetention() < retentionThreshold;
+    }
+
+    /// <summary>
+    /// Sets a typed metadata value with JSON serialization.
+    /// Phase 28: Structured metadata API for type-safe storage.
+    /// </summary>
+    /// <typeparam name="T">Type of the metadata value.</typeparam>
+    /// <param name="key">Metadata key.</param>
+    /// <param name="value">Metadata value to serialize.</param>
+    public void SetMetadata<T>(string key, T value)
+    {
+        Metadata ??= new Dictionary<string, string>();
+        Metadata[key] = JsonSerializer.Serialize(value);
+    }
+
+    /// <summary>
+    /// Gets a typed metadata value with JSON deserialization.
+    /// Phase 28: Structured metadata API for type-safe retrieval.
+    /// </summary>
+    /// <typeparam name="T">Type of the metadata value.</typeparam>
+    /// <param name="key">Metadata key.</param>
+    /// <returns>Deserialized metadata value, or default(T) if not found.</returns>
+    public T? GetMetadata<T>(string key)
+    {
+        if (Metadata is null || !Metadata.TryGetValue(key, out var json))
+            return default;
+        return JsonSerializer.Deserialize<T>(json);
+    }
+
+    /// <summary>
+    /// Tries to get a typed metadata value with JSON deserialization.
+    /// Phase 28: Structured metadata API for safe type-safe retrieval.
+    /// </summary>
+    /// <typeparam name="T">Type of the metadata value.</typeparam>
+    /// <param name="key">Metadata key.</param>
+    /// <param name="value">Deserialized metadata value if found.</param>
+    /// <returns>True if metadata exists and was deserialized successfully.</returns>
+    public bool TryGetMetadata<T>(string key, out T? value)
+    {
+        if (Metadata is null || !Metadata.TryGetValue(key, out var json))
+        {
+            value = default;
+            return false;
+        }
+        try
+        {
+            value = JsonSerializer.Deserialize<T>(json);
+            return true;
+        }
+        catch
+        {
+            value = default;
+            return false;
+        }
     }
 }

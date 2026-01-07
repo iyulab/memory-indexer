@@ -58,6 +58,25 @@ public interface IMemoryConsolidator
         IReadOnlyList<MemoryUnit> candidates,
         float similarityThreshold = 0.85f,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Compresses time-series metadata in consolidated memories (Phase 29).
+    /// Prevents metadata bloat from sequential operations like game rounds.
+    /// </summary>
+    /// <param name="memories">Memories to process for time-series compression.</param>
+    /// <param name="metadataKey">Metadata key containing time-series data.</param>
+    /// <param name="strategy">Compression strategy to apply.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Memories with compressed metadata.</returns>
+    /// <example>
+    /// Input metadata: "Round": "1, 2, 3, 4, 5"
+    /// Output (Range): "Round": "1-5"
+    /// </example>
+    Task<IReadOnlyList<MemoryUnit>> ConsolidateTimeSeriesAsync(
+        IReadOnlyList<MemoryUnit> memories,
+        string metadataKey,
+        TimeSeriesCompressionStrategy strategy = TimeSeriesCompressionStrategy.Range,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -109,6 +128,22 @@ public sealed class ConsolidationOptions
     /// Session ID to scope consolidation (null = all sessions).
     /// </summary>
     public string? SessionId { get; init; }
+
+    /// <summary>
+    /// Whether to apply time-series compression during consolidation (Phase 29, default: true).
+    /// </summary>
+    public bool ApplyTimeSeriesCompression { get; init; } = true;
+
+    /// <summary>
+    /// Time-series compression strategy (Phase 29, default: Range).
+    /// </summary>
+    public TimeSeriesCompressionStrategy TimeSeriesStrategy { get; init; } = TimeSeriesCompressionStrategy.Range;
+
+    /// <summary>
+    /// Metadata keys to compress as time-series (Phase 29).
+    /// Example: ["Round", "Turn", "Step"]
+    /// </summary>
+    public List<string>? TimeSeriesMetadataKeys { get; init; }
 }
 
 /// <summary>

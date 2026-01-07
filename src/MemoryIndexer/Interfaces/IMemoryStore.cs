@@ -161,6 +161,12 @@ public sealed class MemorySearchOptions
     /// Include soft-deleted memories.
     /// </summary>
     public bool IncludeDeleted { get; set; }
+
+    /// <summary>
+    /// Filter by metadata key-value pairs (Phase 28).
+    /// All specified pairs must match (AND logic).
+    /// </summary>
+    public Dictionary<string, string>? MetadataFilter { get; set; }
 }
 
 /// <summary>
@@ -207,6 +213,12 @@ public sealed class MemoryFilterOptions
     /// Order by field.
     /// </summary>
     public MemoryOrderBy OrderBy { get; set; } = MemoryOrderBy.CreatedAtDesc;
+
+    /// <summary>
+    /// Filter by metadata key-value pairs (Phase 28).
+    /// All specified pairs must match (AND logic).
+    /// </summary>
+    public Dictionary<string, string>? MetadataFilter { get; set; }
 }
 
 /// <summary>

@@ -375,6 +375,17 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             command.Parameters.AddWithValue("@session_id", options.SessionId);
         }
 
+        // Phase 28: Metadata filter parameters
+        if (options?.MetadataFilter != null && options.MetadataFilter.Count > 0)
+        {
+            var idx = 0;
+            foreach (var kvp in options.MetadataFilter)
+            {
+                command.Parameters.AddWithValue($"@metadata_{idx}", kvp.Value);
+                idx++;
+            }
+        }
+
         var results = new List<MemoryUnit>();
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
@@ -452,6 +463,17 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         if (options.CreatedBefore.HasValue)
         {
             command.Parameters.AddWithValue("@created_before", options.CreatedBefore.Value.ToString("O"));
+        }
+
+        // Phase 28: Metadata filter parameters
+        if (options.MetadataFilter != null && options.MetadataFilter.Count > 0)
+        {
+            var idx = 0;
+            foreach (var kvp in options.MetadataFilter)
+            {
+                command.Parameters.AddWithValue($"@metadata_{idx}", kvp.Value);
+                idx++;
+            }
         }
     }
 
@@ -869,6 +891,14 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             conditions.Add($"({typeConditions})");
         }
 
+        // Phase 28: Metadata filtering
+        if (options?.MetadataFilter != null && options.MetadataFilter.Count > 0)
+        {
+            var metadataConditions = options.MetadataFilter.Select((kvp, idx) =>
+                $"json_extract(metadata, '$.{kvp.Key}') = @metadata_{idx}");
+            conditions.Add($"({string.Join(" AND ", metadataConditions)})");
+        }
+
         var orderBy = "ORDER BY created_at DESC";
         var limit = options?.Limit > 0 ? $"LIMIT {options.Limit}" : "";
 
@@ -934,6 +964,14 @@ WITH tenant_scope AS (
         if (options.CreatedBefore.HasValue)
         {
             additionalConditions.Add("created_at <= @created_before");
+        }
+
+        // Phase 28: Metadata filtering
+        if (options.MetadataFilter != null && options.MetadataFilter.Count > 0)
+        {
+            var metadataConditions = options.MetadataFilter.Select((kvp, idx) =>
+                $"json_extract(metadata, '$.{kvp.Key}') = @metadata_{idx}");
+            additionalConditions.Add($"({string.Join(" AND ", metadataConditions)})");
         }
 
         var whereClause = additionalConditions.Count > 0

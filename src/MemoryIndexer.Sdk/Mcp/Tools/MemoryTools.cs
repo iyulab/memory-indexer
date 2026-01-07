@@ -92,6 +92,7 @@ public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memory
             limit,
             sessionId,
             types,
+            metadataFilter: null,
             cancellationToken);
 
         return new RecallMemoryResult

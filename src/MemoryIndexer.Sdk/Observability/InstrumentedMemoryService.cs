@@ -81,6 +81,7 @@ public sealed class InstrumentedMemoryService
         int limit = 5,
         string? sessionId = null,
         MemoryType[]? types = null,
+        Dictionary<string, string>? metadataFilter = null,
         CancellationToken cancellationToken = default)
     {
         using var activity = MemoryIndexerTelemetry.StartOperation("MemoryRecall", "recall");
@@ -99,8 +100,12 @@ public sealed class InstrumentedMemoryService
             {
                 activity?.SetTag("memory.type_filter", string.Join(",", types));
             }
+            if (metadataFilter != null)
+            {
+                activity?.SetTag("memory.metadata_filter_count", metadataFilter.Count);
+            }
 
-            var results = await _inner.RecallAsync(userId, query, limit, sessionId, types, cancellationToken);
+            var results = await _inner.RecallAsync(userId, query, limit, sessionId, types, metadataFilter, cancellationToken);
 
             sw.Stop();
             var topScore = results.Count > 0 ? results[0].Score : (double?)null;

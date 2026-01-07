@@ -344,6 +344,7 @@ public class MemoryService(
     /// <param name="limit">Maximum number of results.</param>
     /// <param name="sessionId">Optional session ID filter.</param>
     /// <param name="types">Optional memory type filter.</param>
+    /// <param name="metadataFilter">Optional metadata filter (Phase 28).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Relevant memories with scores.</returns>
     public async Task<IReadOnlyList<MemorySearchResult>> RecallAsync(
@@ -352,6 +353,7 @@ public class MemoryService(
         int limit = 5,
         string? sessionId = null,
         MemoryType[]? types = null,
+        Dictionary<string, string>? metadataFilter = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -366,7 +368,8 @@ public class MemoryService(
             UserId = userId,
             SessionId = sessionId,
             Limit = limit * 2, // Get extra for re-ranking
-            Types = types
+            Types = types,
+            MetadataFilter = metadataFilter // Phase 28
         };
 
         var results = await memoryStore.SearchAsync(queryEmbedding, searchOptions, cancellationToken);

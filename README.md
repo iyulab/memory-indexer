@@ -106,6 +106,18 @@ Where:
 
 ## What's New in v0.3.0
 
+- **Structured Metadata API** (Phase 28): Type-safe metadata storage and filtering
+  - Generic `SetMetadata<T>`, `GetMetadata<T>`, `TryGetMetadata<T>` methods
+  - JSON serialization for complex objects
+  - SQLite `json_extract()` based metadata filtering
+  - Integrated with `RecallAsync` for query-time filtering
+  - Backward-compatible with existing Dictionary<string, string> metadata
+- **Time-Series Compression** (Phase 29): Prevent metadata bloat from sequential operations
+  - Range compression: "1, 2, 3, 4, 5" → "1-5"
+  - Statistical compression: Min/Max/Avg/Count/First/Last summary
+  - Windowed compression: Recent N items + range for older
+  - Integrated with memory consolidation (sleep cycles)
+  - Configurable compression strategies and metadata keys
 - **Smart Deduplication & Quality Control** (Phase 20): Improved memory precision
   - Semantic deduplication with 0.80 similarity threshold
   - Content-type aware duplicate actions (CONFIRMED/RULED OUT/QUESTION)

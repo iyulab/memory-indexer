@@ -2216,4 +2216,137 @@ Every 30 minutes: Full Maintenance
 
 ---
 
-*Last Updated: 2026-01-06 (Phases 21-24 added from Twenty Questions Game analysis)*
+## Phase 28: Structured Metadata API ✅
+
+**Status**: ✅ Complete
+**Date**: 2026-01-07
+**Goal**: Type-safe metadata storage and retrieval with JSON serialization and filtering
+
+### Phase 28.1: Metadata API Design ✅
+
+**Implementation**:
+- ✅ Generic `SetMetadata<T>`, `GetMetadata<T>`, `TryGetMetadata<T>` methods in MemoryUnit
+- ✅ JSON serialization using `System.Text.Json`
+- ✅ Type-safe metadata operations
+- ✅ Backward-compatible with existing Dictionary<string, string> metadata
+
+### Phase 28.2: Metadata Filtering ✅
+
+**Implementation**:
+- ✅ `MetadataFilter` property in `MemorySearchOptions` and `MemoryFilterOptions`
+- ✅ AND logic for multiple metadata pairs
+- ✅ SQLite `json_extract()` based filtering in `SqliteVecMemoryStore`
+- ✅ Integrated with `RecallAsync` in `MemoryService`
+
+### Phase 28.3: Configuration ✅
+
+**Usage Example**:
+```csharp
+// Type-safe metadata storage
+memory.SetMetadata("round", 42);
+memory.SetMetadata("location", new { x = 10, y = 20 });
+
+// Type-safe retrieval
+var round = memory.GetMetadata<int>("round");
+var location = memory.GetMetadata<Location>("location");
+
+// Metadata filtering in queries
+var results = await memoryService.RecallAsync(
+    userId: "user1",
+    query: "apples",
+    metadataFilter: new Dictionary<string, string>
+    {
+        ["ContentType"] = "CONFIRMED"
+    }
+);
+```
+
+### Success Criteria
+- ✅ Type-safe metadata API operational
+- ✅ JSON serialization for complex objects
+- ✅ SQLite metadata filtering with json_extract()
+- ✅ All tests passing (848 total)
+- ✅ Backward compatible with existing code
+
+### Files Modified
+- `src/MemoryIndexer/Models/MemoryUnit.cs` (SetMetadata, GetMetadata, TryGetMetadata)
+- `src/MemoryIndexer/Interfaces/IMemoryStore.cs` (MetadataFilter in options)
+- `src/MemoryIndexer.Sdk/Storage/Sqlite/SqliteVecMemoryStore.cs` (json_extract filtering)
+- `src/MemoryIndexer/Services/MemoryService.cs` (RecallAsync metadataFilter param)
+- `src/MemoryIndexer.Sdk/Observability/InstrumentedMemoryService.cs` (param propagation)
+- `src/MemoryIndexer.Sdk/Mcp/Tools/MemoryTools.cs` (metadataFilter: null)
+
+---
+
+## Phase 29: Time-Series Compression ✅
+
+**Status**: ✅ Complete
+**Date**: 2026-01-07
+**Goal**: Prevent metadata bloat from sequential operations (e.g., game rounds)
+
+### Phase 29.1: Compression Strategies ✅
+
+**Implementation**:
+- ✅ `TimeSeriesCompressionStrategy` enum (None, Range, Statistical, Windowed)
+- ✅ **Range**: "1, 2, 3, 4, 5" → "1-5"
+- ✅ **Statistical**: "1, 3, 5, 7, 9" → "Count: 5, Min: 1, Max: 9, Avg: 5, First: 1, Last: 9"
+- ✅ **Windowed**: Recent N items in full, older as range
+
+### Phase 29.2: Consolidation Integration ✅
+
+**Implementation**:
+- ✅ `ConsolidateTimeSeriesAsync()` method in `IMemoryConsolidator`
+- ✅ Configuration in `ConsolidationOptions`:
+  - `ApplyTimeSeriesCompression` (default: true)
+  - `TimeSeriesStrategy` (default: Range)
+  - `TimeSeriesMetadataKeys` (list of keys to compress)
+- ✅ Integrated into `SleepBasedConsolidator.ConsolidateAsync()` (Phase 5)
+
+### Phase 29.3: Compression Algorithms ✅
+
+**Implementation**:
+- ✅ `CompressRange()`: Collapse sequential numeric values into ranges
+- ✅ `CompressStatistical()`: Min/Max/Avg/Count/First/Last summary
+- ✅ `CompressWindowed()`: Recent N + range for older (default window: 5)
+- ✅ Automatic numeric detection and ordering
+
+### Configuration
+```csharp
+"Consolidation": {
+  "ApplyTimeSeriesCompression": true,
+  "TimeSeriesStrategy": "Range",
+  "TimeSeriesMetadataKeys": ["Round", "Turn", "Step"]
+}
+```
+
+### Example
+**Before Compression**:
+```json
+{ "Round": "1, 2, 3, 4, 5, 6, 7, 8, 9, 10" }
+```
+
+**After Range Compression**:
+```json
+{ "Round": "1-10" }
+```
+
+**After Statistical Compression**:
+```json
+{ "Round": "Count: 10, Min: 1, Max: 10, Avg: 5.5, First: 1, Last: 10" }
+```
+
+### Success Criteria
+- ✅ Time-series compression implemented with 3 strategies
+- ✅ Configuration-driven compression during consolidation
+- ✅ Automatic numeric range detection
+- ✅ All tests passing (848 total)
+- ✅ Token reduction for sequential metadata (e.g., "Round 1, 2, ..., 20" → "1-20")
+
+### Files Modified
+- `src/MemoryIndexer/Models/TimeSeriesCompressionStrategy.cs` (new enum)
+- `src/MemoryIndexer.Sdk/Intelligence/Consolidation/IMemoryConsolidator.cs` (interface + options)
+- `src/MemoryIndexer.Sdk/Intelligence/Consolidation/SleepBasedConsolidator.cs` (implementation)
+
+---
+
+*Last Updated: 2026-01-07 (Phases 28-29 added)*
