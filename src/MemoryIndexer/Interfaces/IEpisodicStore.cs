@@ -3,9 +3,24 @@ using MemoryIndexer.Models;
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
-/// Storage interface for conversation sessions.
+/// Tier 2: Episodic Store interface for conversation sessions.
+/// Stores temporally-specific episodic memories with contextual details.
+/// Implements Tulving's Episodic Memory System.
 /// </summary>
-public interface ISessionStore
+/// <remarks>
+/// 4-Tier Cognitive Architecture:
+/// - SensoryBuffer (T0): Raw sensory input
+/// - WorkingMemory (T1): Active processing
+/// - EpisodicStore (T2): Episodic memories - THIS TIER
+/// - SemanticStore (T3): Semantic knowledge
+///
+/// Episodic memories are:
+/// - Temporally specific (when/where)
+/// - Context-rich (what/who/how)
+/// - Personally experienced
+/// - Potentially promoted to semantic knowledge
+/// </remarks>
+public interface IEpisodicStore
 {
     /// <summary>
     /// Creates a new session.

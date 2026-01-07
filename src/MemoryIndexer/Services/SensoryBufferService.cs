@@ -8,15 +8,16 @@ using Microsoft.Extensions.Options;
 namespace MemoryIndexer.Services;
 
 /// <summary>
-/// Implementation of the Recently buffer (Tier 0).
-/// Provides async staging for raw conversation before promotion to Working memory.
+/// Implementation of the Sensory buffer (Tier 0).
+/// Provides async staging for raw sensory input before promotion to Working memory.
+/// Implements Atkinson-Shiffrin Multi-Store Model's sensory register.
 /// </summary>
 /// <remarks>
-/// 4-Tier Architecture:
-/// - Recently (Buffer): This implementation
-/// - Working (L1): WorkingMemoryService
-/// - Session (L2): ITieredMemoryStore
-/// - User (L3): ITieredMemoryStore
+/// 4-Tier Cognitive Architecture:
+/// - SensoryBuffer (T0): This implementation
+/// - WorkingMemory (T1): WorkingMemoryService
+/// - EpisodicStore (T2): ITieredMemoryStore
+/// - SemanticStore (T3): ITieredMemoryStore
 ///
 /// Features:
 /// - Thread-safe per-user buffers
@@ -24,18 +25,18 @@ namespace MemoryIndexer.Services;
 /// - Token counting for threshold detection
 /// - Idle timeout tracking
 /// </remarks>
-public sealed class RecentlyBufferService : IRecentlyBuffer
+public sealed class SensoryBufferService : ISensoryBuffer
 {
     private readonly ConcurrentDictionary<string, UserBuffer> _userBuffers = new();
-    private readonly RecentlyBufferOptions _options;
-    private readonly ILogger<RecentlyBufferService> _logger;
+    private readonly SensoryBufferOptions _options;
+    private readonly ILogger<SensoryBufferService> _logger;
     private readonly object _lock = new();
 
-    public RecentlyBufferService(
+    public SensoryBufferService(
         IOptions<MemoryIndexerOptions> options,
-        ILogger<RecentlyBufferService> logger)
+        ILogger<SensoryBufferService> logger)
     {
-        _options = options.Value.RecentlyBuffer;
+        _options = options.Value.SensoryBuffer;
         _logger = logger;
     }
 
@@ -52,7 +53,7 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
     }
 
     /// <inheritdoc />
-    public Task<RecentlyMemory> EnqueueAsync(
+    public Task<SensoryMemory> EnqueueAsync(
         string content,
         string userId,
         string? sessionId = null,
@@ -70,7 +71,7 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
         lock (buffer.Lock)
         {
             buffer.TurnCounter++;
-            var item = new RecentlyMemory
+            var item = new SensoryMemory
             {
                 Content = content,
                 UserId = userId,
@@ -109,7 +110,7 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<RecentlyMemory>> GetPendingAsync(
+    public Task<IReadOnlyList<SensoryMemory>> GetPendingAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
@@ -117,12 +118,12 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
 
         if (!_userBuffers.TryGetValue(userId, out var buffer))
         {
-            return Task.FromResult<IReadOnlyList<RecentlyMemory>>([]);
+            return Task.FromResult<IReadOnlyList<SensoryMemory>>([]);
         }
 
         lock (buffer.Lock)
         {
-            return Task.FromResult<IReadOnlyList<RecentlyMemory>>(
+            return Task.FromResult<IReadOnlyList<SensoryMemory>>(
                 buffer.Items.ToList());
         }
     }
@@ -181,7 +182,7 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<RecentlyMemory>> DrainAsync(
+    public Task<IReadOnlyList<SensoryMemory>> DrainAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
@@ -189,7 +190,7 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<RecentlyMemory>> DrainAsync(
+    public Task<IReadOnlyList<SensoryMemory>> DrainAsync(
         string userId,
         int maxItems,
         CancellationToken cancellationToken = default)
@@ -198,10 +199,10 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
 
         if (!_userBuffers.TryGetValue(userId, out var buffer))
         {
-            return Task.FromResult<IReadOnlyList<RecentlyMemory>>([]);
+            return Task.FromResult<IReadOnlyList<SensoryMemory>>([]);
         }
 
-        var drained = new List<RecentlyMemory>();
+        var drained = new List<SensoryMemory>();
 
         lock (buffer.Lock)
         {
@@ -222,7 +223,7 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
                 drained.Count, userId, buffer.TotalTokens);
         }
 
-        return Task.FromResult<IReadOnlyList<RecentlyMemory>>(drained);
+        return Task.FromResult<IReadOnlyList<SensoryMemory>>(drained);
     }
 
     /// <inheritdoc />
@@ -241,11 +242,11 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
     }
 
     /// <inheritdoc />
-    public RecentlyBufferStats GetStats(string userId)
+    public SensoryBufferStats GetStats(string userId)
     {
         if (!_userBuffers.TryGetValue(userId, out var buffer))
         {
-            return RecentlyBufferStats.Empty;
+            return SensoryBufferStats.Empty;
         }
 
         lock (buffer.Lock)
@@ -254,7 +255,7 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
             var idleDuration = DateTime.UtcNow - buffer.LastActivityTime;
             var trigger = CheckTriggerSync(buffer);
 
-            return new RecentlyBufferStats
+            return new SensoryBufferStats
             {
                 ItemCount = items.Length,
                 TotalTokens = buffer.TotalTokens,
@@ -320,7 +321,7 @@ public sealed class RecentlyBufferService : IRecentlyBuffer
     /// </summary>
     private sealed class UserBuffer
     {
-        public ConcurrentQueue<RecentlyMemory> Items { get; } = new();
+        public ConcurrentQueue<SensoryMemory> Items { get; } = new();
         public int TotalTokens { get; set; }
         public int TurnCounter { get; set; }
         public DateTime LastActivityTime { get; set; }

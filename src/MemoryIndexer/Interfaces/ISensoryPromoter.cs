@@ -3,26 +3,27 @@ using MemoryIndexer.Models;
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
-/// Interface for promoting Recently buffer items to Working memory.
-/// Acts as the bridge between Tier 0 (Buffer) and Tier 1 (Working).
+/// Interface for promoting Sensory buffer items to Working memory.
+/// Acts as the bridge between Tier 0 (Sensory Buffer) and Tier 1 (Working Memory).
+/// Implements consolidation from sensory to working memory in Atkinson-Shiffrin model.
 /// </summary>
 /// <remarks>
-/// 4-Tier Architecture:
-/// - Recently (Buffer): Raw conversation staging
-/// - Working (L1): Topic-grouped, summarized active context - THIS TRANSITION
-/// - Session (L2): Archived session summaries
-/// - User (L3): Profile dictionary
+/// 4-Tier Cognitive Architecture:
+/// - SensoryBuffer (T0): Raw sensory input
+/// - WorkingMemory (T1): Active processing - THIS TRANSITION
+/// - EpisodicStore (T2): Episodic memories
+/// - SemanticStore (T3): Semantic knowledge
 ///
 /// Promotion pipeline:
-/// 1. Drain items from RecentlyBuffer
+/// 1. Drain items from SensoryBuffer
 /// 2. Group by topic using TopicSegmenter
 /// 3. Create MemoryUnits per topic group
 /// 4. Promote to WorkingMemory
 /// </remarks>
-public interface IBufferPromoter
+public interface ISensoryPromoter
 {
     /// <summary>
-    /// Promotes items from the Recently buffer to Working memory for a user.
+    /// Promotes items from the Sensory buffer to Working memory for a user.
     /// Applies topic grouping and creates MemoryUnits.
     /// </summary>
     /// <param name="userId">The user ID.</param>
@@ -35,14 +36,14 @@ public interface IBufferPromoter
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Promotes specific items from the Recently buffer.
+    /// Promotes specific items from the Sensory buffer.
     /// Used for manual or partial promotion.
     /// </summary>
     /// <param name="items">The items to promote.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result containing created memories and any evicted items.</returns>
     Task<BufferPromotionResult> PromoteItemsAsync(
-        IReadOnlyList<RecentlyMemory> items,
+        IReadOnlyList<SensoryMemory> items,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -87,7 +88,7 @@ public sealed record BufferPromotionResult
 
     /// <summary>
     /// Memories evicted from Working tier to make room.
-    /// These should be demoted to Session tier.
+    /// These should be demoted to Episodic tier.
     /// </summary>
     public IReadOnlyList<MemoryUnit> EvictedMemories { get; init; } = [];
 

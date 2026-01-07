@@ -55,9 +55,10 @@ public sealed class MemoryIndexerOptions
     public IntelligenceOptions Intelligence { get; set; } = new();
 
     /// <summary>
-    /// Recently buffer (Tier 0) configuration.
+    /// Sensory buffer (Tier 0) configuration.
+    /// Implements Atkinson-Shiffrin Multi-Store Model's sensory register.
     /// </summary>
-    public RecentlyBufferOptions RecentlyBuffer { get; set; } = new();
+    public SensoryBufferOptions SensoryBuffer { get; set; } = new();
 
     /// <summary>
     /// Deduplication configuration.
@@ -606,8 +607,9 @@ public sealed class IntelligenceOptions
 }
 
 /// <summary>
-/// Recently buffer (Tier 0) configuration options.
+/// Sensory buffer (Tier 0) configuration options.
 /// Controls the async staging area before memories are promoted to Working tier.
+/// Implements Atkinson-Shiffrin Multi-Store Model's sensory register.
 /// </summary>
 /// <remarks>
 /// Multi-signal promotion triggers (OR logic):
@@ -615,10 +617,10 @@ public sealed class IntelligenceOptions
 /// - TokenThreshold: Promotes when accumulated tokens exceed threshold
 /// - TurnThreshold: Promotes when turn count exceeds threshold
 /// </remarks>
-public sealed class RecentlyBufferOptions
+public sealed class SensoryBufferOptions
 {
     /// <summary>
-    /// Whether the Recently buffer is enabled.
+    /// Whether the Sensory buffer is enabled.
     /// When disabled, memories go directly to Working tier.
     /// </summary>
     public bool Enabled { get; set; } = true;

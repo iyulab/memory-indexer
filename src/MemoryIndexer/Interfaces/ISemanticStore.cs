@@ -3,90 +3,97 @@ using MemoryIndexer.Models;
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
-/// User Profile (L3 Tier) interface for persistent user knowledge.
-/// Stores long-term facts, preferences, and accumulated session knowledge.
+/// Tier 3: Semantic Store interface for persistent user knowledge.
+/// Stores context-free semantic knowledge extracted from episodic memories.
+/// Implements Tulving's Semantic Memory System.
 /// </summary>
 /// <remarks>
-/// 4-Tier Architecture:
-/// - Recently (Buffer): Raw conversation staging
-/// - Working (L1): Topic-grouped active context
-/// - Session (L2): Archived session summaries
-/// - User (L3): Profile dictionary - THIS TIER
+/// 4-Tier Cognitive Architecture:
+/// - SensoryBuffer (T0): Raw sensory input
+/// - WorkingMemory (T1): Active processing
+/// - EpisodicStore (T2): Episodic memories
+/// - SemanticStore (T3): Semantic knowledge - THIS TIER
 ///
-/// Promotion from Session→User uses AND logic:
+/// Semantic knowledge is:
+/// - Context-free (no when/where)
+/// - Generalized facts/concepts
+/// - Abstracted from episodic experiences
+/// - Highly consolidated and stable
+///
+/// Promotion from Episodic→Semantic uses AND logic:
 /// - Minimum confirmation count (3 sessions)
 /// - High confidence threshold (0.8)
-/// - Consistency across sessions
+/// - Consistency across episodes
 /// </remarks>
-public interface IUserProfile
+public interface ISemanticStore
 {
     /// <summary>
-    /// Gets a user profile entry by key.
+    /// Gets a semantic knowledge entry by key.
     /// </summary>
     /// <param name="userId">The user ID.</param>
-    /// <param name="key">The profile key.</param>
+    /// <param name="key">The knowledge key.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The profile entry if found.</returns>
-    Task<UserProfileEntry?> GetAsync(
+    /// <returns>The semantic entry if found.</returns>
+    Task<SemanticStoreEntry?> GetAsync(
         string userId,
         string key,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all profile entries for a user.
+    /// Gets all semantic entries for a user.
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>All profile entries.</returns>
-    Task<IReadOnlyList<UserProfileEntry>> GetAllAsync(
+    /// <returns>All semantic entries.</returns>
+    Task<IReadOnlyList<SemanticStoreEntry>> GetAllAsync(
         string userId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets profile entries by category.
+    /// Gets semantic entries by category.
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <param name="category">The category to filter by.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Profile entries in the specified category.</returns>
-    Task<IReadOnlyList<UserProfileEntry>> GetByCategoryAsync(
+    /// <returns>Semantic entries in the specified category.</returns>
+    Task<IReadOnlyList<SemanticStoreEntry>> GetByCategoryAsync(
         string userId,
-        UserProfileCategory category,
+        SemanticStoreCategory category,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sets or updates a profile entry.
+    /// Sets or updates a semantic entry.
     /// Creates new entry if key doesn't exist.
     /// </summary>
     /// <param name="userId">The user ID.</param>
-    /// <param name="entry">The profile entry to set.</param>
+    /// <param name="entry">The semantic entry to set.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if updated, false if created new.</returns>
     Task<bool> SetAsync(
         string userId,
-        UserProfileEntry entry,
+        SemanticStoreEntry entry,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Confirms an existing profile entry.
+    /// Confirms an existing semantic entry.
     /// Increments confirmation count and updates confidence.
     /// </summary>
     /// <param name="userId">The user ID.</param>
-    /// <param name="key">The profile key to confirm.</param>
+    /// <param name="key">The knowledge key to confirm.</param>
     /// <param name="evidence">Optional evidence for the confirmation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Updated entry if found.</returns>
-    Task<UserProfileEntry?> ConfirmAsync(
+    Task<SemanticStoreEntry?> ConfirmAsync(
         string userId,
         string key,
         string? evidence = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Removes a profile entry.
+    /// Removes a semantic entry.
     /// </summary>
     /// <param name="userId">The user ID.</param>
-    /// <param name="key">The profile key to remove.</param>
+    /// <param name="key">The knowledge key to remove.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if removed.</returns>
     Task<bool> RemoveAsync(
@@ -95,41 +102,41 @@ public interface IUserProfile
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Searches profile entries by content similarity.
+    /// Searches semantic entries by content similarity.
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <param name="query">The search query.</param>
     /// <param name="limit">Maximum results to return.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Matching profile entries.</returns>
-    Task<IReadOnlyList<UserProfileEntry>> SearchAsync(
+    /// <returns>Matching semantic entries.</returns>
+    Task<IReadOnlyList<SemanticStoreEntry>> SearchAsync(
         string userId,
         string query,
         int limit = 10,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets profile statistics for a user.
+    /// Gets semantic knowledge statistics for a user.
     /// </summary>
     /// <param name="userId">The user ID.</param>
-    /// <returns>Profile statistics.</returns>
-    UserProfileStats GetStats(string userId);
+    /// <returns>Semantic store statistics.</returns>
+    SemanticStoreStats GetStats(string userId);
 
     /// <summary>
-    /// Checks if a user has any profile data.
+    /// Checks if a user has any semantic knowledge.
     /// </summary>
     /// <param name="userId">The user ID.</param>
-    /// <returns>True if profile exists.</returns>
+    /// <returns>True if semantic store exists.</returns>
     bool HasProfile(string userId);
 }
 
 /// <summary>
-/// A single entry in the user profile dictionary.
+/// A single entry in the semantic knowledge store.
 /// </summary>
-public sealed class UserProfileEntry
+public sealed class SemanticStoreEntry
 {
     /// <summary>
-    /// Unique key for this profile entry.
+    /// Unique key for this semantic entry.
     /// </summary>
     public required string Key { get; init; }
 
@@ -139,9 +146,9 @@ public sealed class UserProfileEntry
     public required string Value { get; set; }
 
     /// <summary>
-    /// Category of this profile entry.
+    /// Category of this semantic entry.
     /// </summary>
-    public UserProfileCategory Category { get; set; } = UserProfileCategory.Fact;
+    public SemanticStoreCategory Category { get; set; } = SemanticStoreCategory.Fact;
 
     /// <summary>
     /// Confidence score (0-1).
@@ -190,9 +197,9 @@ public sealed class UserProfileEntry
 }
 
 /// <summary>
-/// Categories for user profile entries.
+/// Categories for semantic knowledge entries.
 /// </summary>
-public enum UserProfileCategory
+public enum SemanticStoreCategory
 {
     /// <summary>
     /// General fact about the user.
@@ -246,9 +253,9 @@ public enum UserProfileCategory
 }
 
 /// <summary>
-/// Statistics about a user's profile.
+/// Statistics about a user's semantic knowledge.
 /// </summary>
-public sealed class UserProfileStats
+public sealed class SemanticStoreStats
 {
     /// <summary>
     /// User ID.
@@ -256,7 +263,7 @@ public sealed class UserProfileStats
     public required string UserId { get; init; }
 
     /// <summary>
-    /// Total number of profile entries.
+    /// Total number of semantic entries.
     /// </summary>
     public int TotalEntries { get; init; }
 
@@ -268,8 +275,8 @@ public sealed class UserProfileStats
     /// <summary>
     /// Entries by category.
     /// </summary>
-    public IReadOnlyDictionary<UserProfileCategory, int> EntriesByCategory { get; init; }
-        = new Dictionary<UserProfileCategory, int>();
+    public IReadOnlyDictionary<SemanticStoreCategory, int> EntriesByCategory { get; init; }
+        = new Dictionary<SemanticStoreCategory, int>();
 
     /// <summary>
     /// Average confidence across all entries.
@@ -277,19 +284,19 @@ public sealed class UserProfileStats
     public float AverageConfidence { get; init; }
 
     /// <summary>
-    /// When the profile was first created.
+    /// When the semantic store was first created.
     /// </summary>
     public DateTime? FirstEntryAt { get; init; }
 
     /// <summary>
-    /// When the profile was last updated.
+    /// When the semantic store was last updated.
     /// </summary>
     public DateTime? LastUpdatedAt { get; init; }
 
     /// <summary>
     /// Empty stats.
     /// </summary>
-    public static UserProfileStats Empty(string userId) => new()
+    public static SemanticStoreStats Empty(string userId) => new()
     {
         UserId = userId,
         TotalEntries = 0,
@@ -299,9 +306,9 @@ public sealed class UserProfileStats
 }
 
 /// <summary>
-/// Options for the user profile service.
+/// Options for the semantic store service.
 /// </summary>
-public sealed class UserProfileOptions
+public sealed class SemanticStoreOptions
 {
     /// <summary>
     /// Minimum confirmations required for an entry to be considered confirmed.

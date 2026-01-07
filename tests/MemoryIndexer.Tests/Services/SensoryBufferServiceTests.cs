@@ -9,14 +9,14 @@ using Xunit;
 
 namespace MemoryIndexer.Tests.Services;
 
-public class RecentlyBufferServiceTests
+public class SensoryBufferServiceTests
 {
-    private readonly IRecentlyBuffer _buffer;
-    private readonly RecentlyBufferOptions _options;
+    private readonly ISensoryBuffer _buffer;
+    private readonly SensoryBufferOptions _options;
 
-    public RecentlyBufferServiceTests()
+    public SensoryBufferServiceTests()
     {
-        _options = new RecentlyBufferOptions
+        _options = new SensoryBufferOptions
         {
             IdleTimeout = TimeSpan.FromSeconds(60),
             TokenThreshold = 500,
@@ -27,12 +27,12 @@ public class RecentlyBufferServiceTests
 
         var memoryOptions = new MemoryIndexerOptions
         {
-            RecentlyBuffer = _options
+            SensoryBuffer = _options
         };
 
-        _buffer = new RecentlyBufferService(
+        _buffer = new SensoryBufferService(
             Options.Create(memoryOptions),
-            NullLogger<RecentlyBufferService>.Instance);
+            NullLogger<SensoryBufferService>.Instance);
     }
 
     #region Enqueue Tests
@@ -466,14 +466,14 @@ public class RecentlyBufferServiceTests
         // Arrange
         var smallOptions = new MemoryIndexerOptions
         {
-            RecentlyBuffer = new RecentlyBufferOptions
+            SensoryBuffer = new SensoryBufferOptions
             {
                 MaxBufferSize = 3
             }
         };
-        var smallBuffer = new RecentlyBufferService(
+        var smallBuffer = new SensoryBufferService(
             Options.Create(smallOptions),
-            NullLogger<RecentlyBufferService>.Instance);
+            NullLogger<SensoryBufferService>.Instance);
 
         const string userId = "user-1";
 

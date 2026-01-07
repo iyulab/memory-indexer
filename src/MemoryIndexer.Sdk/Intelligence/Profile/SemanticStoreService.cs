@@ -6,28 +6,29 @@ using Microsoft.Extensions.Options;
 namespace MemoryIndexer.Sdk.Intelligence.Profile;
 
 /// <summary>
-/// In-memory implementation of user profile service.
+/// In-memory implementation of semantic store service.
 /// Stores long-term user facts, preferences, and accumulated knowledge.
+/// Implements Tulving's Semantic Memory System for context-independent knowledge.
 /// </summary>
 /// <remarks>
-/// AND logic promotion from Session→User:
+/// AND logic promotion from Episodic→Semantic:
 /// - Minimum 3 confirmations across sessions
 /// - Confidence threshold >= 0.8
 /// - Consistent evidence across sources
 /// </remarks>
-public sealed class UserProfileService : IUserProfile
+public sealed class SemanticStoreService : ISemanticStore
 {
     private readonly IEmbeddingService _embeddingService;
-    private readonly UserProfileOptions _options;
-    private readonly ILogger<UserProfileService> _logger;
+    private readonly SemanticStoreOptions _options;
+    private readonly ILogger<SemanticStoreService> _logger;
 
     // userId -> (key -> entry)
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, UserProfileEntry>> _profiles = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SemanticStoreEntry>> _profiles = new();
 
-    public UserProfileService(
+    public SemanticStoreService(
         IEmbeddingService embeddingService,
-        IOptions<UserProfileOptions> options,
-        ILogger<UserProfileService> logger)
+        IOptions<SemanticStoreOptions> options,
+        ILogger<SemanticStoreService> logger)
     {
         _embeddingService = embeddingService;
         _options = options.Value;
@@ -35,7 +36,7 @@ public sealed class UserProfileService : IUserProfile
     }
 
     /// <inheritdoc />
-    public Task<UserProfileEntry?> GetAsync(
+    public Task<SemanticStoreEntry?> GetAsync(
         string userId,
         string key,
         CancellationToken cancellationToken = default)
@@ -45,20 +46,20 @@ public sealed class UserProfileService : IUserProfile
 
         if (!_profiles.TryGetValue(userId, out var userProfile))
         {
-            return Task.FromResult<UserProfileEntry?>(null);
+            return Task.FromResult<SemanticStoreEntry?>(null);
         }
 
         if (userProfile.TryGetValue(key, out var entry))
         {
             entry.LastAccessedAt = DateTime.UtcNow;
-            return Task.FromResult<UserProfileEntry?>(entry);
+            return Task.FromResult<SemanticStoreEntry?>(entry);
         }
 
-        return Task.FromResult<UserProfileEntry?>(null);
+        return Task.FromResult<SemanticStoreEntry?>(null);
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<UserProfileEntry>> GetAllAsync(
+    public Task<IReadOnlyList<SemanticStoreEntry>> GetAllAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
@@ -66,7 +67,7 @@ public sealed class UserProfileService : IUserProfile
 
         if (!_profiles.TryGetValue(userId, out var userProfile))
         {
-            return Task.FromResult<IReadOnlyList<UserProfileEntry>>([]);
+            return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>([]);
         }
 
         var entries = userProfile.Values
@@ -74,20 +75,20 @@ public sealed class UserProfileService : IUserProfile
             .ThenByDescending(e => e.ConfirmationCount)
             .ToList();
 
-        return Task.FromResult<IReadOnlyList<UserProfileEntry>>(entries);
+        return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>(entries);
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<UserProfileEntry>> GetByCategoryAsync(
+    public Task<IReadOnlyList<SemanticStoreEntry>> GetByCategoryAsync(
         string userId,
-        UserProfileCategory category,
+        SemanticStoreCategory category,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
         if (!_profiles.TryGetValue(userId, out var userProfile))
         {
-            return Task.FromResult<IReadOnlyList<UserProfileEntry>>([]);
+            return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>([]);
         }
 
         var entries = userProfile.Values
@@ -95,26 +96,26 @@ public sealed class UserProfileService : IUserProfile
             .OrderByDescending(e => e.Confidence)
             .ToList();
 
-        return Task.FromResult<IReadOnlyList<UserProfileEntry>>(entries);
+        return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>(entries);
     }
 
     /// <inheritdoc />
     public async Task<bool> SetAsync(
         string userId,
-        UserProfileEntry entry,
+        SemanticStoreEntry entry,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentNullException.ThrowIfNull(entry);
         ArgumentException.ThrowIfNullOrWhiteSpace(entry.Key);
 
-        var userProfile = _profiles.GetOrAdd(userId, _ => new ConcurrentDictionary<string, UserProfileEntry>());
+        var userProfile = _profiles.GetOrAdd(userId, _ => new ConcurrentDictionary<string, SemanticStoreEntry>());
 
         // Check max entries limit
         if (userProfile.Count >= _options.MaxEntriesPerUser && !userProfile.ContainsKey(entry.Key))
         {
             _logger.LogWarning(
-                "User {UserId} profile at capacity ({Max} entries), cannot add new entry",
+                "User {UserId} semantic store at capacity ({Max} entries), cannot add new entry",
                 userId, _options.MaxEntriesPerUser);
             return false;
         }
@@ -130,7 +131,7 @@ public sealed class UserProfileService : IUserProfile
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to generate embedding for profile entry {Key}", entry.Key);
+                _logger.LogWarning(ex, "Failed to generate embedding for semantic entry {Key}", entry.Key);
             }
         }
 
@@ -141,20 +142,20 @@ public sealed class UserProfileService : IUserProfile
             // Update existing entry
             entry.UpdatedAt = DateTime.UtcNow;
             userProfile[entry.Key] = entry;
-            _logger.LogDebug("Updated profile entry {Key} for user {UserId}", entry.Key, userId);
+            _logger.LogDebug("Updated semantic entry {Key} for user {UserId}", entry.Key, userId);
         }
         else
         {
             // Add new entry
             userProfile[entry.Key] = entry;
-            _logger.LogDebug("Created profile entry {Key} for user {UserId}", entry.Key, userId);
+            _logger.LogDebug("Created semantic entry {Key} for user {UserId}", entry.Key, userId);
         }
 
         return isUpdate;
     }
 
     /// <inheritdoc />
-    public Task<UserProfileEntry?> ConfirmAsync(
+    public Task<SemanticStoreEntry?> ConfirmAsync(
         string userId,
         string key,
         string? evidence = null,
@@ -165,12 +166,12 @@ public sealed class UserProfileService : IUserProfile
 
         if (!_profiles.TryGetValue(userId, out var userProfile))
         {
-            return Task.FromResult<UserProfileEntry?>(null);
+            return Task.FromResult<SemanticStoreEntry?>(null);
         }
 
         if (!userProfile.TryGetValue(key, out var entry))
         {
-            return Task.FromResult<UserProfileEntry?>(null);
+            return Task.FromResult<SemanticStoreEntry?>(null);
         }
 
         // Increment confirmation count
@@ -188,10 +189,10 @@ public sealed class UserProfileService : IUserProfile
         }
 
         _logger.LogDebug(
-            "Confirmed profile entry {Key} for user {UserId}: Count={Count}, Confidence={Confidence}",
+            "Confirmed semantic entry {Key} for user {UserId}: Count={Count}, Confidence={Confidence}",
             key, userId, entry.ConfirmationCount, entry.Confidence);
 
-        return Task.FromResult<UserProfileEntry?>(entry);
+        return Task.FromResult<SemanticStoreEntry?>(entry);
     }
 
     /// <inheritdoc />
@@ -211,14 +212,14 @@ public sealed class UserProfileService : IUserProfile
         var removed = userProfile.TryRemove(key, out _);
         if (removed)
         {
-            _logger.LogDebug("Removed profile entry {Key} for user {UserId}", key, userId);
+            _logger.LogDebug("Removed semantic entry {Key} for user {UserId}", key, userId);
         }
 
         return Task.FromResult(removed);
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<UserProfileEntry>> SearchAsync(
+    public async Task<IReadOnlyList<SemanticStoreEntry>> SearchAsync(
         string userId,
         string query,
         int limit = 10,
@@ -269,13 +270,13 @@ public sealed class UserProfileService : IUserProfile
     }
 
     /// <inheritdoc />
-    public UserProfileStats GetStats(string userId)
+    public SemanticStoreStats GetStats(string userId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
         if (!_profiles.TryGetValue(userId, out var userProfile) || userProfile.IsEmpty)
         {
-            return UserProfileStats.Empty(userId);
+            return SemanticStoreStats.Empty(userId);
         }
 
         var entries = userProfile.Values.ToList();
@@ -284,7 +285,7 @@ public sealed class UserProfileService : IUserProfile
             .GroupBy(e => e.Category)
             .ToDictionary(g => g.Key, g => g.Count());
 
-        return new UserProfileStats
+        return new SemanticStoreStats
         {
             UserId = userId,
             TotalEntries = entries.Count,

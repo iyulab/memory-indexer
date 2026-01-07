@@ -78,8 +78,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IMemoryPrimitives, MemoryPrimitivesService>();
         services.TryAddSingleton<IVirtualContextManager, VirtualContextManager>();
 
-        // Register Recently buffer (Tier 0) - Phase 14
-        services.TryAddSingleton<IRecentlyBuffer, RecentlyBufferService>();
+        // Register Sensory buffer (Tier 0) - Phase 14 → Cognitive terminology (Phase 30)
+        services.TryAddSingleton<ISensoryBuffer, SensoryBufferService>();
 
         // Register storage based on configuration
         services.TryAddSingleton<IMemoryStore>(sp =>
@@ -100,10 +100,10 @@ public static class ServiceCollectionExtensions
             };
         });
 
-        services.TryAddSingleton<ISessionStore>(sp =>
+        services.TryAddSingleton<IEpisodicStore>(sp =>
         {
-            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<InMemorySessionStore>>();
-            return new InMemorySessionStore(logger);
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<InMemoryEpisodicStore>>();
+            return new InMemoryEpisodicStore(logger);
         });
 
         // Register memory cache for embedding caching
@@ -273,18 +273,18 @@ public static class ServiceCollectionExtensions
         // Register entity resolution services (Phase 12)
         services.TryAddSingleton<ICoreferenceResolver, CoreferenceResolver>();
 
-        // Register buffer promotion services (Phase 14)
-        services.TryAddSingleton<IBufferPromoter, BufferPromoterService>();
+        // Register buffer promotion services (Phase 14 → Cognitive terminology Phase 30)
+        services.TryAddSingleton<ISensoryPromoter, SensoryPromoterService>();
 
         // Register working memory orchestrator (Phase 14.3)
         services.AddOptions<WorkingMemoryOrchestratorOptions>()
             .BindConfiguration("MemoryIndexer:VCM:WorkingOrchestrator");
         services.TryAddSingleton<IWorkingMemoryOrchestrator, WorkingMemoryOrchestratorService>();
 
-        // Register user profile service (Phase 14.4)
-        services.AddOptions<UserProfileOptions>()
-            .BindConfiguration("MemoryIndexer:VCM:UserProfile");
-        services.TryAddSingleton<IUserProfile, UserProfileService>();
+        // Register semantic store service (Phase 14.4 → Cognitive terminology Phase 30)
+        services.AddOptions<SemanticStoreOptions>()
+            .BindConfiguration("MemoryIndexer:VCM:SemanticStore");
+        services.TryAddSingleton<ISemanticStore, SemanticStoreService>();
 
         return services;
     }

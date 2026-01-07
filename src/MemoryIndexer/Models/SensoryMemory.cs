@@ -1,17 +1,18 @@
 namespace MemoryIndexer.Models;
 
 /// <summary>
-/// Represents a raw memory item in the Recently buffer (Tier 0).
-/// This is a staging area for async processing before promotion to Working memory.
+/// Represents a raw memory item in the Sensory buffer (Tier 0).
+/// This is a staging area for sensory input before promotion to Working memory.
+/// Implements Atkinson-Shiffrin Multi-Store Model's sensory register.
 /// </summary>
 /// <remarks>
-/// 4-Tier Architecture:
-/// - Recently (Buffer): Raw conversation, async staging
-/// - Working (L1): Summarized active context
-/// - Session (L2): Archived session summaries
-/// - User (L3): Profile dictionary
+/// 4-Tier Cognitive Architecture:
+/// - SensoryBuffer (T0): Raw sensory input, async staging - THIS CLASS
+/// - WorkingMemory (T1): Processed active context
+/// - EpisodicStore (T2): Archived episodic memories
+/// - SemanticStore (T3): Consolidated semantic knowledge
 /// </remarks>
-public sealed class RecentlyMemory
+public sealed class SensoryMemory
 {
     /// <summary>
     /// Unique identifier for this buffer item.
@@ -19,7 +20,7 @@ public sealed class RecentlyMemory
     public Guid Id { get; init; } = Guid.NewGuid();
 
     /// <summary>
-    /// Raw content of the memory.
+    /// Raw content of the sensory memory.
     /// </summary>
     public required string Content { get; init; }
 
@@ -62,7 +63,7 @@ public sealed class RecentlyMemory
 }
 
 /// <summary>
-/// Result of a promotion operation from Recently buffer.
+/// Result of a promotion operation from Sensory buffer.
 /// </summary>
 public sealed class PromotionResult
 {

@@ -7,33 +7,34 @@ using Microsoft.Extensions.Logging;
 namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 
 /// <summary>
-/// Implementation of buffer promotion from Recently to Working tier.
+/// Implementation of buffer promotion from Sensory to Working tier.
 /// Applies topic segmentation and creates MemoryUnits for promotion.
+/// Implements Atkinson-Shiffrin Multi-Store Model's sensory→short-term memory transition.
 /// </summary>
 /// <remarks>
 /// Promotion Pipeline:
-/// 1. Drain items from RecentlyBuffer (triggered by time/tokens/turns)
+/// 1. Drain items from SensoryBuffer (triggered by time/tokens/turns)
 /// 2. Convert to ConversationMessages for topic analysis
 /// 3. Segment by topic using TopicSegmenter
 /// 4. Create MemoryUnit per topic group
 /// 5. Promote to WorkingMemory (with eviction if at capacity)
 /// </remarks>
-public sealed class BufferPromoterService : IBufferPromoter
+public sealed class SensoryPromoterService : ISensoryPromoter
 {
-    private readonly IRecentlyBuffer _recentlyBuffer;
+    private readonly ISensoryBuffer _sensoryBuffer;
     private readonly IWorkingMemory _workingMemory;
     private readonly IEmbeddingService _embeddingService;
     private readonly TopicSegmenter _topicSegmenter;
-    private readonly ILogger<BufferPromoterService> _logger;
+    private readonly ILogger<SensoryPromoterService> _logger;
 
-    public BufferPromoterService(
-        IRecentlyBuffer recentlyBuffer,
+    public SensoryPromoterService(
+        ISensoryBuffer sensoryBuffer,
         IWorkingMemory workingMemory,
         IEmbeddingService embeddingService,
         TopicSegmenter topicSegmenter,
-        ILogger<BufferPromoterService> logger)
+        ILogger<SensoryPromoterService> logger)
     {
-        _recentlyBuffer = recentlyBuffer;
+        _sensoryBuffer = sensoryBuffer;
         _workingMemory = workingMemory;
         _embeddingService = embeddingService;
         _topicSegmenter = topicSegmenter;
@@ -53,7 +54,7 @@ public sealed class BufferPromoterService : IBufferPromoter
         try
         {
             // Drain all items from the buffer
-            var items = await _recentlyBuffer.DrainAsync(userId, cancellationToken);
+            var items = await _sensoryBuffer.DrainAsync(userId, cancellationToken);
 
             if (items.Count == 0)
             {
@@ -79,7 +80,7 @@ public sealed class BufferPromoterService : IBufferPromoter
 
     /// <inheritdoc />
     public async Task<BufferPromotionResult> PromoteItemsAsync(
-        IReadOnlyList<RecentlyMemory> items,
+        IReadOnlyList<SensoryMemory> items,
         CancellationToken cancellationToken = default)
     {
         if (items.Count == 0)
@@ -110,16 +111,16 @@ public sealed class BufferPromoterService : IBufferPromoter
         CancellationToken cancellationToken = default)
     {
         var results = new List<UserPromotionCheck>();
-        var activeUsers = _recentlyBuffer.GetActiveUserIds();
+        var activeUsers = _sensoryBuffer.GetActiveUserIds();
 
         foreach (var userId in activeUsers)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var trigger = await _recentlyBuffer.CheckTriggerAsync(userId, cancellationToken);
+            var trigger = await _sensoryBuffer.CheckTriggerAsync(userId, cancellationToken);
             if (trigger.HasValue)
             {
-                var stats = _recentlyBuffer.GetStats(userId);
+                var stats = _sensoryBuffer.GetStats(userId);
                 results.Add(new UserPromotionCheck
                 {
                     UserId = userId,
@@ -134,7 +135,7 @@ public sealed class BufferPromoterService : IBufferPromoter
     }
 
     private async Task<BufferPromotionResult> PromoteItemsInternalAsync(
-        IReadOnlyList<RecentlyMemory> items,
+        IReadOnlyList<SensoryMemory> items,
         PromotionTriggerType trigger,
         CancellationToken cancellationToken)
     {

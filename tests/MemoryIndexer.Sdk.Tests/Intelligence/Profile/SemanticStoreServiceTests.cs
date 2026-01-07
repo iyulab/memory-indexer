@@ -8,20 +8,20 @@ using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Profile;
 
-public class UserProfileServiceTests
+public class SemanticStoreServiceTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly UserProfileOptions _options;
-    private readonly IUserProfile _profileService;
+    private readonly SemanticStoreOptions _options;
+    private readonly ISemanticStore _profileService;
 
-    public UserProfileServiceTests()
+    public SemanticStoreServiceTests()
     {
         _embeddingServiceMock = new Mock<IEmbeddingService>();
         _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new float[768].AsMemory());
 
-        _options = new UserProfileOptions
+        _options = new SemanticStoreOptions
         {
             MinConfirmationCount = 3,
             MinConfidenceThreshold = 0.8f,
@@ -30,10 +30,10 @@ public class UserProfileServiceTests
             EnableSemanticSearch = true
         };
 
-        _profileService = new UserProfileService(
+        _profileService = new SemanticStoreService(
             _embeddingServiceMock.Object,
             Options.Create(_options),
-            NullLogger<UserProfileService>.Instance);
+            NullLogger<SemanticStoreService>.Instance);
     }
 
     #region SetAsync Tests
@@ -189,16 +189,16 @@ public class UserProfileServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("skill1", "Python", category: UserProfileCategory.Skill));
-        await _profileService.SetAsync(userId, CreateTestEntry("skill2", "C#", category: UserProfileCategory.Skill));
-        await _profileService.SetAsync(userId, CreateTestEntry("interest", "Music", category: UserProfileCategory.Interest));
+        await _profileService.SetAsync(userId, CreateTestEntry("skill1", "Python", category: SemanticStoreCategory.Skill));
+        await _profileService.SetAsync(userId, CreateTestEntry("skill2", "C#", category: SemanticStoreCategory.Skill));
+        await _profileService.SetAsync(userId, CreateTestEntry("interest", "Music", category: SemanticStoreCategory.Interest));
 
         // Act
-        var skills = await _profileService.GetByCategoryAsync(userId, UserProfileCategory.Skill);
+        var skills = await _profileService.GetByCategoryAsync(userId, SemanticStoreCategory.Skill);
 
         // Assert
         skills.Should().HaveCount(2);
-        skills.Should().OnlyContain(e => e.Category == UserProfileCategory.Skill);
+        skills.Should().OnlyContain(e => e.Category == SemanticStoreCategory.Skill);
     }
 
     #endregion
@@ -352,9 +352,9 @@ public class UserProfileServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("skill1", "Python", 0.9f, UserProfileCategory.Skill));
-        await _profileService.SetAsync(userId, CreateTestEntry("skill2", "C#", 0.8f, UserProfileCategory.Skill));
-        await _profileService.SetAsync(userId, CreateTestEntry("interest", "Music", 0.7f, UserProfileCategory.Interest));
+        await _profileService.SetAsync(userId, CreateTestEntry("skill1", "Python", 0.9f, SemanticStoreCategory.Skill));
+        await _profileService.SetAsync(userId, CreateTestEntry("skill2", "C#", 0.8f, SemanticStoreCategory.Skill));
+        await _profileService.SetAsync(userId, CreateTestEntry("interest", "Music", 0.7f, SemanticStoreCategory.Interest));
 
         // Confirm one entry to make it confirmed
         await _profileService.ConfirmAsync(userId, "skill1");
@@ -365,8 +365,8 @@ public class UserProfileServiceTests
 
         // Assert
         stats.TotalEntries.Should().Be(3);
-        stats.EntriesByCategory[UserProfileCategory.Skill].Should().Be(2);
-        stats.EntriesByCategory[UserProfileCategory.Interest].Should().Be(1);
+        stats.EntriesByCategory[SemanticStoreCategory.Skill].Should().Be(2);
+        stats.EntriesByCategory[SemanticStoreCategory.Interest].Should().Be(1);
         stats.AverageConfidence.Should().BeGreaterThan(0);
     }
 
@@ -407,13 +407,13 @@ public class UserProfileServiceTests
 
     #region Helper Methods
 
-    private static UserProfileEntry CreateTestEntry(
+    private static SemanticStoreEntry CreateTestEntry(
         string key,
         string value,
         float confidence = 0.5f,
-        UserProfileCategory category = UserProfileCategory.Fact)
+        SemanticStoreCategory category = SemanticStoreCategory.Fact)
     {
-        return new UserProfileEntry
+        return new SemanticStoreEntry
         {
             Key = key,
             Value = value,

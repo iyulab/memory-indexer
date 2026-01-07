@@ -13,15 +13,15 @@ using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Promotion;
 
-public class BufferPromoterServiceTests
+public class SensoryPromoterServiceTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly IRecentlyBuffer _recentlyBuffer;
+    private readonly ISensoryBuffer _recentlyBuffer;
     private readonly IWorkingMemory _workingMemory;
     private readonly TopicSegmenter _topicSegmenter;
-    private readonly IBufferPromoter _promoter;
+    private readonly ISensoryPromoter _promoter;
 
-    public BufferPromoterServiceTests()
+    public SensoryPromoterServiceTests()
     {
         // Setup mocks
         _embeddingServiceMock = new Mock<IEmbeddingService>();
@@ -62,12 +62,12 @@ public class BufferPromoterServiceTests
             NullLogger<TopicSegmenter>.Instance);
 
         // Create service under test
-        _promoter = new BufferPromoterService(
+        _promoter = new SensoryPromoterService(
             _recentlyBuffer,
             _workingMemory,
             _embeddingServiceMock.Object,
             _topicSegmenter,
-            NullLogger<BufferPromoterService>.Instance);
+            NullLogger<SensoryPromoterService>.Instance);
     }
 
     #region PromoteAsync Tests
@@ -195,15 +195,15 @@ public class BufferPromoterServiceTests
     public async Task PromoteItemsAsync_WithItems_CreatesMemories()
     {
         // Arrange
-        var items = new List<RecentlyMemory>
+        var items = new List<SensoryMemory>
         {
-            new RecentlyMemory
+            new SensoryMemory
             {
                 Content = "Item 1",
                 UserId = "user-1",
                 Role = "user"
             },
-            new RecentlyMemory
+            new SensoryMemory
             {
                 Content = "Item 2",
                 UserId = "user-1",
@@ -298,12 +298,12 @@ public class BufferPromoterServiceTests
             new MemoryCache(new MemoryCacheOptions()),
             Options.Create(smallWorkingOptions));
 
-        var promoter = new BufferPromoterService(
+        var promoter = new SensoryPromoterService(
             _recentlyBuffer,
             smallWorkingMemory,
             _embeddingServiceMock.Object,
             _topicSegmenter,
-            NullLogger<BufferPromoterService>.Instance);
+            NullLogger<SensoryPromoterService>.Instance);
 
         // Pre-fill working memory
         await smallWorkingMemory.PromoteAsync(new MemoryUnit
@@ -349,12 +349,12 @@ public class BufferPromoterServiceTests
             failingEmbeddingService.Object,
             NullLogger<TopicSegmenter>.Instance);
 
-        var promoter = new BufferPromoterService(
+        var promoter = new SensoryPromoterService(
             _recentlyBuffer,
             _workingMemory,
             failingEmbeddingService.Object,
             segmenter,
-            NullLogger<BufferPromoterService>.Instance);
+            NullLogger<SensoryPromoterService>.Instance);
 
         await _recentlyBuffer.EnqueueAsync("Content", "user-1");
 

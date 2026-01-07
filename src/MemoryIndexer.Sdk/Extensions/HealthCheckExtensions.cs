@@ -25,28 +25,28 @@ public static class HealthCheckExtensions
 
     /// <summary>
     /// Adds health checks for the 4-tier memory architecture.
-    /// Tags: "tier:recently", "tier:working", "tier:session", "tier:user"
+    /// Tags: "tier:sensory", "tier:working", "tier:episodic", "tier:semantic"
     /// </summary>
     public static IHealthChecksBuilder AddMemoryTierHealthChecks(
         this IHealthChecksBuilder builder)
     {
         return builder
-            .AddCheck<RecentlyBufferHealthCheck>(
-                name: "Recently Buffer",
+            .AddCheck<SensoryBufferHealthCheck>(
+                name: "Sensory Buffer",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: new[] { "tier", "tier:recently", "memory" })
+                tags: new[] { "tier", "tier:sensory", "memory" })
             .AddCheck<WorkingMemoryHealthCheck>(
                 name: "Working Memory",
                 failureStatus: HealthStatus.Unhealthy,
                 tags: new[] { "tier", "tier:working", "memory", "critical" })
-            .AddCheck<SessionStoreHealthCheck>(
-                name: "Session Store",
+            .AddCheck<EpisodicStoreHealthCheck>(
+                name: "Episodic Store",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: new[] { "tier", "tier:session", "memory", "critical" })
-            .AddCheck<UserProfileHealthCheck>(
-                name: "User Profile",
+                tags: new[] { "tier", "tier:episodic", "memory", "critical" })
+            .AddCheck<SemanticStoreHealthCheck>(
+                name: "Semantic Store",
                 failureStatus: HealthStatus.Degraded,
-                tags: new[] { "tier", "tier:user", "memory" });
+                tags: new[] { "tier", "tier:semantic", "memory" });
     }
 
     /// <summary>

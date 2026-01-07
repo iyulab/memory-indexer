@@ -4,18 +4,19 @@ using MemoryIndexer.Interfaces;
 namespace MemoryIndexer.Sdk.Health;
 
 /// <summary>
-/// Health check for User Profile tier (L3).
+/// Health check for Semantic Store tier (Tier 3).
 /// Monitors profile consistency and storage health.
+/// Implements Tulving's Semantic Memory System health monitoring.
 /// </summary>
-public class UserProfileHealthCheck : IHealthCheck
+public class SemanticStoreHealthCheck : IHealthCheck
 {
-    private readonly IUserProfile _userProfile;
+    private readonly ISemanticStore _semanticStore;
     private const int CriticalEntriesPerUser = 1000;  // Way above normal ~500
     private const int WarningEntriesPerUser = 750;
 
-    public UserProfileHealthCheck(IUserProfile userProfile)
+    public SemanticStoreHealthCheck(ISemanticStore semanticStore)
     {
-        _userProfile = userProfile ?? throw new ArgumentNullException(nameof(userProfile));
+        _semanticStore = semanticStore ?? throw new ArgumentNullException(nameof(semanticStore));
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
@@ -24,7 +25,7 @@ public class UserProfileHealthCheck : IHealthCheck
     {
         try
         {
-            var stats = _userProfile.GetStats("__health_check_test__");
+            var stats = _semanticStore.GetStats("__health_check_test__");
 
             var data = new Dictionary<string, object>
             {
@@ -43,7 +44,7 @@ public class UserProfileHealthCheck : IHealthCheck
             if (stats.TotalEntries > CriticalEntriesPerUser)
             {
                 return HealthCheckResult.Unhealthy(
-                    $"User profile has critical entry count: {stats.TotalEntries} (expected ~500)",
+                    $"Semantic store has critical entry count: {stats.TotalEntries} (expected ~500)",
                     data: data);
             }
 
@@ -51,7 +52,7 @@ public class UserProfileHealthCheck : IHealthCheck
             if (stats.TotalEntries > WarningEntriesPerUser)
             {
                 return HealthCheckResult.Degraded(
-                    $"User profile approaching entry limit: {stats.TotalEntries}",
+                    $"Semantic store approaching entry limit: {stats.TotalEntries}",
                     data: data);
             }
 
@@ -65,19 +66,19 @@ public class UserProfileHealthCheck : IHealthCheck
                 // Many entries but very few confirmed - may indicate promotion issues
                 data["confirmationRatio"] = confirmationRatio;
                 return HealthCheckResult.Degraded(
-                    $"User profile has low confirmation ratio: {confirmationRatio:P1} ({stats.ConfirmedEntries}/{stats.TotalEntries})",
+                    $"Semantic store has low confirmation ratio: {confirmationRatio:P1} ({stats.ConfirmedEntries}/{stats.TotalEntries})",
                     data: data);
             }
 
             // Healthy
             return HealthCheckResult.Healthy(
-                $"User profile healthy ({stats.TotalEntries} entries, {stats.ConfirmedEntries} confirmed, avg confidence: {stats.AverageConfidence:F2})",
+                $"Semantic store healthy ({stats.TotalEntries} entries, {stats.ConfirmedEntries} confirmed, avg confidence: {stats.AverageConfidence:F2})",
                 data);
         }
         catch (Exception ex)
         {
             return HealthCheckResult.Unhealthy(
-                "Failed to check User profile health",
+                "Failed to check Semantic store health",
                 exception: ex);
         }
     }

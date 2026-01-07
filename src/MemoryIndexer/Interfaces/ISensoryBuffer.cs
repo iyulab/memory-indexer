@@ -3,22 +3,23 @@ using MemoryIndexer.Models;
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
-/// Tier 0: Recently Buffer interface.
-/// Async staging area for raw conversation before promotion to Working memory.
+/// Tier 0: Sensory Buffer interface.
+/// Async staging area for raw sensory input before promotion to Working memory.
+/// Implements Atkinson-Shiffrin Multi-Store Model's sensory memory component.
 /// </summary>
 /// <remarks>
-/// 4-Tier Architecture:
-/// - Recently (Buffer): Raw conversation, async staging - THIS TIER
-/// - Working (L1): Summarized active context
-/// - Session (L2): Archived session summaries
-/// - User (L3): Profile dictionary
+/// 4-Tier Cognitive Architecture:
+/// - SensoryBuffer (T0): Raw sensory input, async staging - THIS TIER
+/// - WorkingMemory (T1): Processed active context
+/// - EpisodicStore (T2): Archived episodic memories
+/// - SemanticStore (T3): Consolidated semantic knowledge
 ///
 /// Multi-signal promotion triggers (OR logic):
 /// - IdleTimeout: No activity for specified duration
 /// - TokenThreshold: Accumulated tokens exceed threshold
 /// - TurnThreshold: Turn count exceeds threshold
 /// </remarks>
-public interface IRecentlyBuffer
+public interface ISensoryBuffer
 {
     /// <summary>
     /// Gets the current number of items in the buffer for a user.
@@ -35,7 +36,7 @@ public interface IRecentlyBuffer
     int GetTokenCount(string userId);
 
     /// <summary>
-    /// Enqueues a new item into the Recently buffer.
+    /// Enqueues a new item into the Sensory buffer.
     /// </summary>
     /// <param name="content">The raw content to buffer.</param>
     /// <param name="userId">The user ID.</param>
@@ -44,7 +45,7 @@ public interface IRecentlyBuffer
     /// <param name="metadata">Optional metadata.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The created buffer item.</returns>
-    Task<RecentlyMemory> EnqueueAsync(
+    Task<SensoryMemory> EnqueueAsync(
         string content,
         string userId,
         string? sessionId = null,
@@ -59,7 +60,7 @@ public interface IRecentlyBuffer
     /// <param name="userId">The user ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of buffered items.</returns>
-    Task<IReadOnlyList<RecentlyMemory>> GetPendingAsync(
+    Task<IReadOnlyList<SensoryMemory>> GetPendingAsync(
         string userId,
         CancellationToken cancellationToken = default);
 
@@ -80,7 +81,7 @@ public interface IRecentlyBuffer
     /// <param name="userId">The user ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>All drained items.</returns>
-    Task<IReadOnlyList<RecentlyMemory>> DrainAsync(
+    Task<IReadOnlyList<SensoryMemory>> DrainAsync(
         string userId,
         CancellationToken cancellationToken = default);
 
@@ -91,7 +92,7 @@ public interface IRecentlyBuffer
     /// <param name="maxItems">Maximum items to drain.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Drained items up to the limit.</returns>
-    Task<IReadOnlyList<RecentlyMemory>> DrainAsync(
+    Task<IReadOnlyList<SensoryMemory>> DrainAsync(
         string userId,
         int maxItems,
         CancellationToken cancellationToken = default);
@@ -112,7 +113,7 @@ public interface IRecentlyBuffer
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <returns>Buffer statistics.</returns>
-    RecentlyBufferStats GetStats(string userId);
+    SensoryBufferStats GetStats(string userId);
 
     /// <summary>
     /// Gets all active user IDs with pending buffer items.
@@ -123,9 +124,9 @@ public interface IRecentlyBuffer
 }
 
 /// <summary>
-/// Statistics about the Recently buffer state.
+/// Statistics about the Sensory buffer state.
 /// </summary>
-public sealed class RecentlyBufferStats
+public sealed class SensoryBufferStats
 {
     /// <summary>
     /// Number of items in the buffer.
@@ -170,7 +171,7 @@ public sealed class RecentlyBufferStats
     /// <summary>
     /// Empty stats instance.
     /// </summary>
-    public static RecentlyBufferStats Empty => new()
+    public static SensoryBufferStats Empty => new()
     {
         ItemCount = 0,
         TotalTokens = 0,

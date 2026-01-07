@@ -7,15 +7,15 @@ using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Health;
 
-public class RecentlyBufferHealthCheckTests
+public class SensoryBufferHealthCheckTests
 {
-    private readonly Mock<IRecentlyBuffer> _mockBuffer;
-    private readonly RecentlyBufferHealthCheck _healthCheck;
+    private readonly Mock<ISensoryBuffer> _mockBuffer;
+    private readonly SensoryBufferHealthCheck _healthCheck;
 
-    public RecentlyBufferHealthCheckTests()
+    public SensoryBufferHealthCheckTests()
     {
-        _mockBuffer = new Mock<IRecentlyBuffer>();
-        _healthCheck = new RecentlyBufferHealthCheck(_mockBuffer.Object);
+        _mockBuffer = new Mock<ISensoryBuffer>();
+        _healthCheck = new SensoryBufferHealthCheck(_mockBuffer.Object);
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public class RecentlyBufferHealthCheckTests
     {
         // Arrange
         _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
-            .Returns(new RecentlyBufferStats
+            .Returns(new SensoryBufferStats
             {
                 ItemCount = 5,
                 TotalTokens = 500,
@@ -46,7 +46,7 @@ public class RecentlyBufferHealthCheckTests
     {
         // Arrange
         _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
-            .Returns(new RecentlyBufferStats
+            .Returns(new SensoryBufferStats
             {
                 ItemCount = 10,
                 TotalTokens = 2500, // Warning threshold
@@ -68,7 +68,7 @@ public class RecentlyBufferHealthCheckTests
     {
         // Arrange
         _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
-            .Returns(new RecentlyBufferStats
+            .Returns(new SensoryBufferStats
             {
                 ItemCount = 20,
                 TotalTokens = 6000, // Critical threshold
@@ -90,7 +90,7 @@ public class RecentlyBufferHealthCheckTests
     {
         // Arrange
         _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
-            .Returns(new RecentlyBufferStats
+            .Returns(new SensoryBufferStats
             {
                 ItemCount = 5,
                 TotalTokens = 500,
@@ -111,7 +111,7 @@ public class RecentlyBufferHealthCheckTests
     {
         // Arrange
         _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
-            .Returns(new RecentlyBufferStats
+            .Returns(new SensoryBufferStats
             {
                 ItemCount = 10,
                 TotalTokens = 1000,
