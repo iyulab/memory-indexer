@@ -53,26 +53,43 @@ public sealed class SensoryPromoterService : ISensoryPromoter
 
         try
         {
+            _logger.LogInformation("[PROMOTION] Starting promotion cycle for user {UserId}", userId);
+
             // Drain all items from the buffer
             var items = await _sensoryBuffer.DrainAsync(userId, cancellationToken);
 
             if (items.Count == 0)
             {
+                _logger.LogInformation("[PROMOTION] No items to promote for user {UserId}", userId);
                 return BufferPromotionResult.Empty;
             }
 
-            _logger.LogDebug(
-                "Promoting {Count} items for user {UserId} with trigger {Trigger}",
+            _logger.LogInformation(
+                "[PROMOTION] Found {Count} promotable items for user {UserId} with trigger {Trigger}",
                 items.Count, userId, trigger);
 
             var result = await PromoteItemsInternalAsync(items, trigger, cancellationToken);
 
             stopwatch.Stop();
+
+            if (result.Success)
+            {
+                _logger.LogInformation(
+                    "[PROMOTION] ✅ Successfully promoted {ItemCount} items as {SegmentCount} memories. " +
+                    "Evicted: {EvictedCount}. Duration: {Duration:F2}s",
+                    result.ItemsProcessed, result.CreatedMemories.Count, result.EvictedMemories.Count,
+                    stopwatch.Elapsed.TotalSeconds);
+            }
+            else
+            {
+                _logger.LogError("[PROMOTION] ❌ Promotion failed: {Error}", result.Error);
+            }
+
             return result with { Duration = stopwatch.Elapsed };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to promote buffer for user {UserId}", userId);
+            _logger.LogError(ex, "[PROMOTION] ❌ Failed to promote buffer for user {UserId}", userId);
             stopwatch.Stop();
             return BufferPromotionResult.Failure(ex.Message) with { Duration = stopwatch.Elapsed };
         }
@@ -214,12 +231,18 @@ public sealed class SensoryPromoterService : ISensoryPromoter
             var evicted = await _workingMemory.PromoteAsync(memory, cancellationToken);
             createdMemories.Add(memory);
 
+            _logger.LogInformation(
+                "[PROMOTION] ✅ Promoted: {Content}",
+                memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content);
+
             if (evicted != null)
             {
                 evictedMemories.Add(evicted);
-                _logger.LogDebug(
-                    "Evicted memory {EvictedId} to make room for promoted memory {NewId}",
-                    evicted.Id, memory.Id);
+                _logger.LogWarning(
+                    "[PROMOTION] ⚠️ Evicted memory {EvictedId} to make room for {NewId}. " +
+                    "Content: {Content}",
+                    evicted.Id, memory.Id,
+                    evicted.Content.Length > 50 ? evicted.Content[..50] + "..." : evicted.Content);
             }
         }
 

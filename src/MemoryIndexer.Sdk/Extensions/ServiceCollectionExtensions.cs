@@ -28,6 +28,7 @@ using MemoryIndexer.Sdk.Intelligence.Promotion;
 using MemoryIndexer.Sdk.Intelligence.Quality;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Intelligence.Caching;
+using MemoryIndexer.Sdk.Services;
 using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.InMemory;
 using MemoryIndexer.Mock;
@@ -294,6 +295,11 @@ public static class ServiceCollectionExtensions
         services.AddOptions<SemanticStoreOptions>()
             .BindConfiguration("MemoryIndexer:VCM:SemanticStore");
         services.TryAddSingleton<IArchiveStore, ArchiveStoreService>();
+
+        // Register memory promotion background worker (Phase 47)
+        services.AddOptions<MemoryPromotionBackgroundOptions>()
+            .BindConfiguration("MemoryIndexer:VCM:PromotionBackground");
+        services.AddHostedService<MemoryPromotionBackgroundService>();
 
         return services;
     }
