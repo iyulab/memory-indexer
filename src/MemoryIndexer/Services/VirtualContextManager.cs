@@ -19,6 +19,8 @@ public sealed class VirtualContextManager : IVirtualContextManager
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
     private readonly IScoringService _scoringService;
+    private readonly IScopeManager _scopeManager;
+    private readonly ITierManager _tierManager;
     private readonly ILogger<VirtualContextManager> _logger;
     private readonly VCMOptions _options;
     private readonly VirtualContextState _state;
@@ -28,6 +30,8 @@ public sealed class VirtualContextManager : IVirtualContextManager
         IMemoryStore memoryStore,
         IEmbeddingService embeddingService,
         IScoringService scoringService,
+        IScopeManager scopeManager,
+        ITierManager tierManager,
         IOptions<VCMOptions> options,
         ILogger<VirtualContextManager> logger)
     {
@@ -35,6 +39,8 @@ public sealed class VirtualContextManager : IVirtualContextManager
         _memoryStore = memoryStore;
         _embeddingService = embeddingService;
         _scoringService = scoringService;
+        _scopeManager = scopeManager;
+        _tierManager = tierManager;
         _logger = logger;
         _options = options.Value;
         _state = new VirtualContextState
@@ -61,6 +67,9 @@ public sealed class VirtualContextManager : IVirtualContextManager
         _state.UserId = userId;
         _state.SessionId = sessionId;
         _state.IsInitialized = true;
+
+        // Initialize scope tracking (3-axis model: Scope dimension)
+        await _scopeManager.InitializeAsync(userId, sessionId, cancellationToken);
 
         // Clear any existing working memory
         await _workingMemory.ClearAsync(cancellationToken);
@@ -121,17 +130,33 @@ public sealed class VirtualContextManager : IVirtualContextManager
 
             if (evicted != null)
             {
-                // Handle evicted memory - update in store
-                evicted.Tier = Tier.Long;
-                await _memoryStore.UpdateAsync(evicted, cancellationToken);
-                _logger.LogDebug("Evicted memory {MemoryId} to session tier", evicted.Id);
+                // Handle evicted memory - demote using tier manager
+                var demoteResult = await _tierManager.DemoteAsync(
+                    evicted,
+                    Tier.Long,
+                    PromotionReason.CapacityEviction,
+                    cancellationToken);
+
+                if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+                {
+                    await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
+                    _logger.LogDebug("Evicted memory {MemoryId} to Long tier", evicted.Id);
+                }
             }
 
-            memory.Tier = Tier.Short;
-            memory.RecordAccess();
-            await _memoryStore.UpdateAsync(memory, cancellationToken);
+            // Promote memory using tier manager
+            var promoteResult = await _tierManager.PromoteAsync(
+                memory,
+                Tier.Short,
+                PromotionReason.Manual,
+                cancellationToken);
 
-            pagedIn.Add(memory);
+            if (promoteResult.Success && promoteResult.UpdatedMemory != null)
+            {
+                promoteResult.UpdatedMemory.RecordAccess();
+                await _memoryStore.UpdateAsync(promoteResult.UpdatedMemory, cancellationToken);
+                pagedIn.Add(promoteResult.UpdatedMemory);
+            }
         }
 
         await UpdateStateAsync(cancellationToken);
@@ -164,17 +189,33 @@ public sealed class VirtualContextManager : IVirtualContextManager
 
         if (evicted != null)
         {
-            evicted.Tier = Tier.Long;
-            await _memoryStore.UpdateAsync(evicted, cancellationToken);
+            var demoteResult = await _tierManager.DemoteAsync(
+                evicted,
+                Tier.Long,
+                PromotionReason.CapacityEviction,
+                cancellationToken);
+
+            if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+            {
+                await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
+            }
         }
 
-        memory.Tier = Tier.Short;
-        memory.RecordAccess();
-        await _memoryStore.UpdateAsync(memory, cancellationToken);
+        var promoteResult = await _tierManager.PromoteAsync(
+            memory,
+            Tier.Short,
+            PromotionReason.Manual,
+            cancellationToken);
+
+        if (promoteResult.Success && promoteResult.UpdatedMemory != null)
+        {
+            promoteResult.UpdatedMemory.RecordAccess();
+            await _memoryStore.UpdateAsync(promoteResult.UpdatedMemory, cancellationToken);
+        }
 
         await UpdateStateAsync(cancellationToken);
 
-        return memory;
+        return promoteResult.UpdatedMemory;
     }
 
     /// <inheritdoc />
@@ -195,9 +236,17 @@ public sealed class VirtualContextManager : IVirtualContextManager
             var demoted = await _workingMemory.DemoteAsync(candidate.Id, cancellationToken);
             if (demoted != null)
             {
-                demoted.Tier = Tier.Long;
-                await _memoryStore.UpdateAsync(demoted, cancellationToken);
-                pagedOut.Add(demoted);
+                var demoteResult = await _tierManager.DemoteAsync(
+                    demoted,
+                    Tier.Long,
+                    PromotionReason.LowRetention,
+                    cancellationToken);
+
+                if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+                {
+                    await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
+                    pagedOut.Add(demoteResult.UpdatedMemory);
+                }
             }
         }
 
@@ -241,12 +290,19 @@ public sealed class VirtualContextManager : IVirtualContextManager
             var demoted = await _workingMemory.DemoteAsync(candidate.Id, cancellationToken);
             if (demoted != null)
             {
-                demoted.Tier = Tier.Long;
-                await _memoryStore.UpdateAsync(demoted, cancellationToken);
+                var demoteResult = await _tierManager.DemoteAsync(
+                    demoted,
+                    Tier.Long,
+                    PromotionReason.CapacityEviction,
+                    cancellationToken);
 
-                demotedCount++;
-                tokensFreed += EstimateTokens(demoted.Content);
-                affectedIds.Add(demoted.Id);
+                if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+                {
+                    await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
+                    demotedCount++;
+                    tokensFreed += EstimateTokens(demoteResult.UpdatedMemory.Content);
+                    affectedIds.Add(demoteResult.UpdatedMemory.Id);
+                }
             }
 
             await UpdateStateAsync(cancellationToken);
@@ -314,19 +370,41 @@ public sealed class VirtualContextManager : IVirtualContextManager
                 stabilityUpgradedCount++;
             }
 
-            // Promote frequently accessed session memories to user tier
-            if (memory.Tier == Tier.Long &&
-                memory.Stability >= MemoryStability.Stable &&
-                memory.RetentionScore > 0.7f)
+            // Evaluate promotion to Archive tier using tier manager
+            if (memory.Tier == Tier.Long)
             {
-                memory.Tier = Tier.Archive;
-                promotedCount++;
+                var context = new TierEvaluationContext
+                {
+                    UserId = _state.UserId!,
+                    SessionId = _state.SessionId,
+                    TurnCount = 0,
+                    TokenCount = 0,
+                    TimeElapsed = TimeSpan.Zero,
+                    SessionEnding = false
+                };
+
+                var recommendation = await _tierManager.EvaluatePromotionAsync(memory, context, cancellationToken);
+
+                if (recommendation.ShouldPromote && recommendation.TargetTier == Tier.Archive)
+                {
+                    var promoteResult = await _tierManager.PromoteAsync(
+                        memory,
+                        Tier.Archive,
+                        recommendation.Reason,
+                        cancellationToken);
+
+                    if (promoteResult.Success)
+                    {
+                        promotedCount++;
+                        // Memory already updated by tier manager
+                        continue;
+                    }
+                }
             }
 
-            // Only update if something changed
+            // Only update if something changed (and not already updated by promotion)
             if (memory.Stability != originalStability ||
-                Math.Abs(memory.RetentionScore - originalRetention) > 0.01f ||
-                memory.Tier == Tier.Archive)
+                Math.Abs(memory.RetentionScore - originalRetention) > 0.01f)
             {
                 memory.MarkUpdated();
                 await _memoryStore.UpdateAsync(memory, cancellationToken);
@@ -412,13 +490,20 @@ public sealed class VirtualContextManager : IVirtualContextManager
             // Update retention before migration decision
             memory.RetentionScore = memory.CalculateRetention();
 
-            // Migrate memories above retention threshold to user tier
+            // Migrate memories above retention threshold to Archive tier using tier manager
             if (memory.RetentionScore >= _options.SessionMigrationThreshold)
             {
-                memory.Tier = Tier.Archive;
-                memory.MarkUpdated();
-                await _memoryStore.UpdateAsync(memory, cancellationToken);
-                migratedIds.Add(memory.Id);
+                var promoteResult = await _tierManager.PromoteAsync(
+                    memory,
+                    Tier.Archive,
+                    PromotionReason.SessionBoundary,
+                    cancellationToken);
+
+                if (promoteResult.Success && promoteResult.UpdatedMemory != null)
+                {
+                    await _memoryStore.UpdateAsync(promoteResult.UpdatedMemory, cancellationToken);
+                    migratedIds.Add(promoteResult.UpdatedMemory.Id);
+                }
             }
             else if (!memory.IsLocked)
             {
@@ -427,6 +512,9 @@ public sealed class VirtualContextManager : IVirtualContextManager
                 discardedCount++;
             }
         }
+
+        // End scope tracking
+        await _scopeManager.EndSessionAsync(cancellationToken);
 
         // Reset state
         _state.IsInitialized = false;
@@ -517,9 +605,20 @@ public sealed class VirtualContextManager : IVirtualContextManager
 
             foreach (var item in toPageOut)
             {
-                await _workingMemory.DemoteAsync(item.Memory.Id, cancellationToken);
-                item.Memory.Tier = Tier.Long;
-                await _memoryStore.UpdateAsync(item.Memory, cancellationToken);
+                var demoted = await _workingMemory.DemoteAsync(item.Memory.Id, cancellationToken);
+                if (demoted != null)
+                {
+                    var demoteResult = await _tierManager.DemoteAsync(
+                        demoted,
+                        Tier.Long,
+                        PromotionReason.LowRetention,
+                        cancellationToken);
+
+                    if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+                    {
+                        await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
+                    }
+                }
             }
 
             _logger.LogDebug("Optimized: paged out {Count} low-relevance memories", toPageOut.Count);

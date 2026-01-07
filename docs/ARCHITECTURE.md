@@ -99,6 +99,75 @@ Memory Indexer implements a 4-tier cognitive memory architecture inspired by Atk
 | Sensory → Working | `IBufferPromoter` | `BufferPromoterService` |
 | Working → Episodic | `IShortTermMemoryOrchestrator` | `ShortTermMemoryOrchestratorService` |
 
+## 3-Axis Memory Model (v0.4.1)
+
+**Phase 32.3**: Memory Indexer implements a 3-Axis Memory Model where each memory has three independent, orthogonal dimensions:
+
+```
+Type × Scope × Tier
+ ↓      ↓       ↓
+What   When   Where
+```
+
+### Three Dimensions
+
+**Type (What)**: Memory category
+- `Episodic`: Events and experiences
+- `Semantic`: Facts and knowledge
+- `Procedural`: Skills and procedures
+- `Fact`: Atomic verified facts
+
+**Scope (When)**: Temporal containment
+- `Turn` (S3): Single conversation turn
+- `Topic` (S2): Conversation topic cluster
+- `Session` (S1): Single conversation session
+- `User` (S0): Cross-session, permanent
+
+**Tier (Where)**: Storage location
+- `Buffer` (T0): Sensory buffer
+- `Short` (T1): Working memory
+- `Long` (T2): Episodic store
+- `Archive` (T3): Semantic store
+
+### 3-Axis Coordination Services
+
+| Service | Interface | Responsibility |
+|---------|-----------|----------------|
+| **Scope Manager** | `IScopeManager` | Resolves Scope dimension, detects topic changes, tracks session boundaries |
+| **Tier Manager** | `ITierManager` | Evaluates tier promotions/demotions, enforces OR/AND logic, manages transitions |
+| **Virtual Context Manager** | `IVirtualContextManager` | Orchestrates all three dimensions, coordinates IScopeManager and ITierManager |
+
+### Promotion Logic
+
+**Buffer → Short → Long** (OR Logic):
+- Time elapsed >= threshold **OR**
+- Token count >= threshold **OR**
+- Turn count >= threshold
+
+**Long → Archive** (AND Logic):
+- Confidence >= 0.8 **AND**
+- Confirmation count >= 3
+
+### MemoryPrimitives Scope Support
+
+```csharp
+// Encode with explicit Scope
+var memory = await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    Content = "User prefers dark mode",
+    Type = MemoryType.Fact,
+    Scope = Scope.User,  // Cross-session preference
+    Tier = Tier.Archive
+});
+
+// Retrieve filtered by Scope
+var results = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+{
+    Query = "user preferences",
+    Scopes = new[] { Scope.User, Scope.Session }
+});
+```
+
 ## Layer Diagram
 
 ```

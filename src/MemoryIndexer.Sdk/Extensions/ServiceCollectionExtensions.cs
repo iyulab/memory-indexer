@@ -74,8 +74,14 @@ public static class ServiceCollectionExtensions
         services.AddOptions<VCMOptions>()
             .BindConfiguration("MemoryIndexer:VCM");
 
+        // Register 3-axis model services (Phase 32.3)
+        services.AddOptions<ScopeManagerOptions>()
+            .BindConfiguration("MemoryIndexer:ScopeManager");
+
         services.TryAddSingleton<IShortTermMemory, ShortTermMemoryService>();
         services.TryAddSingleton<IMemoryPrimitives, MemoryPrimitivesService>();
+        services.TryAddSingleton<IScopeManager, ScopeManager>();
+        services.TryAddSingleton<ITierManager, TierManager>();
         services.TryAddSingleton<IVirtualContextManager, VirtualContextManager>();
 
         // Register Sensory buffer (Tier 0) - Phase 14 → Cognitive terminology (Phase 30)

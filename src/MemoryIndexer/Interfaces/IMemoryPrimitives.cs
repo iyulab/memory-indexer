@@ -177,6 +177,12 @@ public sealed class EncodeRequest
     public MemoryType? Type { get; init; }
 
     /// <summary>
+    /// Scope dimension (default: Session).
+    /// 3-Axis Model: Turn → Topic → Session → User
+    /// </summary>
+    public Scope Scope { get; init; } = Scope.Session;
+
+    /// <summary>
     /// Initial tier (default: Session).
     /// </summary>
     public Tier Tier { get; init; } = Tier.Long;
@@ -480,6 +486,12 @@ public sealed class RetrieveRequest
     /// Minimum combined score threshold.
     /// </summary>
     public float MinScore { get; init; } = 0.3f;
+
+    /// <summary>
+    /// Scopes to search (null = all).
+    /// 3-Axis Model: Filter by Turn, Topic, Session, or User scope.
+    /// </summary>
+    public Scope[]? Scopes { get; init; }
 
     /// <summary>
     /// Tiers to search (null = all).

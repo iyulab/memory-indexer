@@ -120,7 +120,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         // Generate embedding
         var embedding = await _embeddingService.GenerateEmbeddingAsync(request.Content, cancellationToken);
 
-        // Create memory unit
+        // Create memory unit (3-axis model: Type × Scope × Tier)
         var memory = new MemoryUnit
         {
             UserId = request.UserId,
@@ -128,7 +128,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             Content = request.Content,
             Embedding = embedding,
             Type = request.Type ?? MemoryType.Episodic,
-            Tier = request.Tier,
+            Scope = request.Scope,  // 3-axis: Scope dimension
+            Tier = request.Tier,    // 3-axis: Tier dimension
             ImportanceScore = request.ImportanceScore ?? 0.5f,
             ContentHash = ComputeContentHash(request.Content),
             Topics = request.Topics ?? [],
@@ -536,10 +537,11 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         // Search
         var searchResults = await _memoryStore.SearchAsync(queryEmbedding, searchOptions, cancellationToken);
 
-        // Filter by tier if specified
-        var filtered = request.Tiers != null
-            ? searchResults.Where(r => request.Tiers.Contains(r.Memory.Tier)).ToList()
-            : searchResults.ToList();
+        // Filter by tier and scope if specified (3-axis model)
+        var filtered = searchResults
+            .Where(r => request.Tiers == null || request.Tiers.Contains(r.Memory.Tier))
+            .Where(r => request.Scopes == null || request.Scopes.Contains(r.Memory.Scope))
+            .ToList();
 
         // Apply cross-encoder re-ranking if enabled and available
         IReadOnlyList<(MemorySearchResult Result, float RerankScore)>? rerankedResults = null;

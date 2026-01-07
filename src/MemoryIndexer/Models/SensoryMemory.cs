@@ -159,7 +159,27 @@ public enum PromotionTriggerType
     TurnThreshold = 3,
 
     /// <summary>
-    /// Triggered by explicit flush request.
+    /// Triggered by topic change.
     /// </summary>
-    Manual = 4
+    TopicChange = 4,
+
+    /// <summary>
+    /// Triggered by session end.
+    /// </summary>
+    SessionEnd = 5,
+
+    /// <summary>
+    /// Triggered by confidence threshold (for Archive tier).
+    /// </summary>
+    ConfidenceThreshold = 6,
+
+    /// <summary>
+    /// Triggered by confirmation count threshold (for Archive tier).
+    /// </summary>
+    ConfirmationThreshold = 7,
+
+    /// <summary>
+    /// Triggered by explicit manual request.
+    /// </summary>
+    Manual = 8
 }

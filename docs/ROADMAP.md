@@ -2856,8 +2856,9 @@ Semantic → Archive  (T3)
 
 **Estimated Effort**: 1 week (5 days)
 
-### Phase 32.3: VirtualContextManager Refactoring ⏳
+### Phase 32.3: VirtualContextManager Refactoring ✅
 
+**Status**: ✅ Complete (Date: 2026-01-07)
 **Design Reference**: DESIGN_V0.4.md Section 3 "Architectural Changes"
 
 **Goal**: Refactor VCM to manage 3 dimensions independently
@@ -2917,16 +2918,20 @@ public class VirtualContextManager
 ```
 
 **Implementation Tasks**:
-- [ ] Create `IScopeManager` interface and implementation
-- [ ] Create `ITierManager` for tier promotion logic
-- [ ] Refactor `VirtualContextManager` to use 3-axis model
-- [ ] Update `MemoryPrimitives` to support Scope parameter
-- [ ] Update all MCP tools to expose Scope (where applicable)
-- [ ] Write integration tests for 3-axis coordination
+- [x] Create `IScopeManager` interface and implementation
+- [x] Create `ITierManager` for tier promotion logic
+- [x] Refactor `VirtualContextManager` to use 3-axis model
+- [x] Update `MemoryPrimitives` to support Scope parameter
+- [ ] Update all MCP tools to expose Scope (optional - deferred to Phase 33)
+- [ ] Write integration tests for 3-axis coordination (deferred to Phase 32.4)
 
-**Estimated Effort**: 1 week (5 days)
+**Completed**: 2026-01-07
+**Actual Effort**: 1 day (rapid implementation with existing 848 tests passing)
 
-### Phase 32.4: Testing & Validation ⏳
+### Phase 32.4: Testing & Validation 🔄
+
+**Status**: 🔄 Next (Date: 2026-01-07)
+**Goal**: Comprehensive test coverage for 3-Axis Model
 
 **Test Coverage**:
 - [ ] Scope enum behavior tests (50+ tests)
