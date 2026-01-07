@@ -245,7 +245,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         var entities = ExtractEntities(content);
 
         // Determine if should persist
-        var shouldPersist = tier != MemoryTier.Working && importance >= 0.3f;
+        var shouldPersist = tier != Tier.Short && importance >= 0.3f;
 
         return new MemoryClassification
         {
@@ -377,34 +377,34 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return false;
     }
 
-    private static MemoryTier DetermineTier(string lower, int wordCount, MemoryType type, ClassificationContext? context)
+    private static Tier DetermineTier(string lower, int wordCount, MemoryType type, ClassificationContext? context)
     {
         // Facts about user go to User tier
         if (type == MemoryType.Fact)
         {
-            return MemoryTier.User;
+            return Tier.Archive;
         }
 
         // Long semantic content goes to User tier
         if (type == MemoryType.Semantic && wordCount > 50)
         {
-            return MemoryTier.User;
+            return Tier.Archive;
         }
 
         // Procedural knowledge persists at Session or User level
         if (type == MemoryType.Procedural)
         {
-            return wordCount > 100 ? MemoryTier.User : MemoryTier.Session;
+            return wordCount > 100 ? Tier.Archive : Tier.Long;
         }
 
         // Short episodic content stays in Working memory
         if (wordCount < 20)
         {
-            return MemoryTier.Working;
+            return Tier.Short;
         }
 
         // Medium-length content goes to Session
-        return MemoryTier.Session;
+        return Tier.Long;
     }
 
     private static float CalculateImportance(string lower, int wordCount, MemoryType type, ClassificationContext? context)

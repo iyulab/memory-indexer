@@ -74,12 +74,12 @@ public static class ServiceCollectionExtensions
         services.AddOptions<VCMOptions>()
             .BindConfiguration("MemoryIndexer:VCM");
 
-        services.TryAddSingleton<IWorkingMemory, WorkingMemoryService>();
+        services.TryAddSingleton<IShortTermMemory, ShortTermMemoryService>();
         services.TryAddSingleton<IMemoryPrimitives, MemoryPrimitivesService>();
         services.TryAddSingleton<IVirtualContextManager, VirtualContextManager>();
 
         // Register Sensory buffer (Tier 0) - Phase 14 → Cognitive terminology (Phase 30)
-        services.TryAddSingleton<ISensoryBuffer, SensoryBufferService>();
+        services.TryAddSingleton<IBuffer, BufferService>();
 
         // Register storage based on configuration
         services.TryAddSingleton<IMemoryStore>(sp =>
@@ -100,10 +100,10 @@ public static class ServiceCollectionExtensions
             };
         });
 
-        services.TryAddSingleton<IEpisodicStore>(sp =>
+        services.TryAddSingleton<ILongTermStore>(sp =>
         {
-            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<InMemoryEpisodicStore>>();
-            return new InMemoryEpisodicStore(logger);
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<InMemoryLongTermStore>>();
+            return new InMemoryLongTermStore(logger);
         });
 
         // Register memory cache for embedding caching
@@ -279,12 +279,12 @@ public static class ServiceCollectionExtensions
         // Register working memory orchestrator (Phase 14.3)
         services.AddOptions<WorkingMemoryOrchestratorOptions>()
             .BindConfiguration("MemoryIndexer:VCM:WorkingOrchestrator");
-        services.TryAddSingleton<IWorkingMemoryOrchestrator, WorkingMemoryOrchestratorService>();
+        services.TryAddSingleton<IShortTermMemoryOrchestrator, ShortTermMemoryOrchestratorService>();
 
         // Register semantic store service (Phase 14.4 → Cognitive terminology Phase 30)
         services.AddOptions<SemanticStoreOptions>()
             .BindConfiguration("MemoryIndexer:VCM:SemanticStore");
-        services.TryAddSingleton<ISemanticStore, SemanticStoreService>();
+        services.TryAddSingleton<IArchiveStore, ArchiveStoreService>();
 
         return services;
     }

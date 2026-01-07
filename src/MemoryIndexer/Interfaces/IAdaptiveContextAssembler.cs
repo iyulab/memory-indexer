@@ -144,8 +144,8 @@ public sealed class AssembledContext
     /// <summary>
     /// Breakdown by tier.
     /// </summary>
-    public IReadOnlyDictionary<MemoryTier, int> TierBreakdown { get; init; }
-        = new Dictionary<MemoryTier, int>();
+    public IReadOnlyDictionary<Tier, int> TierBreakdown { get; init; }
+        = new Dictionary<Tier, int>();
 
     /// <summary>
     /// Number of memories included.

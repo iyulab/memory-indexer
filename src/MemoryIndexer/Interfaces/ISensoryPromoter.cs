@@ -4,15 +4,15 @@ namespace MemoryIndexer.Interfaces;
 
 /// <summary>
 /// Interface for promoting Sensory buffer items to Working memory.
-/// Acts as the bridge between Tier 0 (Sensory Buffer) and Tier 1 (Working Memory).
+/// Acts as the bridge between Tier 0 (Buffer) and Tier 1 (Short-Term Memory).
 /// Implements consolidation from sensory to working memory in Atkinson-Shiffrin model.
 /// </summary>
 /// <remarks>
 /// 4-Tier Cognitive Architecture:
-/// - SensoryBuffer (T0): Raw sensory input
-/// - WorkingMemory (T1): Active processing - THIS TRANSITION
-/// - EpisodicStore (T2): Episodic memories
-/// - SemanticStore (T3): Semantic knowledge
+/// - Buffer (T0): Raw sensory input
+/// - Short-Term Memory (T1): Active processing - THIS TRANSITION
+/// - LongTermStore (T2): Episodic memories
+/// - ArchiveStore (T3): Semantic knowledge
 ///
 /// Promotion pipeline:
 /// 1. Drain items from SensoryBuffer
@@ -88,7 +88,7 @@ public sealed record BufferPromotionResult
 
     /// <summary>
     /// Memories evicted from Working tier to make room.
-    /// These should be demoted to Episodic tier.
+    /// These should be demoted to Long-Term tier.
     /// </summary>
     public IReadOnlyList<MemoryUnit> EvictedMemories { get; init; } = [];
 

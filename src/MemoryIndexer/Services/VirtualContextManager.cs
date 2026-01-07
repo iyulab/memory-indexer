@@ -15,7 +15,7 @@ namespace MemoryIndexer.Services;
 /// </remarks>
 public sealed class VirtualContextManager : IVirtualContextManager
 {
-    private readonly IWorkingMemory _workingMemory;
+    private readonly IShortTermMemory _workingMemory;
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
     private readonly IScoringService _scoringService;
@@ -24,7 +24,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
     private readonly VirtualContextState _state;
 
     public VirtualContextManager(
-        IWorkingMemory workingMemory,
+        IShortTermMemory workingMemory,
         IMemoryStore memoryStore,
         IEmbeddingService embeddingService,
         IScoringService scoringService,
@@ -122,12 +122,12 @@ public sealed class VirtualContextManager : IVirtualContextManager
             if (evicted != null)
             {
                 // Handle evicted memory - update in store
-                evicted.Tier = MemoryTier.Session;
+                evicted.Tier = Tier.Long;
                 await _memoryStore.UpdateAsync(evicted, cancellationToken);
                 _logger.LogDebug("Evicted memory {MemoryId} to session tier", evicted.Id);
             }
 
-            memory.Tier = MemoryTier.Working;
+            memory.Tier = Tier.Short;
             memory.RecordAccess();
             await _memoryStore.UpdateAsync(memory, cancellationToken);
 
@@ -164,11 +164,11 @@ public sealed class VirtualContextManager : IVirtualContextManager
 
         if (evicted != null)
         {
-            evicted.Tier = MemoryTier.Session;
+            evicted.Tier = Tier.Long;
             await _memoryStore.UpdateAsync(evicted, cancellationToken);
         }
 
-        memory.Tier = MemoryTier.Working;
+        memory.Tier = Tier.Short;
         memory.RecordAccess();
         await _memoryStore.UpdateAsync(memory, cancellationToken);
 
@@ -195,7 +195,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
             var demoted = await _workingMemory.DemoteAsync(candidate.Id, cancellationToken);
             if (demoted != null)
             {
-                demoted.Tier = MemoryTier.Session;
+                demoted.Tier = Tier.Long;
                 await _memoryStore.UpdateAsync(demoted, cancellationToken);
                 pagedOut.Add(demoted);
             }
@@ -241,7 +241,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
             var demoted = await _workingMemory.DemoteAsync(candidate.Id, cancellationToken);
             if (demoted != null)
             {
-                demoted.Tier = MemoryTier.Session;
+                demoted.Tier = Tier.Long;
                 await _memoryStore.UpdateAsync(demoted, cancellationToken);
 
                 demotedCount++;
@@ -315,18 +315,18 @@ public sealed class VirtualContextManager : IVirtualContextManager
             }
 
             // Promote frequently accessed session memories to user tier
-            if (memory.Tier == MemoryTier.Session &&
+            if (memory.Tier == Tier.Long &&
                 memory.Stability >= MemoryStability.Stable &&
                 memory.RetentionScore > 0.7f)
             {
-                memory.Tier = MemoryTier.User;
+                memory.Tier = Tier.Archive;
                 promotedCount++;
             }
 
             // Only update if something changed
             if (memory.Stability != originalStability ||
                 Math.Abs(memory.RetentionScore - originalRetention) > 0.01f ||
-                memory.Tier == MemoryTier.User)
+                memory.Tier == Tier.Archive)
             {
                 memory.MarkUpdated();
                 await _memoryStore.UpdateAsync(memory, cancellationToken);
@@ -415,7 +415,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
             // Migrate memories above retention threshold to user tier
             if (memory.RetentionScore >= _options.SessionMigrationThreshold)
             {
-                memory.Tier = MemoryTier.User;
+                memory.Tier = Tier.Archive;
                 memory.MarkUpdated();
                 await _memoryStore.UpdateAsync(memory, cancellationToken);
                 migratedIds.Add(memory.Id);
@@ -518,7 +518,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
             foreach (var item in toPageOut)
             {
                 await _workingMemory.DemoteAsync(item.Memory.Id, cancellationToken);
-                item.Memory.Tier = MemoryTier.Session;
+                item.Memory.Tier = Tier.Long;
                 await _memoryStore.UpdateAsync(item.Memory, cancellationToken);
             }
 

@@ -3,7 +3,7 @@ using MemoryIndexer.Models;
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
-/// L1: Working Memory (In-Context) interface.
+/// L1: Short-Term Memory (In-Context) interface.
 /// Fast, limited-capacity memory following Baddeley's Working Memory Model.
 /// </summary>
 /// <remarks>
@@ -13,7 +13,7 @@ namespace MemoryIndexer.Interfaces;
 /// - Storage: IMemoryCache
 /// - Scope: Current task context
 /// </remarks>
-public interface IWorkingMemory
+public interface IShortTermMemory
 {
     /// <summary>
     /// Gets the current number of items in working memory.

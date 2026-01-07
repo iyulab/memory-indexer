@@ -21,7 +21,7 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
 {
     private readonly ITieredMemoryStore _store;
     private readonly IQueryIntentClassifier _intentClassifier;
-    private readonly IWorkingMemory _workingMemory;
+    private readonly IShortTermMemory _workingMemory;
     private readonly IGraphRetriever? _graphRetriever;
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<TieredMemoryRetriever> _logger;
@@ -37,44 +37,44 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
     };
 
     // Tier boost factors for ranking
-    private static readonly Dictionary<QueryIntent, Dictionary<MemoryTier, float>> TierBoosts = new()
+    private static readonly Dictionary<QueryIntent, Dictionary<Tier, float>> TierBoosts = new()
     {
         [QueryIntent.Factual] = new()
         {
-            [MemoryTier.User] = 1.2f,
-            [MemoryTier.Session] = 1.0f,
-            [MemoryTier.Working] = 0.8f
+            [Tier.Archive] = 1.2f,
+            [Tier.Long] = 1.0f,
+            [Tier.Short] = 0.8f
         },
         [QueryIntent.Contextual] = new()
         {
-            [MemoryTier.Working] = 1.3f,
-            [MemoryTier.Session] = 1.0f,
-            [MemoryTier.User] = 0.7f
+            [Tier.Short] = 1.3f,
+            [Tier.Long] = 1.0f,
+            [Tier.Archive] = 0.7f
         },
         [QueryIntent.Temporal] = new()
         {
-            [MemoryTier.Session] = 1.2f,
-            [MemoryTier.User] = 1.0f,
-            [MemoryTier.Working] = 0.9f
+            [Tier.Long] = 1.2f,
+            [Tier.Archive] = 1.0f,
+            [Tier.Short] = 0.9f
         },
         [QueryIntent.Relational] = new()
         {
-            [MemoryTier.Session] = 1.1f,
-            [MemoryTier.User] = 1.1f,
-            [MemoryTier.Working] = 0.8f
+            [Tier.Long] = 1.1f,
+            [Tier.Archive] = 1.1f,
+            [Tier.Short] = 0.8f
         },
         [QueryIntent.General] = new()
         {
-            [MemoryTier.Working] = 1.0f,
-            [MemoryTier.Session] = 1.0f,
-            [MemoryTier.User] = 1.0f
+            [Tier.Short] = 1.0f,
+            [Tier.Long] = 1.0f,
+            [Tier.Archive] = 1.0f
         }
     };
 
     public TieredMemoryRetriever(
         ITieredMemoryStore store,
         IQueryIntentClassifier intentClassifier,
-        IWorkingMemory workingMemory,
+        IShortTermMemory workingMemory,
         IEmbeddingService embeddingService,
         ILogger<TieredMemoryRetriever> logger,
         IGraphRetriever? graphRetriever = null)
@@ -93,9 +93,9 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
         CancellationToken cancellationToken = default)
     {
         var totalStopwatch = Stopwatch.StartNew();
-        var tierDurations = new Dictionary<MemoryTier, TimeSpan>();
-        var tierCandidates = new Dictionary<MemoryTier, int>();
-        var tierSelected = new Dictionary<MemoryTier, int>();
+        var tierDurations = new Dictionary<Tier, TimeSpan>();
+        var tierCandidates = new Dictionary<Tier, int>();
+        var tierSelected = new Dictionary<Tier, int>();
 
         // Step 1: Classify query intent
         var classifyStopwatch = Stopwatch.StartNew();
@@ -122,7 +122,7 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
             cancellationToken);
 
         // Step 4: Retrieve from each tier in priority order
-        var tierResults = new Dictionary<MemoryTier, IReadOnlyList<ScoredMemory>>();
+        var tierResults = new Dictionary<Tier, IReadOnlyList<ScoredMemory>>();
         var allResults = new List<ScoredMemory>();
 
         foreach (var tier in intent.TierPriority)
@@ -224,11 +224,11 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
             SessionBudget = (int)(totalBudget * weights.Session),
             UserBudget = (int)(totalBudget * weights.User),
             GraphBudget = (int)(totalBudget * weights.Graph),
-            TierPercentages = new Dictionary<MemoryTier, float>
+            TierPercentages = new Dictionary<Tier, float>
             {
-                [MemoryTier.Working] = weights.Working,
-                [MemoryTier.Session] = weights.Session,
-                [MemoryTier.User] = weights.User
+                [Tier.Short] = weights.Working,
+                [Tier.Long] = weights.Session,
+                [Tier.Archive] = weights.User
             }
         };
 
@@ -236,14 +236,14 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
     }
 
     private async Task<IReadOnlyList<MemoryUnit>> RetrieveFromTierAsync(
-        MemoryTier tier,
+        Tier tier,
         TieredRetrievalRequest request,
         ReadOnlyMemory<float> queryEmbedding,
         QueryIntentResult intent,
         CancellationToken cancellationToken)
     {
         // Working memory uses different interface
-        if (tier == MemoryTier.Working)
+        if (tier == Tier.Short)
         {
             var workingMemories = await _workingMemory.GetAllAsync(cancellationToken);
             return workingMemories;
@@ -252,7 +252,7 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
         // Session and User tiers use ITieredMemoryStore
         var options = new MemoryFilterOptions
         {
-            SessionId = tier == MemoryTier.Session ? request.SessionId : null,
+            SessionId = tier == Tier.Long ? request.SessionId : null,
             Limit = 50
         };
 
@@ -358,7 +358,7 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
 
     private ScoredMemory CreateScoredMemory(
         MemoryUnit memory,
-        MemoryTier tier,
+        Tier tier,
         float tierBoost,
         TierBudgetAllocation budget)
     {

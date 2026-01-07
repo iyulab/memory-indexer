@@ -2737,7 +2737,923 @@ Types (Orthogonal): Episodic | Semantic | Procedural | Fact
 1. Monitor user adoption of new terminology
 2. Collect feedback on migration guide
 3. Plan removal of deprecated aliases (v0.5.0)
-4. Consider Phase 32: Procedural Store (if research completed)
+4. Implement 3-Axis Memory Model (Phase 32-36)
+
+---
+
+## Phase 32: 3-Axis Foundation (Type × Scope × Tier) 🔄
+
+**Status**: 🔄 In Progress (Date: 2026-01-07)
+**Target**: v0.4.1
+**Timeline**: 3 weeks implementation + 1 week testing = 4 weeks total
+**Goal**: Implement foundational 3-Axis Memory Model with explicit Scope dimension
+**Design Reference**: `docs/DESIGN_V0.4.md` (Sections 1-4)
+
+### Background
+
+**Problem**: Current 2-Axis model (Type × Tier) lacks explicit scope control
+- SessionId is implicit, not a first-class concept
+- No support for topic-based or turn-based scoping
+- Cross-session queries require complex filters
+
+**Solution**: 3-Axis Model (Type × Scope × Tier)
+- **Type**: Episodic, Semantic, Procedural, Fact (unchanged)
+- **Scope**: User(S0), Session(S1), Topic(S2), Turn(S3) — NEW dimension
+- **Tier**: Buffer(T0), Short(T1), Long(T2), Archive(T3) — renamed
+
+**Breaking Changes**:
+- ✅ No backward compatibility for v0.x (bold refactoring approach)
+- ✅ Tier enum renamed: Sensory→Buffer, Working→Short, Episodic→Long, Semantic→Archive
+- ✅ No `[Obsolete]` aliases - clean break for technical debt elimination
+
+### Phase 32.1: Scope Enum Definition & MemoryUnit Extension ✅
+
+**Design Reference**: DESIGN_V0.4.md Section 2.1 "Scope Dimension"
+
+**New Enum**: `Models/Scope.cs`
+```csharp
+public enum Scope
+{
+    Turn = 0,      // S3 - Current turn buffer, internal only
+    Topic = 1,     // S2 - Current topic context, internal only
+    Session = 2,   // S1 - Conversation session, API exposed
+    User = 3       // S0 - Cross-session global, API exposed
+}
+```
+
+**MemoryUnit Extensions**:
+```csharp
+public sealed class MemoryUnit
+{
+    // NEW fields
+    public Scope Scope { get; set; } = Scope.Session;
+    public string? TopicId { get; set; }  // Nullable, auto-generated
+    public Tier Tier { get; set; } = Tier.Short;  // Renamed enum
+
+    // Enhanced confidence tracking
+    public float Confidence { get; set; } = 0.5f;
+    public int ConfirmCount { get; set; } = 0;
+    public int ActivationCount { get; set; } = 0;
+
+    // Existing fields (unchanged)
+    public string Id { get; set; }
+    public string UserId { get; set; }
+    public string SessionId { get; set; }
+    public string Content { get; set; }
+    public ReadOnlyMemory<float> Embedding { get; set; }
+    public MemoryType Type { get; set; }
+    public float Importance { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? LastAccessedAt { get; set; }
+}
+```
+
+**Implementation Tasks**:
+- [ ] Create `src/MemoryIndexer/Models/Scope.cs`
+- [ ] Update `src/MemoryIndexer/Models/MemoryUnit.cs` with new fields
+- [ ] Update vector store schema (SQLite-vec, Qdrant)
+- [ ] Add Scope indexing for efficient queries
+- [ ] Write unit tests for Scope enum and MemoryUnit extensions
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 32.2: Tier Enum Rename (Breaking Change) ✅
+
+**Design Reference**: DESIGN_V0.4.md Section 2.3 "Tier Dimension (Renamed)"
+
+**Old → New Mapping**:
+```
+Sensory  → Buffer   (T0)
+Working  → Short    (T1)
+Episodic → Long     (T2)
+Semantic → Archive  (T3)
+```
+
+**Files to Update**:
+1. `src/MemoryIndexer/Models/MemoryTier.cs` → Rename to `Tier.cs`
+2. All interface names using old terms:
+   - `ISensoryBuffer` → `IBuffer` (or keep for clarity)
+   - `IWorkingMemory` → `IShortTermMemory`
+   - `IEpisodicStore` → `ILongTermStore`
+   - `ISemanticStore` → `IArchiveStore`
+3. All implementation classes
+4. All test files
+5. All documentation
+
+**Migration Strategy**:
+- ✅ NO `[Obsolete]` attributes (clean break)
+- ✅ Auto-migration on startup: Detect old schema → Rename columns/fields
+- ✅ Update `docs/MIGRATION_V0.4.md` with breaking change notice
+
+**Implementation Tasks**:
+- [ ] Rename `MemoryTier.cs` → `Tier.cs` with new enum values
+- [ ] Update all interface names (ISensoryBuffer, IWorkingMemory, etc.)
+- [ ] Update all implementation classes
+- [ ] Update VirtualContextManager to use new Tier enum
+- [ ] Implement auto-migration for existing databases
+- [ ] Update all 848 tests with new terminology
+- [ ] Update all documentation (README, ARCHITECTURE, VISION)
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 32.3: VirtualContextManager Refactoring ⏳
+
+**Design Reference**: DESIGN_V0.4.md Section 3 "Architectural Changes"
+
+**Goal**: Refactor VCM to manage 3 dimensions independently
+
+**New VCM Structure**:
+```csharp
+public class VirtualContextManager
+{
+    // 3-Axis coordination
+    private readonly IScopeManager _scopeManager;       // NEW
+    private readonly ITierManager _tierManager;
+    private readonly ITypeClassifier _typeClassifier;
+
+    // Tier-specific managers (renamed)
+    private readonly IBuffer _buffer;                   // was ISensoryBuffer
+    private readonly IShortTermMemory _short;          // was IWorkingMemory
+    private readonly ILongTermStore _long;             // was IEpisodicStore
+    private readonly IArchiveStore _archive;           // was ISemanticStore
+
+    public async Task<string> StoreAsync(
+        string userId,
+        string? sessionId,
+        string content,
+        MemoryType? type = null,
+        Scope scope = Scope.Session,  // NEW parameter
+        CancellationToken ct = default)
+    {
+        // 1. Scope resolution (User/Session/Topic/Turn)
+        var resolvedScope = await _scopeManager.ResolveAsync(userId, sessionId, scope, ct);
+
+        // 2. Type classification (if not provided)
+        var memoryType = type ?? await _typeClassifier.ClassifyAsync(content, ct);
+
+        // 3. Tier placement (always starts in Buffer/T0)
+        var tier = Tier.Buffer;
+
+        // 4. Create MemoryUnit with 3-axis metadata
+        var unit = new MemoryUnit
+        {
+            UserId = userId,
+            SessionId = sessionId ?? resolvedScope.SessionId,
+            TopicId = resolvedScope.TopicId,
+            Content = content,
+            Type = memoryType,
+            Scope = resolvedScope.Scope,
+            Tier = tier,
+            Confidence = 0.5f,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        // 5. Store in appropriate tier
+        await _buffer.AddAsync(unit, ct);
+
+        return unit.Id;
+    }
+}
+```
+
+**Implementation Tasks**:
+- [ ] Create `IScopeManager` interface and implementation
+- [ ] Create `ITierManager` for tier promotion logic
+- [ ] Refactor `VirtualContextManager` to use 3-axis model
+- [ ] Update `MemoryPrimitives` to support Scope parameter
+- [ ] Update all MCP tools to expose Scope (where applicable)
+- [ ] Write integration tests for 3-axis coordination
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 32.4: Testing & Validation ⏳
+
+**Test Coverage**:
+- [ ] Scope enum behavior tests (50+ tests)
+- [ ] MemoryUnit extension tests (30+ tests)
+- [ ] Tier rename migration tests (40+ tests)
+- [ ] VCM 3-axis coordination tests (100+ tests)
+- [ ] Auto-migration integration tests (20+ tests)
+- [ ] Performance regression tests (10+ benchmarks)
+
+**Validation Criteria**:
+- [ ] All existing 848 tests pass with new terminology
+- [ ] New tests cover Scope dimension (50+ new tests)
+- [ ] Auto-migration works on existing v0.3.x databases
+- [ ] No performance degradation (<5% acceptable)
+- [ ] Documentation updated and reviewed
+
+**Estimated Effort**: 1 week (5 days)
+
+### Success Criteria
+
+- [ ] Scope enum defined and integrated into MemoryUnit
+- [ ] Tier enum renamed (Sensory→Buffer, Working→Short, Episodic→Long, Semantic→Archive)
+- [ ] VirtualContextManager refactored for 3-axis coordination
+- [ ] Auto-migration implemented for existing databases
+- [ ] All tests pass (848 existing + 220+ new = 1068+ total)
+- [ ] Documentation updated (DESIGN_V0.4.md, MIGRATION_V0.4.md, ARCHITECTURE.md)
+- [ ] v0.4.1 release ready
+
+### Files Created
+
+- `src/MemoryIndexer/Models/Scope.cs` (new enum)
+- `src/MemoryIndexer/Interfaces/IScopeManager.cs` (new interface)
+- `src/MemoryIndexer/Services/ScopeManager.cs` (new implementation)
+
+### Files Modified
+
+- `src/MemoryIndexer/Models/MemoryUnit.cs` (Scope, TopicId, Tier, Confidence fields)
+- `src/MemoryIndexer/Models/MemoryTier.cs` → `Tier.cs` (rename + enum values)
+- `src/MemoryIndexer/Services/VirtualContextManager.cs` (3-axis refactoring)
+- All interface files (ISensoryBuffer→IBuffer, etc.)
+- All 848 test files
+- `docs/ARCHITECTURE.md`, `README.md`, `docs/VISION.md`
+
+---
+
+## Phase 33: Simple API (IMemoryService) 🔄
+
+**Status**: ⏳ Planned (Start: 2026-02-07)
+**Target**: v0.4.2
+**Timeline**: 2 weeks implementation + 3 days testing = 17 days total
+**Goal**: Implement zero-config Simple API (Level 0-1) for 99% use cases
+**Design Reference**: `docs/DESIGN_V0.4.md` (Section 5 "Simple API Design")
+
+### Background
+
+**Problem**: Current API requires deep understanding of VCM internals
+- Users must understand Tier, Type, Scope concepts upfront
+- No progressive API levels (zero-config → expert)
+- Verbose for common "just remember this" scenarios
+
+**Solution**: 4-Level Progressive API
+- **Level 0**: Zero-Config (`Remember(userId, content)`)
+- **Level 1**: Session-Aware (`Remember(userId, sessionId, content)`)
+- **Level 2**: Type-Aware (`StoreFact/Event/Rule`)
+- **Level 3**: Full Control (`StoreAsync(StoreRequest)`)
+
+**Target Audience**: 99% of users (chat apps, personal assistants, games)
+
+### Phase 33.1: IMemoryService Interface Implementation ⏳
+
+**Design Reference**: DESIGN_V0.4.md Section 5.1 "IMemoryService (Level 0-1)"
+
+**New Interface**: `Interfaces/IMemoryService.cs`
+```csharp
+public interface IMemoryService
+{
+    // Level 0: Zero-Config (User-scoped only)
+    Task RememberAsync(string userId, string content,
+        CancellationToken cancellationToken = default);
+
+    // Level 1: Session-Aware (explicit SessionId)
+    Task RememberAsync(string userId, string sessionId, string content,
+        CancellationToken cancellationToken = default);
+
+    // Recall with scope-structured results
+    Task<MemoryContext> RecallAsync(string userId, string? sessionId, string query,
+        int limit = 10, CancellationToken cancellationToken = default);
+
+    // Lifecycle management
+    Task EndSessionAsync(string userId, string sessionId,
+        CancellationToken cancellationToken = default);
+
+    // Forgetting (GDPR compliance)
+    Task ForgetUserAsync(string userId, CancellationToken cancellationToken = default);
+    Task ForgetSessionAsync(string userId, string sessionId,
+        CancellationToken cancellationToken = default);
+}
+```
+
+**Implementation Strategy**:
+- Delegates to VirtualContextManager internally
+- Auto-detects Type using ITypeClassifier
+- Defaults: Scope=Session, Tier=Short (for recall)
+- Simple, predictable behavior
+
+**Implementation Tasks**:
+- [ ] Create `IMemoryService` interface
+- [ ] Implement `MemoryService` class delegating to VCM
+- [ ] Integrate ITypeClassifier for auto-classification
+- [ ] Add overload for zero-config (userId only)
+- [ ] Write unit tests (50+ tests)
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 33.2: MemoryContext Return Structure ⏳
+
+**Design Reference**: DESIGN_V0.4.md Section 5.3 "MemoryContext Return Structure"
+
+**New Class**: `Models/MemoryContext.cs`
+```csharp
+public sealed class MemoryContext
+{
+    public IReadOnlyList<MemoryUnit> UserMemories { get; init; }     // Scope=User
+    public IReadOnlyList<MemoryUnit> SessionMemories { get; init; }  // Scope=Session
+    public IReadOnlyList<MemoryUnit> TopicMemories { get; init; }    // Scope=Topic (internal)
+
+    public int TotalCount => UserMemories.Count + SessionMemories.Count + TopicMemories.Count;
+
+    // Convenience methods
+    public IEnumerable<MemoryUnit> AllMemories() =>
+        UserMemories.Concat(SessionMemories).Concat(TopicMemories);
+
+    public IEnumerable<MemoryUnit> ByType(MemoryType type) =>
+        AllMemories().Where(m => m.Type == type);
+
+    public IEnumerable<MemoryUnit> ByScope(Scope scope) =>
+        AllMemories().Where(m => m.Scope == scope);
+}
+```
+
+**Scope Grouping Logic**:
+- **UserMemories**: Cross-session facts (Scope=User)
+- **SessionMemories**: Current session context (Scope=Session)
+- **TopicMemories**: Current topic (Scope=Topic, internal use)
+
+**Implementation Tasks**:
+- [ ] Create `MemoryContext` class
+- [ ] Implement scope-based grouping in RecallAsync
+- [ ] Add convenience methods (AllMemories, ByType, ByScope)
+- [ ] Write unit tests (30+ tests)
+- [ ] Update sample apps (TwentyQuestions, MemoryChatApp)
+
+**Estimated Effort**: 3 days
+
+### Phase 33.3: Migration & Testing ⏳
+
+**Migration from v0.3.x**:
+- Existing `IMemoryStore` users can migrate to `IMemoryService`
+- `MemoryPrimitives` remains for backward compatibility (for now)
+- Update sample projects to use new Simple API
+
+**Test Coverage**:
+- [ ] IMemoryService unit tests (50+ tests)
+- [ ] MemoryContext structure tests (30+ tests)
+- [ ] Integration tests with VCM (40+ tests)
+- [ ] Sample project updates (TwentyQuestions, MemoryChatApp)
+- [ ] Performance benchmarks (10+ scenarios)
+
+**Validation Criteria**:
+- [ ] Zero-config API works without any setup
+- [ ] Session-aware API maintains session context
+- [ ] MemoryContext groups memories by scope correctly
+- [ ] All tests pass (1068 existing + 120+ new = 1188+ total)
+- [ ] Sample projects updated and tested
+
+**Estimated Effort**: 4 days
+
+### Success Criteria
+
+- [ ] IMemoryService interface defined and implemented
+- [ ] MemoryContext return structure with scope grouping
+- [ ] Zero-config API (Level 0) works out-of-the-box
+- [ ] Session-aware API (Level 1) maintains session context
+- [ ] All tests pass (1188+ total)
+- [ ] Sample projects updated (TwentyQuestions, MemoryChatApp)
+- [ ] v0.4.2 release ready
+
+### Files Created
+
+- `src/MemoryIndexer/Interfaces/IMemoryService.cs` (new interface)
+- `src/MemoryIndexer/Services/MemoryService.cs` (new implementation)
+- `src/MemoryIndexer/Models/MemoryContext.cs` (new return structure)
+
+### Files Modified
+
+- `samples/TwentyQuestionsGame/` (use new Simple API)
+- `samples/MemoryChatApp/` (use new Simple API)
+- `docs/QUICKSTART.md` (update with Simple API examples)
+- `README.md` (update Quick Start section)
+
+---
+
+## Phase 34: Expert API (IMemoryServiceAdvanced) 🔄
+
+**Status**: ⏳ Planned (Start: 2026-02-24)
+**Target**: v0.5.0
+**Timeline**: 2 weeks implementation + 3 days testing = 17 days total
+**Goal**: Implement Expert API (Level 2-3) for advanced use cases
+**Design Reference**: `docs/DESIGN_V0.4.md` (Section 6 "Expert API Design")
+
+### Background
+
+**Problem**: Simple API insufficient for complex scenarios
+- Games need Procedural memory (rules, strategies)
+- RAG systems need explicit Type control
+- Advanced users want full 3-axis control
+
+**Solution**: Expert API with Level 2-3 capabilities
+- **Level 2**: Type-Aware (`StoreFact`, `StoreEvent`, `StoreRule`)
+- **Level 3**: Full Control (`StoreAsync(StoreRequest)`)
+
+**Target Audience**: 1% of users (games, RAG systems, research)
+
+### Phase 34.1: IMemoryServiceAdvanced Interface ⏳
+
+**Design Reference**: DESIGN_V0.4.md Section 6.1 "IMemoryServiceAdvanced Interface"
+
+**New Interface**: `Interfaces/IMemoryServiceAdvanced.cs`
+```csharp
+public interface IMemoryServiceAdvanced
+{
+    // Level 2: Type-Aware API
+    Task<string> StoreFactAsync(string userId, string sessionId, string content,
+        float confidence = 0.5f, CancellationToken ct = default);
+
+    Task<string> StoreEventAsync(string userId, string sessionId, string content,
+        float importance = 0.5f, CancellationToken ct = default);
+
+    Task<string> StoreRuleAsync(string userId, string sessionId, string content,
+        float confidence = 0.8f, CancellationToken ct = default);
+
+    // Level 3: Full Control
+    Task<string> StoreAsync(StoreRequest request, CancellationToken ct = default);
+
+    // Advanced recall with filtering
+    Task<MemoryContext> RecallAsync(RecallRequest request, CancellationToken ct = default);
+
+    // Explicit promotion (bypass auto-promotion)
+    Task PromoteToArchiveAsync(string memoryId, CancellationToken ct = default);
+
+    // Confidence/ConfirmCount management
+    Task UpdateConfidenceAsync(string memoryId, float confidence, CancellationToken ct = default);
+    Task IncrementConfirmCountAsync(string memoryId, CancellationToken ct = default);
+}
+
+public sealed class StoreRequest
+{
+    public string UserId { get; init; }
+    public string? SessionId { get; init; }
+    public string? TopicId { get; init; }
+    public string Content { get; init; }
+    public MemoryType Type { get; init; }
+    public Scope Scope { get; init; } = Scope.Session;
+    public Tier Tier { get; init; } = Tier.Short;
+    public float Importance { get; init; } = 0.5f;
+    public float Confidence { get; init; } = 0.5f;
+    public Dictionary<string, object>? Metadata { get; init; }
+}
+
+public sealed class RecallRequest
+{
+    public string UserId { get; init; }
+    public string? SessionId { get; init; }
+    public string? TopicId { get; init; }
+    public string Query { get; init; }
+    public int Limit { get; init; } = 10;
+    public MemoryType? TypeFilter { get; init; }
+    public Scope? ScopeFilter { get; init; }
+    public Tier? TierFilter { get; init; }
+    public float? MinConfidence { get; init; }
+    public float? MinImportance { get; init; }
+}
+```
+
+**Implementation Tasks**:
+- [ ] Create `IMemoryServiceAdvanced` interface
+- [ ] Define `StoreRequest` and `RecallRequest` classes
+- [ ] Implement type-specific methods (StoreFact, StoreEvent, StoreRule)
+- [ ] Implement full-control StoreAsync with StoreRequest
+- [ ] Implement advanced RecallAsync with filtering
+- [ ] Write unit tests (80+ tests)
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 34.2: Level 2-3 API Implementation ⏳
+
+**Type-Aware Defaults** (Level 2):
+- `StoreFactAsync`: Type=Semantic, Confidence=0.5, Auto-promotion eligible
+- `StoreEventAsync`: Type=Episodic, Importance=0.5, No auto-promotion
+- `StoreRuleAsync`: Type=Procedural, Confidence=0.8, High importance
+
+**Full Control** (Level 3):
+- Explicit Type, Scope, Tier control
+- Custom metadata support
+- Advanced filtering in RecallAsync
+
+**Implementation Tasks**:
+- [ ] Implement `MemoryServiceAdvanced` class
+- [ ] Add type-specific default configurations
+- [ ] Implement StoreRequest/RecallRequest processing
+- [ ] Add explicit promotion methods
+- [ ] Add confidence/confirmCount management
+- [ ] Write integration tests (60+ tests)
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 34.3: Testing & Documentation ⏳
+
+**Test Coverage**:
+- [ ] Type-aware API tests (StoreFact, StoreEvent, StoreRule) (40+ tests)
+- [ ] Full-control API tests (StoreRequest, RecallRequest) (40+ tests)
+- [ ] Advanced filtering tests (20+ tests)
+- [ ] Explicit promotion tests (20+ tests)
+- [ ] Confidence management tests (20+ tests)
+
+**Documentation**:
+- [ ] Update `docs/GUIDES.md` with Expert API examples
+- [ ] Create `docs/ADVANCED_USAGE.md`
+- [ ] Update `README.md` with Expert API mention
+- [ ] Add code examples to DESIGN_V0.4.md
+
+**Validation Criteria**:
+- [ ] All Expert API methods work as specified
+- [ ] Type-aware defaults are correct
+- [ ] Full-control API provides complete 3-axis access
+- [ ] All tests pass (1188 existing + 140+ new = 1328+ total)
+- [ ] Documentation comprehensive and clear
+
+**Estimated Effort**: 3 days
+
+### Success Criteria
+
+- [ ] IMemoryServiceAdvanced interface defined and implemented
+- [ ] Level 2 type-aware API (StoreFact, StoreEvent, StoreRule) working
+- [ ] Level 3 full-control API (StoreRequest, RecallRequest) working
+- [ ] Advanced filtering and explicit promotion working
+- [ ] All tests pass (1328+ total)
+- [ ] Documentation updated (GUIDES.md, ADVANCED_USAGE.md)
+- [ ] v0.5.0 release ready
+
+### Files Created
+
+- `src/MemoryIndexer/Interfaces/IMemoryServiceAdvanced.cs` (new interface)
+- `src/MemoryIndexer/Services/MemoryServiceAdvanced.cs` (new implementation)
+- `src/MemoryIndexer/Models/StoreRequest.cs` (new request model)
+- `src/MemoryIndexer/Models/RecallRequest.cs` (new request model)
+- `docs/ADVANCED_USAGE.md` (new documentation)
+
+### Files Modified
+
+- `docs/GUIDES.md` (add Expert API examples)
+- `README.md` (mention Expert API)
+- `docs/DESIGN_V0.4.md` (add code examples)
+
+---
+
+## Phase 35: Domain Profiles 🔄
+
+**Status**: ⏳ Planned (Start: 2026-03-17)
+**Target**: v0.5.1
+**Timeline**: 2 weeks implementation + 3 days testing = 17 days total
+**Goal**: Implement DomainProfile system for domain-specific presets
+**Design Reference**: `docs/DESIGN_V0.4.md` (Section 7 "Domain Profiles")
+
+### Background
+
+**Problem**: One-size-fits-all approach doesn't work for all domains
+- Chat apps need different settings than games
+- RAG systems have different promotion rules
+- No easy way to optimize for specific use cases
+
+**Solution**: DomainProfile system with presets
+- **ChatProfile**: Default, balanced settings
+- **TwentyQuestionsProfile**: High procedural memory, strict rules
+- **RAGProfile**: High fact precision, low procedural
+- **CustomProfile**: User-defined configurations
+
+### Phase 35.1: DomainProfile System Design ⏳
+
+**Design Reference**: DESIGN_V0.4.md Section 7.1 "DomainProfile Base Class"
+
+**New Class**: `Models/DomainProfile.cs`
+```csharp
+public abstract class DomainProfile
+{
+    public string Name { get; protected init; }
+
+    // Type distribution preferences (total = 1.0)
+    public float EpisodicWeight { get; protected init; } = 0.4f;
+    public float SemanticWeight { get; protected init; } = 0.4f;
+    public float ProceduralWeight { get; protected init; } = 0.2f;
+
+    // Promotion thresholds
+    public float ShortToLongThreshold { get; protected init; } = 0.6f;   // T1→T2
+    public float LongToArchiveThreshold { get; protected init; } = 0.8f; // T2→T3
+    public int MinConfirmCountForArchive { get; protected init; } = 3;
+
+    // Capacity settings
+    public int ShortTermCapacity { get; protected init; } = 7;  // T1 capacity
+    public TimeSpan ShortTermTtl { get; protected init; } = TimeSpan.FromMinutes(10);
+
+    // Topic detection
+    public bool EnableTopicDetection { get; protected init; } = true;
+    public float TopicSimilarityThreshold { get; protected init; } = 0.7f;
+
+    // Abstract methods for domain-specific logic
+    public abstract float CalculateImportance(MemoryUnit unit);
+    public abstract bool ShouldPromote(MemoryUnit unit, Tier currentTier);
+}
+```
+
+**Implementation Tasks**:
+- [ ] Create `DomainProfile` abstract class
+- [ ] Define configuration properties
+- [ ] Add abstract methods for domain logic
+- [ ] Write unit tests (30+ tests)
+
+**Estimated Effort**: 3 days
+
+### Phase 35.2: Built-in Profile Implementations ⏳
+
+**Design Reference**: DESIGN_V0.4.md Section 7.2-7.4 "Profile Implementations"
+
+**Profiles to Implement**:
+
+1. **ChatProfile** (Default):
+```csharp
+public sealed class ChatProfile : DomainProfile
+{
+    public ChatProfile()
+    {
+        Name = "Chat";
+        EpisodicWeight = 0.5f;
+        SemanticWeight = 0.4f;
+        ProceduralWeight = 0.1f;
+        ShortToLongThreshold = 0.6f;
+        LongToArchiveThreshold = 0.8f;
+    }
+
+    public override float CalculateImportance(MemoryUnit unit) =>
+        unit.Type == MemoryType.Semantic ? 0.8f : 0.5f;
+}
+```
+
+2. **TwentyQuestionsProfile**:
+```csharp
+public sealed class TwentyQuestionsProfile : DomainProfile
+{
+    public TwentyQuestionsProfile()
+    {
+        Name = "TwentyQuestions";
+        EpisodicWeight = 0.3f;
+        SemanticWeight = 0.2f;
+        ProceduralWeight = 0.5f;  // High for game rules
+        ShortToLongThreshold = 0.5f;  // Aggressive promotion
+        LongToArchiveThreshold = 0.9f; // Strict archive
+        EnableTopicDetection = false;  // Game doesn't need topics
+    }
+
+    public override float CalculateImportance(MemoryUnit unit) =>
+        unit.Type == MemoryType.Procedural ? 0.9f : 0.4f;
+}
+```
+
+3. **RAGProfile**:
+```csharp
+public sealed class RAGProfile : DomainProfile
+{
+    public RAGProfile()
+    {
+        Name = "RAG";
+        EpisodicWeight = 0.2f;
+        SemanticWeight = 0.7f;  // High semantic for facts
+        ProceduralWeight = 0.1f;
+        ShortToLongThreshold = 0.7f;  // High precision
+        LongToArchiveThreshold = 0.85f;
+        MinConfirmCountForArchive = 5;  // Strict confirmation
+    }
+
+    public override float CalculateImportance(MemoryUnit unit) =>
+        unit.Type == MemoryType.Semantic ? unit.Confidence : 0.3f;
+}
+```
+
+**Implementation Tasks**:
+- [ ] Implement ChatProfile
+- [ ] Implement TwentyQuestionsProfile
+- [ ] Implement RAGProfile
+- [ ] Add profile selection to MemoryIndexerOptions
+- [ ] Write unit tests for each profile (90+ tests)
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 35.3: Testing & Benchmarking ⏳
+
+**Test Coverage**:
+- [ ] DomainProfile base class tests (30+ tests)
+- [ ] ChatProfile behavior tests (30+ tests)
+- [ ] TwentyQuestionsProfile behavior tests (30+ tests)
+- [ ] RAGProfile behavior tests (30+ tests)
+- [ ] Profile switching tests (20+ tests)
+
+**Benchmarks**:
+- [ ] Compare promotion rates across profiles
+- [ ] Measure memory distribution (Type × Tier)
+- [ ] Validate domain-specific behavior
+
+**Validation Criteria**:
+- [ ] Each profile produces expected Type distribution
+- [ ] Promotion thresholds work as configured
+- [ ] Sample projects work with appropriate profiles
+- [ ] All tests pass (1328 existing + 140+ new = 1468+ total)
+
+**Estimated Effort**: 3 days
+
+### Success Criteria
+
+- [ ] DomainProfile abstract class defined
+- [ ] ChatProfile, TwentyQuestionsProfile, RAGProfile implemented
+- [ ] Profile selection integrated into configuration
+- [ ] All tests pass (1468+ total)
+- [ ] Benchmarks show expected behavior for each profile
+- [ ] v0.5.1 release ready
+
+### Files Created
+
+- `src/MemoryIndexer/Models/DomainProfile.cs` (abstract class)
+- `src/MemoryIndexer/Models/Profiles/ChatProfile.cs`
+- `src/MemoryIndexer/Models/Profiles/TwentyQuestionsProfile.cs`
+- `src/MemoryIndexer/Models/Profiles/RAGProfile.cs`
+
+### Files Modified
+
+- `src/MemoryIndexer/Configuration/MemoryIndexerOptions.cs` (add ProfileName property)
+- `src/MemoryIndexer/Services/VirtualContextManager.cs` (use profile for decisions)
+- `samples/TwentyQuestionsGame/` (use TwentyQuestionsProfile)
+
+---
+
+## Phase 36: Automation & Optimization 🔄
+
+**Status**: ⏳ Planned (Start: 2026-04-07)
+**Target**: v0.5.2
+**Timeline**: 2 weeks implementation + 3 days testing = 17 days total
+**Goal**: Implement Topic auto-detection and Type auto-classification
+**Design Reference**: `docs/DESIGN_V0.4.md` (Section 8 "Automation Features")
+
+### Background
+
+**Problem**: Manual classification burden on users
+- Users must specify TopicId manually
+- Type classification requires domain knowledge
+- No automatic context switching
+
+**Solution**: Intelligent automation
+- **Topic Auto-Detection**: Cluster-based topic identification
+- **Type Auto-Classification**: LLM-based semantic classification
+- **Performance Optimization**: Caching, batching, indexing
+
+### Phase 36.1: Topic Auto-Detection ⏳
+
+**Design Reference**: DESIGN_V0.4.md Section 8.1 "Topic Auto-Detection"
+
+**Algorithm**: Semantic clustering with topic labeling
+1. Embed new content
+2. Compare with existing topic centroids (cosine similarity)
+3. If similarity > threshold (0.7): Assign to existing topic
+4. Else: Create new topic, update centroids
+
+**New Interface**: `Interfaces/ITopicDetector.cs`
+```csharp
+public interface ITopicDetector
+{
+    Task<string> DetectTopicAsync(string userId, string sessionId, string content,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<TopicInfo>> GetTopicsAsync(string userId, string sessionId,
+        CancellationToken ct = default);
+
+    Task MergeTopicsAsync(string topicId1, string topicId2,
+        CancellationToken ct = default);
+}
+
+public sealed class TopicInfo
+{
+    public string TopicId { get; init; }
+    public string? Label { get; init; }  // Auto-generated or user-provided
+    public int MemoryCount { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime LastActiveAt { get; init; }
+}
+```
+
+**Implementation Tasks**:
+- [ ] Create `ITopicDetector` interface
+- [ ] Implement semantic clustering algorithm
+- [ ] Integrate with VirtualContextManager
+- [ ] Add topic centroids to storage
+- [ ] Write unit tests (50+ tests)
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 36.2: Type Auto-Classification ⏳
+
+**Design Reference**: DESIGN_V0.4.md Section 8.2 "Type Auto-Classification"
+
+**Algorithm**: LLM-based semantic classification
+1. Analyze content semantics
+2. Classify as Episodic, Semantic, Procedural, or Fact
+3. Return with confidence score
+
+**Existing Interface**: `ITypeClassifier` (already exists, enhance)
+```csharp
+public interface ITypeClassifier
+{
+    Task<MemoryType> ClassifyAsync(string content, CancellationToken ct = default);
+    Task<(MemoryType Type, float Confidence)> ClassifyWithConfidenceAsync(
+        string content, CancellationToken ct = default);
+}
+```
+
+**Classification Rules**:
+- **Episodic**: "I went to...", "Yesterday we...", events with time context
+- **Semantic**: "The capital of France is...", facts, definitions
+- **Procedural**: "To solve X, do Y", rules, strategies, instructions
+- **Fact** (fallback): Short factoids, preferences
+
+**Implementation Tasks**:
+- [ ] Enhance existing `ITypeClassifier` with confidence scoring
+- [ ] Implement LLM-based classification (optional, fallback to heuristics)
+- [ ] Add caching for classification results
+- [ ] Integrate with Simple API (auto-classification)
+- [ ] Write unit tests (40+ tests)
+
+**Estimated Effort**: 1 week (5 days)
+
+### Phase 36.3: Performance Optimization ⏳
+
+**Optimization Areas**:
+1. **Embedding Caching**: Cache embeddings for repeated content
+2. **Batch Processing**: Batch embedding generation
+3. **Index Optimization**: Add indexes for Scope, TopicId, Tier queries
+4. **Query Optimization**: Use vector indexes efficiently
+
+**Implementation Tasks**:
+- [ ] Implement embedding cache (in-memory + optional Redis)
+- [ ] Add batch embedding API
+- [ ] Optimize database indexes (Scope, TopicId, Tier)
+- [ ] Profile and optimize hot paths
+- [ ] Write performance benchmarks (20+ scenarios)
+
+**Validation Criteria**:
+- [ ] 50% reduction in embedding API calls (via caching)
+- [ ] 30% improvement in batch embedding throughput
+- [ ] <100ms query latency for RecallAsync (p95)
+- [ ] All tests pass (1468 existing + 90+ new = 1558+ total)
+
+**Estimated Effort**: 3 days
+
+### Success Criteria
+
+- [ ] Topic auto-detection working with 70%+ accuracy
+- [ ] Type auto-classification working with 80%+ accuracy
+- [ ] Embedding caching reduces API calls by 50%
+- [ ] Query latency <100ms (p95)
+- [ ] All tests pass (1558+ total)
+- [ ] v0.5.2 release ready
+
+### Files Created
+
+- `src/MemoryIndexer.Sdk/Intelligence/ITopicDetector.cs` (new interface)
+- `src/MemoryIndexer.Sdk/Intelligence/TopicDetector.cs` (new implementation)
+- `src/MemoryIndexer.Sdk/Intelligence/EmbeddingCache.cs` (new caching layer)
+
+### Files Modified
+
+- `src/MemoryIndexer.Sdk/Intelligence/ITypeClassifier.cs` (add confidence scoring)
+- `src/MemoryIndexer.Sdk/Intelligence/TypeClassifier.cs` (enhance classification)
+- `src/MemoryIndexer/Services/VirtualContextManager.cs` (integrate auto-detection)
+- `src/MemoryIndexer.Sdk/Storage/SqliteVec/SqliteVecMemoryStore.cs` (add indexes)
+
+---
+
+## Overall Phase 32-36 Summary
+
+**Combined Timeline**: 4 weeks (Phase 32) + 17 days (Phase 33) + 17 days (Phase 34) + 17 days (Phase 35) + 17 days (Phase 36) = **~11 weeks total**
+
+**Deliverables**:
+- ⏳ 3-Axis Memory Model (Type × Scope × Tier) — Phase 32
+- ⏳ Simple API (IMemoryService) for 99% use cases — Phase 33
+- ⏳ Expert API (IMemoryServiceAdvanced) for advanced users — Phase 34
+- ⏳ Domain Profiles (Chat, TwentyQuestions, RAG) — Phase 35
+- ⏳ Topic auto-detection & Type auto-classification — Phase 36
+- ⏳ Performance optimization (caching, indexing) — Phase 36
+
+**Test Growth**:
+- Phase 32: 848 → 1068+ tests (+220)
+- Phase 33: 1068 → 1188+ tests (+120)
+- Phase 34: 1188 → 1328+ tests (+140)
+- Phase 35: 1328 → 1468+ tests (+140)
+- Phase 36: 1468 → 1558+ tests (+90)
+- **Total**: 1558+ tests (84% growth from v0.3.x)
+
+**Philosophy Alignment**: 9.5/10 — Realizes full cognitive science vision
+**Feasibility**: 8.0/10 — Well-specified, clear implementation path, bold refactoring
+**User Value**: 9.0/10 — Simplifies API, enables advanced use cases, domain-specific optimization
+
+**Breaking Changes Summary**:
+- ✅ Tier enum renamed (Sensory→Buffer, Working→Short, Episodic→Long, Semantic→Archive)
+- ✅ Interface renames (ISensoryBuffer→IBuffer, etc.)
+- ✅ No backward compatibility (v0.x allows bold refactoring)
+- ✅ Auto-migration on startup (v0.3.x → v0.4.x databases)
+
+**Next Major Milestone After v0.5.2**:
+1. v1.0 Stabilization (API freeze, production hardening)
+2. Advanced features (Procedural Store research, Multi-modal embeddings)
+3. Enterprise features (Multi-tenancy, Advanced observability)
 
 ---
 

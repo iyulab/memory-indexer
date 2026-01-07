@@ -44,7 +44,7 @@ public enum QueryIntent
 
     /// <summary>
     /// Context continuation: "Tell me more about that"
-    /// Prioritizes: Working Memory → Recent buffer
+    /// Prioritizes: Short-Term Memory → Recent buffer
     /// </summary>
     Contextual,
 
@@ -111,5 +111,5 @@ public sealed class QueryIntentResult
     /// <summary>
     /// Suggested tier priority order for retrieval.
     /// </summary>
-    public IReadOnlyList<MemoryTier> TierPriority { get; init; } = [];
+    public IReadOnlyList<Tier> TierPriority { get; init; } = [];
 }

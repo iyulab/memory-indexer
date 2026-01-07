@@ -853,7 +853,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             SessionId = memory.SessionId,
             Content = $"[BACKUP] {memory.Content}",
             Type = memory.Type,
-            Tier = MemoryTier.User,
+            Tier = Tier.Archive,
             Stability = memory.Stability,
             CreatedAt = memory.CreatedAt,
             UpdatedAt = DateTime.UtcNow
@@ -891,7 +891,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
 
             case CorrectionType.Archive:
                 // Move to User tier (long-term storage)
-                memory.Tier = MemoryTier.User;
+                memory.Tier = Tier.Archive;
                 memory.UpdatedAt = DateTime.UtcNow;
                 await _memoryStore.UpdateAsync(memory, cancellationToken);
                 break;
@@ -947,7 +947,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             : contradiction.Memory1;
 
         // Archive older memory to User tier
-        older.Tier = MemoryTier.User;
+        older.Tier = Tier.Archive;
         older.UpdatedAt = DateTime.UtcNow;
         await _memoryStore.UpdateAsync(older, cancellationToken);
 
@@ -975,7 +975,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             : contradiction.Memory1;
 
         // Archive newer memory to User tier
-        newer.Tier = MemoryTier.User;
+        newer.Tier = Tier.Archive;
         newer.UpdatedAt = DateTime.UtcNow;
         await _memoryStore.UpdateAsync(newer, cancellationToken);
 
@@ -1003,7 +1003,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             ? contradiction.Memory2
             : contradiction.Memory1;
 
-        archiver.Tier = MemoryTier.User;
+        archiver.Tier = Tier.Archive;
         archiver.UpdatedAt = DateTime.UtcNow;
         await _memoryStore.UpdateAsync(archiver, cancellationToken);
 
@@ -1036,7 +1036,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             SessionId = contradiction.Memory1.SessionId,
             Content = mergedContent,
             Type = MemoryType.Fact,
-            Tier = MemoryTier.Session,
+            Tier = Tier.Long,
             Stability = MemoryStability.Volatile,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -1045,8 +1045,8 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         await _memoryStore.StoreAsync(mergedMemory, cancellationToken);
 
         // Archive originals to User tier
-        contradiction.Memory1.Tier = MemoryTier.User;
-        contradiction.Memory2.Tier = MemoryTier.User;
+        contradiction.Memory1.Tier = Tier.Archive;
+        contradiction.Memory2.Tier = Tier.Archive;
         await _memoryStore.UpdateAsync(contradiction.Memory1, cancellationToken);
         await _memoryStore.UpdateAsync(contradiction.Memory2, cancellationToken);
 

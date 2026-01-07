@@ -813,7 +813,7 @@ public sealed class ReflectionEngine : IReflectionEngine
                 UserId = userId,
                 Content = $"[Insight] {insight.Content}",
                 Type = MemoryType.Semantic,
-                Tier = MemoryTier.Session,
+                Tier = Tier.Long,
                 Stability = MemoryStability.Stable,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow

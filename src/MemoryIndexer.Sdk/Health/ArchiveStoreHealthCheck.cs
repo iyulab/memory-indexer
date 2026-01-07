@@ -8,13 +8,13 @@ namespace MemoryIndexer.Sdk.Health;
 /// Monitors profile consistency and storage health.
 /// Implements Tulving's Semantic Memory System health monitoring.
 /// </summary>
-public class SemanticStoreHealthCheck : IHealthCheck
+public class ArchiveStoreHealthCheck : IHealthCheck
 {
-    private readonly ISemanticStore _semanticStore;
+    private readonly IArchiveStore _semanticStore;
     private const int CriticalEntriesPerUser = 1000;  // Way above normal ~500
     private const int WarningEntriesPerUser = 750;
 
-    public SemanticStoreHealthCheck(ISemanticStore semanticStore)
+    public ArchiveStoreHealthCheck(IArchiveStore semanticStore)
     {
         _semanticStore = semanticStore ?? throw new ArgumentNullException(nameof(semanticStore));
     }

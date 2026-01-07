@@ -264,13 +264,13 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
         return entities.Distinct().ToList();
     }
 
-    private static List<MemoryTier> GetTierPriority(QueryIntent intent) => intent switch
+    private static List<Tier> GetTierPriority(QueryIntent intent) => intent switch
     {
-        QueryIntent.Factual => [MemoryTier.User, MemoryTier.Session, MemoryTier.Working],
-        QueryIntent.Contextual => [MemoryTier.Working, MemoryTier.Session, MemoryTier.User],
-        QueryIntent.Temporal => [MemoryTier.Session, MemoryTier.User, MemoryTier.Working],
-        QueryIntent.Relational => [MemoryTier.Session, MemoryTier.User, MemoryTier.Working],
-        _ => [MemoryTier.Working, MemoryTier.Session, MemoryTier.User]
+        QueryIntent.Factual => [Tier.Archive, Tier.Long, Tier.Short],
+        QueryIntent.Contextual => [Tier.Short, Tier.Long, Tier.Archive],
+        QueryIntent.Temporal => [Tier.Long, Tier.Archive, Tier.Short],
+        QueryIntent.Relational => [Tier.Long, Tier.Archive, Tier.Short],
+        _ => [Tier.Short, Tier.Long, Tier.Archive]
     };
 
     /// <summary>

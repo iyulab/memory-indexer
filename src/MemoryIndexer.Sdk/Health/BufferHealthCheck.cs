@@ -4,19 +4,19 @@ using MemoryIndexer.Interfaces;
 namespace MemoryIndexer.Sdk.Health;
 
 /// <summary>
-/// Health check for Sensory Buffer tier (Tier 0).
+/// Health check for Buffer tier (Tier 0).
 /// Monitors buffer capacity, processing lag, and overall tier health.
 /// Implements Atkinson-Shiffrin Multi-Store Model's sensory register health monitoring.
 /// </summary>
-public class SensoryBufferHealthCheck : IHealthCheck
+public class BufferHealthCheck : IHealthCheck
 {
-    private readonly ISensoryBuffer _buffer;
+    private readonly IBuffer _buffer;
     private const int CriticalProcessingLagSeconds = 120; // 2 minutes
     private const int WarningProcessingLagSeconds = 60;   // 1 minute
     private const int CriticalTokenThreshold = 5000;      // High buffer accumulation
     private const int WarningTokenThreshold = 2000;
 
-    public SensoryBufferHealthCheck(ISensoryBuffer buffer)
+    public BufferHealthCheck(IBuffer buffer)
     {
         _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
     }

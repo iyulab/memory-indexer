@@ -7,15 +7,15 @@ using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Health;
 
-public class WorkingMemoryHealthCheckTests
+public class ShortTermMemoryHealthCheckTests
 {
-    private readonly Mock<IWorkingMemory> _mockWorkingMemory;
-    private readonly WorkingMemoryHealthCheck _healthCheck;
+    private readonly Mock<IShortTermMemory> _mockWorkingMemory;
+    private readonly ShortTermMemoryHealthCheck _healthCheck;
 
-    public WorkingMemoryHealthCheckTests()
+    public ShortTermMemoryHealthCheckTests()
     {
-        _mockWorkingMemory = new Mock<IWorkingMemory>();
-        _healthCheck = new WorkingMemoryHealthCheck(_mockWorkingMemory.Object);
+        _mockWorkingMemory = new Mock<IShortTermMemory>();
+        _healthCheck = new ShortTermMemoryHealthCheck(_mockWorkingMemory.Object);
     }
 
     [Fact]

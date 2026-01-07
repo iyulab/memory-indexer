@@ -59,7 +59,7 @@ public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
             [ContextFidelity.Compressed] = 0,
             [ContextFidelity.Placeholder] = 0
         };
-        var tierBreakdown = new Dictionary<MemoryTier, int>();
+        var tierBreakdown = new Dictionary<Tier, int>();
 
         // Add custom header if provided
         if (!string.IsNullOrEmpty(options.CustomHeader))
@@ -317,9 +317,9 @@ public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
         {
             var tierEmoji = memory.SourceTier switch
             {
-                MemoryTier.Working => "💭",
-                MemoryTier.Session => "📝",
-                MemoryTier.User => "👤",
+                Tier.Short => "💭",
+                Tier.Long => "📝",
+                Tier.Archive => "👤",
                 _ => "📌"
             };
             sb.AppendLine($"**{tierEmoji} {memory.SourceTier}**");

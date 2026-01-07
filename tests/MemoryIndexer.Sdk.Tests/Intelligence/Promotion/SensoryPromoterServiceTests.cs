@@ -16,8 +16,8 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Promotion;
 public class SensoryPromoterServiceTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly ISensoryBuffer _recentlyBuffer;
-    private readonly IWorkingMemory _workingMemory;
+    private readonly IBuffer _recentlyBuffer;
+    private readonly IShortTermMemory _workingMemory;
     private readonly TopicSegmenter _topicSegmenter;
     private readonly ISensoryPromoter _promoter;
 
@@ -46,13 +46,13 @@ public class SensoryPromoterServiceTests
                 TurnThreshold = 3
             }
         };
-        _recentlyBuffer = new SensoryBufferService(
+        _recentlyBuffer = new BufferService(
             Options.Create(bufferOptions),
-            NullLogger<SensoryBufferService>.Instance);
+            NullLogger<BufferService>.Instance);
 
         // Setup working memory
         var workingOptions = new WorkingMemoryOptions { Capacity = 7 };
-        _workingMemory = new WorkingMemoryService(
+        _workingMemory = new ShortTermMemoryService(
             new MemoryCache(new MemoryCacheOptions()),
             Options.Create(workingOptions));
 
@@ -103,7 +103,7 @@ public class SensoryPromoterServiceTests
         result.CreatedMemories.Should().HaveCount(1);
         result.CreatedMemories[0].Content.Should().Be("Hello, world!");
         result.CreatedMemories[0].UserId.Should().Be(userId);
-        result.CreatedMemories[0].Tier.Should().Be(MemoryTier.Working);
+        result.CreatedMemories[0].Tier.Should().Be(Tier.Short);
     }
 
     [Fact]
@@ -287,14 +287,14 @@ public class SensoryPromoterServiceTests
 
     #endregion
 
-    #region Working Memory Eviction Tests
+    #region Short-Term Memory Eviction Tests
 
     [Fact]
     public async Task PromoteAsync_AtCapacity_EvictsOldest()
     {
         // Arrange - fill working memory to capacity
         var smallWorkingOptions = new WorkingMemoryOptions { Capacity = 2 };
-        var smallWorkingMemory = new WorkingMemoryService(
+        var smallWorkingMemory = new ShortTermMemoryService(
             new MemoryCache(new MemoryCacheOptions()),
             Options.Create(smallWorkingOptions));
 

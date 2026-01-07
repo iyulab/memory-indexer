@@ -20,7 +20,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
     private readonly IScoringService _scoringService;
-    private readonly IWorkingMemory _workingMemory;
+    private readonly IShortTermMemory _workingMemory;
     private readonly IRerankerService? _rerankerService;
     private readonly IDeduplicationService? _deduplicationService;
     private readonly SearchOptions _searchOptions;
@@ -30,7 +30,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         IMemoryStore memoryStore,
         IEmbeddingService embeddingService,
         IScoringService scoringService,
-        IWorkingMemory workingMemory,
+        IShortTermMemory workingMemory,
         IOptions<MemoryIndexerOptions> options,
         ILogger<MemoryPrimitivesService> logger,
         IRerankerService? rerankerService = null,
@@ -724,7 +724,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         }
 
         // If promoting to Working memory, use working memory service
-        if (targetTier == MemoryTier.Working)
+        if (targetTier == Tier.Short)
         {
             await _workingMemory.PromoteAsync(memory, cancellationToken);
         }
@@ -758,7 +758,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         }
 
         // If demoting from Working memory
-        if (memory.Tier == MemoryTier.Working)
+        if (memory.Tier == Tier.Short)
         {
             await _workingMemory.DemoteAsync(memory.Id, cancellationToken);
         }
@@ -863,19 +863,19 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         Importance = 0.2f
     };
 
-    private static MemoryTier GetHigherTier(MemoryTier current) => current switch
+    private static Tier GetHigherTier(Tier current) => current switch
     {
-        MemoryTier.User => MemoryTier.Session,
-        MemoryTier.Session => MemoryTier.Working,
-        MemoryTier.Working => MemoryTier.Working,
+        Tier.Archive => Tier.Long,
+        Tier.Long => Tier.Short,
+        Tier.Short => Tier.Short,
         _ => current
     };
 
-    private static MemoryTier GetLowerTier(MemoryTier current) => current switch
+    private static Tier GetLowerTier(Tier current) => current switch
     {
-        MemoryTier.Working => MemoryTier.Session,
-        MemoryTier.Session => MemoryTier.User,
-        MemoryTier.User => MemoryTier.User,
+        Tier.Short => Tier.Long,
+        Tier.Long => Tier.Archive,
+        Tier.Archive => Tier.Archive,
         _ => current
     };
 

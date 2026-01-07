@@ -9,10 +9,10 @@ namespace MemoryIndexer.Interfaces;
 /// </summary>
 /// <remarks>
 /// 4-Tier Cognitive Architecture:
-/// - SensoryBuffer (T0): Raw sensory input
-/// - WorkingMemory (T1): Active processing
-/// - EpisodicStore (T2): Episodic memories
-/// - SemanticStore (T3): Semantic knowledge - THIS TIER
+/// - Buffer (T0): Raw sensory input
+/// - Short-Term Memory (T1): Active processing
+/// - LongTermStore (T2): Episodic memories
+/// - ArchiveStore (T3): Semantic knowledge - THIS TIER
 ///
 /// Semantic knowledge is:
 /// - Context-free (no when/where)
@@ -25,7 +25,7 @@ namespace MemoryIndexer.Interfaces;
 /// - High confidence threshold (0.8)
 /// - Consistency across episodes
 /// </remarks>
-public interface ISemanticStore
+public interface IArchiveStore
 {
     /// <summary>
     /// Gets a semantic knowledge entry by key.

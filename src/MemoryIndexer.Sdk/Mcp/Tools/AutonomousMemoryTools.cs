@@ -49,7 +49,7 @@ public sealed class AutonomousMemoryTools
         sb.AppendLine();
         sb.AppendLine($"**Health Status**: {response.HealthStatus}");
         sb.AppendLine($"**Context Utilization**: {response.State.UtilizationPercent:F1}%");
-        sb.AppendLine($"**Working Memory**: {response.State.WorkingMemoryCount} items");
+        sb.AppendLine($"**Short-Term Memory**: {response.State.WorkingMemoryCount} items");
         sb.AppendLine($"**Archival Memory**: {response.State.ArchivalMemoryCount} items");
         sb.AppendLine();
 

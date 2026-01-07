@@ -8,13 +8,13 @@ namespace MemoryIndexer.Sdk.Health;
 /// Monitors storage connectivity and query performance.
 /// Implements Tulving's Episodic Memory System health monitoring.
 /// </summary>
-public class EpisodicStoreHealthCheck : IHealthCheck
+public class LongTermStoreHealthCheck : IHealthCheck
 {
-    private readonly IEpisodicStore _episodicStore;
+    private readonly ILongTermStore _episodicStore;
     private const int CriticalQueryLatencyMs = 1000;  // 1 second
     private const int WarningQueryLatencyMs = 500;    // 500ms
 
-    public EpisodicStoreHealthCheck(IEpisodicStore episodicStore)
+    public LongTermStoreHealthCheck(ILongTermStore episodicStore)
     {
         _episodicStore = episodicStore ?? throw new ArgumentNullException(nameof(episodicStore));
     }

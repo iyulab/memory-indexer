@@ -17,7 +17,7 @@ LLMs face a fundamental constraint: **finite context windows**. Memory Indexer s
 ### Core Value Propositions
 
 - **Zero Configuration**: Works out-of-the-box with sensible defaults
-- **4-Tier Cognitive Architecture**: Sensory → Working → Episodic → Semantic (cognitive science-inspired memory tiers)
+- **4-Tier Cognitive Architecture**: Buffer → Short-Term → Long-Term → Archive (cognitive science-inspired memory tiers)
 - **Intelligent Forgetting**: Ebbinghaus curve-based decay with importance weighting
 - **Production Ready**: 848 tests, comprehensive observability, deployment guides
 - **Research-Based**: Built on MemGPT, Mem0, H-MEM, and cognitive psychology research
@@ -84,19 +84,19 @@ var results = await memoryService.RecallAsync(
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Sensory (T0): Raw conversation staging            │
+│  Buffer (T0): Raw conversation staging            │
 │  TTL: 60s idle OR 500 tokens OR 3 turns            │
 │  (Atkinson-Shiffrin sensory memory)                │
 ├─────────────────────────────────────────────────────┤
-│  Working (T1): Active context, 4-7 chunks          │
+│  Short-Term (T1): Active context, 4-7 chunks          │
 │  TTL: 10min OR 2K tokens OR topic change           │
 │  (Baddeley's working memory model)                 │
 ├─────────────────────────────────────────────────────┤
-│  Episodic (T2): Session experiences, vector search │
+│  Long-Term (T2): Session experiences, vector search │
 │  Storage: SQLite-vec (default) or Qdrant           │
 │  (Tulving's episodic memory - event-based)         │
 ├─────────────────────────────────────────────────────┤
-│  Semantic (T3): Long-term knowledge dictionary      │
+│  Archive (T3): Long-term knowledge dictionary      │
 │  Promotion: Confidence ≥ 0.8 AND Confirms ≥ 3      │
 │  (Tulving's semantic memory - fact-based)          │
 └─────────────────────────────────────────────────────┘
@@ -144,8 +144,8 @@ var results = await memoryService.RecallAsync(
       "Dimensions": 1024
     },
     "VCM": {
-      "WorkingMemory": { "Capacity": 7, "DefaultTtl": "00:10:00" },
-      "SensoryBuffer": { "MaxIdleSeconds": 60, "TokenThreshold": 500 },
+      "ShortTermMemory": { "Capacity": 7, "DefaultTtl": "00:10:00" },
+      "Buffer": { "MaxIdleSeconds": 60, "TokenThreshold": 500 },
       "SemanticStore": { "MinConfirmationCount": 3, "MinConfidenceThreshold": 0.8 }
     }
   }

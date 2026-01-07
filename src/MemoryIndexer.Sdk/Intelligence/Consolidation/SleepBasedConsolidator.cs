@@ -393,7 +393,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
             Content = reflectionContent,
             Embedding = embedding,
             Type = MemoryType.Reflection,
-            Tier = MemoryTier.User, // Reflections are long-term cross-session memories
+            Tier = Tier.Archive, // Reflections are long-term cross-session memories
             Topics = [topic],
             ImportanceScore = reflectionImportance,
             CreatedAt = DateTime.UtcNow,
@@ -438,7 +438,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
             Content = reflectionContent,
             Embedding = embedding,
             Type = MemoryType.Reflection,
-            Tier = MemoryTier.User, // Reflections are long-term cross-session memories
+            Tier = Tier.Archive, // Reflections are long-term cross-session memories
             Topics = allTopics,
             ImportanceScore = 0.8f, // Cross-topic reflections are high value
             CreatedAt = DateTime.UtcNow,

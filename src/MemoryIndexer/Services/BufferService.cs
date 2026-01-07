@@ -14,10 +14,10 @@ namespace MemoryIndexer.Services;
 /// </summary>
 /// <remarks>
 /// 4-Tier Cognitive Architecture:
-/// - SensoryBuffer (T0): This implementation
-/// - WorkingMemory (T1): WorkingMemoryService
-/// - EpisodicStore (T2): ITieredMemoryStore
-/// - SemanticStore (T3): ITieredMemoryStore
+/// - Buffer (T0): This implementation
+/// - Short-Term Memory (T1): ShortTermMemoryService
+/// - LongTermStore (T2): ITieredMemoryStore
+/// - ArchiveStore (T3): ITieredMemoryStore
 ///
 /// Features:
 /// - Thread-safe per-user buffers
@@ -25,16 +25,16 @@ namespace MemoryIndexer.Services;
 /// - Token counting for threshold detection
 /// - Idle timeout tracking
 /// </remarks>
-public sealed class SensoryBufferService : ISensoryBuffer
+public sealed class BufferService : IBuffer
 {
     private readonly ConcurrentDictionary<string, UserBuffer> _userBuffers = new();
     private readonly SensoryBufferOptions _options;
-    private readonly ILogger<SensoryBufferService> _logger;
+    private readonly ILogger<BufferService> _logger;
     private readonly object _lock = new();
 
-    public SensoryBufferService(
+    public BufferService(
         IOptions<MemoryIndexerOptions> options,
-        ILogger<SensoryBufferService> logger)
+        ILogger<BufferService> logger)
     {
         _options = options.Value.SensoryBuffer;
         _logger = logger;

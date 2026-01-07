@@ -9,10 +9,10 @@ namespace MemoryIndexer.Interfaces;
 /// </summary>
 /// <remarks>
 /// 4-Tier Cognitive Architecture:
-/// - SensoryBuffer (T0): Raw sensory input
-/// - WorkingMemory (T1): Active processing
-/// - EpisodicStore (T2): Episodic memories - THIS TIER
-/// - SemanticStore (T3): Semantic knowledge
+/// - Buffer (T0): Raw sensory input
+/// - Short-Term Memory (T1): Active processing
+/// - LongTermStore (T2): Episodic memories - THIS TIER
+/// - ArchiveStore (T3): Semantic knowledge
 ///
 /// Episodic memories are:
 /// - Temporally specific (when/where)
@@ -20,7 +20,7 @@ namespace MemoryIndexer.Interfaces;
 /// - Personally experienced
 /// - Potentially promoted to semantic knowledge
 /// </remarks>
-public interface IEpisodicStore
+public interface ILongTermStore
 {
     /// <summary>
     /// Creates a new session.

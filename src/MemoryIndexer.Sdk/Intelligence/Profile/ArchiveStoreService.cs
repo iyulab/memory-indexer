@@ -16,19 +16,19 @@ namespace MemoryIndexer.Sdk.Intelligence.Profile;
 /// - Confidence threshold >= 0.8
 /// - Consistent evidence across sources
 /// </remarks>
-public sealed class SemanticStoreService : ISemanticStore
+public sealed class ArchiveStoreService : IArchiveStore
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly SemanticStoreOptions _options;
-    private readonly ILogger<SemanticStoreService> _logger;
+    private readonly ILogger<ArchiveStoreService> _logger;
 
     // userId -> (key -> entry)
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SemanticStoreEntry>> _profiles = new();
 
-    public SemanticStoreService(
+    public ArchiveStoreService(
         IEmbeddingService embeddingService,
         IOptions<SemanticStoreOptions> options,
-        ILogger<SemanticStoreService> logger)
+        ILogger<ArchiveStoreService> logger)
     {
         _embeddingService = embeddingService;
         _options = options.Value;

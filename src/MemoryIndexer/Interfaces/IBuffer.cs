@@ -3,23 +3,23 @@ using MemoryIndexer.Models;
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
-/// Tier 0: Sensory Buffer interface.
+/// Tier 0: Buffer interface.
 /// Async staging area for raw sensory input before promotion to Working memory.
 /// Implements Atkinson-Shiffrin Multi-Store Model's sensory memory component.
 /// </summary>
 /// <remarks>
 /// 4-Tier Cognitive Architecture:
-/// - SensoryBuffer (T0): Raw sensory input, async staging - THIS TIER
-/// - WorkingMemory (T1): Processed active context
-/// - EpisodicStore (T2): Archived episodic memories
-/// - SemanticStore (T3): Consolidated semantic knowledge
+/// - Buffer (T0): Raw sensory input, async staging - THIS TIER
+/// - Short-Term Memory (T1): Processed active context
+/// - LongTermStore (T2): Archived episodic memories
+/// - ArchiveStore (T3): Consolidated semantic knowledge
 ///
 /// Multi-signal promotion triggers (OR logic):
 /// - IdleTimeout: No activity for specified duration
 /// - TokenThreshold: Accumulated tokens exceed threshold
 /// - TurnThreshold: Turn count exceeds threshold
 /// </remarks>
-public interface ISensoryBuffer
+public interface IBuffer
 {
     /// <summary>
     /// Gets the current number of items in the buffer for a user.

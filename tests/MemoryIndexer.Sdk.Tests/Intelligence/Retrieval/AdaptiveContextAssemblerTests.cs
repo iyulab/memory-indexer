@@ -40,7 +40,7 @@ public class AdaptiveContextAssemblerTests
         // Arrange
         var memories = new[]
         {
-            CreateScoredMemory("This is the complete content.", MemoryTier.Working, ContextFidelity.Full)
+            CreateScoredMemory("This is the complete content.", Tier.Short, ContextFidelity.Full)
         };
         var result = CreateRetrievalResult(memories);
 
@@ -60,7 +60,7 @@ public class AdaptiveContextAssemblerTests
         var longContent = "This is the first sentence. This is the second sentence. This is the third sentence.";
         var memories = new[]
         {
-            CreateScoredMemory(longContent, MemoryTier.Session, ContextFidelity.Compressed)
+            CreateScoredMemory(longContent, Tier.Long, ContextFidelity.Compressed)
         };
         var result = CreateRetrievalResult(memories);
 
@@ -79,7 +79,7 @@ public class AdaptiveContextAssemblerTests
         // Arrange
         var memories = new[]
         {
-            CreateScoredMemory("This is a detailed memory content.", MemoryTier.User, ContextFidelity.Placeholder)
+            CreateScoredMemory("This is a detailed memory content.", Tier.Archive, ContextFidelity.Placeholder)
         };
         var result = CreateRetrievalResult(memories);
 
@@ -98,9 +98,9 @@ public class AdaptiveContextAssemblerTests
         // Arrange
         var memories = new[]
         {
-            CreateScoredMemory("Full content here.", MemoryTier.Working, ContextFidelity.Full),
-            CreateScoredMemory("Compressed content here. More sentences follow.", MemoryTier.Session, ContextFidelity.Compressed),
-            CreateScoredMemory("Placeholder content here.", MemoryTier.User, ContextFidelity.Placeholder)
+            CreateScoredMemory("Full content here.", Tier.Short, ContextFidelity.Full),
+            CreateScoredMemory("Compressed content here. More sentences follow.", Tier.Long, ContextFidelity.Compressed),
+            CreateScoredMemory("Placeholder content here.", Tier.Archive, ContextFidelity.Placeholder)
         };
         var result = CreateRetrievalResult(memories);
 
@@ -120,7 +120,7 @@ public class AdaptiveContextAssemblerTests
         // Arrange
         var memories = new[]
         {
-            CreateScoredMemory("Content", MemoryTier.Working, ContextFidelity.Full)
+            CreateScoredMemory("Content", Tier.Short, ContextFidelity.Full)
         };
         var result = CreateRetrievalResult(memories);
         var options = new ContextAssemblyOptions { IncludeTierHeaders = true };
@@ -129,7 +129,7 @@ public class AdaptiveContextAssemblerTests
         var context = await _assembler.AssembleAsync(result, options);
 
         // Assert
-        context.Content.Should().Contain("Working");
+        context.Content.Should().Contain("Short");
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public class AdaptiveContextAssemblerTests
         // Arrange
         var memories = new[]
         {
-            CreateScoredMemory("Content", MemoryTier.Session, ContextFidelity.Full)
+            CreateScoredMemory("Content", Tier.Long, ContextFidelity.Full)
         };
         var result = CreateRetrievalResultWithGraph(
             memories,
@@ -159,7 +159,7 @@ public class AdaptiveContextAssemblerTests
         // Arrange
         var memories = new[]
         {
-            CreateScoredMemory("Content", MemoryTier.Working, ContextFidelity.Full)
+            CreateScoredMemory("Content", Tier.Short, ContextFidelity.Full)
         };
         var result = CreateRetrievalResult(memories);
         var options = new ContextAssemblyOptions
@@ -182,7 +182,7 @@ public class AdaptiveContextAssemblerTests
         // Arrange
         var largeContent = new string('A', 1000);
         var memories = Enumerable.Range(0, 20)
-            .Select(i => CreateScoredMemory(largeContent, MemoryTier.Session, ContextFidelity.Full))
+            .Select(i => CreateScoredMemory(largeContent, Tier.Long, ContextFidelity.Full))
             .ToArray();
         var result = CreateRetrievalResult(memories);
         var options = new ContextAssemblyOptions { MaxTokens = 500 };
@@ -308,7 +308,7 @@ public class AdaptiveContextAssemblerTests
         // Arrange
         var memories = new[]
         {
-            CreateScoredMemory("Test content", MemoryTier.Session, ContextFidelity.Full)
+            CreateScoredMemory("Test content", Tier.Long, ContextFidelity.Full)
         };
         var result = CreateRetrievalResult(memories);
         var options = new ContextAssemblyOptions { Format = format };
@@ -363,7 +363,7 @@ public class AdaptiveContextAssemblerTests
 
     private static ScoredMemory CreateScoredMemory(
         string content,
-        MemoryTier tier,
+        Tier tier,
         ContextFidelity fidelity)
     {
         return new ScoredMemory
@@ -385,7 +385,7 @@ public class AdaptiveContextAssemblerTests
             UserId = "test-user",
             Content = content,
             Type = MemoryType.Fact,
-            Tier = MemoryTier.Session,
+            Tier = Tier.Long,
             CreatedAt = DateTime.UtcNow.AddHours(-1)
         };
     }

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 namespace MemoryIndexer.Services;
 
 /// <summary>
-/// Implementation of L1 Working Memory using IMemoryCache.
+/// Implementation of L1 Short-Term Memory using IMemoryCache.
 /// Manages fast, limited-capacity in-context memory with memory-pressure aware eviction.
 /// </summary>
 /// <remarks>
@@ -17,7 +17,7 @@ namespace MemoryIndexer.Services;
 /// - Access tracking for relevance updates
 /// - Adaptive eviction based on system memory pressure
 /// </remarks>
-public sealed class WorkingMemoryService : IWorkingMemory
+public sealed class ShortTermMemoryService : IShortTermMemory
 {
     private readonly IMemoryCache _cache;
     private readonly ConcurrentDictionary<Guid, WorkingMemoryEntry> _entries;
@@ -25,7 +25,7 @@ public sealed class WorkingMemoryService : IWorkingMemory
     private readonly IMemoryPressureMonitor? _pressureMonitor;
     private readonly object _lock = new();
 
-    public WorkingMemoryService(
+    public ShortTermMemoryService(
         IMemoryCache cache,
         IOptions<WorkingMemoryOptions> options,
         IMemoryPressureMonitor? pressureMonitor = null)
@@ -93,7 +93,7 @@ public sealed class WorkingMemoryService : IWorkingMemory
                 OriginalEmbedding = memory.Embedding // Store original for restoration
             };
 
-            // Lazy embedding loading: Clear embedding from Working Memory to save space
+            // Lazy embedding loading: Clear embedding from Short-Term Memory to save space
             // Embeddings are only needed for search, not for in-context usage
             if (_options.LazyEmbeddingLoading && memory.Embedding.HasValue)
             {
@@ -104,7 +104,7 @@ public sealed class WorkingMemoryService : IWorkingMemory
             UpdateCache(memory.Id, newEntry);
 
             // Update memory tier
-            memory.Tier = MemoryTier.Working;
+            memory.Tier = Tier.Short;
         }
 
         return Task.FromResult(evicted);
@@ -127,7 +127,7 @@ public sealed class WorkingMemoryService : IWorkingMemory
                     entry.Memory.Embedding = entry.OriginalEmbedding;
                 }
 
-                entry.Memory.Tier = MemoryTier.Session;
+                entry.Memory.Tier = Tier.Long;
                 return Task.FromResult<MemoryUnit?>(entry.Memory);
             }
         }
@@ -188,7 +188,7 @@ public sealed class WorkingMemoryService : IWorkingMemory
         // Set tier back to Session for cleared memories
         foreach (var memory in cleared)
         {
-            memory.Tier = MemoryTier.Session;
+            memory.Tier = Tier.Long;
         }
 
         return Task.FromResult<IReadOnlyList<MemoryUnit>>(cleared);
@@ -234,7 +234,7 @@ public sealed class WorkingMemoryService : IWorkingMemory
         if (candidate != null && _entries.TryRemove(candidate.Memory.Id, out _))
         {
             _cache.Remove(GetCacheKey(candidate.Memory.Id));
-            candidate.Memory.Tier = MemoryTier.Session;
+            candidate.Memory.Tier = Tier.Long;
             return candidate.Memory;
         }
 
@@ -289,7 +289,7 @@ public sealed class WorkingMemoryService : IWorkingMemory
 }
 
 /// <summary>
-/// Configuration options for Working Memory.
+/// Configuration options for Short-Term Memory.
 /// </summary>
 public sealed class WorkingMemoryOptions
 {
@@ -311,7 +311,7 @@ public sealed class WorkingMemoryOptions
 
     /// <summary>
     /// Enable lazy embedding loading to reduce memory footprint.
-    /// When true, embeddings are cleared from Working Memory and restored only when needed.
+    /// When true, embeddings are cleared from Short-Term Memory and restored only when needed.
     /// Memory savings: ~3KB per memory unit (768 floats × 4 bytes).
     /// </summary>
     public bool LazyEmbeddingLoading { get; set; } = false;

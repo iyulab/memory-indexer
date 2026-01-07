@@ -6,11 +6,11 @@ using Microsoft.Extensions.Logging;
 namespace MemoryIndexer.InMemory;
 
 /// <summary>
-/// In-memory implementation of IEpisodicStore.
+/// In-memory implementation of ILongTermStore.
 /// Stores episodic memories (conversation sessions) in memory.
 /// Implements Tulving's Episodic Memory System.
 /// </summary>
-public sealed class InMemoryEpisodicStore(ILogger<InMemoryEpisodicStore> logger) : IEpisodicStore
+public sealed class InMemoryLongTermStore(ILogger<InMemoryLongTermStore> logger) : ILongTermStore
 {
     private readonly ConcurrentDictionary<Guid, Session> _sessions = new();
 

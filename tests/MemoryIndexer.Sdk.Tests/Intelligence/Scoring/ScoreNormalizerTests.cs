@@ -113,7 +113,7 @@ public class MinMaxScoreNormalizerTests
                 UserId = "test-user",
                 Content = content,
                 CreatedAt = DateTime.UtcNow,
-                Tier = MemoryTier.Session,
+                Tier = Tier.Long,
                 Type = MemoryType.Episodic
             },
             RawScore = rawScore,
@@ -188,7 +188,7 @@ public class PercentileScoreNormalizerTests
                 UserId = "test-user",
                 Content = content,
                 CreatedAt = DateTime.UtcNow,
-                Tier = MemoryTier.Session,
+                Tier = Tier.Long,
                 Type = MemoryType.Episodic
             },
             RawScore = rawScore,
@@ -284,7 +284,7 @@ public class ZScoreNormalizerTests
                 UserId = "test-user",
                 Content = content,
                 CreatedAt = DateTime.UtcNow,
-                Tier = MemoryTier.Session,
+                Tier = Tier.Long,
                 Type = MemoryType.Episodic
             },
             RawScore = rawScore,
@@ -421,7 +421,7 @@ public class AdaptiveScoreNormalizerTests
                 UserId = "test-user",
                 Content = content,
                 CreatedAt = DateTime.UtcNow,
-                Tier = MemoryTier.Session,
+                Tier = Tier.Long,
                 Type = MemoryType.Episodic
             },
             RawScore = rawScore,

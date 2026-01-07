@@ -34,7 +34,7 @@ public class LocalQueryIntentClassifierTests
         // Assert
         result.Intent.Should().Be(QueryIntent.Factual);
         result.Confidence.Should().BeGreaterThan(0.3f);
-        result.TierPriority.First().Should().Be(MemoryTier.User);
+        result.TierPriority.First().Should().Be(Tier.Archive);
     }
 
     #endregion
@@ -54,7 +54,7 @@ public class LocalQueryIntentClassifierTests
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Contextual);
-        result.TierPriority.First().Should().Be(MemoryTier.Working);
+        result.TierPriority.First().Should().Be(Tier.Short);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class LocalQueryIntentClassifierTests
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Temporal);
-        result.TierPriority.First().Should().Be(MemoryTier.Session);
+        result.TierPriority.First().Should().Be(Tier.Long);
     }
 
     [Fact]

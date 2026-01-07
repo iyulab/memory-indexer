@@ -9,12 +9,12 @@ using Xunit;
 
 namespace MemoryIndexer.Tests.Services;
 
-public class SensoryBufferServiceTests
+public class BufferServiceTests
 {
-    private readonly ISensoryBuffer _buffer;
+    private readonly IBuffer _buffer;
     private readonly SensoryBufferOptions _options;
 
-    public SensoryBufferServiceTests()
+    public BufferServiceTests()
     {
         _options = new SensoryBufferOptions
         {
@@ -30,9 +30,9 @@ public class SensoryBufferServiceTests
             SensoryBuffer = _options
         };
 
-        _buffer = new SensoryBufferService(
+        _buffer = new BufferService(
             Options.Create(memoryOptions),
-            NullLogger<SensoryBufferService>.Instance);
+            NullLogger<BufferService>.Instance);
     }
 
     #region Enqueue Tests
@@ -471,9 +471,9 @@ public class SensoryBufferServiceTests
                 MaxBufferSize = 3
             }
         };
-        var smallBuffer = new SensoryBufferService(
+        var smallBuffer = new BufferService(
             Options.Create(smallOptions),
-            NullLogger<SensoryBufferService>.Instance);
+            NullLogger<BufferService>.Instance);
 
         const string userId = "user-1";
 

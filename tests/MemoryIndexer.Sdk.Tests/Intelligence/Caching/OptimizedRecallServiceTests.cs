@@ -302,7 +302,7 @@ public class OptimizedRecallServiceTests
             UserId = "user1",
             Content = content,
             CreatedAt = DateTime.UtcNow,
-            Tier = MemoryTier.Working
+            Tier = Tier.Short
         };
     }
 

@@ -9,7 +9,7 @@ namespace MemoryIndexer.Interfaces;
 /// <remarks>
 /// 4-Tier Architecture:
 /// - Recently (Buffer): Raw conversation staging
-/// - Working (L1): Topic-grouped active context - THIS TIER
+/// - Short (L1): Topic-grouped active context - THIS TIER
 /// - Session (L2): Archived session summaries - PROMOTION TARGET
 /// - User (L3): Profile dictionary
 ///
@@ -19,7 +19,7 @@ namespace MemoryIndexer.Interfaces;
 /// - TurnThreshold: 10 conversation turns
 /// - TopicChange: Significant topic shift detected
 /// </remarks>
-public interface IWorkingMemoryOrchestrator
+public interface IShortTermMemoryOrchestrator
 {
     /// <summary>
     /// Records activity in working memory for a user.

@@ -51,7 +51,7 @@ Memory Indexer implements a 4-tier cognitive memory architecture inspired by Atk
 │  │ (Atkinson-Shiffrin sensory memory store)                         │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────┬─────────────────────────────────────────┘
-                                │ SensoryPromoter
+                                │ BufferPromoter
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  WORKING MEMORY (T1)                                                     │
@@ -61,7 +61,7 @@ Memory Indexer implements a 4-tier cognitive memory architecture inspired by Atk
 │  │ (Baddeley's working memory model)                                │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────┬─────────────────────────────────────────┘
-                                │ WorkingMemoryOrchestrator
+                                │ ShortTermMemoryOrchestrator
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  EPISODIC STORE (T2)                                                     │
@@ -87,17 +87,17 @@ Memory Indexer implements a 4-tier cognitive memory architecture inspired by Atk
 
 | Tier | Interface | Implementation | Cognitive Model |
 |------|-----------|----------------|-----------------|
-| Sensory (T0) | `ISensoryBuffer` | `SensoryBufferService` | Atkinson-Shiffrin sensory memory |
-| Working (T1) | `IWorkingMemory` | `WorkingMemoryService` | Baddeley's working memory |
-| Episodic (T2) | `IEpisodicStore` | `InMemoryEpisodicStore` | Tulving's episodic memory |
-| Semantic (T3) | `ISemanticStore` | `SemanticStoreService` | Tulving's semantic memory |
+| Buffer (T0) | `IBuffer` | `BufferService` | Atkinson-Shiffrin sensory memory |
+| Short-Term (T1) | `IShortTermMemory` | `ShortTermMemoryService` | Baddeley's working memory |
+| Long-Term (T2) | `ILongTermStore` | `InMemoryEpisodicStore` | Tulving's episodic memory |
+| Archive (T3) | `IArchiveStore` | `SemanticStoreService` | Tulving's semantic memory |
 
 ### Promotion Services
 
 | Transition | Interface | Implementation |
 |------------|-----------|----------------|
-| Sensory → Working | `ISensoryPromoter` | `SensoryPromoterService` |
-| Working → Episodic | `IWorkingMemoryOrchestrator` | `WorkingMemoryOrchestratorService` |
+| Sensory → Working | `IBufferPromoter` | `BufferPromoterService` |
+| Working → Episodic | `IShortTermMemoryOrchestrator` | `ShortTermMemoryOrchestratorService` |
 
 ## Layer Diagram
 
@@ -194,12 +194,12 @@ public class SemanticStoreEntry
 }
 ```
 
-### SensoryMemory
+### BufferMemory
 
 Raw buffer entry before processing (Atkinson-Shiffrin sensory store):
 
 ```csharp
-public record SensoryMemory
+public record BufferMemory
 {
     public required string Content { get; init; }
     public DateTime Timestamp { get; init; }
@@ -274,12 +274,12 @@ Registers (core services):
 - `IScoringService`
 
 Registers (4-tier cognitive architecture):
-- `ISensoryBuffer` → `SensoryBufferService` (T0)
-- `IWorkingMemory` → `WorkingMemoryService` (T1)
-- `IEpisodicStore` → `InMemoryEpisodicStore` (T2)
-- `ISemanticStore` → `SemanticStoreService` (T3)
-- `ISensoryPromoter` → `SensoryPromoterService` (T0→T1)
-- `IWorkingMemoryOrchestrator` → `WorkingMemoryOrchestratorService` (T1→T2)
+- `IBuffer` → `BufferService` (T0)
+- `IShortTermMemory` → `ShortTermMemoryService` (T1)
+- `ILongTermStore` → `InMemoryEpisodicStore` (T2)
+- `IArchiveStore` → `SemanticStoreService` (T3)
+- `IBufferPromoter` → `BufferPromoterService` (T0→T1)
+- `IShortTermMemoryOrchestrator` → `ShortTermMemoryOrchestratorService` (T1→T2)
 
 Registers (intelligence):
 - `IMemoryClassifier` → `LocalMemoryClassifier`
@@ -314,11 +314,11 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
       "Dimensions": 1024
     },
     "VCM": {
-      "WorkingMemory": {
+      "ShortTermMemory": {
         "Capacity": 7,
         "DefaultTtl": "00:10:00"
       },
-      "SensoryBuffer": {
+      "Buffer": {
         "MaxIdleSeconds": 60,
         "TokenThreshold": 500,
         "TurnThreshold": 3

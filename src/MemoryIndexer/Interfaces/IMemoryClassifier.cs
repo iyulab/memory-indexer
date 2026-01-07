@@ -47,7 +47,7 @@ public sealed class MemoryClassification
     /// <summary>
     /// Recommended memory tier.
     /// </summary>
-    public required MemoryTier Tier { get; init; }
+    public required Tier Tier { get; init; }
 
     /// <summary>
     /// Primary detected memory type (highest confidence).
@@ -105,7 +105,7 @@ public sealed class MemoryClassification
     /// </summary>
     public static MemoryClassification Transient => new()
     {
-        Tier = MemoryTier.Working,
+        Tier = Tier.Short,
         Type = MemoryType.Episodic,
         Importance = 0.1f,
         ShouldPersist = false,
@@ -117,7 +117,7 @@ public sealed class MemoryClassification
     /// </summary>
     public static MemoryClassification UserFact => new()
     {
-        Tier = MemoryTier.User,
+        Tier = Tier.Archive,
         Type = MemoryType.Fact,
         Importance = 0.9f,
         ShouldPersist = true,

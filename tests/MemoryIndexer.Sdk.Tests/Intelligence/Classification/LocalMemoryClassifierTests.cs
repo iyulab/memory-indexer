@@ -264,7 +264,7 @@ public class LocalMemoryClassifierTests
 
         // Assert
         result.Type.Should().Be(MemoryType.Fact);
-        result.Tier.Should().Be(MemoryTier.User);
+        result.Tier.Should().Be(Tier.Archive);
     }
 
     [Fact]
@@ -279,7 +279,7 @@ public class LocalMemoryClassifierTests
 
         // Assert
         result.Type.Should().Be(MemoryType.Semantic);
-        result.Tier.Should().Be(MemoryTier.User);
+        result.Tier.Should().Be(Tier.Archive);
     }
 
     [Fact]
@@ -296,10 +296,10 @@ public class LocalMemoryClassifierTests
 
         // Assert
         shortResult.Type.Should().Be(MemoryType.Procedural);
-        shortResult.Tier.Should().Be(MemoryTier.Session);
+        shortResult.Tier.Should().Be(Tier.Long);
 
         longResult.Type.Should().Be(MemoryType.Procedural);
-        longResult.Tier.Should().Be(MemoryTier.User);
+        longResult.Tier.Should().Be(Tier.Archive);
     }
 
     [Fact]
@@ -312,7 +312,7 @@ public class LocalMemoryClassifierTests
         var result = await _classifier.ClassifyAsync(shortEpisodic);
 
         // Assert
-        result.Tier.Should().Be(MemoryTier.Working);
+        result.Tier.Should().Be(Tier.Short);
     }
 
     #endregion
@@ -332,7 +332,7 @@ public class LocalMemoryClassifierTests
 
         // Assert
         result.ShouldPersist.Should().BeFalse();
-        result.Tier.Should().Be(MemoryTier.Working);
+        result.Tier.Should().Be(Tier.Short);
     }
 
     #endregion

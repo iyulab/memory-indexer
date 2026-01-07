@@ -4,16 +4,16 @@ using MemoryIndexer.Interfaces;
 namespace MemoryIndexer.Sdk.Health;
 
 /// <summary>
-/// Health check for Working Memory tier (L1).
+/// Health check for Short-Term Memory tier (L1).
 /// Monitors capacity utilization and eviction patterns.
 /// </summary>
-public class WorkingMemoryHealthCheck : IHealthCheck
+public class ShortTermMemoryHealthCheck : IHealthCheck
 {
-    private readonly IWorkingMemory _workingMemory;
+    private readonly IShortTermMemory _workingMemory;
     private const double CriticalCapacityThreshold = 0.95; // 95% full
     private const double WarningCapacityThreshold = 0.85;  // 85% full
 
-    public WorkingMemoryHealthCheck(IWorkingMemory workingMemory)
+    public ShortTermMemoryHealthCheck(IShortTermMemory workingMemory)
     {
         _workingMemory = workingMemory ?? throw new ArgumentNullException(nameof(workingMemory));
     }

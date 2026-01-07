@@ -26,7 +26,7 @@ public sealed class MemoryRecallExplanation
     /// <summary>
     /// Tier from which memory was recalled.
     /// </summary>
-    public required MemoryTier SourceTier { get; init; }
+    public required Tier SourceTier { get; init; }
 
     /// <summary>
     /// Reason for recall (semantic match, temporal proximity, etc.).

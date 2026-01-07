@@ -7,10 +7,10 @@ namespace MemoryIndexer.Models;
 /// </summary>
 /// <remarks>
 /// 4-Tier Cognitive Architecture:
-/// - SensoryBuffer (T0): Raw sensory input, async staging - THIS CLASS
-/// - WorkingMemory (T1): Processed active context
-/// - EpisodicStore (T2): Archived episodic memories
-/// - SemanticStore (T3): Consolidated semantic knowledge
+/// - Buffer (T0): Raw sensory input, async staging - THIS CLASS
+/// - Short-Term Memory (T1): Processed active context
+/// - LongTermStore (T2): Archived episodic memories
+/// - ArchiveStore (T3): Consolidated semantic knowledge
 /// </remarks>
 public sealed class SensoryMemory
 {

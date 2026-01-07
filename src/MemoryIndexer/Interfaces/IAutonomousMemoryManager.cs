@@ -534,7 +534,7 @@ public sealed class MemoryReference
     /// <summary>
     /// Memory tier.
     /// </summary>
-    public MemoryTier Tier { get; set; }
+    public Tier Tier { get; set; }
 }
 
 /// <summary>
@@ -555,7 +555,7 @@ public sealed class MemoryWithScore
     /// <summary>
     /// Source tier before page-in.
     /// </summary>
-    public MemoryTier SourceTier { get; set; }
+    public Tier SourceTier { get; set; }
 }
 
 /// <summary>

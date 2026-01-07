@@ -807,7 +807,7 @@ public sealed class LatencyOptions
     public bool ProfilingEnabled { get; set; } = true;
 
     /// <summary>
-    /// Latency budget for Working Memory tier (hot path).
+    /// Latency budget for Short-Term Memory tier (hot path).
     /// Target: &lt; 100ms.
     /// Default: 100ms.
     /// </summary>

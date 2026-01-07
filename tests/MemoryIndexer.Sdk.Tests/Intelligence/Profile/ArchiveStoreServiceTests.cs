@@ -8,13 +8,13 @@ using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Profile;
 
-public class SemanticStoreServiceTests
+public class ArchiveStoreServiceTests
 {
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
     private readonly SemanticStoreOptions _options;
-    private readonly ISemanticStore _profileService;
+    private readonly IArchiveStore _profileService;
 
-    public SemanticStoreServiceTests()
+    public ArchiveStoreServiceTests()
     {
         _embeddingServiceMock = new Mock<IEmbeddingService>();
         _embeddingServiceMock
@@ -30,10 +30,10 @@ public class SemanticStoreServiceTests
             EnableSemanticSearch = true
         };
 
-        _profileService = new SemanticStoreService(
+        _profileService = new ArchiveStoreService(
             _embeddingServiceMock.Object,
             Options.Create(_options),
-            NullLogger<SemanticStoreService>.Instance);
+            NullLogger<ArchiveStoreService>.Instance);
     }
 
     #region SetAsync Tests

@@ -9,16 +9,16 @@ using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Promotion;
 
-public class WorkingMemoryOrchestratorServiceTests
+public class ShortTermMemoryOrchestratorServiceTests
 {
-    private readonly Mock<IWorkingMemory> _workingMemoryMock;
+    private readonly Mock<IShortTermMemory> _workingMemoryMock;
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
     private readonly WorkingMemoryOrchestratorOptions _options;
-    private readonly IWorkingMemoryOrchestrator _orchestrator;
+    private readonly IShortTermMemoryOrchestrator _orchestrator;
 
-    public WorkingMemoryOrchestratorServiceTests()
+    public ShortTermMemoryOrchestratorServiceTests()
     {
-        _workingMemoryMock = new Mock<IWorkingMemory>();
+        _workingMemoryMock = new Mock<IShortTermMemory>();
         _embeddingServiceMock = new Mock<IEmbeddingService>();
 
         _embeddingServiceMock
@@ -35,11 +35,11 @@ public class WorkingMemoryOrchestratorServiceTests
             SummarizeBeforeArchival = true
         };
 
-        _orchestrator = new WorkingMemoryOrchestratorService(
+        _orchestrator = new ShortTermMemoryOrchestratorService(
             _workingMemoryMock.Object,
             _embeddingServiceMock.Object,
             Options.Create(_options),
-            NullLogger<WorkingMemoryOrchestratorService>.Instance);
+            NullLogger<ShortTermMemoryOrchestratorService>.Instance);
     }
 
     #region RecordActivityAsync Tests
@@ -410,18 +410,18 @@ public class WorkingMemoryOrchestratorServiceTests
             UserId = userId,
             Embedding = new float[768].AsMemory(),
             Type = MemoryType.Episodic,
-            Tier = MemoryTier.Working,
+            Tier = Tier.Short,
             Stability = MemoryStability.Volatile
         };
     }
 
-    private IWorkingMemoryOrchestrator CreateOrchestratorWithOptions(WorkingMemoryOrchestratorOptions options)
+    private IShortTermMemoryOrchestrator CreateOrchestratorWithOptions(WorkingMemoryOrchestratorOptions options)
     {
-        return new WorkingMemoryOrchestratorService(
+        return new ShortTermMemoryOrchestratorService(
             _workingMemoryMock.Object,
             _embeddingServiceMock.Object,
             Options.Create(options),
-            NullLogger<WorkingMemoryOrchestratorService>.Instance);
+            NullLogger<ShortTermMemoryOrchestratorService>.Instance);
     }
 
     #endregion

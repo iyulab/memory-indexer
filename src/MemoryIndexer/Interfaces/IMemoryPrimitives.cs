@@ -179,7 +179,7 @@ public sealed class EncodeRequest
     /// <summary>
     /// Initial tier (default: Session).
     /// </summary>
-    public MemoryTier Tier { get; init; } = MemoryTier.Session;
+    public Tier Tier { get; init; } = Tier.Long;
 
     /// <summary>
     /// Importance score (0-1, auto-evaluated if not specified).
@@ -484,7 +484,7 @@ public sealed class RetrieveRequest
     /// <summary>
     /// Tiers to search (null = all).
     /// </summary>
-    public MemoryTier[]? Tiers { get; init; }
+    public Tier[]? Tiers { get; init; }
 
     /// <summary>
     /// Memory types to include (null = all).
@@ -634,7 +634,7 @@ public sealed class PromoteRequest
     /// <summary>
     /// Target tier (null = next higher tier).
     /// </summary>
-    public MemoryTier? TargetTier { get; init; }
+    public Tier? TargetTier { get; init; }
 }
 
 /// <summary>
@@ -650,7 +650,7 @@ public sealed class DemoteRequest
     /// <summary>
     /// Target tier (null = next lower tier).
     /// </summary>
-    public MemoryTier? TargetTier { get; init; }
+    public Tier? TargetTier { get; init; }
 
     /// <summary>
     /// Reason for demotion.

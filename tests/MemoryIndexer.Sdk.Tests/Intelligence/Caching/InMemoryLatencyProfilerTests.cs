@@ -151,7 +151,7 @@ public class InMemoryLatencyProfilerTests
         // Arrange
         const string userId = "user1";
 
-        // Act & Assert - Working Memory budget is 100ms
+        // Act & Assert - Short-Term Memory budget is 100ms
         await _profiler.RecordLatencyAsync(userId, "Working", 120.0);
         var workingMetrics = await _profiler.GetMetricsAsync(userId, "Working");
         Assert.Equal(1, workingMetrics[0].BudgetExceededCount);

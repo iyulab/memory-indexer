@@ -103,8 +103,8 @@ public sealed class TieredRetrievalResult
     /// <summary>
     /// Retrieved memories grouped by tier, in priority order.
     /// </summary>
-    public IReadOnlyDictionary<MemoryTier, IReadOnlyList<ScoredMemory>> TierResults { get; init; }
-        = new Dictionary<MemoryTier, IReadOnlyList<ScoredMemory>>();
+    public IReadOnlyDictionary<Tier, IReadOnlyList<ScoredMemory>> TierResults { get; init; }
+        = new Dictionary<Tier, IReadOnlyList<ScoredMemory>>();
 
     /// <summary>
     /// All results merged and ranked.
@@ -150,7 +150,7 @@ public sealed record ScoredMemory
     /// <summary>
     /// The tier this memory was retrieved from.
     /// </summary>
-    public MemoryTier SourceTier { get; init; }
+    public Tier SourceTier { get; init; }
 
     /// <summary>
     /// Estimated token count for this memory.
@@ -227,7 +227,7 @@ public sealed class TierBudgetAllocation
     public int TotalBudget { get; init; }
 
     /// <summary>
-    /// Budget for Working Memory (L1).
+    /// Budget for Short-Term Memory (L1).
     /// </summary>
     public int WorkingBudget { get; init; }
 
@@ -249,8 +249,8 @@ public sealed class TierBudgetAllocation
     /// <summary>
     /// Percentage breakdown by tier.
     /// </summary>
-    public IReadOnlyDictionary<MemoryTier, float> TierPercentages { get; init; }
-        = new Dictionary<MemoryTier, float>();
+    public IReadOnlyDictionary<Tier, float> TierPercentages { get; init; }
+        = new Dictionary<Tier, float>();
 }
 
 /// <summary>
@@ -271,20 +271,20 @@ public sealed class TieredRetrievalStatistics
     /// <summary>
     /// Time spent on each tier's retrieval.
     /// </summary>
-    public IReadOnlyDictionary<MemoryTier, TimeSpan> TierDurations { get; init; }
-        = new Dictionary<MemoryTier, TimeSpan>();
+    public IReadOnlyDictionary<Tier, TimeSpan> TierDurations { get; init; }
+        = new Dictionary<Tier, TimeSpan>();
 
     /// <summary>
     /// Count of results per tier before filtering.
     /// </summary>
-    public IReadOnlyDictionary<MemoryTier, int> TierCandidateCounts { get; init; }
-        = new Dictionary<MemoryTier, int>();
+    public IReadOnlyDictionary<Tier, int> TierCandidateCounts { get; init; }
+        = new Dictionary<Tier, int>();
 
     /// <summary>
     /// Count of results per tier after filtering.
     /// </summary>
-    public IReadOnlyDictionary<MemoryTier, int> TierSelectedCounts { get; init; }
-        = new Dictionary<MemoryTier, int>();
+    public IReadOnlyDictionary<Tier, int> TierSelectedCounts { get; init; }
+        = new Dictionary<Tier, int>();
 
     /// <summary>
     /// Total tokens used.

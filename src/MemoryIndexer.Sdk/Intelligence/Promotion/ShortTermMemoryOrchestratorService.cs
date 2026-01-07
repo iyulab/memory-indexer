@@ -18,21 +18,21 @@ namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 /// - TurnThreshold: 10 conversation turns
 /// - TopicChange: Significant topic shift detected
 /// </remarks>
-public sealed class WorkingMemoryOrchestratorService : IWorkingMemoryOrchestrator
+public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchestrator
 {
-    private readonly IWorkingMemory _workingMemory;
+    private readonly IShortTermMemory _workingMemory;
     private readonly IEmbeddingService _embeddingService;
     private readonly WorkingMemoryOrchestratorOptions _options;
-    private readonly ILogger<WorkingMemoryOrchestratorService> _logger;
+    private readonly ILogger<ShortTermMemoryOrchestratorService> _logger;
 
     // Per-user state tracking
     private readonly ConcurrentDictionary<string, UserWorkingState> _userStates = new();
 
-    public WorkingMemoryOrchestratorService(
-        IWorkingMemory workingMemory,
+    public ShortTermMemoryOrchestratorService(
+        IShortTermMemory workingMemory,
         IEmbeddingService embeddingService,
         IOptions<WorkingMemoryOrchestratorOptions> options,
-        ILogger<WorkingMemoryOrchestratorService> logger)
+        ILogger<ShortTermMemoryOrchestratorService> logger)
     {
         _workingMemory = workingMemory;
         _embeddingService = embeddingService;
@@ -189,7 +189,7 @@ public sealed class WorkingMemoryOrchestratorService : IWorkingMemoryOrchestrato
                     SessionId = state.SessionId,
                     Embedding = summaryEmbedding,
                     Type = MemoryType.Semantic, // Summarized content becomes semantic
-                    Tier = MemoryTier.Session,
+                    Tier = Tier.Long,
                     Stability = MemoryStability.Stable,
                     ImportanceScore = CalculateSessionImportance(memoriesToArchive),
                     Topics = ExtractTopicsFromMemories(memoriesToArchive),

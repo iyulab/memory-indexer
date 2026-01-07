@@ -31,19 +31,19 @@ public static class HealthCheckExtensions
         this IHealthChecksBuilder builder)
     {
         return builder
-            .AddCheck<SensoryBufferHealthCheck>(
-                name: "Sensory Buffer",
+            .AddCheck<BufferHealthCheck>(
+                name: "Buffer",
                 failureStatus: HealthStatus.Unhealthy,
                 tags: new[] { "tier", "tier:sensory", "memory" })
-            .AddCheck<WorkingMemoryHealthCheck>(
-                name: "Working Memory",
+            .AddCheck<ShortTermMemoryHealthCheck>(
+                name: "Short-Term Memory",
                 failureStatus: HealthStatus.Unhealthy,
                 tags: new[] { "tier", "tier:working", "memory", "critical" })
-            .AddCheck<EpisodicStoreHealthCheck>(
+            .AddCheck<LongTermStoreHealthCheck>(
                 name: "Episodic Store",
                 failureStatus: HealthStatus.Unhealthy,
                 tags: new[] { "tier", "tier:episodic", "memory", "critical" })
-            .AddCheck<SemanticStoreHealthCheck>(
+            .AddCheck<ArchiveStoreHealthCheck>(
                 name: "Semantic Store",
                 failureStatus: HealthStatus.Degraded,
                 tags: new[] { "tier", "tier:semantic", "memory" });

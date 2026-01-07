@@ -7,15 +7,15 @@ using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Health;
 
-public class SensoryBufferHealthCheckTests
+public class BufferHealthCheckTests
 {
-    private readonly Mock<ISensoryBuffer> _mockBuffer;
-    private readonly SensoryBufferHealthCheck _healthCheck;
+    private readonly Mock<IBuffer> _mockBuffer;
+    private readonly BufferHealthCheck _healthCheck;
 
-    public SensoryBufferHealthCheckTests()
+    public BufferHealthCheckTests()
     {
-        _mockBuffer = new Mock<ISensoryBuffer>();
-        _healthCheck = new SensoryBufferHealthCheck(_mockBuffer.Object);
+        _mockBuffer = new Mock<IBuffer>();
+        _healthCheck = new BufferHealthCheck(_mockBuffer.Object);
     }
 
     [Fact]

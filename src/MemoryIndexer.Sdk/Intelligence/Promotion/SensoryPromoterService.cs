@@ -21,15 +21,15 @@ namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 /// </remarks>
 public sealed class SensoryPromoterService : ISensoryPromoter
 {
-    private readonly ISensoryBuffer _sensoryBuffer;
-    private readonly IWorkingMemory _workingMemory;
+    private readonly IBuffer _sensoryBuffer;
+    private readonly IShortTermMemory _workingMemory;
     private readonly IEmbeddingService _embeddingService;
     private readonly TopicSegmenter _topicSegmenter;
     private readonly ILogger<SensoryPromoterService> _logger;
 
     public SensoryPromoterService(
-        ISensoryBuffer sensoryBuffer,
-        IWorkingMemory workingMemory,
+        IBuffer sensoryBuffer,
+        IShortTermMemory workingMemory,
         IEmbeddingService embeddingService,
         TopicSegmenter topicSegmenter,
         ILogger<SensoryPromoterService> logger)
@@ -195,7 +195,7 @@ public sealed class SensoryPromoterService : ISensoryPromoter
                 SessionId = sessionId,
                 Embedding = embedding,
                 Type = MemoryType.Episodic, // Episodic: conversation with temporal context
-                Tier = MemoryTier.Working,
+                Tier = Tier.Short,
                 Stability = MemoryStability.Volatile, // Initial stability
                 ImportanceScore = CalculateImportance(segment),
                 Topics = ExtractTopics(segment),

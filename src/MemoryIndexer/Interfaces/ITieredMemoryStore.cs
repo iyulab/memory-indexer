@@ -22,12 +22,12 @@ public interface ITieredMemoryStore : IMemoryStore
     /// <returns>The stored memory with updated tier.</returns>
     Task<MemoryUnit> StoreAtTierAsync(
         MemoryUnit memory,
-        MemoryTier tier,
+        Tier tier,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Promotes a memory to a higher tier.
-    /// L3 (User) → L2 (Session) → L1 (Working, handled by IWorkingMemory)
+    /// L3 (User) → L2 (Session) → L1 (Working, handled by IShortTermMemory)
     /// </summary>
     /// <param name="memoryId">The memory ID to promote.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -53,7 +53,7 @@ public interface ITieredMemoryStore : IMemoryStore
     /// <returns>Memories at the specified tier.</returns>
     Task<IReadOnlyList<MemoryUnit>> GetByTierAsync(
         string userId,
-        MemoryTier tier,
+        Tier tier,
         MemoryFilterOptions? options = null,
         CancellationToken cancellationToken = default);
 
@@ -68,7 +68,7 @@ public interface ITieredMemoryStore : IMemoryStore
     /// <returns>Consolidation candidates ordered by priority.</returns>
     Task<IReadOnlyList<MemoryUnit>> GetConsolidationCandidatesAsync(
         string userId,
-        MemoryTier tier,
+        Tier tier,
         int limit = 10,
         CancellationToken cancellationToken = default);
 
@@ -83,7 +83,7 @@ public interface ITieredMemoryStore : IMemoryStore
     /// <returns>Eviction candidates ordered by priority (lowest retention first).</returns>
     Task<IReadOnlyList<MemoryUnit>> GetEvictionCandidatesAsync(
         string userId,
-        MemoryTier tier,
+        Tier tier,
         float retentionThreshold = 0.1f,
         int limit = 10,
         CancellationToken cancellationToken = default);
@@ -146,7 +146,7 @@ public sealed class TierMigrationResult
 public sealed class TierStorageStatistics
 {
     /// <summary>
-    /// Statistics for Working Memory (L1).
+    /// Statistics for Short-Term Memory (L1).
     /// </summary>
     public TierStatistics Working { get; init; } = new();
 
