@@ -1703,69 +1703,115 @@ public enum NormalizationStrategy
 
 **Status**: Complete (2026-01-07)
 **Priority**: 🔴 High
-**Commit**: 10982a9
+**Commit**: TBD
 
 **Goal**: Extract factual knowledge from Q&A exchanges to generate Semantic memories, addressing memory type imbalance observed in Twenty Questions game (Beta: 0% Semantic, target 30%)
 
-### Phase 25.0: Rule-based Knowledge Extractor
+### Phase 25.0: Rule-based Knowledge Extractor ⚠️ DEPRECATED
 
-**Status**: ✅ Complete
+**Status**: ⚠️ Deprecated (replaced by Phase 25.1)
+**Commit**: 10982a9
 
-**Problem**: Q&A conversations naturally create Episodic memories (57% in Beta) but lack Semantic knowledge extraction, leading to memory type imbalance.
+**Reason for deprecation**: Hardcoded regex patterns lack generality. Memory-indexer is a general-purpose library and must support:
+- Multilingual extraction (regex cannot scale to multiple languages)
+- Complex Q&A patterns beyond simple templates
+- Flexible fact extraction for various domains
 
-**Solution**: Pattern-matching extractor for common Q&A patterns:
-- ✅ "Is it X?" → Property assertions (e.g., "The ocean is blue")
-- ✅ "Is it a/an X?" → Category assertions (e.g., "The ocean is a liquid")
-- ✅ "Does it have X?" → Possession/feature assertions (e.g., "The ocean has waves")
-- ✅ "Can it X?" → Capability assertions (e.g., "The ocean can move")
-- ✅ Answer normalization: Yes/No/Maybe with confidence scoring
-- ✅ Subject tracking and capitalization
-- ✅ Pattern priority ordering (most specific first)
+**Original implementation** (removed):
+- Pattern-matching with 4 hardcoded regex patterns
+- Limited to English Q&A patterns
+- `LocalKnowledgeExtractor` with regex-based extraction
+
+### Phase 25.1: LLM-based Knowledge Extractor ✅
+
+**Status**: ✅ Complete (2026-01-07)
+
+**Problem**: Hardcoded regex patterns cannot scale to multilingual support, complex Q&A patterns, and varied domains. Memory-indexer needs a general-purpose extraction approach.
+
+**Solution**: LLM-based knowledge extraction using prompt engineering:
+- ✅ Generic extraction approach applicable to any language
+- ✅ Handles complex Q&A patterns beyond templates
+- ✅ Semantic understanding of questions and answers
+- ✅ Confidence and importance scoring by LLM
+- ✅ JSON-based structured output
 
 **Implementation**:
-- ✅ `IKnowledgeExtractor` interface (src/MemoryIndexer/Interfaces/)
-- ✅ `KnowledgeExtractionContext` model (Question, Answer, Subject, UserId, Metadata)
-- ✅ `ExtractedFact` model (Content, Confidence, Importance, Source, Topics, Entities)
-- ✅ `LocalKnowledgeExtractor` with 4 regex patterns
+- ✅ `ITextCompletionService` interface for LLM text generation
+- ✅ `TextCompletionOptions` (Temperature, MaxTokens, StopSequences, TopP, penalties)
+- ✅ `OllamaCompletionService` implementation (Ollama `/api/generate` endpoint)
+- ✅ `CompletionOptions` configuration (Provider, Model, Endpoint, ApiKey, timeouts)
+- ✅ `CompletionProvider` enum (Mock, Ollama, OpenAI, AzureOpenAI, Custom)
+- ✅ `LlmKnowledgeExtractor` with prompt-based extraction
 - ✅ DI registration in ServiceCollectionExtensions
-- ✅ 30 comprehensive unit tests covering all patterns and edge cases
+- ✅ 9 comprehensive unit tests with mocked LLM responses
 
-**Confidence Scoring**:
-- Yes answers: 0.75-0.85 (varies by pattern)
-- No answers: 0.8-0.9 (higher confidence for negations)
-- Maybe answers: 0.5 (lower confidence for uncertainty)
+**Prompt Engineering**:
+```
+Extract factual knowledge from Q&A exchange.
+Question: {question}
+Answer: {answer}
+Subject: {subject}
 
-**Importance Scoring**:
-- Category assertions (IsItA): 0.75 (highest)
-- Property assertions (IsIt): 0.7
-- Possession assertions (DoesItHave): 0.65
-- Capability assertions (CanIt): 0.6
+Output JSON:
+{
+  "facts": [
+    {
+      "content": "declarative fact",
+      "confidence": 0.0-1.0,
+      "importance": 0.0-1.0,
+      "source": "extraction method"
+    }
+  ]
+}
+
+Guidelines:
+- Yes answers: high confidence (0.8-0.9)
+- No answers: very high confidence (0.85-0.95)
+- Maybe/uncertain: low confidence (0.4-0.6)
+- Category assertions: importance 0.7-0.8
+- Property assertions: importance 0.6-0.7
+- Capability assertions: importance 0.5-0.6
+```
+
+**Configuration**:
+```json
+{
+  "MemoryIndexer": {
+    "Completion": {
+      "Provider": "Ollama",
+      "Model": "llama3.2:1b",
+      "Endpoint": "http://localhost:11434",
+      "TimeoutSeconds": 60,
+      "DefaultTemperature": 0.1,
+      "DefaultMaxTokens": 500
+    }
+  }
+}
+```
 
 **Test Coverage**:
-- ✅ All 4 pattern types with Yes/No/Maybe variations
-- ✅ Answer normalization (yes/y/true, no/n/false, maybe/m/uncertain)
-- ✅ Edge cases: missing subject, unknown answers, no pattern match
-- ✅ Case insensitivity, question marks, parentheses
-- ✅ Confidence and importance scoring validation
-- ✅ 30 tests total, all passing (798 total tests in suite)
-
-**Future Enhancements** (Phase 25.1):
-- [ ] LLM-based extraction for complex patterns
-- [ ] Multi-turn dialogue context tracking
-- [ ] Confidence adjustment based on context
-- [ ] Entity and topic extraction integration
+- ✅ Valid LLM responses with single/multiple facts
+- ✅ Markdown code block extraction (```json...```)
+- ✅ Empty facts array handling
+- ✅ Invalid JSON handling
+- ✅ LLM service failures (graceful degradation)
+- ✅ Options validation (temperature, maxTokens, stopSequences)
+- ✅ Prompt content verification
+- ✅ 9 tests total, all passing (821 total tests in suite)
 
 **Success Criteria**:
-- ✅ Rule-based extraction for 4 common Q&A patterns
-- ✅ Confidence scoring based on answer type
-- ✅ Importance scoring based on assertion type
-- ✅ All tests passing (798/798)
-- ✅ Pattern priority ordering prevents false matches
+- ✅ LLM-based extraction for general Q&A patterns
+- ✅ Multilingual support through LLM semantic understanding
+- ✅ Confidence and importance scoring by LLM
+- ✅ All tests passing (821/821)
+- ✅ Graceful error handling (returns empty on failures)
+- ✅ JSON deserialization with JsonPropertyName attributes
 
 **Expected Impact**:
-- Semantic memory generation from Q&A: 0% → 15-25%
-- Improved memory type balance (Episodic: 57% → 40%, Semantic: 0% → 30%)
-- Foundation for future LLM-based extraction
+- Semantic memory generation from Q&A: 0% → 20-35%
+- Multilingual Q&A support without additional code
+- Complex pattern extraction beyond templates
+- Foundation for domain-specific extraction tuning
 
 ---
 

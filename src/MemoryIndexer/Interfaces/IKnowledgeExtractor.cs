@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
@@ -66,33 +68,39 @@ public sealed class ExtractedFact
     /// <summary>
     /// The factual statement extracted (e.g., "The ocean is a liquid").
     /// </summary>
+    [JsonPropertyName("content")]
     public required string Content { get; init; }
 
     /// <summary>
     /// Confidence in the extraction (0-1).
     /// Higher confidence = more certain this fact is valid.
     /// </summary>
+    [JsonPropertyName("confidence")]
     public float Confidence { get; init; } = 0.7f;
 
     /// <summary>
     /// Importance score for the extracted fact (0-1).
     /// Higher importance = more valuable for future reasoning.
     /// </summary>
+    [JsonPropertyName("importance")]
     public float Importance { get; init; } = 0.6f;
 
     /// <summary>
     /// Source of the extraction (e.g., "Pattern: IsIt_Yes").
     /// Used for debugging and validation.
     /// </summary>
+    [JsonPropertyName("source")]
     public string? Source { get; init; }
 
     /// <summary>
     /// Topics related to this fact.
     /// </summary>
+    [JsonPropertyName("topics")]
     public List<string>? Topics { get; init; }
 
     /// <summary>
     /// Entities mentioned in this fact.
     /// </summary>
+    [JsonPropertyName("entities")]
     public List<string>? Entities { get; init; }
 }

@@ -24,6 +24,12 @@ public sealed class MemoryIndexerOptions
     public EmbeddingOptions Embedding { get; set; } = new();
 
     /// <summary>
+    /// Text completion service configuration.
+    /// Phase 25: Semantic Knowledge Extraction.
+    /// </summary>
+    public CompletionOptions Completion { get; set; } = new();
+
+    /// <summary>
     /// Scoring configuration.
     /// </summary>
     public ScoringOptions Scoring { get; set; } = new();
@@ -877,4 +883,77 @@ public sealed class TypeBalancerOptions
     /// Default: 20 memories.
     /// </summary>
     public int MinMemoriesForBalancing { get; set; } = 20;
+}
+
+/// <summary>
+/// Text completion service configuration options.
+/// Phase 25: Semantic Knowledge Extraction.
+/// </summary>
+public sealed class CompletionOptions
+{
+    /// <summary>
+    /// Completion provider type.
+    /// </summary>
+    public CompletionProvider Provider { get; set; } = CompletionProvider.Ollama;
+
+    /// <summary>
+    /// Model name/ID to use for completions.
+    /// </summary>
+    public string Model { get; set; } = "llama3.2:1b";
+
+    /// <summary>
+    /// Endpoint URL for the completion service.
+    /// </summary>
+    public string Endpoint { get; set; } = "http://localhost:11434";
+
+    /// <summary>
+    /// API key (for OpenAI or other cloud providers).
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// Request timeout in seconds.
+    /// </summary>
+    public int TimeoutSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// Default temperature for generation (0.0 = deterministic, 1.0 = creative).
+    /// </summary>
+    public float DefaultTemperature { get; set; } = 0.1f;
+
+    /// <summary>
+    /// Default maximum tokens to generate.
+    /// </summary>
+    public int DefaultMaxTokens { get; set; } = 500;
+}
+
+/// <summary>
+/// Completion provider types.
+/// </summary>
+public enum CompletionProvider
+{
+    /// <summary>
+    /// Mock provider for testing (returns placeholder text).
+    /// </summary>
+    Mock,
+
+    /// <summary>
+    /// Ollama local inference.
+    /// </summary>
+    Ollama,
+
+    /// <summary>
+    /// OpenAI API.
+    /// </summary>
+    OpenAI,
+
+    /// <summary>
+    /// Azure OpenAI Service.
+    /// </summary>
+    AzureOpenAI,
+
+    /// <summary>
+    /// Custom HTTP endpoint (OpenAI-compatible).
+    /// </summary>
+    Custom
 }

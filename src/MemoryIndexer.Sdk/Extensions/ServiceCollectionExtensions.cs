@@ -2,6 +2,7 @@ using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Embedding.Providers;
+using MemoryIndexer.Sdk.Completion.Providers;
 using MemoryIndexer.Sdk.Intelligence.Classification;
 using MemoryIndexer.Sdk.Intelligence.Chunking;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
@@ -141,6 +142,23 @@ public static class ServiceCollectionExtensions
             };
         });
 
+        // Register text completion service based on configuration (Phase 25)
+        services.TryAddSingleton<ITextCompletionService>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>();
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+
+            return options.Value.Completion.Provider switch
+            {
+                CompletionProvider.Ollama => new OllamaCompletionService(
+                    httpClientFactory.CreateClient("Ollama"),
+                    options,
+                    sp.GetRequiredService<ILogger<OllamaCompletionService>>()),
+                // Add other providers as needed (OpenAI, AzureOpenAI, etc.)
+                _ => throw new NotSupportedException($"Completion provider {options.Value.Completion.Provider} is not yet supported")
+            };
+        });
+
         // Register scoring service
         services.TryAddSingleton<IScoringService, DefaultScoringService>();
 
@@ -164,7 +182,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IMemoryClassifier, LocalMemoryClassifier>();
 
         // Register knowledge extractor (Phase 25)
-        services.TryAddSingleton<IKnowledgeExtractor, LocalKnowledgeExtractor>();
+        services.TryAddSingleton<IKnowledgeExtractor, LlmKnowledgeExtractor>();
 
         // Register intelligence services (Phase 2)
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();
