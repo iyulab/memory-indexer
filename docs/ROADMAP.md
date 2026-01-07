@@ -4547,9 +4547,9 @@ Fix: Close reader or use separate command object
 
 ---
 
-## Overall Phase 32-40 Summary
+## Overall Phase 32-41 Summary
 
-**Combined Timeline**: 4 weeks (Phase 32) + 17 days (Phase 33) + 17 days (Phase 34) + 17 days (Phase 35) + 17 days (Phase 36) + 1 day (Phase 37) + 1 day (Phase 38) + 1 day (Phase 39) + 4 hours (Phase 40) = **~11 weeks total**
+**Combined Timeline**: 4 weeks (Phase 32) + 17 days (Phase 33) + 17 days (Phase 34) + 17 days (Phase 35) + 17 days (Phase 36) + 1 day (Phase 37) + 1 day (Phase 38) + 1 day (Phase 39) + 4 hours (Phase 40) + 3 hours (Phase 41) = **~11 weeks total**
 
 **Deliverables**:
 - ⏳ 3-Axis Memory Model (Type × Scope × Tier) — Phase 32
@@ -4562,6 +4562,7 @@ Fix: Close reader or use separate command object
 - ✅ TwentyQuestionsGame final deduction logic & candidate generation — Phase 38
 - ✅ TwentyQuestionsGame recall query & deduction format improvements — Phase 39
 - ✅ TwentyQuestionsGame duplicate detection fix & root cause analysis — Phase 40
+- ✅ TwentyQuestionsGame MemoryType DB inspection bug fix & verification — Phase 41
 
 **Test Growth**:
 - Phase 32: 848 → 1068+ tests (+220)
@@ -4588,4 +4589,68 @@ Fix: Close reader or use separate command object
 
 ---
 
-*Last Updated: 2026-01-07 (Phase 39 completed - TwentyQuestionsGame recall quality recovery)*
+---
+
+### Phase 41: TwentyQuestionsGame MemoryType DB Inspection Bug Fix & SDK Verification (2026-01-07) ✅
+
+**Status**: ✅ Complete (Investigation + Bug Fix)
+**Timeline**: 3 hours
+**Scope**: Bug investigation, root cause analysis, DB inspection code fix, SDK verification
+
+**Motivation**:
+Phase 40 identified "MemoryType = null for ALL memories" as a critical bug. Phase 41 investigated this hypothesis and discovered the actual issue.
+
+**Key Discovery**:
+- ❌ **Phase 40 Hypothesis (WRONG)**: "MemoryType NOT serialized to DB"
+- ✅ **Phase 41 Finding (CORRECT)**: "Phase 40 DB inspection queried wrong column"
+
+**Investigation Results**:
+1. ✅ **DB Schema**: Type stored in INTEGER `type` column (MemoryType enum 0-4)
+2. ✅ **SDK Behavior**: Uses `type` column for filtering (BuildCteSearchQuery)
+3. ✅ **MemoryType Storage**: Working correctly all along!
+4. ❌ **Phase 40 Bug**: Queried `json_extract(metadata, '$.MemoryType')` instead of `type` column
+
+**Implementation** (`samples/TwentyQuestionsGame/Program.cs`):
+```diff
+// Phase 40 (WRONG - queries metadata JSON)
+-SELECT json_extract(metadata, '$.MemoryType'), COUNT(*)
+-FROM memories GROUP BY json_extract(metadata, '$.MemoryType')
+
+// Phase 41 (CORRECT - queries type INTEGER column)
++SELECT CASE type
++    WHEN 0 THEN 'Episodic'
++    WHEN 1 THEN 'Semantic'
++    WHEN 2 THEN 'Procedural'
++    WHEN 3 THEN 'Fact'
++    WHEN 4 THEN 'Reflection'
++END as MemoryType, COUNT(*)
++FROM memories GROUP BY type
+```
+
+**Verification** (DbChecker tool):
+```yaml
+Phase 40 (buggy code): metadata.MemoryType = "null" (100%)
+Phase 41 (fixed code):
+  - Episodic: 10 memories
+  - Procedural: 4 memories
+  - Semantic: 1 memory
+  Total: 15 memories ✅
+```
+
+**Files Changed**:
+- ✅ `samples/TwentyQuestionsGame/Program.cs` (DB inspection queries fixed)
+- ✅ `claudedocs/phase41-memorytype-metadata-fix.md` (investigation documentation)
+- ✅ `claudedocs/twentyquestions-evaluation-report.md` (Phase 41 section added)
+
+**Outcome**:
+- ✅ **"MemoryType bug" = FALSE ALARM** (SDK working correctly)
+- ✅ **DB inspection fixed** (queries correct column)
+- ⚠️ **82% memory loss remains** (15/84 memories) - requires Phase 42 investigation
+
+**Philosophy Alignment**: 10/10 — Rigorous investigation, corrected false hypothesis
+**Feasibility**: 10/10 — Simple DB query fix
+**User Value**: 8/10 — Prevents future misdiagnosis, validates SDK correctness
+
+---
+
+*Last Updated: 2026-01-07 (Phase 41 completed - MemoryType DB inspection bug fixed)*

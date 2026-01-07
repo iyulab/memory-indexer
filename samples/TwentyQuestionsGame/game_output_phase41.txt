@@ -1,0 +1,635 @@
+╔══════════════════════════════════════════════════════════════╗
+║          Twenty Questions Game - Memory Demo                  ║
+║          AI vs AI: 상대 응답 1개만 + Memory Recall            ║
+║          API: IMemoryPrimitives (3-Axis Model)                ║
+╚══════════════════════════════════════════════════════════════╝
+
+[ENV] Loaded: D:\data\memory-indexer\samples\TwentyQuestionsGame\..\..\.env
+[CONFIG] LLM: OpenAI gpt-5.2
+[CONFIG] Embedding: OpenAI text-embedding-3-small
+[CONFIG] Memory Log: Full (set MEMORY_LOG_MODE=full|summary)
+[CONFIG] API: IMemoryPrimitives (Expert API with 3-Axis control)
+
+╔══════════════════════════════════════════════════════════════╗
+║  GAME START                                                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+[SECRET] Alpha is thinking of: "a chocolate cake" (hidden from Beta)
+
+[INIT] Clearing previous game memories...
+[INIT] Game initialized. Starting rounds...
+
+══════════════════════════ Round 1/20 ══════════════════════════
+
+[BETA] Received from Alpha: "The game has started. Ask your first question!"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 726ms, 📝 801 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.73] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it a living thing?
+       ⏱️ LLM: 1093ms | 🎯 Prompt: 489 | 💬 Completion: 9
+[ALPHA] Received question: "Is it a living thing?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 2 memories (⏱️ 289ms, 📝 253 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.78] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 946ms | 🎯 Prompt: 204 | 💬 Completion: 4
+  ⏱️ Round 1 Summary: Recall=1015ms, LLM=2039ms, Tokens=706, Total=11075ms
+
+══════════════════════════ Round 2/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 386ms, 📝 909 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.83] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.80] [DEDUCTION_R1] CONFIRMED: living thing - Alpha said 'Yes' to 'Is it a living thing?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.73] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it an animal?
+       ⏱️ LLM: 683ms | 🎯 Prompt: 511 | 💬 Completion: 8
+[ALPHA] Received question: "Is it an animal?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 346ms, 📝 324 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.81] [QUESTION_R1] Beta asked: Is it a living thing?
+       [0.77] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 624ms | 🎯 Prompt: 227 | 💬 Completion: 4
+  ⏱️ Round 2 Summary: Recall=732ms, LLM=1307ms, Tokens=750, Total=9335ms
+
+══════════════════════════ Round 3/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 362ms, 📝 898 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.82] [DEDUCTION_R2] CONFIRMED: animal - Alpha said 'Yes' to 'Is it an animal?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.73] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it a mammal?
+       ⏱️ LLM: 759ms | 🎯 Prompt: 509 | 💬 Completion: 9
+[ALPHA] Received question: "Is it a mammal?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 325ms, 📝 326 chars):
+       [0.85] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.77] [ANSWER_R2] I answered 'Yes' to: Is it an animal?
+       [0.76] [ROUND] Current round: 1/20
+[ALPHA] >>> Maybe
+        ⏱️ LLM: 665ms | 🎯 Prompt: 232 | 💬 Completion: 4
+  ⏱️ Round 3 Summary: Recall=687ms, LLM=1424ms, Tokens=754, Total=9027ms
+
+══════════════════════════ Round 4/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Maybe"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 376ms, 📝 801 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.75] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it a physical object?
+       ⏱️ LLM: 872ms | 🎯 Prompt: 473 | 💬 Completion: 9
+[ALPHA] Received question: "Is it a physical object?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 2 memories (⏱️ 311ms, 📝 253 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.78] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 682ms | 🎯 Prompt: 204 | 💬 Completion: 4
+  ⏱️ Round 4 Summary: Recall=687ms, LLM=1554ms, Tokens=690, Total=9287ms
+
+══════════════════════════ Round 5/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 319ms, 📝 801 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.78] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it man-made?
+       ⏱️ LLM: 694ms | 🎯 Prompt: 473 | 💬 Completion: 8
+[ALPHA] Received question: "Is it man-made?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 342ms, 📝 327 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.82] [QUESTION_R4] Beta asked: Is it a physical object?
+       [0.79] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 724ms | 🎯 Prompt: 227 | 💬 Completion: 4
+  ⏱️ Round 5 Summary: Recall=661ms, LLM=1418ms, Tokens=712, Total=10086ms
+
+══════════════════════════ Round 6/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 472ms, 📝 801 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+[BETA] >>> Is it electronic (does it use electricity or a battery to function)?
+       ⏱️ LLM: 916ms | 🎯 Prompt: 406 | 💬 Completion: 17
+[ALPHA] Received question: "Is it electronic (does it use electricity or a battery to function)?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 2 memories (⏱️ 357ms, 📝 253 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.79] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 774ms | 🎯 Prompt: 221 | 💬 Completion: 4
+  ⏱️ Round 6 Summary: Recall=829ms, LLM=1690ms, Tokens=648, Total=10098ms
+
+══════════════════════════ Round 7/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 408ms, 📝 1,008 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+       [0.79] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+[BETA] >>> Is it something you can hold comfortably in one hand?
+       ⏱️ LLM: 913ms | 🎯 Prompt: 463 | 💬 Completion: 14
+[ALPHA] Received question: "Is it something you can hold comfortably in one hand?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 354ms, 📝 371 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.80] [QUESTION_R6] Beta asked: Is it electronic (does it use electricity or a battery to function)?
+       [0.79] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 544ms | 🎯 Prompt: 247 | 💬 Completion: 4
+  ⏱️ Round 7 Summary: Recall=762ms, LLM=1457ms, Tokens=728, Total=8969ms
+
+══════════════════════════ Round 8/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 408ms, 📝 1,008 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+[BETA] >>> Is it something you can hold and use with one hand?
+       ⏱️ LLM: 786ms | 🎯 Prompt: 463 | 💬 Completion: 15
+[ALPHA] Received question: "Is it something you can hold and use with one hand?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 385ms, 📝 356 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.80] [QUESTION_R7] Beta asked: Is it something you can hold comfortably in one hand?
+       [0.79] [ROUND] Current round: 1/20
+[ALPHA] Duplicate detected! Similarity: 0.94
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 0.94. Ask something different.
+  ⏱️ Round 8 Summary: Recall=793ms, LLM=786ms, Tokens=478, Total=3941ms
+
+══════════════════════════ Round 9/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 0.94. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 397ms, 📝 1,008 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.80] [ROUND] Current round: 1/20. Remaining: 19
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+[BETA] >>> Is it typically used outdoors?
+       ⏱️ LLM: 935ms | 🎯 Prompt: 503 | 💬 Completion: 9
+[ALPHA] Received question: "Is it typically used outdoors?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 455ms, 📝 356 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.79] [QUESTION_R7] Beta asked: Is it something you can hold comfortably in one hand?
+       [0.79] [ROUND] Current round: 1/20
+[ALPHA] >>> Maybe
+        ⏱️ LLM: 720ms | 🎯 Prompt: 234 | 💬 Completion: 4
+  ⏱️ Round 9 Summary: Recall=852ms, LLM=1655ms, Tokens=750, Total=10137ms
+
+══════════════════════════ Round 10/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Maybe"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 358ms, 📝 1,138 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.78] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+[BETA] >>> Is it something you can typically hold and use with one hand?
+       ⏱️ LLM: 837ms | 🎯 Prompt: 502 | 💬 Completion: 16
+[ALPHA] Received question: "Is it something you can typically hold and use with one hand?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 624ms, 📝 333 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.80] [QUESTION_R9] Beta asked: Is it typically used outdoors?
+       [0.79] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 727ms | 🎯 Prompt: 243 | 💬 Completion: 4
+  ⏱️ Round 10 Summary: Recall=982ms, LLM=1564ms, Tokens=765, Total=9273ms
+
+══════════════════════════ Round 11/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 476ms, 📝 1,138 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+[BETA] >>> Is it something you can hold and use with one hand?
+       ⏱️ LLM: 771ms | 🎯 Prompt: 502 | 💬 Completion: 15
+[ALPHA] Received question: "Is it something you can hold and use with one hand?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 396ms, 📝 365 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.80] [ROUND] Current round: 1/20
+       [0.79] [QUESTION_R10] Beta asked: Is it something you can typically hold and use with one hand?
+[ALPHA] Duplicate detected! Similarity: 1.00
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 1.00. Ask something different.
+  ⏱️ Round 11 Summary: Recall=872ms, LLM=771ms, Tokens=517, Total=3385ms
+
+══════════════════════════ Round 12/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 1.00. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 392ms, 📝 1,138 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+[BETA] >>> Is it primarily made of metal?
+       ⏱️ LLM: 720ms | 🎯 Prompt: 542 | 💬 Completion: 10
+[ALPHA] Received question: "Is it primarily made of metal?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 303ms, 📝 365 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.79] [ROUND] Current round: 1/20
+       [0.78] [QUESTION_R10] Beta asked: Is it something you can typically hold and use with one hand?
+[ALPHA] >>> Maybe
+        ⏱️ LLM: 774ms | 🎯 Prompt: 238 | 💬 Completion: 4
+  ⏱️ Round 12 Summary: Recall=695ms, LLM=1494ms, Tokens=794, Total=9084ms
+
+══════════════════════════ Round 13/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Maybe"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 343ms, 📝 1,138 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+[BETA] >>> Is it primarily used for preparing, serving, or consuming food or drink?
+       ⏱️ LLM: 833ms | 🎯 Prompt: 517 | 💬 Completion: 18
+[ALPHA] Received question: "Is it primarily used for preparing, serving, or consuming food or drink?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 345ms, 📝 334 chars):
+       [0.85] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.79] [ROUND] Current round: 1/20
+       [0.79] [QUESTION_R12] Beta asked: Is it primarily made of metal?
+[ALPHA] >>> No
+        ⏱️ LLM: 689ms | 🎯 Prompt: 248 | 💬 Completion: 4
+  ⏱️ Round 13 Summary: Recall=688ms, LLM=1522ms, Tokens=787, Total=9427ms
+
+══════════════════════════ Round 14/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 314ms, 📝 1,138 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.77] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+[BETA] >>> Is it primarily used for cleaning something?
+       ⏱️ LLM: 811ms | 🎯 Prompt: 517 | 💬 Completion: 11
+[ALPHA] Received question: "Is it primarily used for cleaning something?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 308ms, 📝 376 chars):
+       [0.85] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.82] [ROUND] Current round: 1/20
+       [0.77] [QUESTION_R13] Beta asked: Is it primarily used for preparing, serving, or consuming food or drink?
+[ALPHA] >>> No
+        ⏱️ LLM: 794ms | 🎯 Prompt: 242 | 💬 Completion: 4
+  ⏱️ Round 14 Summary: Recall=622ms, LLM=1605ms, Tokens=774, Total=9533ms
+
+══════════════════════════ Round 15/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 322ms, 📝 1,138 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.77] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+[BETA] >>> Is it primarily used in the kitchen for preparing or serving food?
+       ⏱️ LLM: 1040ms | 🎯 Prompt: 517 | 💬 Completion: 16
+[ALPHA] Received question: "Is it primarily used in the kitchen for preparing or serving food?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 476ms, 📝 376 chars):
+       [0.85] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [ROUND] Current round: 1/20
+       [0.77] [QUESTION_R13] Beta asked: Is it primarily used for preparing, serving, or consuming food or drink?
+[ALPHA] Duplicate detected! Similarity: 0.97
+[ALPHA] >>> INVALID: This is too similar to a previous question. Score: 0.97. Ask something different.
+  ⏱️ Round 15 Summary: Recall=798ms, LLM=1040ms, Tokens=533, Total=3653ms
+
+══════════════════════════ Round 16/20 ══════════════════════════
+
+[BETA] Received from Alpha: "INVALID: This is too similar to a previous question. Score: 0.97. Ask something different."
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 352ms, 📝 1,138 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.77] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+[BETA] >>> Is it something primarily used to cut, slice, or shave other materials?
+       ⏱️ LLM: 1076ms | 🎯 Prompt: 557 | 💬 Completion: 18
+[ALPHA] Received question: "Is it something primarily used to cut, slice, or shave other materials?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 2 memories (⏱️ 423ms, 📝 253 chars):
+       [0.85] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 595ms | 🎯 Prompt: 222 | 💬 Completion: 4
+  ⏱️ Round 16 Summary: Recall=775ms, LLM=1671ms, Tokens=801, Total=9444ms
+
+══════════════════════════ Round 17/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 223ms, 📝 1,138 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.77] [DEDUCTION_R6] RULED OUT: NOT electronic (does it use electricity or a battery to function) - Alpha said 'No' to 'Is it electronic (does it use electricity or a battery to function)?'
+       [0.77] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.76] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+[BETA] >>> Is it primarily used in the kitchen for preparing or serving food?
+       ⏱️ LLM: 1008ms | 🎯 Prompt: 517 | 💬 Completion: 16
+[ALPHA] Received question: "Is it primarily used in the kitchen for preparing or serving food?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 296ms, 📝 375 chars):
+       [0.85] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [ROUND] Current round: 1/20
+       [0.78] [QUESTION_R16] Beta asked: Is it something primarily used to cut, slice, or shave other materials?
+[ALPHA] >>> No
+        ⏱️ LLM: 717ms | 🎯 Prompt: 252 | 💬 Completion: 4
+  ⏱️ Round 17 Summary: Recall=519ms, LLM=1725ms, Tokens=789, Total=9116ms
+
+══════════════════════════ Round 18/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 323ms, 📝 931 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.83] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'
+[BETA] >>> Is it something you wear (like clothing, shoes, or an accessory)?
+       ⏱️ LLM: 960ms | 🎯 Prompt: 460 | 💬 Completion: 18
+[ALPHA] Received question: "Is it something you wear (like clothing, shoes, or an accessory)?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 2 memories (⏱️ 319ms, 📝 253 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 699ms | 🎯 Prompt: 223 | 💬 Completion: 4
+  ⏱️ Round 18 Summary: Recall=642ms, LLM=1659ms, Tokens=705, Total=9029ms
+
+══════════════════════════ Round 19/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 418ms, 📝 931 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.83] [ROUND] Current round: 1/20. Remaining: 19
+       [0.81] [STRATEGY_PHASE1] Rounds 1-3: Establish category
+       - Alive vs non-living
+       - Natural vs man-made
+       - Physical object vs place/concept
+       These questions split the entire possibility space.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R9] UNCERTAIN: typically used outdoors - Alpha said 'Maybe' to 'Is it typically used outdoors?'

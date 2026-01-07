@@ -978,14 +978,21 @@ if (File.Exists(dbPath))
         using var connection = new SqliteConnection($"Data Source={dbPath}");
         connection.Open();
 
-        // Count memories by metadata type
+        // Phase 41 Fix: Use type column (INTEGER), not metadata JSON
         using var cmd = connection.CreateCommand();
         cmd.CommandText = @"
             SELECT
-                json_extract(metadata, '$.MemoryType') as MemoryType,
+                CASE type
+                    WHEN 0 THEN 'Episodic'
+                    WHEN 1 THEN 'Semantic'
+                    WHEN 2 THEN 'Procedural'
+                    WHEN 3 THEN 'Fact'
+                    WHEN 4 THEN 'Reflection'
+                    ELSE 'Unknown'
+                END as MemoryType,
                 COUNT(*) as Count
             FROM memories
-            GROUP BY MemoryType
+            GROUP BY type
             ORDER BY Count DESC";
 
         using var reader = cmd.ExecuteReader();
@@ -1009,11 +1016,11 @@ if (File.Exists(dbPath))
         Console.WriteLine($"  Total memories in DB: {totalCount}");
         Console.WriteLine();
 
-        // Sample Semantic memories
+        // Phase 41 Fix: Use type column (Semantic = 1)
         cmd.CommandText = @"
             SELECT content, metadata
             FROM memories
-            WHERE json_extract(metadata, '$.MemoryType') = 'Semantic'
+            WHERE type = 1
             LIMIT 5";
 
         using var reader3 = cmd.ExecuteReader();

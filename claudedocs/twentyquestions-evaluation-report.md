@@ -1095,6 +1095,165 @@ Actual:
 
 ---
 
+### Phase 41: MemoryType DB Inspection Fix + Root Cause Correction
+
+**실행일**: 2026-01-07
+**결과**: ✅ **Investigation Complete - Hypothesis DISPROVEN!**
+
+#### 💡 Key Discovery: "Bug" Was Actually Phase 40 DB Inspection Error
+
+**Phase 40 Hypothesis (INCORRECT)**:
+- Problem: MemoryType NOT serialized to DB
+- Root Cause: EncodeRequest.Type → metadata.MemoryType mapping broken
+
+**Phase 41 Actual Finding (CORRECT)**:
+```yaml
+Real Problem: Phase 40 DB inspection queried WRONG column!
+
+DB Schema (CORRECT design):
+  - type: INTEGER column (stores MemoryType enum 0-4) ✅
+  - metadata: JSON TEXT column (does NOT include Type) ✅
+
+Phase 40 Bug:
+  - Query: json_extract(metadata, '$.MemoryType') → null ❌
+  - Should: SELECT type column → correct values ✅
+
+SDK Behavior (WORKING CORRECTLY):
+  - BuildCteSearchQuery: WHERE type = {(int)MemoryType} ✅
+  - Filtering: Uses INTEGER type column, NOT JSON ✅
+```
+
+#### 구현된 수정사항
+
+**File**: `samples/TwentyQuestionsGame/Program.cs`
+
+**Changes** (lines 983-996, 1020-1024):
+```diff
+// Before (Phase 40 - WRONG column)
+-SELECT json_extract(metadata, '$.MemoryType'), COUNT(*)
+-FROM memories
+-GROUP BY json_extract(metadata, '$.MemoryType')
+
+// After (Phase 41 - CORRECT column)
++SELECT CASE type
++    WHEN 0 THEN 'Episodic'
++    WHEN 1 THEN 'Semantic'
++    WHEN 2 THEN 'Procedural'
++    WHEN 3 THEN 'Fact'
++    WHEN 4 THEN 'Reflection'
++END as MemoryType, COUNT(*)
++FROM memories
++GROUP BY type
+
+// Sample Semantic query fix
+-WHERE json_extract(metadata, '$.MemoryType') = 'Semantic'
++WHERE type = 1  -- Semantic = 1
+```
+
+#### 검증 결과 (DbChecker Tool)
+
+**Phase 40 (버그 있는 코드)**:
+```yaml
+Memory Type Distribution:
+  - null: 13 memories (100%)  ← WRONG query!
+
+Conclusion: "MemoryType serialization broken!" ❌ FALSE ALARM
+```
+
+**Phase 41 (수정된 코드)**:
+```yaml
+Memory Type Distribution:
+  - Episodic:    10 memories
+  - Procedural:   4 memories
+  - Semantic:     1 memories
+Total: 15 memories ✅
+
+Sample Semantic Memory:
+  [1] [GAME_SECRET] My secret answer is: a chocolate cake. I must ...
+```
+
+#### 🎯 Phase 41 Investigation 결과
+
+**✅ 완료된 조사**:
+1. **MemoryUnit 클래스**: Type property와 Metadata dictionary는 별도 필드
+2. **EncodeAsync**: Type은 MemoryUnit property로 설정 (line 81)
+3. **SqliteVecMemoryStore.AddMemoryParameters**: type INTEGER 컬럼에 저장 (line 773-803)
+4. **BuildCteSearchQuery**: WHERE type = {(int)MemoryType} 조건 사용 (line 932-984)
+5. **SDK filtering**: 정상 작동! ✅
+
+**Conclusion**:
+- ✅ MemoryType **IS** correctly stored in DB (type INTEGER column)
+- ✅ SDK **IS** working correctly (filters by type column)
+- ✅ Phase 40 DB inspection was the **ONLY** bug (wrong column queried)
+- ⚠️ **HOWEVER**: Still only 15/84 memories (82% loss rate)
+
+#### ⚠️ 여전히 남은 문제
+
+**Memory Loss Issue** (NEW investigation needed):
+```yaml
+Expected: 84 memories (20 rounds × 4 memory types + 4 init)
+  - GAME_RULES: 1
+  - STRATEGY_PHASE*: 3
+  - MY_QUESTION_R*: 20
+  - DEDUCTION_R*: 20 (Semantic)
+  - QUESTION_R* (Alpha): 20
+  - ANSWER_R* (Alpha): 20
+
+Actual: 15 memories
+Loss Rate: 82% (69 memories missing)
+
+Possible Causes:
+  1. SDK deduplication too aggressive?
+  2. Different timeout/session causing loss?
+  3. Encode failures not logged?
+  4. Storage backend selective filtering?
+```
+
+#### 🎯 Phase 41 효과 종합
+
+**✅ 성공 (100% for intended scope)**:
+1. **Root Cause Identified**:
+   - ✅ "MemoryType serialization bug" was FALSE diagnosis
+   - ✅ Actual bug: Phase 40 DB inspection code error
+   - ✅ SDK working correctly all along
+
+2. **DB Inspection Fixed**:
+   - ✅ Program.cs queries correct column (type, not metadata JSON)
+   - ✅ Verification shows MemoryType properly stored
+   - ✅ DbChecker tool confirms: Episodic 10, Procedural 4, Semantic 1
+
+**❌ 미해결 (Requires Phase 42)**:
+1. **82% Memory Loss**:
+   - ❌ Only 15/84 memories stored
+   - ❌ Cause unknown (NOT MemoryType bug)
+   - ❌ Requires new investigation
+
+2. **Recall Quality**:
+   - ❌ Not tested (game incomplete)
+   - ❌ Win rate: Not measured
+
+#### 다음 Phase 제안
+
+**Phase 42: Memory Loss Root Cause Investigation**
+
+**Priority 1 (Critical)**:
+1. **Trace memory encoding flow**:
+   - Log all EncodeAsync calls with success/failure
+   - Check if 84 encodes attempted vs 15 stored
+   - Identify where memories are lost
+
+2. **SDK deduplication analysis**:
+   - Review deduplication thresholds
+   - Check if too many memories marked as duplicates
+   - Analyze ImportanceScore filtering
+
+3. **Storage backend verification**:
+   - Test direct StoreAsync calls
+   - Verify SQLiteVec doesn't drop memories
+   - Check for silent failures
+
+---
+
 ## 📈 성능 벤치마크 비교
 
 ### 전통적 방식 (가상 추정) vs Memory-Only 방식 (실제)
