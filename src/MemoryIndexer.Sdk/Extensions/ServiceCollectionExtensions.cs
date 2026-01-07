@@ -68,6 +68,9 @@ public static class ServiceCollectionExtensions
         // Register core services
         services.TryAddSingleton<MemoryService>();
 
+        // Register Simple API (Phase 33.1)
+        services.TryAddSingleton<IMemoryService, SimpleMemoryService>();
+
         // Register VCM services (Phase 5)
         services.AddOptions<WorkingMemoryOptions>()
             .BindConfiguration("MemoryIndexer:VCM:WorkingMemory");
