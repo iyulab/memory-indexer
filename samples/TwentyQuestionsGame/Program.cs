@@ -54,8 +54,22 @@ if (string.IsNullOrWhiteSpace(openAiApiKey))
     return;
 }
 
+// Memory log mode: "full" or "summary"
+// If not set, defaults to Debug=full, Release=summary
+var memoryLogMode = Environment.GetEnvironmentVariable("MEMORY_LOG_MODE");
+if (string.IsNullOrWhiteSpace(memoryLogMode))
+{
+#if DEBUG
+    memoryLogMode = "full";
+#else
+    memoryLogMode = "summary";
+#endif
+}
+var isFullMemoryLog = memoryLogMode.Equals("full", StringComparison.OrdinalIgnoreCase);
+
 Console.WriteLine($"[CONFIG] LLM: OpenAI {openAiModel}");
 Console.WriteLine($"[CONFIG] Embedding: OpenAI text-embedding-3-small");
+Console.WriteLine($"[CONFIG] Memory Log: {(isFullMemoryLog ? "Full" : "Summary")} (set MEMORY_LOG_MODE=full|summary)");
 Console.WriteLine();
 
 // Setup services with proper configuration
@@ -242,15 +256,7 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
         $"[{m.Memory.Type}, score:{m.Score:F2}] {m.Memory.Content}"));
     roundMetrics.BetaContextChars = betaContext.Length;
 
-    Console.ForegroundColor = ConsoleColor.DarkGray;
-    Console.WriteLine($"[BETA] Recalled {betaMemories.Count} memories (⏱️ {roundMetrics.BetaRecallMs}ms, 📝 {roundMetrics.BetaContextChars:N0} chars):");
-    foreach (var mem in betaMemories) // Show ALL memories with full content for analysis
-    {
-        // Display full content for detailed log analysis (no truncation)
-        var content = mem.Memory.Content.Replace("\n", "\n       "); // Indent multiline content
-        Console.WriteLine($"       [{mem.Score:F2}] {content}");
-    }
-    Console.ResetColor();
+    PrintRecalledMemories("BETA", betaMemories, roundMetrics.BetaRecallMs, roundMetrics.BetaContextChars, isFullMemoryLog);
 
     // Beta generates a question using ONLY last message + recalled memories
     bool isFinalRound = round == MAX_ROUNDS;
@@ -341,15 +347,7 @@ Output ONLY the question or guess. No explanations.";
         $"[{m.Memory.Type}, score:{m.Score:F2}] {m.Memory.Content}"));
     roundMetrics.AlphaContextChars = alphaContext.Length;
 
-    Console.ForegroundColor = ConsoleColor.DarkGray;
-    Console.WriteLine($"[ALPHA] Recalled {alphaMemories.Count} memories (⏱️ {roundMetrics.AlphaRecallMs}ms, 📝 {roundMetrics.AlphaContextChars:N0} chars):");
-    foreach (var mem in alphaMemories) // Show ALL memories with full content for analysis
-    {
-        // Display full content for detailed log analysis (no truncation)
-        var content = mem.Memory.Content.Replace("\n", "\n        "); // Indent multiline content
-        Console.WriteLine($"        [{mem.Score:F2}] {content}");
-    }
-    Console.ResetColor();
+    PrintRecalledMemories("ALPHA", alphaMemories, roundMetrics.AlphaRecallMs, roundMetrics.AlphaContextChars, isFullMemoryLog);
 
     // Check for final guess first (thin logic - just pattern match)
     var questionLower = betaQuestion.ToLower();
@@ -727,6 +725,43 @@ Console.WriteLine("\nThank you for playing!");
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+void PrintRecalledMemories(
+    string agentName,
+    IReadOnlyList<MemorySearchResult> memories,
+    long recallMs,
+    int contextChars,
+    bool fullMode)
+{
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    Console.WriteLine($"[{agentName}] Recalled {memories.Count} memories (⏱️ {recallMs}ms, 📝 {contextChars:N0} chars):");
+
+    if (fullMode)
+    {
+        // Full mode: Show all memories with full content
+        foreach (var mem in memories)
+        {
+            var content = mem.Memory.Content.Replace("\n", "\n       ");
+            Console.WriteLine($"       [{mem.Score:F2}] {content}");
+        }
+    }
+    else
+    {
+        // Summary mode: Show count + top 3 memories (truncated)
+        var topMemories = memories.Take(3).ToList();
+        foreach (var mem in topMemories)
+        {
+            var content = mem.Memory.Content.Replace("\n", " "); // Single line
+            var truncated = content.Length > 80 ? content[..77] + "..." : content;
+            Console.WriteLine($"       [{mem.Score:F2}] {truncated}");
+        }
+        if (memories.Count > 3)
+        {
+            Console.WriteLine($"       ... and {memories.Count - 3} more memories (set MEMORY_LOG_MODE=full to see all)");
+        }
+    }
+    Console.ResetColor();
+}
 
 void PrintRoundSummary(RoundMetrics rm)
 {
