@@ -349,11 +349,18 @@ Output ONLY the question or guess. No explanations.";
 
     PrintRecalledMemories("ALPHA", alphaMemories, roundMetrics.AlphaRecallMs, roundMetrics.AlphaContextChars, isFullMemoryLog);
 
-    // Check for final guess first (thin logic - just pattern match)
+    // Check for final guess or direct identification
     var questionLower = betaQuestion.ToLower();
     var secretLower = secret.ToLower().Replace("a ", "").Replace("an ", "").Replace("the ", "");
 
-    if (questionLower.Contains("guess") || questionLower.Contains("answer is"))
+    // Pattern 1: Explicit guess ("My final guess is...", "The answer is...")
+    bool isExplicitGuess = questionLower.Contains("guess") || questionLower.Contains("answer is");
+
+    // Pattern 2: Direct question that identifies the secret ("Is it a bicycle?")
+    bool isDirectIdentification = secretLower.Split(' ').Any(w => w.Length > 3 && questionLower.Contains(w)) &&
+                                  (questionLower.StartsWith("is it") || questionLower.StartsWith("could it be"));
+
+    if (isExplicitGuess || isDirectIdentification)
     {
         // Extract guess and compare with secret
         var guessMatch = questionLower.Contains(secretLower) ||
@@ -361,9 +368,37 @@ Output ONLY the question or guess. No explanations.";
 
         if (guessMatch)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"[ALPHA] >>> CORRECT! You guessed it!");
-            Console.ResetColor();
+            // If it's a direct question, Alpha will answer "Yes" and then check for victory
+            if (isDirectIdentification && !isExplicitGuess)
+            {
+                // Store the question in Alpha's memory first
+                await memoryService.StoreAsync(
+                    ALPHA_USER_ID,
+                    $"[QUESTION_R{round}] Beta asked: {betaQuestion}",
+                    MemoryType.Episodic,
+                    importance: 0.9f);
+
+                // Alpha confirms with "Yes"
+                await memoryService.StoreAsync(
+                    ALPHA_USER_ID,
+                    $"[ANSWER_R{round}] I answered 'Yes' to: {betaQuestion}",
+                    MemoryType.Episodic,
+                    importance: 0.85f);
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"[ALPHA] >>> Yes");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"        Beta has correctly identified the secret!");
+                Console.WriteLine($"[ALPHA] >>> CORRECT! The secret was: {secret}");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"[ALPHA] >>> CORRECT! You guessed it!");
+                Console.ResetColor();
+            }
+
             betaWon = true;
             gameOver = true;
 
@@ -733,9 +768,15 @@ void PrintRecalledMemories(
     int contextChars,
     bool fullMode)
 {
-    Console.ForegroundColor = ConsoleColor.DarkGray;
-    Console.WriteLine($"[{agentName}] Recalled {memories.Count} memories (⏱️ {recallMs}ms, 📝 {contextChars:N0} chars):");
+    // Color-coded by agent: Alpha = Magenta, Beta = Cyan
+    var headerColor = agentName == "ALPHA" ? ConsoleColor.Magenta : ConsoleColor.Cyan;
+    var contentColor = agentName == "ALPHA" ? ConsoleColor.DarkMagenta : ConsoleColor.DarkCyan;
 
+    Console.ForegroundColor = headerColor;
+    Console.WriteLine($"[{agentName}] Recalled {memories.Count} memories (⏱️ {recallMs}ms, 📝 {contextChars:N0} chars):");
+    Console.ResetColor();
+
+    Console.ForegroundColor = contentColor;
     if (fullMode)
     {
         // Full mode: Show all memories with full content

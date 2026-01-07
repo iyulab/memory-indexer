@@ -2349,4 +2349,388 @@ var results = await memoryService.RecallAsync(
 
 ---
 
-*Last Updated: 2026-01-07 (Phases 28-29 added)*
+## Phase 30: Cognitive Terminology Migration 🔄
+
+**Status**: 🔄 Planned
+**Target**: v0.4.0
+**Timeline**: 5 days implementation + 5 days testing = 10 days total
+**Goal**: Align Memory Indexer with cognitive science terminology (Tulving, Atkinson-Shiffrin)
+
+### Background
+
+**Decision**: ADAPTED from [spec-suggest-01.md](../local-docs/spec-suggest-01-response.md)
+- ✅ **ACCEPT**: Phases 1-3 (Cognitive Terminology + Tier × Type Docs)
+- ⚠️ **DEFER**: Phase 4 (Procedural Store) to v0.5.0+ pending research
+
+**Philosophy Score**: 8.5/10 — Strengthens cognitive foundation, preserves core principles
+**Feasibility Score**: 7.0/10 — Phases 1-3 clear (low risk), well-specified
+
+### Phase 30.1: Interface Renaming ✅
+
+**Core Renames**:
+- `IRecentlyBuffer` → `ISensoryBuffer` (Atkinson-Shiffrin sensory memory)
+- `ISessionStore` → `IEpisodicStore` (Tulving episodic memory)
+- `IUserProfile` → `ISemanticStore` (Tulving semantic memory)
+- `IWorkingMemory` (no change - already aligned with Baddeley model)
+
+**Related Renames**:
+- `IBufferPromoter` → `ISensoryPromoter`
+- `RecentlyBuffer` → `SensoryBuffer`
+- `SessionStore` → `EpisodicStore`
+- `UserProfile` → `SemanticStore`
+- `RecentlyBufferOptions` → `SensoryBufferOptions`
+- `SessionStoreOptions` → `EpisodicStoreOptions`
+- `UserProfileOptions` → `SemanticStoreOptions`
+
+**Implementation**:
+- [x] Create new interface files (3 files)
+- [x] Create new implementation files (3 files)
+- [x] Rename options classes (3 files)
+- [ ] Update DI registration in `ServiceCollectionExtensions.cs`
+- [ ] Update all using statements project-wide
+- [ ] Build verification (no compile errors)
+
+**Files Created/Modified**:
+- `src/MemoryIndexer/Interfaces/ISensoryBuffer.cs` (new)
+- `src/MemoryIndexer/Interfaces/IEpisodicStore.cs` (new)
+- `src/MemoryIndexer/Interfaces/ISemanticStore.cs` (new)
+- `src/MemoryIndexer.Sdk/VirtualContext/SensoryBuffer.cs` (new)
+- `src/MemoryIndexer.Sdk/VirtualContext/EpisodicStore.cs` (new)
+- `src/MemoryIndexer.Sdk/VirtualContext/SemanticStore.cs` (new)
+- `src/MemoryIndexer/Configuration/SensoryBufferOptions.cs` (new)
+- `src/MemoryIndexer/Configuration/EpisodicStoreOptions.cs` (new)
+- `src/MemoryIndexer/Configuration/SemanticStoreOptions.cs` (new)
+
+**Estimated Effort**: 1 day (6-8 hours)
+
+### Phase 30.2: Deprecated Aliases ✅
+
+**Purpose**: Maintain 100% backward compatibility with compiler warnings
+
+**Pattern**:
+```csharp
+/// <summary>
+/// Deprecated: Use ISensoryBuffer instead.
+/// Renamed for cognitive science alignment (Atkinson-Shiffrin sensory memory).
+/// This alias will be removed in v0.5.0.
+/// </summary>
+[Obsolete("Use ISensoryBuffer. Renamed for cognitive science alignment. Will be removed in v0.5.0.", false)]
+public interface IRecentlyBuffer : ISensoryBuffer { }
+```
+
+**Implementation**:
+- [ ] Create deprecated interface aliases (3 files)
+- [ ] Create deprecated class aliases (3 files)
+- [ ] Create deprecated options aliases (3 files)
+- [ ] Configure `[Obsolete]` attributes with migration messages
+- [ ] Set `error: false` (warning only, not compiler error)
+- [ ] Verify backward compatibility (old code compiles with warnings)
+
+**Files Created**:
+- `src/MemoryIndexer/Interfaces/IRecentlyBuffer.cs` (deprecated alias)
+- `src/MemoryIndexer/Interfaces/ISessionStore.cs` (deprecated alias)
+- `src/MemoryIndexer/Interfaces/IUserProfile.cs` (deprecated alias)
+- `src/MemoryIndexer.Sdk/VirtualContext/RecentlyBuffer.cs` (deprecated class)
+- `src/MemoryIndexer.Sdk/VirtualContext/SessionStore.cs` (deprecated class)
+- `src/MemoryIndexer.Sdk/VirtualContext/UserProfile.cs` (deprecated class)
+- `src/MemoryIndexer/Configuration/RecentlyBufferOptions.cs` (deprecated)
+- `src/MemoryIndexer/Configuration/SessionStoreOptions.cs` (deprecated)
+- `src/MemoryIndexer/Configuration/UserProfileOptions.cs` (deprecated)
+
+**Estimated Effort**: 1 day (4-6 hours)
+
+### Phase 30.3: Test Updates ✅
+
+**Scope**: Update all 848 tests to use new terminology
+
+**Categories**:
+1. Interface usage tests (~100 tests)
+2. Class instantiation tests (~50 tests)
+3. Options configuration tests (~30 tests)
+4. DI registration tests (~10 tests)
+
+**Implementation**:
+- [ ] Update test using statements
+- [ ] Update test class instantiations
+- [ ] Update DI registration verifications
+- [ ] Run full test suite (848 tests must pass)
+- [ ] Verify no warnings from deprecated aliases in tests
+- [ ] Performance regression check
+
+**Validation**:
+- [ ] All 848 tests pass
+- [ ] Test run time within 5% of baseline
+- [ ] Coverage maintained (≥80%)
+
+**Estimated Effort**: 1 day (6-8 hours)
+
+### Phase 30.4: Documentation Updates ✅
+
+**Core Documentation Files**:
+- `README.md` - Architecture diagram, Quick Start examples
+- `docs/ARCHITECTURE.md` - 4-Tier diagram, interface descriptions
+- `docs/VISION.md` - Memory Hierarchy, cognitive science foundation
+- `docs/GUIDES.md` - Code examples, configuration
+- `docs/QUICKSTART.md` - SDK examples, MCP tools
+- `CLAUDE.md` - Interface references, architecture overview
+
+**Implementation**:
+- [ ] Update all ASCII architecture diagrams
+- [ ] Add cognitive science attributions (Tulving, Atkinson-Shiffrin, Baddeley)
+- [ ] Update all code examples with new names
+- [ ] Update configuration examples
+- [ ] Add "Cognitive Science Foundation" subsection to VISION.md
+- [ ] Update XML documentation with cognitive references
+
+**XML Documentation Pattern**:
+```csharp
+/// <summary>
+/// Sensory Buffer (Tier 0) - Raw conversation staging with async processing.
+/// Based on Atkinson-Shiffrin multi-store model's sensory memory stage.
+/// </summary>
+/// <remarks>
+/// <para>Cognitive Foundation: Atkinson & Shiffrin (1968) sensory memory</para>
+/// <para>Lifetime: 60s idle OR 500 tokens OR 3 turns (OR logic)</para>
+/// </remarks>
+public interface ISensoryBuffer { }
+```
+
+**Estimated Effort**: 1 day (6-8 hours)
+
+### Phase 30.5: Validation & Release Prep ✅
+
+**Build Verification**:
+- [ ] Clean build succeeds (`dotnet clean && dotnet build`)
+- [ ] No compile errors
+- [ ] Only expected `[Obsolete]` warnings
+- [ ] Package generation succeeds (`dotnet pack`)
+
+**Test Verification**:
+- [ ] All 848 tests pass
+- [ ] No test performance regression
+- [ ] Coverage maintained (≥80%)
+
+**Documentation Verification**:
+- [ ] All docs build without errors
+- [ ] All code examples compile
+- [ ] All links valid
+
+**Backward Compatibility Verification**:
+- [ ] `TwentyQuestionsGame` runs with deprecated names (warnings only)
+- [ ] `MemoryChatApp` runs with deprecated names (warnings only)
+- [ ] Test project with old names compiles with warnings
+
+**Release Preparation**:
+- [ ] Update version to v0.4.0-preview
+- [ ] Generate release notes
+- [ ] Update CHANGELOG.md
+- [ ] Tag commit with `v0.4.0-preview`
+
+**Estimated Effort**: 1 day (full validation)
+
+### Success Criteria
+
+- ✅ All interfaces renamed with cognitive terminology
+- ✅ Deprecated aliases in place (9 files)
+- ✅ All 848 tests passing with new names
+- ✅ No compile errors, only expected `[Obsolete]` warnings
+- ✅ 100% backward compatibility maintained
+- ✅ Documentation updated with cognitive science references
+- ✅ Sample projects work with both old and new names
+
+---
+
+## Phase 31: Tier × Type Documentation Enhancement 🔄
+
+**Status**: 🔄 Planned
+**Target**: v0.4.0
+**Timeline**: 4 days implementation + 1 day review = 5 days total
+**Goal**: Clarify orthogonal relationship between Tier (storage layer) and Type (memory classification)
+
+### Background
+
+**Problem**: Developer confusion between Tier and Type concepts
+- Users ask: "Is Episodic type only in EpisodicStore?"
+- Misconception: "User profile only contains Semantic type"
+- Need: Clear 2D matrix visualization and concrete examples
+
+**Solution**: Comprehensive documentation with 2D matrix, 10+ examples, common misconceptions
+
+### Phase 31.1: 2D Matrix Documentation ✅
+
+**New File**: `docs/TIER_TYPE_MATRIX.md`
+
+**Contents**:
+1. **Overview**: Explain orthogonal dimensions (Tier vs Type)
+2. **2D Matrix**: ASCII visualization of Tier × Type combinations
+3. **Tier Dimension**: Detailed description of each tier with cognitive basis
+4. **Type Dimension**: Detailed description of each type with examples
+5. **Concrete Examples**: 10+ scenarios showing types across tiers
+6. **Lifecycle Flow**: Step-by-step example of memory promotion
+7. **Common Misconceptions**: ❌ Wrong vs ✅ Correct patterns
+8. **API Usage**: Code examples demonstrating tier/type separation
+
+**2D Matrix**:
+```
+              │ Episodic │ Semantic │ Procedural │ Fact
+──────────────┼──────────┼──────────┼────────────┼──────
+SensoryBuffer │    ✓     │    ✓     │     ✓      │  ✓
+WorkingMemory │    ✓     │    ✓     │     ✓      │  ✓
+EpisodicStore │    ✓     │    ✓     │     ✓      │  ✓
+SemanticStore │    ✓     │    ✓     │     ✓      │  ✓
+```
+
+**Key Insight**: Types are NOT tier-exclusive!
+
+**Implementation**:
+- [ ] Create `docs/TIER_TYPE_MATRIX.md` (~1000 lines)
+- [ ] Include ASCII 2D matrix diagram
+- [ ] Provide 10+ concrete examples
+- [ ] Document common misconceptions
+- [ ] Add API usage examples
+- [ ] Cross-reference from ARCHITECTURE.md
+
+**Estimated Effort**: 1 day (6-8 hours)
+
+### Phase 31.2: Architecture Diagram Updates ✅
+
+**Files to Update**:
+1. `README.md` - Architecture overview diagram
+2. `docs/ARCHITECTURE.md` - Detailed 4-tier diagram
+3. `docs/VISION.md` - Memory hierarchy visualization
+
+**Updated Diagram Format**:
+```
+┌─────────────────────────────────────────────────────┐
+│  T0: SensoryBuffer (Atkinson-Shiffrin)             │
+│  Raw conversation staging, async processing         │
+│  TTL: 60s idle OR 500 tokens OR 3 turns            │
+├─────────────────────────────────────────────────────┤
+│  T1: WorkingMemory (Baddeley)                      │
+│  Active context, topic-grouped chunks               │
+│  Capacity: 4-7 items, TTL: 10min OR topic change   │
+├─────────────────────────────────────────────────────┤
+│  T2: EpisodicStore (Tulving)                       │
+│  Archived sessions, vector search                   │
+│  Storage: SQLite-vec or Qdrant                     │
+├─────────────────────────────────────────────────────┤
+│  T3: SemanticStore (Tulving)                       │
+│  Long-term profile, cross-session facts            │
+│  Promotion: Confidence ≥ 0.8 AND Confirms ≥ 3      │
+└─────────────────────────────────────────────────────┘
+
+Types (Orthogonal): Episodic | Semantic | Procedural | Fact
+```
+
+**Implementation**:
+- [ ] Update all ASCII diagrams with cognitive terminology
+- [ ] Add cognitive science attributions
+- [ ] Add "Tier × Type Orthogonality" note to all diagrams
+- [ ] Verify diagrams render correctly in Markdown viewers
+- [ ] Consider Mermaid diagrams for GitHub rendering
+
+**Estimated Effort**: 1 day (4-6 hours)
+
+### Phase 31.3: Migration Guide ✅
+
+**New File**: `docs/MIGRATION_V0.4.md`
+
+**Contents**:
+1. **Overview**: Breaking changes summary
+2. **Interface Renames**: Old → New mapping table
+3. **Configuration Changes**: Before/After examples
+4. **DI Registration Changes**: Code examples
+5. **Migration Steps**: Step-by-step guide
+6. **Gradual Migration**: Incremental approach (recommended)
+7. **No Migration**: Temporary option with timeline
+8. **Rollback Plan**: How to downgrade if needed
+9. **New Features**: Tier × Type matrix clarification
+10. **Support**: Where to get help
+
+**Migration Timeline**:
+- v0.4.0: Cognitive terminology + deprecated aliases (Jan 2026)
+- v0.5.0: Remove deprecated aliases (Est. March 2026)
+- Migration Window: ~2 months
+
+**Implementation**:
+- [ ] Create `docs/MIGRATION_V0.4.md`
+- [ ] Document all breaking changes
+- [ ] Provide step-by-step migration guide
+- [ ] Include rollback plan
+- [ ] Add gradual migration strategy
+- [ ] Test migration steps on sample project
+
+**Estimated Effort**: 1 day (4-6 hours)
+
+### Phase 31.4: Validation & Review ✅
+
+**Documentation Review**:
+- [ ] All terminology consistent across docs
+- [ ] Cognitive science references accurate (peer review)
+- [ ] Code examples compile and run
+- [ ] Links between docs work correctly
+- [ ] Tier × Type examples clear and correct
+- [ ] Migration guide tested on real project
+
+**External Review**:
+- [ ] Peer review of cognitive science claims
+- [ ] User testing of migration guide
+- [ ] Accessibility check (screen reader friendly)
+- [ ] Mobile rendering verification
+
+**Final Validation**:
+- [ ] Documentation builds without errors
+- [ ] All 848 tests still passing
+- [ ] Sample projects updated and tested
+- [ ] Release notes finalized
+- [ ] CHANGELOG.md updated
+
+**Estimated Effort**: 1 day (thorough review)
+
+### Success Criteria
+
+- ✅ `docs/TIER_TYPE_MATRIX.md` created with 10+ examples
+- ✅ All architecture diagrams updated with cognitive terminology
+- ✅ `docs/MIGRATION_V0.4.md` created and tested
+- ✅ Documentation review completed (internal + external)
+- ✅ v0.4.0 release ready
+
+### Files Created
+
+- `docs/TIER_TYPE_MATRIX.md` (new, ~1000 lines)
+- `docs/MIGRATION_V0.4.md` (new, ~500 lines)
+
+### Files Modified
+
+- `README.md` (architecture diagram)
+- `docs/ARCHITECTURE.md` (4-tier diagram, cross-references)
+- `docs/VISION.md` (memory hierarchy, cognitive foundation)
+
+---
+
+## Overall Phase 30-31 Summary
+
+**Combined Timeline**: 10 days (Phase 30) + 5 days (Phase 31) = **15 days total**
+
+**Deliverables**:
+- ✅ Cognitive terminology migration (Phase 30)
+- ✅ Deprecated aliases for backward compatibility
+- ✅ All 848 tests updated and passing
+- ✅ Comprehensive documentation updates
+- ✅ Tier × Type matrix clarification (Phase 31)
+- ✅ Migration guide for v0.4.0
+- ✅ v0.4.0 release ready
+
+**Philosophy Alignment**: 8.5/10 — Strengthens cognitive science foundation
+**Feasibility**: 7.0/10 — Well-specified, clear implementation path
+**User Value**: 8.0/10 — Improves clarity, competitive positioning
+
+**Next Steps After v0.4.0**:
+1. Monitor user adoption of new terminology
+2. Collect feedback on migration guide
+3. Plan removal of deprecated aliases (v0.5.0)
+4. Consider Phase 32: Procedural Store (if research completed)
+
+---
+
+*Last Updated: 2026-01-07 (Phases 28-31 added)*
