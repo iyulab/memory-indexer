@@ -121,10 +121,12 @@ var results = await memoryService.RecallAsync(
 
 - **[Quick Start Guide](docs/QUICKSTART.md)** — 5-minute setup for MCP and SDK
 - **[Architecture](docs/ARCHITECTURE.md)** — System design and 4-tier VCM details
+- **[Tier × Type Matrix](docs/TIER_TYPE_MATRIX.md)** — Understanding memory tiers vs types (orthogonal dimensions)
 - **[Vision & Philosophy](docs/VISION.md)** — Research basis and design principles
 - **[Usage Patterns](docs/GUIDES.md)** — Common patterns, best practices, anti-patterns
 - **[Integrations](docs/INTEGRATIONS.md)** — Semantic Kernel, LangChain, AutoGen
 - **[Migration Guide](docs/MIGRATION_GUIDE.md)** — Storage migration and upgrades
+- **[Migration to v0.4](docs/MIGRATION_V0.4.md)** — Cognitive terminology migration guide
 - **[Roadmap](docs/ROADMAP.md)** — Feature timeline and completed phases
 
 ## Configuration Example
