@@ -115,14 +115,9 @@ services.AddMemoryIndexer(options =>
     options.Deduplication.HighSimilarityThreshold = 0.95f;
 });
 
-// Phase 44c: Increase Working Memory capacity to validate bottleneck hypothesis
-// Bottleneck analysis (phase44b-bottleneck-analysis.md) identified capacity limit as primary cause
-// Mathematical model: 84 conversations / 7 capacity = ~77 evictions → 31% survival = ~24 stored
-// Test with capacity = 84 to eliminate evictions and achieve 100% retention
-services.Configure<MemoryIndexer.Services.WorkingMemoryOptions>(wmOptions =>
-{
-    wmOptions.Capacity = 84;  // Increased from default 7 to match conversation count
-});
+// Phase 45: Test Alpha recall fix (capacity back to default 7)
+// Phase 44c proved capacity is NOT the bottleneck (no improvement from 7→84)
+// Now testing if Alpha's secret recall bug is causing memory loss
 
 services.AddHttpClient("LLM", client =>
 {
@@ -518,7 +513,7 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
     {
         UserId = ALPHA_USER_ID,
         SessionId = ALPHA_SESSION_ID,
-        Query = $"Beta's questions and my answers from all previous rounds up to round {round - 1}",  // Phase 39: More explicit query
+        Query = $"my secret answer, Beta's questions and my answers from all previous rounds up to round {round - 1}",  // Phase 45: Include secret in recall
         Limit = 50,  // Phase 39: Increased from 30 to capture duplicate patterns
         MinScore = 0.3f
     });

@@ -4837,4 +4837,101 @@ Working Memory Capacity is **NOT** the bottleneck!
 
 ---
 
-*Last Updated: 2026-01-08 (Phase 44 completed - Working Memory Capacity ruled out as bottleneck)*
+### Phase 45: Alpha Secret Recall Bug Fix (2026-01-08) ✅
+
+**Problem**: Alpha couldn't recall its secret in TwentyQuestionsGame, causing incorrect answers
+
+**Root Cause**:
+```csharp
+// Line 521 - Phase 39 code
+Query = $"Beta's questions and my answers from all previous rounds up to round {round - 1}"
+```
+→ Query didn't include "secret" keywords → [GAME_SECRET] memory not retrieved
+
+**Fix Applied**:
+```csharp
+// Line 521 - Phase 45 fix
+Query = $"my secret answer, Beta's questions and my answers from all previous rounds up to round {round - 1}"
+```
+
+**Result**: ✅ **Alpha recall fixed**, ❌ **Memory retention unchanged**
+
+**Evidence**:
+- Round 1: Alpha correctly recalled [GAME_SECRET] and answered "No" to "Is it a living thing?" ✅
+- Retention: 24/84 (28.6%) - identical to Phase 43/44c
+- Both major hypotheses rejected:
+  - Phase 44c: Working Memory Capacity (7→84) → No improvement
+  - Phase 45: Alpha Secret Recall Bug → No improvement
+
+**Critical Finding**: Actual bottleneck is at **tier transitions** (T0→T1 or T1→T2), not capacity or recall queries
+
+**Documentation**:
+- `claudedocs/phase45-alpha-recall-fix.md` — Bug fix analysis & results
+
+**Files Changed**:
+- `samples/TwentyQuestionsGame/Program.cs:521` — Query fix
+- `samples/TwentyQuestionsGame/Program.cs:118-120` — Reverted capacity override
+
+**Status**: ✅ Completed
+**Complexity**: 2/10 — Simple query fix
+**Feasibility**: 10/10 — One-line code change
+**User Value**: 8/10 — Improved game quality, redirected investigation to tier promotion
+
+---
+
+### Phase 46-48: Tier Promotion Investigation & Fix (Planned)
+
+**Problem**: 71.4% memory loss (60/84) despite ruling out capacity and recall bugs
+
+**Approach**: Sequential investigation → Fix → Validation
+
+#### Phase 46: Tier Promotion Logging ⏳
+**Goal**: Identify exact location of memory loss
+
+**Tasks**:
+1. Add logging to `BufferPromoterService` (T0→T1 promotion)
+   - Track: Promotion attempts, successes, failures
+   - Metrics: TTL timing, buffer size, promotion lag
+
+2. Add logging to `ShortTermMemoryOrchestratorService` (T1→T2 promotion)
+   - Track: Consolidation triggers, archival attempts
+   - Metrics: Working Memory age, consolidation frequency
+
+3. Execute TwentyQuestionsGame with full logging
+   - Analyze: Which tier loses the 60 memories
+   - Identify: T0→T1, T1→T2, or mixed loss
+
+**Expected Outcome**: Pinpoint bottleneck location (T0→T1 or T1→T2)
+
+#### Phase 47: Bottleneck Fix ⏳
+**Goal**: Fix identified bottleneck
+
+**Fix Options** (based on Phase 46 results):
+- **Option A** (if T0→T1 loss): Reduce BufferPromoter TTL (60s → 10s)
+- **Option B** (if T1→T2 loss): Aggressive consolidation triggers
+- **Option C** (if mixed): Batch mode detection with immediate archival
+- **Option D** (if deduplication): Increase threshold (0.95f → 0.98f)
+
+**Validation Criteria**: ≥60/84 memories (71% retention minimum)
+
+#### Phase 48: Final Validation ⏳
+**Goal**: Validate fix and update documentation
+
+**Tasks**:
+1. Test matrix (4 scenarios)
+2. Update ROADMAP.md, evaluation report
+3. Document lessons learned
+4. Production configuration recommendation
+
+**Success Metrics**:
+- Quantitative: 28.6% → ≥71% retention
+- Qualitative: Tier promotion works as designed
+
+**Philosophy Alignment**:
+- Zero Context Engineering: Automatic promotion without developer intervention
+- Intelligent Placement: Correct tier assignment based on importance/time
+- Proactive Consolidation: Aggressive archival before eviction
+
+---
+
+*Last Updated: 2026-01-08 (Phase 45 completed, Phase 46-48 planned)*

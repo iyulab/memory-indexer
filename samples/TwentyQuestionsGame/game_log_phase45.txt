@@ -1,0 +1,928 @@
+╔══════════════════════════════════════════════════════════════╗
+║          Twenty Questions Game - Memory Demo                  ║
+║          AI vs AI: 상대 응답 1개만 + Memory Recall            ║
+║          API: IMemoryPrimitives (3-Axis Model)                ║
+╚══════════════════════════════════════════════════════════════╝
+
+[ENV] Loaded: D:\data\memory-indexer\samples\TwentyQuestionsGame\..\..\.env
+[CONFIG] LLM: OpenAI gpt-5.2
+[CONFIG] Embedding: OpenAI text-embedding-3-small
+[CONFIG] Memory Log: Full (set MEMORY_LOG_MODE=full|summary)
+[CONFIG] API: IMemoryPrimitives (Expert API with 3-Axis control)
+
+╔══════════════════════════════════════════════════════════════╗
+║  GAME START                                                   ║
+╚══════════════════════════════════════════════════════════════╝
+
+[SECRET] Alpha is thinking of: "a guitar" (hidden from Beta)
+
+[INIT] Clearing previous game memories...
+[INIT] Game initialized. Starting rounds...
+
+══════════════════════════ Round 1/20 ══════════════════════════
+
+[BETA] Received from Alpha: "The game has started. Ask your first question!"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 4 memories (⏱️ 1146ms, 📝 831 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.73] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it a living thing?
+       ⏱️ LLM: 917ms | 🎯 Prompt: 496 | 💬 Completion: 9
+[ALPHA] Received question: "Is it a living thing?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 1379ms, 📝 354 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.75] [ROUND] Current round: 1/20
+[ALPHA] >>> No
+        ⏱️ LLM: 988ms | 🎯 Prompt: 232 | 💬 Completion: 4
+  ⏱️ Round 1 Summary: Recall=2525ms, LLM=1905ms, Tokens=741, Total=13712ms
+
+══════════════════════════ Round 2/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 5 memories (⏱️ 474ms, 📝 942 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.79] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.79] [DEDUCTION_R1] RULED OUT: NOT living thing - Alpha said 'No' to 'Is it a living thing?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.73] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it man-made?
+       ⏱️ LLM: 593ms | 🎯 Prompt: 519 | 💬 Completion: 8
+[ALPHA] Received question: "Is it man-made?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 413ms, 📝 354 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.74] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 670ms | 🎯 Prompt: 230 | 💬 Completion: 4
+  ⏱️ Round 2 Summary: Recall=887ms, LLM=1263ms, Tokens=761, Total=11254ms
+
+══════════════════════════ Round 3/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 406ms, 📝 1,040 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R2] CONFIRMED: man-made - Alpha said 'Yes' to 'Is it man-made?'
+       [0.79] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R1] RULED OUT: NOT living thing - Alpha said 'No' to 'Is it a living thing?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.73] [ROUND] Current round: 1/20. Remaining: 19
+[BETA] >>> Is it a physical object?
+       ⏱️ LLM: 827ms | 🎯 Prompt: 556 | 💬 Completion: 9
+[ALPHA] Received question: "Is it a physical object?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 371ms, 📝 354 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.73] [ROUND] Current round: 1/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 678ms | 🎯 Prompt: 232 | 💬 Completion: 4
+  ⏱️ Round 3 Summary: Recall=777ms, LLM=1505ms, Tokens=801, Total=9777ms
+
+══════════════════════════ Round 4/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 356ms, 📝 1,056 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.82] [DEDUCTION_R3] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.79] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R1] RULED OUT: NOT living thing - Alpha said 'No' to 'Is it a living thing?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.71] [ROUND] Current round: 4/20. Remaining: 16
+[BETA] >>> Is it man-made?
+       ⏱️ LLM: 735ms | 🎯 Prompt: 557 | 💬 Completion: 8
+[ALPHA] Received question: "Is it man-made?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 1021ms, 📝 354 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.73] [ROUND] Current round: 4/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 821ms | 🎯 Prompt: 230 | 💬 Completion: 4
+  ⏱️ Round 4 Summary: Recall=1377ms, LLM=1556ms, Tokens=799, Total=9819ms
+
+══════════════════════════ Round 5/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 463ms, 📝 1,040 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R4] CONFIRMED: man-made - Alpha said 'Yes' to 'Is it man-made?'
+       [0.80] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.78] [DEDUCTION_R1] RULED OUT: NOT living thing - Alpha said 'No' to 'Is it a living thing?'
+       [0.73] [ROUND] Current round: 5/20. Remaining: 15
+[BETA] >>> Is it a physical object?
+       ⏱️ LLM: 820ms | 🎯 Prompt: 556 | 💬 Completion: 9
+[ALPHA] Received question: "Is it a physical object?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 676ms, 📝 354 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.75] [ROUND] Current round: 5/20
+[ALPHA] >>> Yes
+        ⏱️ LLM: 669ms | 🎯 Prompt: 232 | 💬 Completion: 4
+  ⏱️ Round 5 Summary: Recall=1139ms, LLM=1489ms, Tokens=801, Total=10385ms
+
+══════════════════════════ Round 6/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Yes"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 674ms, 📝 1,056 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.79] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R1] RULED OUT: NOT living thing - Alpha said 'No' to 'Is it a living thing?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.75] [ROUND] Current round: 5/20. Remaining: 15
+[BETA] >>> Is it something you can comfortably hold in one hand?
+       ⏱️ LLM: 849ms | 🎯 Prompt: 490 | 💬 Completion: 14
+[ALPHA] Received question: "Is it something you can comfortably hold in one hand?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 443ms, 📝 354 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.77] [ROUND] Current round: 5/20
+[ALPHA] >>> No
+        ⏱️ LLM: 1027ms | 🎯 Prompt: 242 | 💬 Completion: 4
+  ⏱️ Round 6 Summary: Recall=1117ms, LLM=1876ms, Tokens=750, Total=12959ms
+
+══════════════════════════ Round 7/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 6 memories (⏱️ 432ms, 📝 1,122 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.79] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.78] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.73] [ROUND] Current round: 5/20. Remaining: 15
+[BETA] >>> Is it larger than a typical refrigerator?
+       ⏱️ LLM: 894ms | 🎯 Prompt: 501 | 💬 Completion: 11
+[ALPHA] Received question: "Is it larger than a typical refrigerator?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 452ms, 📝 354 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.75] [ROUND] Current round: 5/20
+[ALPHA] >>> No
+        ⏱️ LLM: 814ms | 🎯 Prompt: 236 | 💬 Completion: 4
+  ⏱️ Round 7 Summary: Recall=884ms, LLM=1708ms, Tokens=752, Total=12128ms
+
+══════════════════════════ Round 8/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 7 memories (⏱️ 573ms, 📝 1,275 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.79] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R7] RULED OUT: NOT larger than a typical refrigerator - Alpha said 'No' to 'Is it larger than a typical refrigerator?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.73] [ROUND] Current round: 5/20. Remaining: 15
+[BETA] >>> Is it primarily used indoors?
+       ⏱️ LLM: 809ms | 🎯 Prompt: 545 | 💬 Completion: 9
+[ALPHA] Received question: "Is it primarily used indoors?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 310ms, 📝 354 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.74] [ROUND] Current round: 5/20
+[ALPHA] >>> Maybe
+        ⏱️ LLM: 765ms | 🎯 Prompt: 232 | 💬 Completion: 4
+  ⏱️ Round 8 Summary: Recall=883ms, LLM=1574ms, Tokens=790, Total=10272ms
+
+══════════════════════════ Round 9/20 ══════════════════════════
+
+[BETA] Received from Alpha: "Maybe"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 8 memories (⏱️ 579ms, 📝 1,403 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.80] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.78] [DEDUCTION_R7] RULED OUT: NOT larger than a typical refrigerator - Alpha said 'No' to 'Is it larger than a typical refrigerator?'
+       [0.77] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.75] [ROUND] Current round: 9/20. Remaining: 11
+[BETA] >>> Is it something that requires electricity to work?
+       ⏱️ LLM: 967ms | 🎯 Prompt: 584 | 💬 Completion: 12
+[ALPHA] Received question: "Is it something that requires electricity to work?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 399ms, 📝 354 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.74] [ROUND] Current round: 5/20
+[ALPHA] >>> No
+        ⏱️ LLM: 770ms | 🎯 Prompt: 238 | 💬 Completion: 4
+  ⏱️ Round 9 Summary: Recall=978ms, LLM=1737ms, Tokens=838, Total=10631ms
+
+══════════════════════════ Round 10/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 8 memories (⏱️ 417ms, 📝 1,421 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.79] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R9] RULED OUT: NOT something that requires electricity to work - Alpha said 'No' to 'Is it something that requires electricity to work?'
+       [0.78] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.76] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.76] [ROUND] Current round: 9/20. Remaining: 11
+[BETA] >>> Is it larger than a microwave oven?
+       ⏱️ LLM: 913ms | 🎯 Prompt: 586 | 💬 Completion: 11
+[ALPHA] Received question: "Is it larger than a microwave oven?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 467ms, 📝 354 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.85] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.73] [ROUND] Current round: 5/20
+[ALPHA] >>> No
+        ⏱️ LLM: 927ms | 🎯 Prompt: 236 | 💬 Completion: 4
+  ⏱️ Round 10 Summary: Recall=884ms, LLM=1840ms, Tokens=837, Total=10922ms
+
+══════════════════════════ Round 11/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 8 memories (⏱️ 351ms, 📝 1,392 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.79] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.77] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.76] [ROUND] Current round: 9/20. Remaining: 11
+[BETA] >>> Is it an electronic device that requires electricity to function?
+       ⏱️ LLM: 984ms | 🎯 Prompt: 584 | 💬 Completion: 14
+[ALPHA] Received question: "Is it an electronic device that requires electricity to function?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 432ms, 📝 354 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.75] [ROUND] Current round: 5/20
+[ALPHA] >>> No
+        ⏱️ LLM: 663ms | 🎯 Prompt: 242 | 💬 Completion: 4
+  ⏱️ Round 11 Summary: Recall=783ms, LLM=1647ms, Tokens=844, Total=11159ms
+
+══════════════════════════ Round 12/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 9 memories (⏱️ 425ms, 📝 1,591 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.77] [DEDUCTION_R11] RULED OUT: NOT electronic device that requires electricity to function - Alpha said 'No' to 'Is it an electronic device that requires electricity to function?'
+       [0.77] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.76] [ROUND] Current round: 9/20. Remaining: 11
+[BETA] >>> Is it made mostly of metal?
+       ⏱️ LLM: 747ms | 🎯 Prompt: 633 | 💬 Completion: 10
+[ALPHA] Received question: "Is it made mostly of metal?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 513ms, 📝 354 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.74] [ROUND] Current round: 5/20
+[ALPHA] >>> No
+        ⏱️ LLM: 782ms | 🎯 Prompt: 234 | 💬 Completion: 4
+  ⏱️ Round 12 Summary: Recall=938ms, LLM=1529ms, Tokens=881, Total=10693ms
+
+══════════════════════════ Round 13/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 9 memories (⏱️ 837ms, 📝 1,518 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.79] [DEDUCTION_R12] RULED OUT: NOT made mostly of metal - Alpha said 'No' to 'Is it made mostly of metal?'
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.77] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.75] [ROUND] Current round: 9/20. Remaining: 11
+[BETA] >>> Is it a piece of furniture?
+       ⏱️ LLM: 964ms | 🎯 Prompt: 641 | 💬 Completion: 10
+[ALPHA] Received question: "Is it a piece of furniture?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 519ms, 📝 354 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.83] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.74] [ROUND] Current round: 5/20
+[ALPHA] >>> No
+        ⏱️ LLM: 799ms | 🎯 Prompt: 234 | 💬 Completion: 4
+  ⏱️ Round 13 Summary: Recall=1356ms, LLM=1763ms, Tokens=889, Total=10527ms
+
+══════════════════════════ Round 14/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 9 memories (⏱️ 328ms, 📝 1,516 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.78] [DEDUCTION_R13] RULED OUT: NOT piece of furniture - Alpha said 'No' to 'Is it a piece of furniture?'
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.77] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.76] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.75] [ROUND] Current round: 9/20. Remaining: 11
+[BETA] >>> Is it an electronic device?
+       ⏱️ LLM: 658ms | 🎯 Prompt: 640 | 💬 Completion: 9
+[ALPHA] Received question: "Is it an electronic device?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 559ms, 📝 355 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.77] [ROUND] Current round: 14/20
+[ALPHA] >>> No
+        ⏱️ LLM: 660ms | 🎯 Prompt: 232 | 💬 Completion: 4
+  ⏱️ Round 14 Summary: Recall=887ms, LLM=1318ms, Tokens=885, Total=9859ms
+
+══════════════════════════ Round 15/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 9 memories (⏱️ 1994ms, 📝 1,515 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.79] [DEDUCTION_R14] RULED OUT: NOT electronic device - Alpha said 'No' to 'Is it an electronic device?'
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.77] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.76] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.75] [ROUND] Current round: 15/20. Remaining: 5
+[BETA] >>> Is it primarily used as furniture (something you sit on, sleep on, or store things in)?
+       ⏱️ LLM: 1114ms | 🎯 Prompt: 638 | 💬 Completion: 23
+[ALPHA] Received question: "Is it primarily used as furniture (something you sit on, sleep on, or store things in)?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 512ms, 📝 355 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.78] [ROUND] Current round: 14/20
+[ALPHA] >>> No
+        ⏱️ LLM: 709ms | 🎯 Prompt: 261 | 💬 Completion: 4
+  ⏱️ Round 15 Summary: Recall=2506ms, LLM=1823ms, Tokens=926, Total=11899ms
+
+══════════════════════════ Round 16/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 9 memories (⏱️ 577ms, 📝 1,515 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.81] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R14] RULED OUT: NOT electronic device - Alpha said 'No' to 'Is it an electronic device?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.78] [ROUND] Current round: 15/20. Remaining: 5
+       [0.78] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.78] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+[BETA] >>> Is it used primarily for sitting or lying down (like furniture)?
+       ⏱️ LLM: 984ms | 🎯 Prompt: 638 | 💬 Completion: 16
+[ALPHA] Received question: "Is it used primarily for sitting or lying down (like furniture)?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 425ms, 📝 355 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.77] [ROUND] Current round: 14/20
+[ALPHA] >>> No
+        ⏱️ LLM: 773ms | 🎯 Prompt: 247 | 💬 Completion: 4
+  ⏱️ Round 16 Summary: Recall=1002ms, LLM=1757ms, Tokens=905, Total=10167ms
+
+══════════════════════════ Round 17/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 9 memories (⏱️ 346ms, 📝 1,515 chars):
+       [0.87] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R14] RULED OUT: NOT electronic device - Alpha said 'No' to 'Is it an electronic device?'
+       [0.77] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.76] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.76] [ROUND] Current round: 15/20. Remaining: 5
+[BETA] >>> Is it a piece of furniture?
+       ⏱️ LLM: 879ms | 🎯 Prompt: 638 | 💬 Completion: 10
+[ALPHA] Received question: "Is it a piece of furniture?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 338ms, 📝 355 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.77] [ROUND] Current round: 14/20
+[ALPHA] >>> No
+        ⏱️ LLM: 687ms | 🎯 Prompt: 234 | 💬 Completion: 4
+  ⏱️ Round 17 Summary: Recall=684ms, LLM=1566ms, Tokens=886, Total=10439ms
+
+══════════════════════════ Round 18/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 9 memories (⏱️ 960ms, 📝 1,516 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R17] RULED OUT: NOT piece of furniture - Alpha said 'No' to 'Is it a piece of furniture?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.76] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.75] [ROUND] Current round: 15/20. Remaining: 5
+[BETA] >>> Is it an electronic device?
+       ⏱️ LLM: 918ms | 🎯 Prompt: 640 | 💬 Completion: 9
+[ALPHA] Received question: "Is it an electronic device?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 1075ms, 📝 355 chars):
+       [0.86] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.76] [ROUND] Current round: 14/20
+[ALPHA] >>> No
+        ⏱️ LLM: 895ms | 🎯 Prompt: 232 | 💬 Completion: 4
+  ⏱️ Round 18 Summary: Recall=2035ms, LLM=1813ms, Tokens=885, Total=11049ms
+
+══════════════════════════ Round 19/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 9 memories (⏱️ 289ms, 📝 1,515 chars):
+       [0.88] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.80] [DEDUCTION_R5] CONFIRMED: physical object - Alpha said 'Yes' to 'Is it a physical object?'
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R18] RULED OUT: NOT electronic device - Alpha said 'No' to 'Is it an electronic device?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.76] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably hold in one hand - Alpha said 'No' to 'Is it something you can comfortably hold in one hand?'
+       [0.75] [ROUND] Current round: 15/20. Remaining: 5
+[BETA] >>> **CONFIRMED properties (from memory):**
+- Physical object
+
+**RULED OUT properties (from memory):**
+- Not an electronic device  
+- Not larger than a microwave oven  
+- Not something you can comfortably hold in one hand
+
+**UNCERTAIN (from memory):**
+- Primarily used indoors (Alpha said “Maybe”)
+
+**My candidates are (fit: physical, non-electronic, medium-sized, typically 2-handed):**
+1. **Backpack**
+2. **Office chair seat cushion** (or similar cushion/pillow)
+3. **Fire extinguisher**
+4. **Carry-on suitcase**
+5. **Large cooking pot / stockpot**
+
+**Final question (one yes/no):**  
+Is it something people commonly **wear or carry for transporting items** (e.g., a backpack/suitcase)?
+       ⏱️ LLM: 4541ms | 🎯 Prompt: 944 | 💬 Completion: 174
+[ALPHA] Received question: "**CONFIRMED properties (from memory):**
+- Physical object
+
+**RULED OUT properties (from memory):**
+- Not an electronic device  
+- Not larger than a microwave oven  
+- Not something you can comfortably hold in one hand
+
+**UNCERTAIN (from memory):**
+- Primarily used indoors (Alpha said “Maybe”)
+
+**My candidates are (fit: physical, non-electronic, medium-sized, typically 2-handed):**
+1. **Backpack**
+2. **Office chair seat cushion** (or similar cushion/pillow)
+3. **Fire extinguisher**
+4. **Carry-on suitcase**
+5. **Large cooking pot / stockpot**
+
+**Final question (one yes/no):**  
+Is it something people commonly **wear or carry for transporting items** (e.g., a backpack/suitcase)?"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 420ms, 📝 355 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.77] [ROUND] Current round: 14/20
+[ALPHA] >>> No
+        ⏱️ LLM: 1046ms | 🎯 Prompt: 563 | 💬 Completion: 4
+  ⏱️ Round 19 Summary: Recall=709ms, LLM=5587ms, Tokens=1685, Total=14739ms
+
+══════════════════════════ Round 20/20 ══════════════════════════
+
+[BETA] Received from Alpha: "No"
+[BETA] Recalling memories to understand context...
+[BETA] Recalled 7 memories (⏱️ 541ms, 📝 1,224 chars):
+       [0.89] [GAME_RULES] I am Beta, the Guesser in 20 Questions.
+       Goal: Identify Alpha's secret within 20 yes/no questions.
+       Strategy: Use binary search to halve possibilities each round.
+       Round 20: MUST make final guess regardless of certainty.
+       [0.78] [STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+       - Size comparisons (bigger than X?)
+       - Location (indoors/outdoors, specific regions)
+       - Common usage patterns
+       Each question should eliminate ~50% of remaining options.
+       [0.78] [DEDUCTION_R18] RULED OUT: NOT electronic device - Alpha said 'No' to 'Is it an electronic device?'
+       [0.78] [DEDUCTION_TEMPLATE] After each answer, I record:
+       - Yes → CONFIRMED: secret HAS this property
+       - No → RULED OUT: secret does NOT have this property
+       - Maybe → UNCERTAIN: need different angle
+       I must check these before each question to avoid redundancy.
+       [0.77] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha said 'Maybe' to 'Is it primarily used indoors?'
+       [0.77] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven - Alpha said 'No' to 'Is it larger than a microwave oven?'
+       [0.77] [ROUND] Current round: 20/20. Remaining: 0
+[BETA] >>> My final guess is: a book
+       ⏱️ LLM: 626ms | 🎯 Prompt: 890 | 💬 Completion: 10
+[ALPHA] Received question: "My final guess is: a book"
+[ALPHA] Recalling memories...
+[ALPHA] Recalled 3 memories (⏱️ 282ms, 📝 355 chars):
+       [0.87] [GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. I only answer 'Yes', 'No', or 'Maybe' to questions. I track round numbers. I detect duplicate or invalid questions.
+       [0.84] [GAME_SECRET] My secret answer is: a guitar. I must not reveal this directly.
+       [0.77] [ROUND] Current round: 14/20
+[ALPHA] >>> Wrong guess. Keep trying!
+  ⏱️ Round 20 Summary: Recall=823ms, LLM=626ms, Tokens=900, Total=2704ms
+
+╔══════════════════════════════════════════════════════════════╗
+║  GAME OVER                                                    ║
+╚══════════════════════════════════════════════════════════════╝
+
+  👑 ALPHA WINS! Beta failed to guess: a guitar
+
+╔══════════════════════════════════════════════════════════════╗
+║  MEMORY SYSTEM STATISTICS                                     ║
+╚══════════════════════════════════════════════════════════════╝
+  Alpha memories:        9
+  Beta memories:         15
+  Total memories:        24
+
+  Expected (no dedup):   ~86 memories
+  Actual stored:         24 memories
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ RECALL QUALITY ANALYSIS                                     │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Avg Beta recall size:  1,300 chars
+  │ Avg Alpha recall size: 354 chars
+  │ Memories recalled/query: 15 (configured limit)              │
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ MEMORY TYPE DISTRIBUTION (3-Axis Model)                     │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Beta:                                                       │
+  │   Episodic      12 memories (80.0%)
+  │   Procedural     3 memories (20.0%)
+  │                                                             │
+  │ Alpha:                                                      │
+  │   Episodic       7 memories (77.8%)
+  │   Semantic       1 memories (11.1%)
+  │   Procedural     1 memories (11.1%)
+  └─────────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════╗
+║  PERFORMANCE STATISTICS                                       ║
+╚══════════════════════════════════════════════════════════════╝
+  Total game time:      230,676ms (230.7s)
+  Rounds played:        20
+  Avg round time:       10,755ms
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ RECALL PERFORMANCE                                          │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Total recall time:    23,174ms
+  │ Avg Beta recall:      608ms
+  │ Avg Alpha recall:     550ms
+  │ Max recall time:      1,994ms
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ LLM PERFORMANCE                                             │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Total LLM time:       35,882ms (35.9s)
+  │ Avg Beta LLM:         1,037ms
+  │ Avg Alpha LLM:        797ms
+  │ Max LLM time:         4,541ms
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ TOKEN USAGE                                                 │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Total prompt tokens:  17,095
+  │ Total completion:     461
+  │ Total tokens:         17,556
+  │ Avg prompt/round:     855
+  │ Avg completion/round: 23
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ CONTEXT SIZE (Characters)                                   │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Avg Beta context:     1,300 chars
+  │ Avg Alpha context:    354 chars
+  │ Max context size:     1,591 chars
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌───────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+  │ Round │ Recall   │ LLM      │ Prompt   │ Complet. │ Total    │
+  ├───────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+  │   1   │   2525ms │   1905ms │    728   │     13   │  13712ms │
+  │   2   │    887ms │   1263ms │    749   │     12   │  11254ms │
+  │   3   │    777ms │   1505ms │    788   │     13   │   9777ms │
+  │   4   │   1377ms │   1556ms │    787   │     12   │   9819ms │
+  │   5   │   1139ms │   1489ms │    788   │     13   │  10385ms │
+  │   6   │   1117ms │   1876ms │    732   │     18   │  12959ms │
+  │   7   │    884ms │   1708ms │    737   │     15   │  12128ms │
+  │   8   │    883ms │   1574ms │    777   │     13   │  10272ms │
+  │   9   │    978ms │   1737ms │    822   │     16   │  10631ms │
+  │  10   │    884ms │   1840ms │    822   │     15   │  10922ms │
+  │  11   │    783ms │   1647ms │    826   │     18   │  11159ms │
+  │  12   │    938ms │   1529ms │    867   │     14   │  10693ms │
+  │  13   │   1356ms │   1763ms │    875   │     14   │  10527ms │
+  │  14   │    887ms │   1318ms │    872   │     13   │   9859ms │
+  │  15   │   2506ms │   1823ms │    899   │     27   │  11899ms │
+  │  16   │   1002ms │   1757ms │    885   │     20   │  10167ms │
+  │  17   │    684ms │   1566ms │    872   │     14   │  10439ms │
+  │  18   │   2035ms │   1813ms │    872   │     13   │  11049ms │
+  │  19   │    709ms │   5587ms │   1507   │    178   │  14739ms │
+  │  20   │    823ms │    626ms │    890   │     10   │   2704ms │
+  └───────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+
+  ┌────────────────────────────────────────────────────────┐
+  │ KEY DEMONSTRATION (3-Axis Model):                      │
+  │ - Each LLM call received ONLY the opponent's last msg  │
+  │ - NO chat history was passed                           │
+  │ - Context came 100% from IMemoryPrimitives recall      │
+  │ - Explicit Type × Scope × Tier control demonstrated    │
+  └────────────────────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════╗
+║  PHASE 40: MEMORY STORAGE INVESTIGATION                       ║
+╚══════════════════════════════════════════════════════════════╝
+
+📁 DB file: D:\data\memory-indexer\samples\TwentyQuestionsGame\twenty_questions.db
+📊 DB size: 324.00 KB
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ MEMORY COUNTS BY TYPE (Direct DB Query)                    │
+  ├─────────────────────────────────────────────────────────────┤
+  │   Episodic      19 memories
+  │   Procedural     4 memories
+  │   Semantic       1 memories
+  └─────────────────────────────────────────────────────────────┘
+
+  ❌ DB inspection error: An open reader is associated with this command. Close it before changing the CommandText property.
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ EXPECTED VS ACTUAL MEMORY COUNT                             │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Expected total:  84 memories
+  │   - GAME_RULES: 1
+  │   - STRATEGY_PHASE*: 3
+  │   - MY_QUESTION_R*: 20
+  │   - DEDUCTION_R*: 20 (Semantic)
+  │   - QUESTION_R* (Alpha): 20
+  │   - ANSWER_R* (Alpha): 20
+  │
+  │ Actual stored:  24 memories
+  │ Loss rate: 71.4%
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │ SDK DEDUPLICATION CHECK (DEDUCTION_R queries)               │
+  ├─────────────────────────────────────────────────────────────┤
+  │ Deductions found by SDK: 15 / 20 expected
+  │
+  │   [0.85] [DEDUCTION_R8] UNCERTAIN: primarily used indoors - Alpha sai...
+  │   [0.84] [DEDUCTION_R18] RULED OUT: NOT electronic device - Alpha sai...
+  │   [0.84] [DEDUCTION_R6] RULED OUT: NOT something you can comfortably ...
+  │   [0.82] [DEDUCTION_R10] RULED OUT: NOT larger than a microwave oven ...
+  │   [0.81] [DEDUCTION_TEMPLATE] After each answer, I record:
+- Yes → CO...
+  │   ... and 10 more
+  └─────────────────────────────────────────────────────────────┘
+
+Delete game memories? (y/N): 
+Thank you for playing!
