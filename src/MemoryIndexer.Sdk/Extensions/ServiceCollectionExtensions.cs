@@ -184,6 +184,10 @@ public static class ServiceCollectionExtensions
         // Register knowledge extractor (Phase 25)
         services.TryAddSingleton<IKnowledgeExtractor, LlmKnowledgeExtractor>();
 
+        // Register memory conflict resolver (Phase 26)
+        services.TryAddSingleton<IMemoryConflictResolver, RecencyWeightedResolver>();
+        services.TryAddSingleton<LlmConflictDetector>();
+
         // Register intelligence services (Phase 2)
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();
         services.TryAddSingleton<IQueryExpander, QueryExpander>();
