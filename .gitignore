@@ -101,6 +101,7 @@ BenchmarkDotNet.Artifacts/
 .serena/
 research-docs/
 local-docs/
+claudedocs/
 CLAUDE.md
 *.local.md
 .env

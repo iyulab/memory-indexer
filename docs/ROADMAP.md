@@ -4771,4 +4771,70 @@ lm-supply reported ONNX Runtime segfault bug in v0.8.3 (fixed in v0.8.5). Invest
 
 ---
 
-*Last Updated: 2026-01-07 (Phase 43 completed - Deduplication threshold fixed, +71% improvement)*
+### Phase 44: Bottleneck Analysis & Validation (2026-01-08) ✅
+
+**Problem**: Even with deduplication fix, still 70% memory loss (24/84 memories)
+
+**Investigation Process**:
+
+1. **Phase 44a**: Research & Design
+   - Web research on production RAG metrics (Recall@k, MRR, NDCG, <50ms p99)
+   - .NET ILogger performance analysis (88 bytes allocation without IsEnabled)
+   - Cognitive architecture observability patterns
+   - Designed logging strategy for 4-tier VCM flow tracing
+
+2. **Phase 44b**: Bottleneck Analysis Without Logging
+   - Configuration analysis of VCM tier capacities and TTLs
+   - Mathematical modeling using Phase 43 timing data
+   - **Hypothesis**: Working Memory Capacity (4-7 limit) causes 60/84 loss
+   - Mathematical proof: 84 conversations / 7 capacity = 12 "generations" → 77 evictions → 31% survival = 24 stored ✅ matches actual
+
+3. **Phase 44c**: Validation Testing
+   - Modified `TwentyQuestionsGame/Program.cs`
+   - Override: `WorkingMemory.Capacity = 84` (from default 7)
+   - **Expected**: 60-84/84 memories (71-100% retention)
+   - **Actual**: 20-25/84 memories (23.8-29.8% retention)
+
+**Critical Finding**: ❌ **Hypothesis REJECTED**
+
+Working Memory Capacity is **NOT** the bottleneck!
+
+**Evidence**:
+- No improvement from 7 → 84 capacity increase
+- Phase 43 (28.6%) vs Phase 44c (23.8-29.8%) - essentially unchanged
+- Run variance (15-25 memories) suggests other factors at play
+- 20 rounds completed successfully in all tests
+
+**New Bottleneck Candidates**:
+1. **Recently Buffer → Working Memory promotion** (IBufferPromoter)
+   - TTL expiration before promotion?
+   - Async timing issues?
+
+2. **Working Memory → Session Storage promotion** (IWorkingMemoryOrchestrator)
+   - Consolidation not triggered?
+   - Memories evicted without archival?
+
+3. **Classification/Summarization failures**
+   - Silent AI processing failures?
+   - Memory type assignment errors?
+
+4. **Deduplication over-merging** (even at 0.95f threshold)
+   - Similar deductions still being merged?
+
+**Documentation**:
+- `claudedocs/phase44-vcm-flow-tracing.md` — Research & logging strategy
+- `claudedocs/phase44b-bottleneck-analysis.md` — Mathematical analysis & hypothesis
+- `claudedocs/phase44c-validation-results.md` — Validation results & rejection
+
+**Files Changed**:
+- `samples/TwentyQuestionsGame/Program.cs` — Capacity override (lines 118-125)
+- `claudedocs/` — 3 analysis documents
+
+**Status**: ✅ Completed
+**Complexity**: 8/10 — Mathematical modeling, hypothesis testing, empirical validation
+**Feasibility**: 10/10 — Configuration change for testing
+**User Value**: 10/10 — **Critical negative result**: Ruled out capacity hypothesis, redirected investigation to tier transitions
+
+---
+
+*Last Updated: 2026-01-08 (Phase 44 completed - Working Memory Capacity ruled out as bottleneck)*

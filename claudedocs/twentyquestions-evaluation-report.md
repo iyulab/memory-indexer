@@ -1572,9 +1572,70 @@ options.Deduplication.HighSimilarityThreshold = 0.95f;
 
 **권장**: Option 1 (증거 기반 진단 우선)
 
+### Phase 44: Working Memory Capacity 가설 검증
+
+**가설**: Working Memory capacity (4-7 limit)가 주요 병목
+**수학적 모델**:
+```
+84 conversations / 7 capacity = ~12 "generations"
+→ ~77 evictions
+→ 31% survival rate = ~24 stored ✅ matches Phase 43 result
+```
+
+**실험 설계**:
+```csharp
+// TwentyQuestionsGame/Program.cs:118-125
+services.Configure<WorkingMemoryOptions>(wmOptions =>
+{
+    wmOptions.Capacity = 84;  // from default 7
+});
+```
+
+**예상 결과**: 60-84/84 memories (71-100% retention)
+
+**실제 결과**:
+
+| Run | Total | Episodic | Procedural | Semantic | Retention |
+|-----|-------|----------|------------|----------|-----------|
+| 1 | 15/84 | 10 (66.7%) | 4 (26.7%) | 1 (6.7%) | 17.9% |
+| 2 | 25/84 | 20 (80.0%) | 4 (16.0%) | 1 (4.0%) | 29.8% |
+| **Avg** | **20/84** | **15 (75%)** | **4 (20%)** | **1 (5%)** | **23.8%** |
+
+**비교**:
+- Phase 43 (capacity=7): 24/84 (28.6%)
+- Phase 44c (capacity=84): 20/84 (23.8%)
+- **개선 없음** ❌
+
+**결론**: ❌ **가설 기각 - Working Memory Capacity는 병목이 아님**
+
+**증거**:
+1. ✅ Capacity 12배 증가해도 retention 변화 없음
+2. ✅ Run variance (15-25) = 67% 변동성 → 다른 요인 존재
+3. ✅ 20 rounds 완료 (검증 완료)
+4. ✅ "Deductions found by SDK: 15/20" → Recall 문제 의심
+
+**새로운 병목 후보**:
+1. **Recently Buffer → Working Memory promotion** (IBufferPromoter)
+   - TTL 만료 vs 게임 속도 (5s/conversation)
+   - Async 타이밍 문제
+
+2. **Working Memory → Session promotion** (IWorkingMemoryOrchestrator)
+   - Consolidation trigger 미발동
+   - Eviction without archival
+
+3. **Classification/Summarization 실패**
+   - AI 서비스 silent failure
+   - Memory type 할당 오류
+
+4. **Deduplication over-merging** (threshold=0.95f에도)
+   - 유사 deduction 병합
+   - Content similarity 계산 이슈
+
+**다음 단계**: Phase 45 - Tier transition 분석 (promotion/demotion 로깅)
+
 ---
 
 **평가자**: Claude (Sonnet 4.5)
 **작성일**: 2026-01-07
 **버전**: v0.3.0 (3-Axis Model)
-**최종 업데이트**: Phase 43 완료 (Deduplication Fix)
+**최종 업데이트**: Phase 44 완료 (Working Memory Capacity 가설 기각)

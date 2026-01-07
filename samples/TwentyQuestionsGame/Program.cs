@@ -115,6 +115,15 @@ services.AddMemoryIndexer(options =>
     options.Deduplication.HighSimilarityThreshold = 0.95f;
 });
 
+// Phase 44c: Increase Working Memory capacity to validate bottleneck hypothesis
+// Bottleneck analysis (phase44b-bottleneck-analysis.md) identified capacity limit as primary cause
+// Mathematical model: 84 conversations / 7 capacity = ~77 evictions → 31% survival = ~24 stored
+// Test with capacity = 84 to eliminate evictions and achieve 100% retention
+services.Configure<MemoryIndexer.Services.WorkingMemoryOptions>(wmOptions =>
+{
+    wmOptions.Capacity = 84;  // Increased from default 7 to match conversation count
+});
+
 services.AddHttpClient("LLM", client =>
 {
     client.BaseAddress = new Uri("https://api.openai.com/v1/");
