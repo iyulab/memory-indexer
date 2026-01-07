@@ -7,406 +7,178 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-## Vision
+## Why Memory Indexer?
 
 LLMs face a fundamental constraint: **finite context windows**. Memory Indexer solves this by implementing a cognitive architecture inspired by human memory systems—where forgetting is not a bug, but a feature.
 
 > *"The goal of memory is not to transmit the most accurate information over time, but to guide and optimize intelligent decision-making by only preserving valuable information."*
 > — Richards & Frankland (2017), "The Persistence and Transience of Memory"
 
-## Architecture
+### Core Value Propositions
 
-### 4-Tier Virtual Context Management (VCM)
+- **Zero Configuration**: Works out-of-the-box with sensible defaults
+- **4-Tier Architecture**: Recently → Working → Session → User (human-inspired memory tiers)
+- **Intelligent Forgetting**: Ebbinghaus curve-based decay with importance weighting
+- **Production Ready**: 848 tests, comprehensive observability, deployment guides
+- **Research-Based**: Built on MemGPT, Mem0, H-MEM, and cognitive psychology research
 
-Memory Indexer operates like an **operating system for LLM memory**, implementing virtual memory paging between four tiers:
+## Quick Start
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Recently (Buffer): Raw Conversation Staging                    │
-│  ├─ Full text, async processing staging                        │
-│  ├─ TTL: 60s idle OR 500 tokens OR 3 turns                     │
-│  └─ Promotion: OR logic (any trigger fires)                    │
-├─────────────────────────────────────────────────────────────────┤
-│  Working (L1): Active Context                                   │
-│  ├─ Topic-grouped, summarized chunks                           │
-│  ├─ TTL: 10min OR 2K tokens OR 10 turns OR topic_change        │
-│  └─ Capacity: 4-7 chunks (Baddeley's Working Memory Model)     │
-├─────────────────────────────────────────────────────────────────┤
-│  Session (L2): Archived Sessions                                │
-│  ├─ Session summaries, extracted facts                         │
-│  ├─ Compressed representation                                   │
-│  └─ Storage: Vector DB (Qdrant/SQLite-vec)                     │
-├─────────────────────────────────────────────────────────────────┤
-│  User (L3): Profile Dictionary                                  │
-│  ├─ Long-term facts, preferences, identity                     │
-│  ├─ Promotion: AND logic (high confidence + multiple confirms) │
-│  └─ Scope: Cross-session persistent knowledge                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+### As MCP Server (with Claude Desktop)
 
-### Multi-Signal Promotion Triggers
-
-| Transition | Signal | Threshold | Logic |
-|------------|--------|-----------|-------|
-| Recently → Working | Time | 60s idle | OR |
-| | Tokens | 500 accumulated | OR |
-| | Turns | 3 conversation turns | OR |
-| Working → Session | Time | 10min since topic | OR |
-| | Tokens | 2000 in working | OR |
-| | Turns | 10 turns same topic | OR |
-| | Topic | Change detected | OR |
-| Session → User | Confidence | >= 0.8 score | AND |
-| | Confirmations | >= 3 times | AND |
-
-**Design Principle**:
-- **Lower tiers (Recently→Working→Session)**: OR logic — aggressive buffer cleanup
-- **Upper tier (Session→User)**: AND logic — conservative, only confirmed facts
-
-### Memory Primitives
-
-Twelve fundamental operations form the "instruction set" of the memory system:
-
-| Primitive | Description | Research Basis |
-|-----------|-------------|----------------|
-| **Encode** | Store new memory with embedding | Tulving's Encoding Specificity |
-| **Retrieve** | Semantic search with hybrid scoring | RRF + DAT |
-| **Update** | Modify existing memory content | Reconsolidation Theory |
-| **Delete** | Soft delete with tombstone | Intentional Forgetting |
-| **Label** | Classify memory type | Tulving's Memory Types |
-| **Split** | Decompose into semantic units | Chunking Theory |
-| **Merge** | Consolidate related memories | Memory Consolidation |
-| **Promote** | Move to higher tier | Page-In |
-| **Demote** | Move to lower tier | Page-Out |
-| **Lock** | Prevent automatic eviction | System Prompts |
-| **Summarize** | Compress while preserving essence | Gist Extraction |
-| **Expire** | TTL-based automatic cleanup | Temporal Decay |
-
-### Ebbinghaus Forgetting Curve
-
-Memory retention follows the exponential decay formula:
-
-```
-R = e^(-t/S)
-
-Where:
-  R = Retention score (0.0 to 1.0)
-  t = Time since last access (days)
-  S = Stability factor (based on memory stability level)
-```
-
-**Stability Levels:**
-
-| Level | Half-life | Description |
-|-------|-----------|-------------|
-| Volatile | ~1 day | Newly encoded, high forgetting rate |
-| Stabilizing | ~7 days | Accessed 2-3 times, moderate retention |
-| Stable | ~30 days | Frequently accessed, strong retention |
-| Consolidated | ~365 days | Core knowledge, minimal forgetting |
-| Permanent | ∞ | Locked memory, no decay |
-
-## What's New in v0.3.0
-
-- **Structured Metadata API** (Phase 28): Type-safe metadata storage and filtering
-  - Generic `SetMetadata<T>`, `GetMetadata<T>`, `TryGetMetadata<T>` methods
-  - JSON serialization for complex objects
-  - SQLite `json_extract()` based metadata filtering
-  - Integrated with `RecallAsync` for query-time filtering
-  - Backward-compatible with existing Dictionary<string, string> metadata
-- **Time-Series Compression** (Phase 29): Prevent metadata bloat from sequential operations
-  - Range compression: "1, 2, 3, 4, 5" → "1-5"
-  - Statistical compression: Min/Max/Avg/Count/First/Last summary
-  - Windowed compression: Recent N items + range for older
-  - Integrated with memory consolidation (sleep cycles)
-  - Configurable compression strategies and metadata keys
-- **Smart Deduplication & Quality Control** (Phase 20): Improved memory precision
-  - Semantic deduplication with 0.80 similarity threshold
-  - Content-type aware duplicate actions (CONFIRMED/RULED OUT/QUESTION)
-  - 4-dimensional quality metrics (Uniqueness, Relevance, Completeness, Consistency)
-  - Query intent-aware boosting (CONFIRMED +50%, RULED OUT -30%)
-  - Recency bias mitigation (configurable reduction, default 50%)
-  - Real-time contradiction detection with confidence-based scoring
-- **Self-Directed Memory Management** (Phase 17): MemGPT-inspired autonomous memory
-  - Heartbeat-based operation scheduling
-  - Memory self-correction with contradiction resolution
-  - Reflection engine for insight generation
-  - Agent memory tools integration
-- **Graph-based Memory Network** (Phase 16): Mem0g-style relationship-aware retrieval
-  - Community detection (Label Propagation)
-  - PageRank importance propagation
-  - Graph-enhanced query expansion
-- **Smart Tiered Retrieval** (Phase 15): H-MEM/AFM-inspired adaptive retrieval
-  - Query intent classification (Factual, Contextual, Temporal, Relational)
-  - Adaptive fidelity levels (Full, Compressed, Placeholder)
-  - Token budget allocation per tier
-- **4-Tier Memory Architecture**: Recently → Working → Session → User
-- **Multi-Signal Promotion**: Intelligent tier transitions with OR/AND logic
-- **User Profile Service**: Long-term fact storage with confirmation tracking
-- **Buffer Promotion Pipeline**: Async processing with topic segmentation
-
-## Features
-
-### Hybrid Search with Dynamic Alpha Tuning (DAT)
-
-Combines multiple retrieval strategies with query-adaptive weights:
-
-```
-BaseScore = α·Semantic + β·Recency + γ·Importance + δ·AccessFrequency
-HybridScore = BaseScore + KeywordBoost(0.5) + MetadataBoost(-0.3~+0.5)
-
-Where:
-- KeywordBoost: Query word matching ratio (normalized 0-1, weighted 0.5)
-- MetadataBoost: CONFIRMED=+0.5, RULED OUT=-0.3, QUESTION=0 (Phase 20.2)
-- RecencyBiasMitigation: Default 0.5 (50% reduction to prevent recent-bias)
-```
-
-### Memory Type Classification
-
-Based on Tulving's memory taxonomy:
-
-- **Episodic**: Event-based memories with temporal context
-- **Semantic**: Factual knowledge and concepts
-- **Procedural**: How-to knowledge and workflows
-- **Fact**: Structured assertions with confidence scores
-
-### User Profile Categories
-
-Long-term knowledge is organized by category:
-
-- **Fact**: General facts about the user
-- **Preference**: User preferences and settings
-- **Skill**: User's skills and expertise
-- **Interest**: Hobbies and interests
-- **Relationship**: Social connections
-- **Work**: Professional context
-- **Goal**: Objectives and aspirations
-- **Behavior**: Behavioral patterns
-- **Communication**: Communication style preferences
-
-### Zero-Config High-Performance Storage
-
-Memory Indexer works out-of-the-box with **SQLite zero-config auto-management**:
-
-- **No configuration needed**: Works immediately with sensible defaults
-- **Automatic maintenance**: Background optimization, cleanup, and checkpointing
-- **Smart resource management**: Auto-VACUUM, size limits, old data cleanup
-- **High performance**: WAL mode, optimized indexes, HNSW vector search
-- **Production-ready**: Automatic database health management
-
-**Auto-Management Features:**
-- **Incremental VACUUM**: Automatic space reclamation (default: 100 pages)
-- **Checkpoint timer**: WAL checkpoint every 10 minutes
-- **Maintenance timer**: Full optimization every 30 minutes
-- **Size limits**: Auto-delete oldest memories when > 500MB
-- **Age-based cleanup**: Auto-delete memories > 90 days old
-
-**Alternative: Full Stack**
-- **Qdrant**: Production vector database for large-scale deployments
-- **Neo4j**: Graph-based memory networks (future)
-- **Custom providers**: Implement `IMemoryStore` interface
-
-## Installation
-
-### As MCP Server
-
+1. **Install the MCP server:**
 ```bash
-# Clone repository
-git clone https://github.com/iyulab/memory-indexer.git
-cd memory-indexer
-
-# Build
-dotnet build
-
-# Run MCP server
-dotnet run --project tools/McpServer
+dotnet tool install -g MemoryIndexer.Mcp
 ```
 
-### Claude Desktop Configuration
-
-Add to `%APPDATA%\Claude\claude_desktop_config.json`:
-
+2. **Configure Claude Desktop** (`%APPDATA%\Claude\claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
     "memory-indexer": {
-      "command": "dotnet",
-      "args": ["run", "--project", "path/to/tools/McpServer"]
+      "command": "memory-indexer-mcp",
+      "args": []
     }
   }
 }
 ```
 
-### As SDK
+3. **Restart Claude Desktop** and start using memory tools in conversations.
 
+### As SDK (in your .NET application)
+
+1. **Install the package:**
 ```bash
 dotnet add package MemoryIndexer.Sdk
 ```
 
+2. **Configure services:**
 ```csharp
 services.AddMemoryIndexer(options =>
 {
-    options.Storage.Type = StorageType.SqliteVec;
+    options.Storage.Type = StorageType.SqliteVec;  // Zero-config default
     options.Embedding.Provider = EmbeddingProvider.Ollama;
     options.Embedding.Model = "bge-m3";
 });
 ```
 
-## MCP Tools
+3. **Use the memory service:**
+```csharp
+// Store a memory
+await memoryService.StoreAsync(
+    userId: "user123",
+    content: "User prefers dark mode",
+    type: MemoryType.Fact,
+    importance: 0.8f
+);
 
-| Tool | Description |
-|------|-------------|
-| `memory_store` | Encode new memory with automatic embedding |
-| `memory_recall` | Hybrid semantic search with relevance scoring |
-| `memory_get` | Retrieve specific memory by ID |
-| `memory_list` | List memories with filtering options |
-| `memory_update` | Update memory content and metadata |
-| `memory_delete` | Soft delete memory |
+// Recall relevant memories
+var results = await memoryService.RecallAsync(
+    userId: "user123",
+    query: "UI preferences",
+    limit: 5
+);
+```
 
-## Configuration
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Recently (Buffer): Raw conversation staging        │
+│  TTL: 60s idle OR 500 tokens OR 3 turns            │
+├─────────────────────────────────────────────────────┤
+│  Working (L1): Active context, 4-7 chunks          │
+│  TTL: 10min OR 2K tokens OR topic change           │
+├─────────────────────────────────────────────────────┤
+│  Session (L2): Archived sessions, vector search    │
+│  Storage: SQLite-vec (default) or Qdrant           │
+├─────────────────────────────────────────────────────┤
+│  User (L3): Long-term profile dictionary           │
+│  Promotion: Confidence ≥ 0.8 AND Confirms ≥ 3      │
+└─────────────────────────────────────────────────────┘
+```
+
+**Multi-Signal Promotion:**
+- **Lower tiers**: OR logic (time OR tokens OR turns) — aggressive cleanup
+- **Upper tier**: AND logic (confidence AND frequency) — conservative promotion
+
+## Key Features
+
+- **Hybrid Search**: Semantic (embeddings) + Keyword (BM25) + Metadata boosting
+- **Smart Deduplication**: Content-aware duplicate detection with 80% similarity threshold
+- **Query Intent Classification**: Factual/Contextual/Temporal/Relational routing
+- **Graph Memory Network**: Entity extraction, community detection, PageRank importance
+- **Self-Directed Management**: MemGPT-inspired autonomous consolidation and reflection
+- **Structured Metadata**: Type-safe JSON-serialized metadata with filtering
+- **Time-Series Compression**: Automatic metadata compression (e.g., "1-20" instead of "1, 2, 3...")
+- **Production Observability**: OpenTelemetry integration, health checks, metrics
+
+## Documentation
+
+- **[Quick Start Guide](docs/QUICKSTART.md)** — 5-minute setup for MCP and SDK
+- **[Architecture](docs/ARCHITECTURE.md)** — System design and 4-tier VCM details
+- **[Vision & Philosophy](docs/VISION.md)** — Research basis and design principles
+- **[Usage Patterns](docs/GUIDES.md)** — Common patterns, best practices, anti-patterns
+- **[Integrations](docs/INTEGRATIONS.md)** — Semantic Kernel, LangChain, AutoGen
+- **[Migration Guide](docs/MIGRATION_GUIDE.md)** — Storage migration and upgrades
+- **[Roadmap](docs/ROADMAP.md)** — Feature timeline and completed phases
+
+## Configuration Example
 
 ```json
 {
   "MemoryIndexer": {
     "Storage": {
       "Type": "SqliteVec",
-      "ConnectionString": "Data Source=memory.db"
+      "ConnectionString": "memory.db"
     },
     "Embedding": {
       "Provider": "Ollama",
       "Model": "bge-m3",
       "Dimensions": 1024
     },
-    "Storage": {
-      "Sqlite": {
-        "UseWalMode": true,
-        "EnableFullTextSearch": true,
-        "CacheSizeKb": 2000,
-        "AutoVacuum": "Incremental",
-        "EnableAutoMaintenance": true,
-        "MaintenanceIntervalMinutes": 30,
-        "CheckpointIntervalMinutes": 10,
-        "MaxDatabaseSizeMb": 500,
-        "AutoCleanupOldMemoriesDays": 90,
-        "IncrementalVacuumPages": 100
-      }
-    },
     "VCM": {
-      "WorkingMemory": {
-        "Capacity": 7,
-        "DefaultTtl": "00:10:00"
-      },
-      "RecentlyBuffer": {
-        "MaxIdleSeconds": 60,
-        "TokenThreshold": 500,
-        "TurnThreshold": 3
-      },
-      "UserProfile": {
-        "MinConfirmationCount": 3,
-        "MinConfidenceThreshold": 0.8
-      }
-    },
-    "Search": {
-      "DefaultLimit": 10,
-      "RRFConstant": 60,
-      "EnableDAT": true
+      "WorkingMemory": { "Capacity": 7, "DefaultTtl": "00:10:00" },
+      "RecentlyBuffer": { "MaxIdleSeconds": 60, "TokenThreshold": 500 },
+      "UserProfile": { "MinConfirmationCount": 3, "MinConfidenceThreshold": 0.8 }
     }
   }
 }
-
-**SQLite Auto-Maintenance Options:**
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `AutoVacuum` | `Incremental` | Auto-VACUUM mode: None, Full, Incremental |
-| `EnableAutoMaintenance` | `true` | Enable background maintenance |
-| `MaintenanceIntervalMinutes` | `30` | Full optimization interval |
-| `CheckpointIntervalMinutes` | `10` | WAL checkpoint interval |
-| `MaxDatabaseSizeMb` | `500` | Delete old memories when exceeded |
-| `AutoCleanupOldMemoriesDays` | `90` | Delete memories older than N days |
-| `IncrementalVacuumPages` | `100` | Pages to free per vacuum |
-
-## Project Structure
-
-```
-src/
-├── MemoryIndexer/               # Core abstractions (lightweight)
-│   ├── Interfaces/              # IMemoryStore, IEmbeddingService, etc.
-│   ├── Models/                  # MemoryUnit, Session, EntityTriple
-│   ├── Services/                # Core orchestration services
-│   ├── InMemory/                # In-memory implementations
-│   └── Configuration/           # Options and settings
-│
-└── MemoryIndexer.Sdk/           # Full implementation
-    ├── Storage/                 # Sqlite, Qdrant providers
-    ├── Embedding/               # Local, Ollama, OpenAI providers
-    ├── Intelligence/            # All ML/AI features
-    │   ├── Profile/             # User profile service
-    │   ├── Promotion/           # Buffer & working memory promotion
-    │   ├── Summarization/       # Rolling summaries
-    │   └── ...                  # Classification, Chunking, etc.
-    ├── Mcp/                     # MCP tool implementations
-    └── Extensions/              # DI registration
-
-tools/
-└── McpServer/                   # Standalone MCP server CLI
-
-samples/
-├── TwentyQuestionsGame/         # Memory-only context demonstration
-└── MemoryChatApp/               # Web frontend chat application
 ```
 
-## Research Foundation
+## Project Status
 
-Memory Indexer is built on established research in cognitive science and AI:
+- **Version**: v0.3.0
+- **Tests**: 848 passing (49 Core + 799 SDK)
+- **Target**: .NET 10.0
+- **License**: MIT
 
-### Cognitive Science
-- **Baddeley's Working Memory Model** (1974) — 4-7 chunk capacity limitation
-- **Tulving's Memory Classification** (1972) — Episodic vs Semantic memory
-- **Ebbinghaus Forgetting Curve** (1885) — Exponential memory decay
-- **Spacing Effect** — Distributed practice strengthens retention
+### Recent Updates (v0.3.0)
 
-### AI Memory Systems
-- **MemGPT** (2023) — Virtual context management inspiration
-- **Mem0** — Factual memory with temporal tracking
-- **Generative Agents** (Stanford, 2023) — Importance scoring via LLM
+- **Phase 28**: Structured Metadata API with type-safe JSON serialization
+- **Phase 29**: Time-Series Compression (Range/Statistical/Windowed strategies)
+- **Phase 27**: SQLite Zero-Config Auto-Management
+- **Phase 26**: LLM-powered Memory Conflict Resolution
+- **Phase 25**: Semantic Knowledge Extraction from Q&A
+- **Phase 20-23**: Smart Deduplication, Quality Control, Type Balancing
 
-### Information Retrieval
-- **Reciprocal Rank Fusion** — Multi-signal result combination
-- **BGE-M3** — State-of-the-art multilingual embeddings
-- **Hybrid Search** — Vector + keyword complementary retrieval
+## Contributing
 
-## Success Metrics
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-Based on research benchmarks:
+## Research References
 
-| Metric | Target | Status |
-|--------|--------|--------|
-| Memory Reuse Rate | ≥58.6% | ✅ Achieved |
-| Net Efficiency Gain | 17-18% | ✅ Achieved |
-| Context Utilization | <85% | ✅ Achieved |
-| Retrieval Latency | <100ms | ✅ Achieved |
-| Test Coverage | >500 tests | ✅ 664 tests |
-
-## Documentation
-
-### Getting Started
-- [Quick Start Guide](docs/QUICKSTART.md) — 5-minute setup guide
-- [Common Patterns](docs/PATTERNS.md) — Practical usage patterns and cookbook
-- [LLM Integrations](docs/INTEGRATIONS.md) — Semantic Kernel, LangChain, AutoGen
-
-### Architecture & Operations
-- [Architecture](docs/ARCHITECTURE.md) — System design and 4-tier VCM
-- [Best Practices](docs/BEST_PRACTICES.md) — Production deployment guidelines
-- [Memory Optimization](docs/MEMORY_OPTIMIZATION.md) — Performance tuning guide
-- [Migration Guide](docs/MIGRATION_GUIDE.md) — Version and storage migration
-
-### Project Information
-- [Roadmap](docs/ROADMAP.md) — Feature timeline and status
-- [Vision](docs/VISION.md) — Long-term goals and philosophy
+Memory Indexer builds on cutting-edge research:
+- **MemGPT**: OS-inspired virtual memory paging
+- **Mem0/Mem0g**: Graph-based memory networks
+- **H-MEM**: Hierarchical memory with index routing
+- **AFM**: Adaptive fidelity memory
+- **SLEEP Paradigm**: Memory consolidation during rest cycles
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-*"Memory is not about the past. It's about the future."* — Endel Tulving
+**Built with ❤️ by [iyulab](https://github.com/iyulab)**
