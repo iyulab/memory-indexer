@@ -4653,4 +4653,65 @@ Phase 41 (fixed code):
 
 ---
 
-*Last Updated: 2026-01-07 (Phase 41 completed - MemoryType DB inspection bug fixed)*
+### Phase 42: LMSupply Upgrade + ONNX Crash Investigation (2026-01-07) ✅
+
+**Status**: ✅ Complete (Hypothesis Rejected)
+**Timeline**: 2 hours
+**Scope**: Dependency upgrade, hypothesis testing, root cause elimination
+
+**Motivation**:
+lm-supply reported ONNX Runtime segfault bug in v0.8.3 (fixed in v0.8.5). Investigated whether this crash was causing the 82% memory loss in TwentyQuestionsGame.
+
+**Implementation**:
+1. **Dependency Upgrade**:
+   - LMSupply.Embedder: 0.8.3 → 0.8.5
+   - LMSupply.Reranker: 0.8.3 → 0.8.5
+   - LMSupply.Generator: 0.8.3 → 0.8.5
+   - All 1015 tests passed ✅
+
+2. **Verification**:
+   - Deleted DB and reran TwentyQuestionsGame
+   - Measured memory retention: **14/84 (16.7%)**
+   - Compared with Phase 41: 15/84 (17.9%)
+
+**Results**:
+```
+| Metric         | Phase 41 (v0.8.3) | Phase 42 (v0.8.5) | Change      |
+|----------------|-------------------|-------------------|-------------|
+| Total Memories | 15                | 14                | -1 (-6.7%)  |
+| Episodic       | 10 (66.7%)        | 9 (64.3%)         | -1          |
+| Procedural     | 4 (26.7%)         | 4 (28.6%)         | 0           |
+| Semantic       | 1 (6.7%)          | 1 (7.1%)          | 0           |
+| Loss Rate      | 82.1%             | 83.3%             | +1.2%       |
+```
+
+**Conclusion**: ❌ **HYPOTHESIS REJECTED**
+- ONNX crashes were NOT causing memory loss
+- LMSupply upgrade showed no improvement (within statistical noise)
+- Embedding generation is working correctly
+
+**Eliminated Root Causes**:
+1. ✅ MemoryType Serialization (Phase 41)
+2. ✅ ONNX Runtime Crashes (Phase 42)
+3. ✅ Embedding Generation Failures
+
+**Remaining Suspects**:
+1. **Deduplication Logic**: `EncodeAsync` may be too aggressive
+2. **VCM Tier Transitions**: Recently Buffer expiration, Working Memory capacity limits
+3. **Storage Backend**: Silent failures in SqliteVecMemoryStore
+
+**Next Steps**: Phase 43 will add diagnostic logging to trace memory flow and identify exact loss point.
+
+**Files Changed**:
+- `Directory.Packages.props` — LMSupply version bump
+- `claudedocs/phase42-lmsupply-upgrade.md` — Analysis document
+- `claudedocs/twentyquestions-evaluation-report.md` — Phase 42 results
+- `tools/MemoryChecker/` — DB inspection tool
+
+**Philosophy Alignment**: 10/10 — Scientific hypothesis testing, negative results valuable
+**Feasibility**: 10/10 — Simple dependency upgrade
+**User Value**: 8/10 — Eliminated false lead, narrowed root cause search
+
+---
+
+*Last Updated: 2026-01-07 (Phase 42 completed - ONNX crash eliminated as cause)*

@@ -1232,25 +1232,97 @@ Possible Causes:
    - ❌ Not tested (game incomplete)
    - ❌ Win rate: Not measured
 
+---
+
+## Phase 42: LMSupply Upgrade + ONNX Crash Investigation
+
+**Date**: 2026-01-07
+**Hypothesis**: ONNX Runtime segfault in LMSupply v0.8.3 causing memory loss
+**Result**: ❌ **HYPOTHESIS REJECTED**
+
+### 실행 내용
+
+#### 1. LMSupply 패키지 업그레이드
+- **Before**: v0.8.3 (ONNX Runtime synchronous API crash bug)
+- **After**: v0.8.5 (ONNX crash fixed)
+- **Affected**: LMSupply.Embedder, LMSupply.Reranker, LMSupply.Generator
+- **Tests**: 1015/1015 passed ✅
+
+#### 2. TwentyQuestionsGame 재실행
+- DB 삭제 후 클린 상태로 재실행
+- 84개 대화 전체 진행 (동일 조건)
+
+### 📊 결과 비교
+
+| Metric | Phase 41 (v0.8.3) | Phase 42 (v0.8.5) | Change |
+|--------|-------------------|-------------------|--------|
+| **Total Memories** | 15 | 14 | **-1 (-6.7%)** |
+| Episodic | 10 (66.7%) | 9 (64.3%) | -1 |
+| Procedural | 4 (26.7%) | 4 (28.6%) | 0 |
+| Semantic | 1 (6.7%) | 1 (7.1%) | 0 |
+| **Loss Rate** | 82.1% | 83.3% | **+1.2%** |
+
+### 🔍 분석
+
+#### ❌ ONNX 크래시가 근본 원인이 아님
+
+**이유**:
+1. **No improvement**: LMSupply 업그레이드 후 메모리 보존율 변화 없음
+2. **Within noise**: -1 메모리 차이는 통계적 변동 범위
+3. **Embedding still works**: 임베딩 생성 실패가 원인이었다면 극적인 개선이 있었을 것
+
+#### ✅ 제거된 원인들
+
+1. **MemoryType Serialization** (Phase 41): SDK가 정상 작동 중
+2. **ONNX Runtime Crashes** (Phase 42): memory-indexer에 영향 없음
+3. **Embedding Generation Failures**: 임베딩 생성은 정상 작동
+
+#### 🔍 남은 용의자
+
+**Deduplication Logic**:
+- `MemoryPrimitivesService.EncodeAsync`의 `IsSimilarContent` 로직이 너무 공격적일 가능성
+- 유사하지만 구별되는 대화를 중복으로 분류
+
+**VCM Tier Transitions**:
+- **Recently Buffer → Working Memory**: TTL 만료 vs 승격 비율
+- **Working Memory Capacity**: 4-7 제한이 너무 작을 가능성
+- **Working → Session**: 승격 조건이 너무 엄격할 가능성
+
+**Storage Backend**:
+- SqliteVecMemoryStore.StoreAsync의 silent failure 가능성
+- 로깅 부재로 인한 실패 감지 불가
+
+### 🎯 Phase 42 효과 종합
+
+**주요 성과**:
+- ✅ LMSupply v0.8.5로 업그레이드 (최신 버전 동기화)
+- ✅ ONNX 크래시를 메모리 손실 원인에서 **명확히 제거**
+- ✅ 근본 원인 후보를 deduplication/VCM으로 좁힘
+
+**미해결**:
+- ❌ **82% 메모리 손실 여전히 존재**
+- ❌ 근본 원인 미식별
+
 #### 다음 Phase 제안
 
-**Phase 42: Memory Loss Root Cause Investigation**
+**Phase 43: Diagnostic Logging + Memory Flow Tracing**
 
 **Priority 1 (Critical)**:
-1. **Trace memory encoding flow**:
-   - Log all EncodeAsync calls with success/failure
-   - Check if 84 encodes attempted vs 15 stored
-   - Identify where memories are lost
+1. **Add comprehensive logging**:
+   - Log all EncodeAsync calls (success/failure)
+   - Track VCM tier transitions with counts
+   - Log deduplication decisions with similarity scores
+   - Measure Recently Buffer expiration vs promotion ratio
 
-2. **SDK deduplication analysis**:
-   - Review deduplication thresholds
-   - Check if too many memories marked as duplicates
-   - Analyze ImportanceScore filtering
+2. **Trace memory flow**:
+   - Identify exact point where 69 memories are lost
+   - Measure Working Memory turnover rate
+   - Analyze Storage backend success rate
 
-3. **Storage backend verification**:
-   - Test direct StoreAsync calls
-   - Verify SQLiteVec doesn't drop memories
-   - Check for silent failures
+3. **Targeted fixes**:
+   - Adjust deduplication thresholds if too aggressive
+   - Increase VCM capacities if bottleneck identified
+   - Fix storage backend if silent failures detected
 
 ---
 
