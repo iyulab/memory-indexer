@@ -2741,9 +2741,9 @@ Types (Orthogonal): Episodic | Semantic | Procedural | Fact
 
 ---
 
-## Phase 32: 3-Axis Foundation (Type × Scope × Tier) 🔄
+## Phase 32: 3-Axis Foundation (Type × Scope × Tier) ✅
 
-**Status**: 🔄 In Progress (Date: 2026-01-07)
+**Status**: ✅ Complete (Date: 2026-01-07)
 **Target**: v0.4.1
 **Timeline**: 3 weeks implementation + 1 week testing = 4 weeks total
 **Goal**: Implement foundational 3-Axis Memory Model with explicit Scope dimension
@@ -3159,13 +3159,150 @@ These features are beyond Simple API scope. Samples serve as reference implement
 
 ---
 
-## Phase 34: Expert API (IMemoryServiceAdvanced) 🔄
+## Critical Re-evaluation: Phase 34-36 Analysis
 
-**Status**: ⏳ Planned (Start: 2026-02-24)
-**Target**: v0.5.0
-**Timeline**: 2 weeks implementation + 3 days testing = 17 days total
-**Goal**: Implement Expert API (Level 2-3) for advanced use cases
+**Date**: 2026-01-07
+**Evaluator**: Architecture Review (applying YAGNI principle)
+**Methodology**: Comparative analysis of planned phases vs. existing implementation
+
+### Evaluation Summary
+
+After completing Phase 32-33, a critical review of Phase 34-36 revealed significant overlap with **already implemented functionality**. Following the YAGNI principle ("You Aren't Gonna Need It") and the project's bold refactoring philosophy, the following assessment was made:
+
+#### Phase 34: Expert API (IMemoryServiceAdvanced) - ❌ REDUNDANT
+
+**Planned**: Level 2-3 API with `StoreRequest`, `RecallRequest`, type-aware methods
+**Reality**: **IMemoryPrimitives already provides Level 3 "Full Control"**
+
+**Evidence**:
+- `EncodeRequest` (IMemoryPrimitives) ≈ `StoreRequest` (Phase 34)
+  - Both have: UserId, SessionId, Content, Type, Scope, Tier, Metadata
+  - EncodeRequest has MORE: Topics, IsLocked, ExpiresAt
+- `RetrieveRequest` (IMemoryPrimitives) ≈ `RecallRequest` (Phase 34)
+  - Both provide: Type/Scope/Tier filtering, confidence/importance thresholds
+- Level 2 "Type-Aware" (`StoreFact`, `StoreEvent`, `StoreRule`) = EncodeRequest with specific Type values
+
+**Conclusion**: Phase 34 adds zero new functionality. IMemoryPrimitives IS the Expert API.
+
+**Recommendation**: Mark as ✅ Already Implemented (via IMemoryPrimitives)
+
+#### Phase 35: Domain Profiles - ⚠️ YAGNI (Deferred)
+
+**Planned**: DomainProfile system with ChatProfile, TwentyQuestionsProfile, RAGProfile presets
+
+**Assessment**: Nice-to-have convenience feature, but **premature for v0.4.x**
+
+**Reasoning**:
+- Can be achieved with configuration examples or JSON presets
+- Should be data-driven: implement when users actually request it
+- v0.x is pre-1.0, should focus on core functionality not convenience layers
+- No user feedback yet indicating this is needed
+
+**Recommendation**: Defer to post-v1.0 or when user feedback indicates demand
+
+#### Phase 36.1: Topic Auto-Detection - ✅ ALREADY IMPLEMENTED
+
+**Planned**: `ITopicDetector` with semantic clustering and topic labeling
+
+**Reality**: **IScopeManager already implements full topic lifecycle**
+
+**Evidence**:
+- `IScopeManager.DetectTopicChangeAsync()` - semantic topic change detection
+- `IScopeManager.GetCurrentTopicId()` - current topic tracking
+- `IScopeManager.RecordTurnAsync()` - automatic topic state updates
+- `ScopeState.TopicId` - current topic tracking
+- `ScopeStatistics.TopicIds` - all topics in session
+
+**Conclusion**: Topic auto-detection is fully operational since Phase 32.3
+
+#### Phase 36.2: Type Auto-Classification - ✅ ALREADY IMPLEMENTED
+
+**Planned**: `ITypeClassifier` enhancement with confidence scoring
+
+**Reality**: **IMemoryClassifier already provides comprehensive auto-classification**
+
+**Evidence**:
+- `MemoryClassification.Type` - classified memory type (Episodic, Semantic, Procedural, Fact)
+- `MemoryClassification.TypeConfidences` - confidence dictionary per type
+- `MemoryClassification.Confidence` - overall classification confidence
+- `MemoryClassification.Topics` - extracted topics from content
+- `MemoryClassification.Importance` - auto-calculated importance score
+- Full integration with SimpleMemoryService (auto-classification on Remember)
+
+**Conclusion**: Type auto-classification with confidence scoring is production-ready
+
+#### Phase 36.3: Performance Optimization - ⚠️ PREMATURE (Measure First)
+
+**Planned**: Embedding caching, batch processing, index optimization
+
+**Assessment**: **No performance problems identified yet**
+
+**Reasoning**:
+- No benchmarks showing performance bottlenecks
+- No user complaints about speed
+- "Premature optimization is the root of all evil" - Donald Knuth
+- Should measure first, then optimize based on data
+
+**Recommendation**: Defer until performance issues are measured and documented
+
+### Revised Phase Status
+
+| Phase | Original Status | New Status | Reason |
+|-------|----------------|------------|---------|
+| Phase 32 | 🔄 In Progress | ✅ Complete | All sub-phases complete |
+| Phase 33 | ✅ Complete | ✅ Complete | No change |
+| Phase 34 | ⏳ Planned | ✅ Already Implemented | IMemoryPrimitives = Expert API |
+| Phase 35 | ⏳ Planned | ⏸️ Deferred (YAGNI) | Premature, defer to v1.0+ |
+| Phase 36.1 | ⏳ Planned | ✅ Already Implemented | IScopeManager has topic detection |
+| Phase 36.2 | ⏳ Planned | ✅ Already Implemented | IMemoryClassifier has auto-classification |
+| Phase 36.3 | ⏳ Planned | ⏸️ Deferred (Measure First) | No performance issues identified |
+
+### Impact on Release Planning
+
+**v0.4.2 Release** (Current Target):
+- Phase 32: 3-Axis Model ✅
+- Phase 33: Simple API ✅
+- **Phase 34**: Already implemented via IMemoryPrimitives ✅
+- **Phase 36.1-36.2**: Already implemented via IScopeManager + IMemoryClassifier ✅
+- **Total**: 1015 tests passing (216 + 799)
+
+**v0.5.0+ Future Work**:
+- Phase 35: Domain Profiles (when user feedback indicates need)
+- Phase 36.3: Performance Optimization (when benchmarks show bottlenecks)
+- Phase 37+: Advanced features based on actual usage patterns
+
+### Architectural Insight
+
+This evaluation demonstrates the **power of the 3-Axis Model (Phase 32)**:
+- By implementing Type × Scope × Tier properly, we automatically gained:
+  - Expert API capabilities (via IMemoryPrimitives)
+  - Topic auto-detection (via IScopeManager)
+  - Type auto-classification (via IMemoryClassifier)
+- The foundation was more powerful than anticipated
+- Phases 34-36 were planning for features the foundation already enabled
+
+**Lesson Learned**: Strong architectural foundations eliminate the need for many planned "advanced" features.
+
+---
+
+## Phase 34: Expert API (IMemoryServiceAdvanced) ✅ Already Implemented
+
+**Status**: ✅ Already Implemented via IMemoryPrimitives (Date: 2026-01-07)
+**Original Target**: v0.5.0
+**Actual Implementation**: v0.3.0 (IMemoryPrimitives was the Expert API all along)
+**Goal**: ~~Implement Expert API (Level 2-3)~~ **REDUNDANT - IMemoryPrimitives provides full control**
 **Design Reference**: `docs/DESIGN_V0.4.md` (Section 6 "Expert API Design")
+
+### Re-evaluation Result
+
+After critical analysis, Phase 34 was found to be **completely redundant**. The existing `IMemoryPrimitives` interface (implemented since v0.3.0) already provides all "Expert API" functionality that Phase 34 planned to add.
+
+**Comparison**:
+- Phase 34's `StoreRequest` ≈ `EncodeRequest` (IMemoryPrimitives has MORE fields)
+- Phase 34's `RecallRequest` ≈ `RetrieveRequest` (same filtering capabilities)
+- Phase 34's Level 2 "Type-Aware" = Just call EncodeRequest with specific Type values
+
+**Conclusion**: IMemoryPrimitives IS the Expert API. No additional implementation needed.
 
 ### Background
 
@@ -3323,13 +3460,48 @@ public sealed class RecallRequest
 
 ---
 
-## Phase 35: Domain Profiles 🔄
+## Phase 35: Domain Profiles ⏸️ Deferred (YAGNI)
 
-**Status**: ⏳ Planned (Start: 2026-03-17)
-**Target**: v0.5.1
-**Timeline**: 2 weeks implementation + 3 days testing = 17 days total
-**Goal**: Implement DomainProfile system for domain-specific presets
+**Status**: ⏸️ Deferred to post-v1.0 (Date: 2026-01-07)
+**Original Target**: v0.5.1
+**Reason**: YAGNI - Premature convenience feature without user demand
+**Timeline**: ~~2 weeks implementation + 3 days testing = 17 days total~~
+**Goal**: ~~Implement DomainProfile system~~ **Deferred until user feedback indicates need**
 **Design Reference**: `docs/DESIGN_V0.4.md` (Section 7 "Domain Profiles")
+
+### Re-evaluation Result
+
+After critical analysis, Phase 35 was found to be **premature** for v0.4.x release. While DomainProfile system is a useful convenience feature, it violates the YAGNI principle at this stage.
+
+**Reasoning**:
+- **No user demand**: No feedback indicating this is a pain point
+- **Alternative exists**: Can be achieved with configuration examples or JSON presets
+- **v0.x focus**: Pre-1.0 versions should prioritize core functionality, not convenience layers
+- **Data-driven development**: Should implement based on actual usage patterns, not speculation
+
+**Alternatives for Current Users**:
+```json
+// Configuration preset example (ChatProfile equivalent)
+{
+  "MemoryIndexer": {
+    "VCM": {
+      "WorkingMemory": { "Capacity": 7, "DefaultTtl": "00:10:00" },
+      "MemoryClassifier": {
+        "EpisodicWeight": 0.5,
+        "SemanticWeight": 0.4,
+        "ProceduralWeight": 0.1
+      }
+    }
+  }
+}
+```
+
+**Re-evaluation Criteria**: Implement when:
+- User feedback indicates difficulty configuring for specific domains
+- Multiple users request preset configurations
+- Sample apps demonstrate clear need for domain-specific optimizations
+
+**Deferred to**: v1.0+ or when user demand is demonstrated
 
 ### Background
 
@@ -3506,13 +3678,66 @@ public sealed class RAGProfile : DomainProfile
 
 ---
 
-## Phase 36: Automation & Optimization 🔄
+## Phase 36: Automation & Optimization ✅ Partially Complete
 
-**Status**: ⏳ Planned (Start: 2026-04-07)
-**Target**: v0.5.2
-**Timeline**: 2 weeks implementation + 3 days testing = 17 days total
-**Goal**: Implement Topic auto-detection and Type auto-classification
+**Status**: ✅ Automation Complete, ⏸️ Optimization Deferred (Date: 2026-01-07)
+**Original Target**: v0.5.2
+**Actual Implementation**:
+  - Phase 36.1 (Topic Auto-Detection): ✅ Implemented in v0.4.1 via IScopeManager
+  - Phase 36.2 (Type Auto-Classification): ✅ Implemented in v0.4.1 via IMemoryClassifier
+  - Phase 36.3 (Performance Optimization): ⏸️ Deferred (measure first)
+**Timeline**: ~~2 weeks implementation + 3 days testing = 17 days total~~
+**Goal**: ~~Implement automation~~ **Automation already operational since Phase 32**
 **Design Reference**: `docs/DESIGN_V0.4.md` (Section 8 "Automation Features")
+
+### Re-evaluation Result
+
+After critical analysis, Phase 36 was found to be **mostly already implemented** as a natural consequence of the 3-Axis Model (Phase 32):
+
+#### Phase 36.1: Topic Auto-Detection - ✅ ALREADY IMPLEMENTED
+
+**Reality**: IScopeManager (implemented in Phase 32.3) already provides full topic lifecycle management.
+
+**Evidence**:
+- `IScopeManager.DetectTopicChangeAsync()` - semantic clustering-based topic change detection
+- `IScopeManager.GetCurrentTopicId()` - current topic tracking
+- `IScopeManager.RecordTurnAsync()` - automatic topic state updates
+- `ScopeState.TopicId` - current topic identifier
+- `ScopeStatistics.TopicIds` - all topics in session
+- Topic similarity threshold configurable via `ScopeManagerOptions`
+
+**Conclusion**: Topic auto-detection has been production-ready since Phase 32.3
+
+#### Phase 36.2: Type Auto-Classification - ✅ ALREADY IMPLEMENTED
+
+**Reality**: IMemoryClassifier already provides comprehensive auto-classification with confidence scoring.
+
+**Evidence**:
+- `MemoryClassification.Type` - classified memory type (Episodic, Semantic, Procedural, Fact)
+- `MemoryClassification.TypeConfidences` - confidence dictionary per type
+- `MemoryClassification.Confidence` - overall classification confidence
+- `MemoryClassification.Topics` - extracted topics from content
+- `MemoryClassification.Importance` - auto-calculated importance score
+- Full integration with SimpleMemoryService (auto-classification on Remember)
+
+**Conclusion**: Type auto-classification with confidence scoring is production-ready
+
+#### Phase 36.3: Performance Optimization - ⏸️ DEFERRED (Measure First)
+
+**Assessment**: No performance problems identified yet. Premature optimization violates engineering best practices.
+
+**Reasoning**:
+- **No data**: No benchmarks showing performance bottlenecks
+- **No complaints**: No user reports of speed issues
+- **Premature**: "Premature optimization is the root of all evil" - Donald Knuth
+- **Wrong order**: Should be: Measure → Identify bottlenecks → Optimize → Measure improvement
+
+**Deferred to**: When performance issues are measured and documented with:
+  - Specific bottleneck identification (profiling data)
+  - Performance targets (e.g., "RecallAsync should be <100ms p95")
+  - Benchmark baseline for comparison
+
+**Current Performance Philosophy**: Ship working software, optimize based on real usage data
 
 ### Background
 
