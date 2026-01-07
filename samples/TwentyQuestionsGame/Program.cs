@@ -235,12 +235,11 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
     Console.WriteLine($"[BETA] Recalled {betaMemories.Count} memories (⏱️ {roundMetrics.BetaRecallMs}ms, 📝 {roundMetrics.BetaContextChars:N0} chars):");
-    foreach (var mem in betaMemories) // Show ALL memories
+    foreach (var mem in betaMemories) // Show ALL memories with full content for analysis
     {
-        var shortContent = mem.Memory.Content.Length > 200
-            ? mem.Memory.Content[..200] + "..."
-            : mem.Memory.Content;
-        Console.WriteLine($"       [{mem.Score:F2}] {shortContent}");
+        // Display full content for detailed log analysis (no truncation)
+        var content = mem.Memory.Content.Replace("\n", "\n       "); // Indent multiline content
+        Console.WriteLine($"       [{mem.Score:F2}] {content}");
     }
     Console.ResetColor();
 
@@ -335,12 +334,11 @@ Output ONLY the question or guess. No explanations.";
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
     Console.WriteLine($"[ALPHA] Recalled {alphaMemories.Count} memories (⏱️ {roundMetrics.AlphaRecallMs}ms, 📝 {roundMetrics.AlphaContextChars:N0} chars):");
-    foreach (var mem in alphaMemories) // Show ALL memories
+    foreach (var mem in alphaMemories) // Show ALL memories with full content for analysis
     {
-        var shortContent = mem.Memory.Content.Length > 200
-            ? mem.Memory.Content[..200] + "..."
-            : mem.Memory.Content;
-        Console.WriteLine($"        [{mem.Score:F2}] {shortContent}");
+        // Display full content for detailed log analysis (no truncation)
+        var content = mem.Memory.Content.Replace("\n", "\n        "); // Indent multiline content
+        Console.WriteLine($"        [{mem.Score:F2}] {content}");
     }
     Console.ResetColor();
 
