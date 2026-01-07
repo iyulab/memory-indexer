@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MemoryIndexer.Configuration;
+using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Extensions;
@@ -77,6 +78,13 @@ services.AddMemoryIndexer(options =>
     options.Embedding.Model = "text-embedding-3-small";
     options.Embedding.Dimensions = 1536;
     options.Storage.VectorDimensions = 1536;
+
+    // Use OpenAI for knowledge extraction (Phase 25.1)
+    options.Completion.Provider = CompletionProvider.OpenAI;
+    options.Completion.ApiKey = openAiApiKey;
+    options.Completion.Model = openAiModel; // Same as game LLM
+    options.Completion.DefaultTemperature = 0.1f; // Deterministic extraction
+    options.Completion.DefaultMaxTokens = 300;
 });
 
 services.AddHttpClient("LLM", client =>
@@ -90,6 +98,7 @@ services.AddHttpClient("LLM", client =>
 var serviceProvider = services.BuildServiceProvider();
 var memoryService = serviceProvider.GetRequiredService<MemoryService>();
 var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+var knowledgeExtractor = serviceProvider.GetRequiredService<IKnowledgeExtractor>();
 
 // Game configuration
 const string ALPHA_USER_ID = "alpha_quizmaster";
@@ -466,6 +475,50 @@ Be honest and consistent with your previous answers.";
         $"[QA_R{round}] Q: {betaQuestion} -> A: {alphaResponse}",
         MemoryType.Episodic,
         importance: 0.95f);
+
+    // Extract semantic knowledge from Q&A (Phase 25.1)
+    if (!alphaResponse.StartsWith("INVALID") && !alphaResponse.StartsWith("Wrong guess"))
+    {
+        try
+        {
+            var extractionContext = new KnowledgeExtractionContext
+            {
+                Question = betaQuestion,
+                Answer = alphaResponse,
+                Subject = "the secret object",
+                UserId = BETA_USER_ID,
+                Metadata = new Dictionary<string, string>
+                {
+                    ["Round"] = round.ToString(),
+                    ["GameType"] = "TwentyQuestions"
+                }
+            };
+
+            var extractedFacts = await knowledgeExtractor.ExtractAsync(extractionContext);
+
+            foreach (var fact in extractedFacts)
+            {
+                await memoryService.StoreAsync(
+                    BETA_USER_ID,
+                    $"[EXTRACTED_R{round}] {fact.Content}",
+                    MemoryType.Semantic,
+                    importance: fact.Importance);
+            }
+
+            if (extractedFacts.Count > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"       💡 Extracted {extractedFacts.Count} semantic fact(s) from Q&A");
+                Console.ResetColor();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            Console.WriteLine($"       ⚠️ Knowledge extraction failed: {ex.Message}");
+            Console.ResetColor();
+        }
+    }
 
     // Store deduction if valid answer
     if (!alphaResponse.StartsWith("INVALID"))
