@@ -412,8 +412,8 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
     {
         UserId = BETA_USER_ID,
         SessionId = BETA_SESSION_ID,
-        Query = $"game rules strategy previous questions asked by me Alpha's answers yes no maybe latest deductions confirmed ruled-out properties round {round}",
-        Limit = 30,  // Phase 37: Increased from 15 to capture more past questions/deductions
+        Query = $"my questions, Alpha's answers, and deductions from all previous rounds up to round {round - 1}",  // Phase 39: More explicit query
+        Limit = 50,  // Phase 39: Increased from 30 to capture more deductions
         MinScore = 0.3f
     });
     betaRecallSw.Stop();
@@ -486,7 +486,7 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
         Type = MemoryType.Episodic,
         Scope = Scope.Session,
         Tier = Tier.Short,
-        ImportanceScore = 0.95f  // Phase 37: Increased importance for questions
+        ImportanceScore = 0.98f  // Phase 39: Increased for better recall
     });
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -503,8 +503,8 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
     {
         UserId = ALPHA_USER_ID,
         SessionId = ALPHA_SESSION_ID,
-        Query = $"secret answer game rules previous questions from Beta my answers duplicate detection history {betaQuestion} round {round}",
-        Limit = 30,  // Phase 37: Increased from 15 to capture duplicate question patterns
+        Query = $"Beta's questions and my answers from all previous rounds up to round {round - 1}",  // Phase 39: More explicit query
+        Limit = 50,  // Phase 39: Increased from 30 to capture duplicate patterns
         MinScore = 0.3f
     });
     alphaRecallSw.Stop();
@@ -547,7 +547,7 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
                     Type = MemoryType.Episodic,
                     Scope = Scope.Session,
                     Tier = Tier.Short,
-                    ImportanceScore = 0.95f  // Phase 37: Increased importance for questions
+                    ImportanceScore = 0.98f  // Phase 39: Increased for better recall
                 });
 
                 // Alpha confirms with "Yes"
@@ -559,7 +559,7 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
                     Type = MemoryType.Episodic,
                     Scope = Scope.Session,
                     Tier = Tier.Short,
-                    ImportanceScore = 0.85f
+                    ImportanceScore = 0.96f  // Phase 39: Increased for better recall
                 });
 
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -635,7 +635,7 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
             Type = MemoryType.Episodic,
             Scope = Scope.Session,
             Tier = Tier.Short,
-            ImportanceScore = 0.95f  // Phase 37: Increased importance for questions
+            ImportanceScore = 0.98f  // Phase 39: Increased for better recall
         });
 
         // Alpha generates response using ONLY the question + recalled memories
@@ -680,7 +680,7 @@ Be honest and consistent with your previous answers.";
             Type = MemoryType.Episodic,
             Scope = Scope.Session,
             Tier = Tier.Short,
-            ImportanceScore = 0.85f
+            ImportanceScore = 0.96f  // Phase 39: Increased for better recall
         });
     }
 
@@ -757,13 +757,16 @@ Be honest and consistent with your previous answers.";
     // Store deduction if valid answer
     if (!alphaResponse.StartsWith("INVALID"))
     {
+        // Phase 39: Extract property explicitly for better recall
+        string property = ExtractPropertyFromQuestion(betaQuestion);
         string deduction;
+
         if (alphaResponse.StartsWith("Yes", StringComparison.OrdinalIgnoreCase))
-            deduction = $"[DEDUCTION_R{round}] CONFIRMED: The secret HAS the property asked in '{betaQuestion}'";
+            deduction = $"[DEDUCTION_R{round}] CONFIRMED: {property} - Alpha said 'Yes' to '{betaQuestion}'";
         else if (alphaResponse.StartsWith("No", StringComparison.OrdinalIgnoreCase))
-            deduction = $"[DEDUCTION_R{round}] RULED OUT: The secret does NOT have the property asked in '{betaQuestion}'";
+            deduction = $"[DEDUCTION_R{round}] RULED OUT: NOT {property} - Alpha said 'No' to '{betaQuestion}'";
         else
-            deduction = $"[DEDUCTION_R{round}] UNCERTAIN: The secret may or may not have the property asked in '{betaQuestion}'";
+            deduction = $"[DEDUCTION_R{round}] UNCERTAIN: {property} - Alpha said 'Maybe' to '{betaQuestion}'";
 
         await memoryPrimitives.EncodeAsync(new EncodeRequest
         {
@@ -773,7 +776,7 @@ Be honest and consistent with your previous answers.";
             Type = MemoryType.Semantic,
             Scope = Scope.Session,
             Tier = Tier.Long,
-            ImportanceScore = 0.95f  // Phase 37: Increased importance for deductions
+            ImportanceScore = 0.99f  // Phase 39: Highest priority for deductions (below GAME_RULES 1.0)
         });
     }
 
@@ -996,6 +999,34 @@ Console.WriteLine("\nThank you for playing!");
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+string ExtractPropertyFromQuestion(string question)
+{
+    // Extract property from yes/no question for explicit deduction storage
+    // "Is it man-made?" → "man-made"
+    // "Does it have wheels?" → "wheels"
+    // "Can it fly?" → "fly"
+
+    var patterns = new[]
+    {
+        @"Is it (a |an )?(.*)\?",           // "Is it man-made?" → "man-made"
+        @"Does it (have |contain )?(.*)\?", // "Does it have wheels?" → "wheels"
+        @"Can it (.*)\?",                   // "Can it fly?" → "fly"
+        @"Is it used (.*)\?",               // "Is it used indoors?" → "used indoors"
+    };
+
+    foreach (var pattern in patterns)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(question, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (match.Success)
+        {
+            return match.Groups[match.Groups.Count - 1].Value.Trim();
+        }
+    }
+
+    // Fallback: use the full question without question mark
+    return question.Replace("?", "").Trim();
+}
 
 string GetStrategyPhase(int round)
 {

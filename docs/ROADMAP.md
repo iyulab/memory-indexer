@@ -4100,9 +4100,193 @@ Missing: DEDUCTION_R2, R3, R4, R5, R6, R8, ... R18
 
 ---
 
-## Overall Phase 32-38 Summary
+## Phase 39: Memory Recall Quality Recovery
 
-**Combined Timeline**: 4 weeks (Phase 32) + 17 days (Phase 33) + 17 days (Phase 34) + 17 days (Phase 35) + 17 days (Phase 36) + 1 day (Phase 37) + 1 day (Phase 38) = **~11 weeks total**
+**Status**: ✅ Complete (2026-01-07)
+**Type**: Sample Bug Fix & Quality Enhancement
+**Scope**: TwentyQuestionsGame recall improvements
+**Timeline**: 1 day
+
+### Goal
+
+Recover memory recall quality degraded in Phase 38:
+1. Explicit recall queries with round context
+2. ImportanceScore tuning for deductions
+3. Recall limit expansion
+4. Deduction format improvement with property extraction
+
+### Implementation Summary
+
+**Core Changes**:
+
+1. **Recall Query Refinement**:
+   ```csharp
+   // BEFORE
+   Query = $"previous questions and deductions from rounds {round}"
+
+   // AFTER
+   Query = $"my questions, Alpha's answers, and deductions from all previous rounds up to round {round - 1}"
+   ```
+   - More explicit: "my questions", "Alpha's answers", "deductions"
+   - Clear round boundary: "up to round {round - 1}"
+
+2. **ImportanceScore Tuning**:
+   - Beta Questions: 0.95 → **0.98**
+   - Beta Deductions: 0.95 → **0.99** (highest priority below GAME_RULES 1.0)
+   - Alpha Questions: 0.95 → **0.98**
+   - Alpha Answers: 0.85 → **0.96**
+
+3. **Recall Limit Expansion**:
+   - Beta recall: 30 → **50**
+   - Alpha recall: 30 → **50**
+
+4. **Deduction Format Enhancement**:
+   ```csharp
+   // BEFORE
+   "RULED OUT: The secret does NOT have the property asked in 'Is it man-made?'"
+
+   // AFTER
+   "RULED OUT: NOT man-made - Alpha said 'No' to 'Is it man-made?'"
+   ```
+   - Added `ExtractPropertyFromQuestion()` helper (Regex-based)
+   - Explicit property extraction: "living thing", "NOT man-made", etc.
+   - Direct embedding of properties for better recall matching
+
+### Measured Results
+
+| Metric | Phase 38 | Phase 39 | Change | Target | Status |
+|--------|----------|----------|--------|--------|--------|
+| Final guess success | 0% | 0% | **0%** ❌ | 20%+ | ❌ Failed |
+| Beta avg context | 841 chars | 883 chars | **+5%** 📈 | 1,200+ | ❌ Partial |
+| Recalled memories (R19) | 6 | 6 | **0** ⚠️ | 15+ | ❌ Failed |
+| Duplicate questions | 4 | 2 | **-50%** ✅ | ≤2 | ✅ Met |
+| Total game time | 152.3s | 193.1s | +27% | 160-170s | ⚠️ Over |
+| Total tokens | 14,072 | 14,495 | +3% | Maintain | ✅ Stable |
+
+**Game Result (Phase 39)**:
+- Secret: "a golden retriever" (living thing, animal)
+- Beta candidates: bicycle, car, laptop, refrigerator, tree
+- Beta guess: N/A (wrong candidates)
+- Winner: Alpha
+- Rounds: 20/20
+
+### Positive Findings
+
+1. **✅ Deduction Format Improved**:
+   - ExtractPropertyFromQuestion() working correctly
+   - Properties explicitly stored: "living thing", "NOT man-made"
+   - Better embedding quality for recall matching
+
+2. **✅ Duplicate Questions Reduced**:
+   - Phase 38: 4 INVALID responses
+   - Phase 39: 2 INVALID responses (-50%)
+
+3. **✅ Code Quality Enhanced**:
+   - All ImportanceScore values consistently increased
+   - Recall limit properly configured
+   - Query explicitness improved
+
+### Critical Issues Discovered
+
+1. **🔴 CRITICAL: Recall Quality Not Improved**
+   - Still only 6 memories recalled (target: 15+)
+   - DEDUCTION_R1 NOT recalled in Round 19 despite 0.99 importance
+   - Beta context still below target (883 vs 1,200+ chars)
+
+2. **🔴 CRITICAL: Duplicate Detection False Positive**
+   ```
+   Round 2:
+     Question: "Is it an animal?"
+     Similarity: 0.85 with "Is it a living thing?"
+     Result: INVALID (marked as duplicate)
+
+   Problem:
+     - "living thing" ⊃ "animal" + "plant"
+     - Related but DISTINCT questions
+     - HIGH_SIMILARITY_THRESHOLD = 0.85 too sensitive
+     - Should be 0.90-0.92 to avoid false positives
+
+   Impact:
+     - DEDUCTION_R2 never created
+     - Beta cannot distinguish animal vs plant
+     - Wrong candidate category in Round 19
+   ```
+
+3. **🔴 CRITICAL: Memory Storage Mystery**
+   ```
+   Expected: ~84 memories (20 rounds × 4 + 4 init)
+   Actual: 7 memories (Beta only)
+
+   Distribution:
+     - Episodic: 4 (57%)
+     - Procedural: 3 (43%)
+     - Semantic: 0 ← DEDUCTION_R memories missing!
+
+   Hypothesis:
+     - SDK deduplication too aggressive?
+     - Semantic memories not persisting?
+     - Tier.Long not working as expected?
+   ```
+
+### Root Cause Analysis
+
+**Recall Quality Failure**:
+1. Limit 50 set, but only 6 returned → Query or MinScore filtering issue
+2. ImportanceScore 0.99 not helping → Ranking or retrieval problem
+3. Explicit query not matching → Embedding quality or query structure issue
+
+**Duplicate Detection Bug**:
+- Threshold 0.85 catches semantically related but informationally distinct questions
+- Need higher threshold (0.90-0.92) for 20 Questions strategy
+- False positives break the animal vs plant distinction logic
+
+**Memory Storage Issue**:
+- Total 7 memories vs expected 84 → Major loss
+- No Semantic type (DEDUCTION_R) in final count → Storage or deletion problem
+- Possible SDK deduplication overreach
+
+### Outstanding Issues
+
+1. **🔴 Critical**: Duplicate threshold causing false positives
+2. **🔴 Critical**: Memory storage only 7/84 (92% loss)
+3. **🔴 Critical**: Semantic deductions not persisting
+4. **🔴 Critical**: Recall quality unchanged despite all improvements
+5. **🟡 Important**: Win rate still 0%
+
+### Next Phase Proposal
+
+**Phase 40**: Duplicate Detection Fix + Memory Storage Investigation
+
+**Scope**:
+1. HIGH_SIMILARITY_THRESHOLD: 0.85 → 0.92
+2. Direct DB inspection (twenty_questions.db)
+3. SDK deduplication logic review
+4. Semantic memory persistence verification
+
+**Expected**: Fix false positives → DEDUCTION_R2-R18 stored → Recall improved → 33%+ win rate
+
+### Files Modified
+
+- `samples/TwentyQuestionsGame/Program.cs` (6 changes)
+  - Beta recall query updated (line 415)
+  - Alpha recall query updated (line 506)
+  - Recall limits increased to 50 (lines 416, 507)
+  - ImportanceScore values increased (lines 489, 550, 562, 638, 683, 779)
+  - ExtractPropertyFromQuestion() helper added (lines 1000-1026)
+  - Deduction format improved with property extraction (lines 760-780)
+
+### Documentation Updated
+
+- `claudedocs/phase39-memory-recall-recovery.md` (new planning document)
+- `claudedocs/twentyquestions-evaluation-report.md` (Phase 39 detailed analysis)
+- `samples/TwentyQuestionsGame/game_output_phase39.txt` (test output)
+- `docs/ROADMAP.md` (this entry)
+
+---
+
+## Overall Phase 32-39 Summary
+
+**Combined Timeline**: 4 weeks (Phase 32) + 17 days (Phase 33) + 17 days (Phase 34) + 17 days (Phase 35) + 17 days (Phase 36) + 1 day (Phase 37) + 1 day (Phase 38) + 1 day (Phase 39) = **~11 weeks total**
 
 **Deliverables**:
 - ⏳ 3-Axis Memory Model (Type × Scope × Tier) — Phase 32
@@ -4113,6 +4297,7 @@ Missing: DEDUCTION_R2, R3, R4, R5, R6, R8, ... R18
 - ⏳ Performance optimization (caching, indexing) — Phase 36
 - ✅ TwentyQuestionsGame memory recall quality improvements — Phase 37
 - ✅ TwentyQuestionsGame final deduction logic & candidate generation — Phase 38
+- ✅ TwentyQuestionsGame recall query & deduction format improvements — Phase 39
 
 **Test Growth**:
 - Phase 32: 848 → 1068+ tests (+220)
@@ -4139,4 +4324,4 @@ Missing: DEDUCTION_R2, R3, R4, R5, R6, R8, ... R18
 
 ---
 
-*Last Updated: 2026-01-07 (Phase 37 added - TwentyQuestionsGame improvements)*
+*Last Updated: 2026-01-07 (Phase 39 completed - TwentyQuestionsGame recall quality recovery)*

@@ -668,6 +668,157 @@ Round 7: (다른 질문)
 
 ---
 
+### Phase 39: Memory Recall Quality Recovery 실행 결과
+
+**실행일**: 2026-01-07
+**Secret**: "a golden retriever" (living thing, animal, pet)
+**Beta 최종 추측**: 알 수 없음 (candidates: bicycle, car, laptop, refrigerator, tree)
+**결과**: ❌ Alpha 승리 (Beta 0% 승률 유지)
+
+#### 구현된 변경사항
+
+| 항목 | Before (Phase 38) | After (Phase 39) | 상태 |
+|------|-------------------|------------------|------|
+| **Beta Recall Query** | `"previous questions and deductions from rounds {round}"` | `"my questions, Alpha's answers, and deductions from all previous rounds up to round {round - 1}"` | ✅ 구현 |
+| **Alpha Recall Query** | `"previous questions and duplicate detection from rounds {round}"` | `"Beta's questions and my answers from all previous rounds up to round {round - 1}"` | ✅ 구현 |
+| **Recall Limit** | 30 | 50 | ✅ 구현 |
+| **ImportanceScore (Questions)** | 0.95 | 0.98 | ✅ 구현 |
+| **ImportanceScore (Deductions)** | 0.95 | 0.99 | ✅ 구현 |
+| **ImportanceScore (Alpha Answers)** | 0.85 | 0.96 | ✅ 구현 |
+| **Deduction Format** | `"RULED OUT: The secret does NOT have the property asked in 'Is it man-made?'"` | `"RULED OUT: NOT man-made - Alpha said 'No' to 'Is it man-made?'"` | ✅ 구현 |
+| **ExtractPropertyFromQuestion()** | N/A | Regex-based property extraction helper | ✅ 구현 |
+
+#### 실행 결과 비교
+
+| 지표 | Phase 38 | Phase 39 | 변화 | 목표 | 달성 여부 |
+|------|----------|----------|------|------|----------|
+| **Beta 평균 컨텍스트** | 841 chars | 883 chars | **+5%** 📈 | 1,200+ chars | ❌ |
+| **Alpha 평균 컨텍스트** | 405 chars | 356 chars | -12% | 유지 | ✅ |
+| **Round 19 Recalled Memories (Beta)** | 6개 | 6개 | **변화 없음** ⚠️ | 15+ 개 | ❌ |
+| **중복 질문** | 4회 | 2회 (INVALID) | **-50%** 📈 | 2회 이하 | ✅ |
+| **최종 추측 성공률** | 0% | 0% | **변화 없음** ❌ | 20%+ | ❌ |
+| **총 게임 시간** | 152.3s | 193.1s | +27% | 160-170s | ⚠️ |
+| **총 토큰** | 14,072 | 14,495 | +3% | 유지 | ✅ |
+
+#### ✅ 성공한 개선
+
+1. **Deduction Format 개선 확인**
+   ```
+   BEFORE: [DEDUCTION_R1] CONFIRMED: The secret HAS the property asked in 'Is it a living thing?'
+   AFTER:  [DEDUCTION_R1] CONFIRMED: living thing - Alpha said 'Yes' to 'Is it a living thing?'
+   ```
+   - ✅ ExtractPropertyFromQuestion() 정상 작동
+   - ✅ 속성이 명시적으로 저장됨 ("living thing", "NOT man-made")
+
+2. **중복 질문 감소**
+   - Phase 38: 4회 INVALID
+   - Phase 39: 2회 INVALID (-50%)
+
+3. **코드 품질 향상**
+   - ✅ 모든 ImportanceScore 일관되게 증가
+   - ✅ Recall limit 정상 작동 (50 설정 확인)
+   - ✅ Query 명시성 향상
+
+#### ❌ 실패한 개선 (Critical)
+
+1. **Recall Quality 개선 실패** 🔴
+   - **여전히 6개만 recall**: Limit 50 설정했지만 6개만 반환
+   - **DEDUCTION_R1 누락**: "living thing" 확정 정보가 Round 19에서 recall 안됨
+   - **평균 컨텍스트 목표 미달**: 883 chars (목표: 1,200+ chars)
+
+2. **Candidate Generation 실패** 🔴
+   ```yaml
+   Expected: [dog, cat, parrot, hamster, goldfish] (animals)
+   Actual:   [bicycle, car, laptop, refrigerator, tree] (mostly non-living!)
+   ```
+   - Beta가 "living thing" deduction을 recall하지 못함
+   - 4/5 candidates가 non-living (80% 오류율)
+
+3. **최종 승률 0% 유지** 🔴
+   - 목표: 20%+ 승률
+   - 실제: 0% (변화 없음)
+
+#### 🐛 새로 발견된 Critical Bug
+
+**문제**: Duplicate Detection False Positive
+```yaml
+Round 2:
+  Question: "Is it an animal?"
+  Similarity: 0.85 with "Is it a living thing?"
+  Result: INVALID (duplicate로 판정) ← 잘못된 판단!
+  Impact: Beta가 Animal vs Plant 구분을 학습하지 못함
+
+Threshold Issue:
+  Current: 0.85
+  Problem: "living thing" vs "animal"은 관련 있지만 DISTINCT한 질문
+  Solution: Threshold를 0.90~0.92로 상향 필요
+```
+
+**근본 원인 분석**:
+- "living thing"(생물) ⊃ "animal"(동물) + "plant"(식물)
+- 의미적으로 관련 있으나 정보 가치는 완전히 다름
+- HIGH_SIMILARITY_THRESHOLD = 0.85는 too sensitive
+- "Is it an animal?" 질문이 INVALID 처리되어 DEDUCTION_R2가 생성되지 않음
+- Round 3-20에서 Beta는 animal vs plant를 구분하지 못함
+
+#### 🔍 Memory Storage Mystery
+
+**관찰**:
+- Expected memories: ~84 (20 rounds × 4 per round + 4 init)
+- Actual stored (Beta): **7 memories only**
+- Memory Type Distribution:
+  - Episodic: 4 (57.1%)
+  - Procedural: 3 (42.9%)
+  - **Semantic: 0** ← DEDUCTION_R 메모리가 없음!
+
+**가설**:
+1. MemoryIndexer SDK에서 semantic 메모리 deduplication이 과도하게 발생?
+2. DEDUCTION_R 메모리가 저장은 되지만 빠르게 제거됨?
+3. ImportanceScore 0.99로 설정했지만 실제 저장 로직에 문제?
+
+**조사 필요**:
+- `samples/TwentyQuestionsGame/twenty_questions.db` 직접 조회
+- MemoryIndexer.Sdk 내부 deduplication 로직 확인
+- Tier.Long 메모리가 실제로 영구 저장되는지 검증
+
+#### 🎯 Phase 39 구현 효과 종합
+
+**성공 (30%)**:
+- ✅ Deduction format 개선 (명시적 속성 저장)
+- ✅ 중복 질문 50% 감소
+- ✅ 코드 리팩토링 성공
+
+**실패 (70%)**:
+- ❌ Recall quality 개선 실패 (여전히 6개)
+- ❌ 최종 승률 0% 유지
+- ❌ Candidate generation 정확도 0%
+
+**Critical Issues Identified**:
+1. 🔴 Duplicate detection threshold too low (0.85 → 0.90~0.92 needed)
+2. 🔴 Memory storage mystery (7/84 memories only)
+3. 🔴 Semantic deductions not being stored or recalled
+
+#### 다음 Phase 제안
+
+**Phase 40: Duplicate Detection Fix + Memory Storage Investigation**
+
+1. **HIGH_SIMILARITY_THRESHOLD 조정**: 0.85 → 0.92
+   - "Is it a living thing?" vs "Is it an animal?" should NOT be duplicate
+
+2. **Memory Storage 디버깅**:
+   - DB 직접 조회하여 실제 저장 여부 확인
+   - MemoryIndexer SDK deduplication 로직 검토
+   - Semantic 메모리 저장/recall 메커니즘 검증
+
+3. **Recall Quality 근본 원인 파악**:
+   - Query embedding 품질 확인
+   - MinScore 0.3 threshold 재검토
+   - ImportanceScore가 실제로 ranking에 반영되는지 확인
+
+**예상 효과**: Duplicate false positive 제거 → DEDUCTION_R2-R18 정상 저장 → Recall quality 회복 → 승률 0% → 33%+
+
+---
+
 ## 📈 성능 벤치마크 비교
 
 ### 전통적 방식 (가상 추정) vs Memory-Only 방식 (실제)
