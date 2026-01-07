@@ -154,7 +154,11 @@ public static class ServiceCollectionExtensions
                     httpClientFactory.CreateClient("Ollama"),
                     options,
                     sp.GetRequiredService<ILogger<OllamaCompletionService>>()),
-                // Add other providers as needed (OpenAI, AzureOpenAI, etc.)
+                CompletionProvider.OpenAI or CompletionProvider.AzureOpenAI or CompletionProvider.Custom =>
+                    new OpenAICompletionService(
+                        httpClientFactory.CreateClient("OpenAI"),
+                        options,
+                        sp.GetRequiredService<ILogger<OpenAICompletionService>>()),
                 _ => throw new NotSupportedException($"Completion provider {options.Value.Completion.Provider} is not yet supported")
             };
         });
