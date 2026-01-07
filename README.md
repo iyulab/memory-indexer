@@ -170,6 +170,28 @@ Long-term knowledge is organized by category:
 - **Behavior**: Behavioral patterns
 - **Communication**: Communication style preferences
 
+### Zero-Config High-Performance Storage
+
+Memory Indexer works out-of-the-box with **SQLite zero-config auto-management**:
+
+- **No configuration needed**: Works immediately with sensible defaults
+- **Automatic maintenance**: Background optimization, cleanup, and checkpointing
+- **Smart resource management**: Auto-VACUUM, size limits, old data cleanup
+- **High performance**: WAL mode, optimized indexes, HNSW vector search
+- **Production-ready**: Automatic database health management
+
+**Auto-Management Features:**
+- **Incremental VACUUM**: Automatic space reclamation (default: 100 pages)
+- **Checkpoint timer**: WAL checkpoint every 10 minutes
+- **Maintenance timer**: Full optimization every 30 minutes
+- **Size limits**: Auto-delete oldest memories when > 500MB
+- **Age-based cleanup**: Auto-delete memories > 90 days old
+
+**Alternative: Full Stack**
+- **Qdrant**: Production vector database for large-scale deployments
+- **Neo4j**: Graph-based memory networks (future)
+- **Custom providers**: Implement `IMemoryStore` interface
+
 ## Installation
 
 ### As MCP Server
@@ -241,6 +263,20 @@ services.AddMemoryIndexer(options =>
       "Model": "bge-m3",
       "Dimensions": 1024
     },
+    "Storage": {
+      "Sqlite": {
+        "UseWalMode": true,
+        "EnableFullTextSearch": true,
+        "CacheSizeKb": 2000,
+        "AutoVacuum": "Incremental",
+        "EnableAutoMaintenance": true,
+        "MaintenanceIntervalMinutes": 30,
+        "CheckpointIntervalMinutes": 10,
+        "MaxDatabaseSizeMb": 500,
+        "AutoCleanupOldMemoriesDays": 90,
+        "IncrementalVacuumPages": 100
+      }
+    },
     "VCM": {
       "WorkingMemory": {
         "Capacity": 7,
@@ -263,7 +299,18 @@ services.AddMemoryIndexer(options =>
     }
   }
 }
-```
+
+**SQLite Auto-Maintenance Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `AutoVacuum` | `Incremental` | Auto-VACUUM mode: None, Full, Incremental |
+| `EnableAutoMaintenance` | `true` | Enable background maintenance |
+| `MaintenanceIntervalMinutes` | `30` | Full optimization interval |
+| `CheckpointIntervalMinutes` | `10` | WAL checkpoint interval |
+| `MaxDatabaseSizeMb` | `500` | Delete old memories when exceeded |
+| `AutoCleanupOldMemoriesDays` | `90` | Delete memories older than N days |
+| `IncrementalVacuumPages` | `100` | Pages to free per vacuum |
 
 ## Project Structure
 

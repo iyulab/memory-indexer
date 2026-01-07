@@ -21,6 +21,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private SqliteConnection? _connection;
     private bool _initialized;
+    private Timer? _maintenanceTimer;
+    private Timer? _checkpointTimer;
 
     private const string TableName = "memories";
     private const string VectorTableName = "memory_vectors";
@@ -68,8 +70,15 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             // Create schema
             await CreateSchemaAsync(cancellationToken);
 
+            // Start automatic maintenance timers if enabled
+            if (_options.EnableAutoMaintenance)
+            {
+                StartAutoMaintenance();
+            }
+
             _initialized = true;
-            _logger.LogInformation("Initialized SQLite memory store with {Dimensions} dimensions", _vectorDimensions);
+            _logger.LogInformation("Initialized SQLite memory store with {Dimensions} dimensions (AutoMaintenance={Enabled})",
+                _vectorDimensions, _options.EnableAutoMaintenance);
         }
         finally
         {
@@ -83,6 +92,16 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         // Set busy timeout
         await ExecuteNonQueryAsync($"PRAGMA busy_timeout = {_options.BusyTimeoutMs};", cancellationToken);
+
+        // Configure auto_vacuum (must be set before any tables are created)
+        var autoVacuumValue = _options.AutoVacuum switch
+        {
+            SqliteAutoVacuumMode.None => 0,
+            SqliteAutoVacuumMode.Full => 1,
+            SqliteAutoVacuumMode.Incremental => 2,
+            _ => 2
+        };
+        await ExecuteNonQueryAsync($"PRAGMA auto_vacuum = {autoVacuumValue};", cancellationToken);
 
         // Enable WAL mode for better concurrency
         if (_options.UseWalMode)
@@ -100,8 +119,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         await ExecuteNonQueryAsync("PRAGMA synchronous = NORMAL;", cancellationToken);
         await ExecuteNonQueryAsync("PRAGMA temp_store = MEMORY;", cancellationToken);
 
-        _logger.LogDebug("SQLite configured with WAL={WalMode}, CacheSize={CacheKb}KB",
-            _options.UseWalMode, _options.CacheSizeKb);
+        _logger.LogDebug("SQLite configured with WAL={WalMode}, CacheSize={CacheKb}KB, AutoVacuum={AutoVacuum}",
+            _options.UseWalMode, _options.CacheSizeKb, _options.AutoVacuum);
     }
 
     private async Task CreateSchemaAsync(CancellationToken cancellationToken)
@@ -958,8 +977,172 @@ ORDER BY created_at DESC";
 
     #endregion
 
+    #region Auto-Maintenance
+
+    private void StartAutoMaintenance()
+    {
+        // Start checkpoint timer (WAL mode only)
+        if (_options.UseWalMode && _options.CheckpointIntervalMinutes > 0)
+        {
+            var checkpointInterval = TimeSpan.FromMinutes(_options.CheckpointIntervalMinutes);
+            _checkpointTimer = new Timer(
+                async _ => await PerformCheckpointAsync(),
+                null,
+                checkpointInterval,
+                checkpointInterval);
+            _logger.LogInformation("Started WAL checkpoint timer (interval: {Minutes}min)", _options.CheckpointIntervalMinutes);
+        }
+
+        // Start maintenance timer (optimize, cleanup, vacuum)
+        if (_options.MaintenanceIntervalMinutes > 0)
+        {
+            var maintenanceInterval = TimeSpan.FromMinutes(_options.MaintenanceIntervalMinutes);
+            _maintenanceTimer = new Timer(
+                async _ => await PerformMaintenanceAsync(),
+                null,
+                maintenanceInterval,
+                maintenanceInterval);
+            _logger.LogInformation("Started auto-maintenance timer (interval: {Minutes}min)", _options.MaintenanceIntervalMinutes);
+        }
+    }
+
+    private void StopAutoMaintenance()
+    {
+        _checkpointTimer?.Dispose();
+        _checkpointTimer = null;
+
+        _maintenanceTimer?.Dispose();
+        _maintenanceTimer = null;
+
+        _logger.LogInformation("Stopped auto-maintenance timers");
+    }
+
+    private async Task PerformCheckpointAsync()
+    {
+        try
+        {
+            await CheckpointAsync();
+            _logger.LogDebug("Auto checkpoint completed");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Auto checkpoint failed");
+        }
+    }
+
+    private async Task PerformMaintenanceAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Starting auto-maintenance");
+
+            // 1. Check database size
+            var dbSizeMb = await GetDatabaseSizeMbAsync();
+            _logger.LogDebug("Database size: {SizeMb}MB", dbSizeMb);
+
+            // 2. Cleanup old memories if configured
+            if (_options.AutoCleanupOldMemoriesDays > 0)
+            {
+                var deleted = await CleanupOldMemoriesAsync(CancellationToken.None);
+                if (deleted > 0)
+                {
+                    _logger.LogInformation("Deleted {Count} old memories (>{Days} days)", deleted, _options.AutoCleanupOldMemoriesDays);
+                }
+            }
+
+            // 3. Cleanup by size limit if configured
+            if (_options.MaxDatabaseSizeMb > 0 && dbSizeMb > _options.MaxDatabaseSizeMb)
+            {
+                var deleted = await CleanupOldestMemoriesAsync(1000, CancellationToken.None);
+                _logger.LogInformation("Database size limit exceeded ({CurrentMb}MB > {MaxMb}MB), deleted {Count} oldest memories",
+                    dbSizeMb, _options.MaxDatabaseSizeMb, deleted);
+            }
+
+            // 4. Incremental vacuum (if enabled)
+            if (_options.AutoVacuum == SqliteAutoVacuumMode.Incremental)
+            {
+                await PerformIncrementalVacuumAsync(CancellationToken.None);
+            }
+
+            // 5. Optimize database
+            await OptimizeAsync();
+
+            _logger.LogInformation("Auto-maintenance completed");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Auto-maintenance failed");
+        }
+    }
+
+    private async Task<long> GetDatabaseSizeMbAsync()
+    {
+        try
+        {
+            var cmd = _connection!.CreateCommand();
+            cmd.CommandText = "SELECT (page_count * page_size) / 1048576.0 FROM pragma_page_count(), pragma_page_size()";
+            var result = await cmd.ExecuteScalarAsync();
+            return result != null ? Convert.ToInt64(result) : 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private async Task<int> CleanupOldMemoriesAsync(CancellationToken cancellationToken)
+    {
+        var cutoffDate = DateTime.UtcNow.AddDays(-_options.AutoCleanupOldMemoriesDays);
+        var sql = $@"
+            DELETE FROM {TableName}
+            WHERE created_at < @cutoff_date
+            AND is_deleted = 0";
+
+        var cmd = _connection!.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.Parameters.AddWithValue("@cutoff_date", cutoffDate.ToString("O"));
+
+        return await cmd.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private async Task<int> CleanupOldestMemoriesAsync(int count, CancellationToken cancellationToken)
+    {
+        var sql = $@"
+            DELETE FROM {TableName}
+            WHERE id IN (
+                SELECT id FROM {TableName}
+                WHERE is_deleted = 0
+                ORDER BY created_at ASC
+                LIMIT @count
+            )";
+
+        var cmd = _connection!.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.Parameters.AddWithValue("@count", count);
+
+        return await cmd.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private async Task PerformIncrementalVacuumAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ExecuteNonQueryAsync($"PRAGMA incremental_vacuum({_options.IncrementalVacuumPages});", cancellationToken);
+            _logger.LogDebug("Incremental vacuum completed ({Pages} pages)", _options.IncrementalVacuumPages);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Incremental vacuum failed");
+        }
+    }
+
+    #endregion
+
     public async ValueTask DisposeAsync()
     {
+        // Stop maintenance timers
+        StopAutoMaintenance();
+
         if (_connection != null)
         {
             await _connection.CloseAsync();

@@ -257,6 +257,67 @@ public sealed class SqliteOptions
     /// Higher values = better recall, slower search.
     /// </summary>
     public int HnswEfSearch { get; set; } = 64;
+
+    // ===== Zero-Config Auto-Management Settings =====
+
+    /// <summary>
+    /// Auto-VACUUM mode. Default: INCREMENTAL for automatic space reclamation.
+    /// </summary>
+    public SqliteAutoVacuumMode AutoVacuum { get; set; } = SqliteAutoVacuumMode.Incremental;
+
+    /// <summary>
+    /// Enable automatic background maintenance (optimize, checkpoint, cleanup).
+    /// </summary>
+    public bool EnableAutoMaintenance { get; set; } = true;
+
+    /// <summary>
+    /// Interval for automatic maintenance tasks (minutes). Default: 30 minutes.
+    /// </summary>
+    public int MaintenanceIntervalMinutes { get; set; } = 30;
+
+    /// <summary>
+    /// Maximum database size in MB. When exceeded, old memories are automatically deleted.
+    /// Set to 0 for unlimited. Default: 500MB.
+    /// </summary>
+    public long MaxDatabaseSizeMb { get; set; } = 500;
+
+    /// <summary>
+    /// Automatically delete memories older than this many days.
+    /// Set to 0 to disable. Default: 90 days.
+    /// </summary>
+    public int AutoCleanupOldMemoriesDays { get; set; } = 90;
+
+    /// <summary>
+    /// WAL checkpoint interval (minutes). Default: 10 minutes.
+    /// </summary>
+    public int CheckpointIntervalMinutes { get; set; } = 10;
+
+    /// <summary>
+    /// Number of pages to free during incremental vacuum.
+    /// Higher = faster cleanup, more I/O. Default: 100 pages.
+    /// </summary>
+    public int IncrementalVacuumPages { get; set; } = 100;
+}
+
+/// <summary>
+/// SQLite auto-vacuum modes.
+/// </summary>
+public enum SqliteAutoVacuumMode
+{
+    /// <summary>
+    /// No automatic vacuum. Requires manual VACUUM command.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
+    /// Full automatic vacuum on every transaction (slower writes).
+    /// </summary>
+    Full = 1,
+
+    /// <summary>
+    /// Incremental vacuum (best for zero-config). Space reclaimed gradually.
+    /// </summary>
+    Incremental = 2
 }
 
 /// <summary>
