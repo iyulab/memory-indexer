@@ -18,6 +18,7 @@ public class MemoryService(
     IDeduplicationService deduplicationService,
     IMemoryPressureMonitor pressureMonitor,
     IMemoryGrowthMonitor growthMonitor,
+    IMemoryConflictResolver? conflictResolver,
     IOptions<MemoryIndexerOptions> options)
 {
     /// <summary>
@@ -195,7 +196,7 @@ public class MemoryService(
             metadata["Topic"] = topic;
         }
 
-        // Create memory unit
+        // Create memory unit for conflict resolution
         var memory = new MemoryUnit
         {
             UserId = userId,
@@ -207,6 +208,125 @@ public class MemoryService(
             ContentHash = ComputeContentHash(content),
             Metadata = metadata
         };
+
+        // Phase 26: Conflict resolution (semantic conflict detection)
+        if (conflictResolver != null)
+        {
+            // Get similar memories for conflict analysis (use vector search)
+            var searchOptions = new MemorySearchOptions
+            {
+                UserId = userId,
+                Limit = 20, // Check last 20 memories for conflicts
+                MinScore = 0.65f // Lower threshold than deduplication
+            };
+
+            var similarResults = await memoryStore.SearchAsync(embedding, searchOptions, cancellationToken);
+            var similarMemories = similarResults.Select(r => r.Memory).ToList();
+
+            if (similarMemories.Count > 0)
+            {
+                var resolution = await conflictResolver.ResolveAsync(memory, similarMemories, cancellationToken);
+
+                // Handle conflict resolution actions
+                switch (resolution.Action)
+                {
+                    case MemoryAction.NoOp:
+                        // Skip storing, conflict detected - existing memory is sufficient
+                        metadata["ConflictAction"] = "NoOp";
+                        metadata["ConflictReason"] = resolution.Reasoning ?? "Existing memory is sufficient";
+                        return similarMemories[0]; // Return most similar existing memory
+
+                    case MemoryAction.Replace:
+                        // Replace existing memory with new content
+                        if (!string.IsNullOrEmpty(resolution.TargetMemoryId))
+                        {
+                            var targetId = Guid.Parse(resolution.TargetMemoryId);
+                            var existing = await memoryStore.GetByIdAsync(targetId, cancellationToken);
+                            if (existing != null)
+                            {
+                                existing.Content = content;
+                                existing.Embedding = embedding;
+                                existing.ContentHash = ComputeContentHash(content);
+                                existing.ImportanceScore = importanceScore;
+                                existing.RecordAccess();
+                                existing.MarkUpdated();
+                                existing.Metadata ??= [];
+                                existing.Metadata["ConflictAction"] = "Replace";
+                                existing.Metadata["ConflictType"] = resolution.ConflictType.ToString();
+                                existing.Metadata["ConflictReason"] = resolution.Reasoning ?? "Newer content supersedes";
+                                await memoryStore.UpdateAsync(existing, cancellationToken);
+                                return existing;
+                            }
+                        }
+                        break;
+
+                    case MemoryAction.Merge:
+                        // Merge new content with existing memory
+                        if (!string.IsNullOrEmpty(resolution.TargetMemoryId))
+                        {
+                            var targetId = Guid.Parse(resolution.TargetMemoryId);
+                            var existing = await memoryStore.GetByIdAsync(targetId, cancellationToken);
+                            if (existing != null)
+                            {
+                                // Use UpdatedContent if provided, otherwise append
+                                existing.Content = resolution.UpdatedContent ?? $"{existing.Content}\n\n[MERGED] {content}";
+                                existing.Embedding = await embeddingService.GenerateEmbeddingAsync(existing.Content, cancellationToken);
+                                existing.ContentHash = ComputeContentHash(existing.Content);
+                                existing.RecordAccess();
+                                existing.MarkUpdated();
+                                existing.Metadata ??= [];
+                                existing.Metadata["ConflictAction"] = "Merge";
+                                existing.Metadata["ConflictType"] = resolution.ConflictType.ToString();
+                                existing.Metadata["ConflictReason"] = resolution.Reasoning ?? "Content merged";
+                                await memoryStore.UpdateAsync(existing, cancellationToken);
+                                return existing;
+                            }
+                        }
+                        break;
+
+                    case MemoryAction.Archive:
+                        // Archive old memory, add new with temporal marker
+                        if (!string.IsNullOrEmpty(resolution.TargetMemoryId))
+                        {
+                            var targetId = Guid.Parse(resolution.TargetMemoryId);
+                            var existing = await memoryStore.GetByIdAsync(targetId, cancellationToken);
+                            if (existing != null)
+                            {
+                                // Mark existing as archived
+                                existing.Metadata ??= [];
+                                existing.Metadata["Archived"] = "true";
+                                existing.Metadata["ArchivedReason"] = "Temporal evolution";
+                                existing.Metadata["ValidUntil"] = DateTime.UtcNow.ToString("O");
+                                await memoryStore.UpdateAsync(existing, cancellationToken);
+
+                                // Add new memory with temporal marker
+                                metadata["ConflictAction"] = "Archive";
+                                metadata["ConflictType"] = resolution.ConflictType.ToString();
+                                metadata["ConflictReason"] = resolution.Reasoning ?? "Temporal evolution";
+                                metadata["ReplacedMemoryId"] = targetId.ToString();
+                            }
+                        }
+                        break;
+
+                    case MemoryAction.MarkConflict:
+                        // Store both, mark conflict for review
+                        metadata["ConflictAction"] = "MarkConflict";
+                        metadata["ConflictType"] = resolution.ConflictType.ToString();
+                        metadata["ConflictReason"] = resolution.Reasoning ?? "Unresolved conflict";
+                        metadata["ConflictConfidence"] = resolution.Confidence.ToString("F2");
+                        if (!string.IsNullOrEmpty(resolution.TargetMemoryId))
+                        {
+                            metadata["ConflictingMemoryId"] = resolution.TargetMemoryId;
+                        }
+                        break;
+
+                    case MemoryAction.Add:
+                    default:
+                        // No conflict detected, continue with normal storage
+                        break;
+                }
+            }
+        }
 
         var result = await memoryStore.StoreAsync(memory, cancellationToken);
 

@@ -65,6 +65,7 @@ public sealed class MemoryServicePhase221Tests
             deduplicationService,
             pressureMonitor,
             _growthMonitor,
+            null, // IMemoryConflictResolver (optional)
             optionsWrapper);
     }
 
