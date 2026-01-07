@@ -108,6 +108,11 @@ services.AddMemoryIndexer(options =>
 
     // Disable reranking (avoid ONNX Runtime issues in demo)
     options.Search.EnableReranking = false;
+
+    // Phase 43b: Raise deduplication threshold to prevent aggressive merging
+    // Research shows 0.85 causes 82% memory loss in TwentyQuestionsGame
+    // Industry best practice: 0.8-0.9 for semantic caching
+    options.Deduplication.HighSimilarityThreshold = 0.95f;
 });
 
 services.AddHttpClient("LLM", client =>

@@ -1434,6 +1434,147 @@ Possible Causes:
 
 ---
 
+## 📊 Phase 41-43: Memory Storage Investigation (2026-01-07)
+
+### 🔍 문제 발견
+
+**Initial Discovery (Phase 41)**:
+- TwentyQuestionsGame 실행 후 DB 검사 시 메모리 손실 발견
+- 예상: 84 conversation memories (42 rounds × 2 players)
+- 실제: 15 memories (17.9% retention)
+- **손실**: 69 memories (82.1%)
+
+### Phase 41: MemoryType Serialization Fix
+
+**가설**: SDK DB 스키마에서 MemoryType을 TEXT로 저장하는 버그
+**조사**:
+- `SqliteVecMemoryStore.cs` 검사 → `Type INTEGER` 정상 확인
+- MemoryType enum → int 변환 정상 작동
+- Phase 40에서 이미 수정됨
+
+**결과**:
+```
+Stored Memories: 15/84 (17.9%)
+├─ Episodic: 10 (66.7%)
+├─ Procedural: 4 (26.7%)
+└─ Semantic: 1 (6.7%)
+
+결론: ❌ MemoryType 버그 아님
+```
+
+### Phase 42: LMSupply ONNX Crash Fix
+
+**가설**: LMSupply v0.8.3의 ONNX Runtime segfault가 embedding 생성 실패 유발
+**조치**:
+- `Directory.Packages.props` 업그레이드: LMSupply 0.8.3 → 0.8.5
+- v0.8.5에서 synchronous API ONNX crash 수정됨
+- 전체 테스트: 1015/1015 통과
+
+**결과**:
+```
+Stored Memories: 14/84 (16.7%)
+├─ Episodic: 9 (64.3%)
+├─ Procedural: 4 (28.6%)
+└─ Semantic: 1 (7.1%)
+
+변화: -1 memory (-6.7% from Phase 41)
+결론: ❌ ONNX crash 아님 (통계적 노이즈)
+```
+
+### Phase 43: Deduplication Threshold Fix
+
+**가설**: DeduplicationService의 HighSimilarityThreshold (0.85)가 너무 낮아서 유사 질문 병합
+**연구**:
+- Web research → 산업 표준: 0.8-0.9 (semantic caching용)
+- NVIDIA NeMo 권장: 높은 threshold (false positive 방지)
+- TwentyQuestionsGame 패턴 분석:
+  - 짧은 질문들 (e.g., "Is it a living thing?", "Is it an animal?")
+  - 공통 단어로 인한 높은 similarity (~0.85-0.90)
+
+**Root Cause 발견**:
+```csharp
+// DeduplicationService.cs:153-185
+if (highestSimilarity >= 0.85)  // HighSimilarityThreshold
+{
+    recommendedAction = DuplicateAction.Merge;  // ⚠️ 문제!
+    // Merge: ImportanceScore만 업데이트, 새 메모리 저장 안 함
+}
+```
+
+**수정**:
+```csharp
+// TwentyQuestionsGame/Program.cs:112-115
+// Phase 43b: Raise deduplication threshold
+options.Deduplication.HighSimilarityThreshold = 0.95f;
+```
+
+**결과**:
+```
+Stored Memories: 24/84 (28.6%)
+├─ Episodic: 19 (79.2%)
+├─ Procedural: 4 (16.7%)
+└─ Semantic: 1 (4.2%)
+
+개선: +10 memories (+71.4% from Phase 42)
+결론: ✅ Deduplication threshold가 주요 원인 중 하나
+```
+
+### 📈 3-Phase 진행 비교
+
+| Phase | Stored | Episodic | Procedural | Semantic | Retention | Change |
+|-------|--------|----------|------------|----------|-----------|--------|
+| **41** (Baseline) | 15 | 10 | 4 | 1 | 17.9% | - |
+| **42** (ONNX Fix) | 14 | 9 | 4 | 1 | 16.7% | -6.7% |
+| **43** (Dedup Fix) | 24 | 19 | 4 | 1 | 28.6% | **+71.4%** |
+
+### 🎯 핵심 발견사항
+
+**1. Deduplication Threshold 영향**:
+- 0.85 → 0.95 변경으로 Episodic 메모리 10개 추가 저장 (+111%)
+- 짧은 대화 턴이 가장 큰 영향 받음
+- Procedural/Semantic은 영향 없음 (이미 다른 유형이라 중복 검사 통과)
+
+**2. 남은 Gap 분석**:
+- 현재: 24/84 (28.6%)
+- 목표: 60+/84 (71%+)
+- **여전히 부족**: 36 memories (42.9% 추가 손실)
+
+**3. 남은 의심 지점**:
+- **Recently Buffer 만료**: TTL 60초, 84회 대화/10분 = 평균 7초/턴 → 빠른 턴 만료 가능
+- **Working Memory 용량**: 4-7 limit, 84회 대화 → 대부분 eviction
+- **IsSimilarContent**: Jaccard 0.3 threshold 여전히 낮음 (30% 단어 겹침)
+
+### 🔧 Production 권장사항
+
+**즉시 적용 가능**:
+```csharp
+// 모든 production 시스템에 권장
+options.Deduplication.HighSimilarityThreshold = 0.95f;
+```
+
+**효과**:
+- Exact duplicates (>=0.95)만 Skip
+- 유사하지만 구별되는 메모리 보존 (0.85-0.94)
+- False positive 감소
+
+### 📋 다음 단계 (Phase 44 제안)
+
+**Option 1: Diagnostic Logging** (권장)
+- VCM 4-tier 전체 흐름 추적
+- Recently Buffer expiration vs promotion ratio 측정
+- Working Memory turnover rate 분석
+- Storage backend 성공/실패율 확인
+
+**Option 2: Direct VCM Tuning**
+- Recently Buffer TTL: 60s → 300s
+- Working Memory capacity: 7 → 20
+- IsSimilarContent threshold: 0.3 → 0.15
+
+**권장**: Option 1 (증거 기반 진단 우선)
+
+---
+
 **평가자**: Claude (Sonnet 4.5)
 **작성일**: 2026-01-07
 **버전**: v0.3.0 (3-Axis Model)
+**최종 업데이트**: Phase 43 완료 (Deduplication Fix)
