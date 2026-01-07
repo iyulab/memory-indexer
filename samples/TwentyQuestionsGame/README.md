@@ -53,27 +53,46 @@ Round 2:
 
 ## 메모리 격리
 
-Alpha와 Beta는 완전히 분리된 메모리 공간을 사용합니다:
+Alpha와 Beta는 완전히 분리된 메모리 공간을 사용합니다 (3-Axis Model: Type × Scope × Tier):
 
-| Agent | User ID | 저장하는 기억 |
-|-------|---------|---------------|
-| Alpha | `alpha_quizmaster` | 비밀 답, 게임 규칙, Q&A 기록 |
-| Beta | `beta_guesser` | 게임 규칙, 전략, Q&A 기록, 추론 |
+| Agent | User ID | Session ID | 저장하는 기억 |
+|-------|---------|------------|---------------|
+| Alpha | `alpha_quizmaster` | `game_session_alpha` | 비밀 답, 게임 규칙, Q&A 기록 |
+| Beta | `beta_guesser` | `game_session_beta` | 게임 규칙, 전략, Q&A 기록, 추론 |
+
+각 메모리는 다음과 같이 분류됩니다:
+- **Type**: Episodic (Q&A 기록), Semantic (게임 규칙), Procedural (전략)
+- **Scope**: Session (현재 게임에만 유효)
+- **Tier**: Long (장기 기억, 게임 종료까지 유지)
 
 ## 주요 기능 시연
 
 ### 1. 중복 질문 감지
 Alpha는 벡터 유사도로 중복 질문을 탐지합니다:
 ```csharp
-var duplicateCheck = await memoryService.RecallAsync(ALPHA_USER_ID, betaQuestion, limit: 5);
+var duplicateCheck = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+{
+    UserId = ALPHA_USER_ID,
+    SessionId = ALPHA_SESSION_ID,
+    Query = betaQuestion,
+    Limit = 5
+});
 var isDuplicate = duplicateCheck.Any(m => m.Score > 0.85f);
 ```
 
 ### 2. 추론 저장
-Beta는 각 Q&A에서 추론을 저장합니다:
-```
-[DEDUCTION_R3] CONFIRMED: The secret HAS the property "alive"
-[DEDUCTION_R4] RULED OUT: The secret does NOT have the property "bigger than a car"
+Beta는 각 Q&A에서 추론을 저장합니다 (Type=Semantic, Scope=Session, Tier=Long):
+```csharp
+await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    UserId = BETA_USER_ID,
+    SessionId = BETA_SESSION_ID,
+    Content = "[DEDUCTION_R3] CONFIRMED: The secret HAS the property \"alive\"",
+    Type = MemoryType.Semantic,
+    Scope = Scope.Session,
+    Tier = Tier.Long,
+    ImportanceScore = 0.9f
+});
 ```
 
 ### 3. 라운드 추적

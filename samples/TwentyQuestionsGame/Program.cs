@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
-using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,19 +12,26 @@ using Microsoft.Extensions.DependencyInjection;
 // ============================================================================
 // Twenty Questions Game - AI vs AI Demo
 // ============================================================================
-// 이 데모는 memory-indexer의 핵심 기능을 증명합니다:
+// This demo proves the core capability of memory-indexer using the 3-Axis Model:
 //
-// 각 AI는 상대방의 마지막 응답 1개만 받습니다.
-// 이전 대화 히스토리는 전혀 전달되지 않습니다.
-// 오직 memory-indexer에서 recall한 기억만으로 게임을 진행합니다.
+// Each AI receives ONLY the opponent's last response (1 message).
+// NO conversation history is passed.
+// Context comes 100% from IMemoryPrimitives recall (Expert API).
 //
-// Alpha: "Yes" 응답 → Beta는 "Yes"만 받음 (히스토리 없음)
-// Beta: 질문 → Alpha는 그 질문만 받음 (히스토리 없음)
+// Alpha: "Yes" → Beta receives "Yes" only (no history)
+// Beta: Question → Alpha receives question only (no history)
+//
+// ============================================================================
+// API USED: IMemoryPrimitives (Expert API, Level 3)
+// - Full control over Type × Scope × Tier
+// - Explicit Importance and Scope management
+// - Advanced filtering in RetrieveAsync
 // ============================================================================
 
 Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
 Console.WriteLine("║          Twenty Questions Game - Memory Demo                  ║");
 Console.WriteLine("║          AI vs AI: 상대 응답 1개만 + Memory Recall            ║");
+Console.WriteLine("║          API: IMemoryPrimitives (3-Axis Model)                ║");
 Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
 Console.WriteLine();
 
@@ -43,8 +49,7 @@ foreach (var path in envPaths.Where(File.Exists))
 
 // Configuration
 var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-// GPT-5 series: gpt-5-nano (fastest), gpt-5-mini (balanced), gpt-5.2 (complex)
-var openAiModel = Environment.GetEnvironmentVariable("OPENAI_CHAT_MODEL") ?? "gpt-5-nano";
+var openAiModel = Environment.GetEnvironmentVariable("OPENAI_CHAT_MODEL") ?? "gpt-4o-mini";
 
 if (string.IsNullOrWhiteSpace(openAiApiKey))
 {
@@ -55,7 +60,6 @@ if (string.IsNullOrWhiteSpace(openAiApiKey))
 }
 
 // Memory log mode: "full" or "summary"
-// If not set, defaults to Debug=full, Release=summary
 var memoryLogMode = Environment.GetEnvironmentVariable("MEMORY_LOG_MODE");
 if (string.IsNullOrWhiteSpace(memoryLogMode))
 {
@@ -70,6 +74,7 @@ var isFullMemoryLog = memoryLogMode.Equals("full", StringComparison.OrdinalIgnor
 Console.WriteLine($"[CONFIG] LLM: OpenAI {openAiModel}");
 Console.WriteLine($"[CONFIG] Embedding: OpenAI text-embedding-3-small");
 Console.WriteLine($"[CONFIG] Memory Log: {(isFullMemoryLog ? "Full" : "Summary")} (set MEMORY_LOG_MODE=full|summary)");
+Console.WriteLine($"[CONFIG] API: IMemoryPrimitives (Expert API with 3-Axis control)");
 Console.WriteLine();
 
 // Setup services with proper configuration
@@ -93,11 +98,11 @@ services.AddMemoryIndexer(options =>
     options.Embedding.Dimensions = 1536;
     options.Storage.VectorDimensions = 1536;
 
-    // Use OpenAI for knowledge extraction (Phase 25.1)
+    // Use OpenAI for knowledge extraction
     options.Completion.Provider = CompletionProvider.OpenAI;
     options.Completion.ApiKey = openAiApiKey;
-    options.Completion.Model = openAiModel; // Same as game LLM
-    options.Completion.DefaultTemperature = 0.1f; // Deterministic extraction
+    options.Completion.Model = openAiModel;
+    options.Completion.DefaultTemperature = 0.1f;
     options.Completion.DefaultMaxTokens = 300;
 });
 
@@ -105,22 +110,21 @@ services.AddHttpClient("LLM", client =>
 {
     client.BaseAddress = new Uri("https://api.openai.com/v1/");
     client.DefaultRequestHeaders.Add("Authorization", $"Bearer {openAiApiKey}");
-    // Increased timeout to handle longer contexts in later rounds
     client.Timeout = TimeSpan.FromSeconds(120);
 });
 
 var serviceProvider = services.BuildServiceProvider();
-var memoryService = serviceProvider.GetRequiredService<MemoryService>();
+var memoryPrimitives = serviceProvider.GetRequiredService<IMemoryPrimitives>();
 var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
 var knowledgeExtractor = serviceProvider.GetRequiredService<IKnowledgeExtractor>();
 
 // Game configuration
 const string ALPHA_USER_ID = "alpha_quizmaster";
+const string ALPHA_SESSION_ID = "game_session_alpha";
 const string BETA_USER_ID = "beta_guesser";
+const string BETA_SESSION_ID = "game_session_beta";
 const int MAX_ROUNDS = 20;
-// Note: Score = (vector_similarity + combined_score) / 2, can exceed 1.0
-// Set high threshold to only catch near-identical questions
-const float HIGH_SIMILARITY_THRESHOLD = 1.75f;
+const float HIGH_SIMILARITY_THRESHOLD = 0.85f;
 
 // Metrics tracking
 var metrics = new GameMetrics();
@@ -147,65 +151,121 @@ Console.WriteLine();
 
 // Clean previous game memories
 Console.WriteLine("[INIT] Clearing previous game memories...");
-var oldAlpha = await memoryService.GetAllAsync(ALPHA_USER_ID);
-var oldBeta = await memoryService.GetAllAsync(BETA_USER_ID);
-foreach (var m in oldAlpha) await memoryService.DeleteAsync(m.Id, hardDelete: true);
-foreach (var m in oldBeta) await memoryService.DeleteAsync(m.Id, hardDelete: true);
+var oldAlpha = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+{
+    UserId = ALPHA_USER_ID,
+    Query = "*",
+    Limit = 10000,
+    MinScore = 0.0f
+});
+var oldBeta = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+{
+    UserId = BETA_USER_ID,
+    Query = "*",
+    Limit = 10000,
+    MinScore = 0.0f
+});
+foreach (var m in oldAlpha)
+{
+    await memoryPrimitives.DeleteAsync(new DeleteRequest
+    {
+        MemoryId = m.Memory.Id,
+        HardDelete = true
+    });
+}
+foreach (var m in oldBeta)
+{
+    await memoryPrimitives.DeleteAsync(new DeleteRequest
+    {
+        MemoryId = m.Memory.Id,
+        HardDelete = true
+    });
+}
 
 // Initialize Alpha's memory with the secret
-await memoryService.StoreAsync(
-    ALPHA_USER_ID,
-    $"[GAME_SECRET] My secret answer is: {secret}. I must not reveal this directly.",
-    MemoryType.Semantic,
-    importance: 1.0f);
+await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    UserId = ALPHA_USER_ID,
+    SessionId = ALPHA_SESSION_ID,
+    Content = $"[GAME_SECRET] My secret answer is: {secret}. I must not reveal this directly.",
+    Type = MemoryType.Semantic,
+    Scope = Scope.Session,
+    Tier = Tier.Long,
+    ImportanceScore = 1.0f
+});
 
-await memoryService.StoreAsync(
-    ALPHA_USER_ID,
-    "[GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. " +
-    "I only answer 'Yes', 'No', or 'Maybe' to questions. " +
-    "I track round numbers. I detect duplicate or invalid questions.",
-    MemoryType.Procedural,
-    importance: 1.0f);
+await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    UserId = ALPHA_USER_ID,
+    SessionId = ALPHA_SESSION_ID,
+    Content = "[GAME_RULES] I am Alpha, the QuizMaster playing 20 Questions. " +
+              "I only answer 'Yes', 'No', or 'Maybe' to questions. " +
+              "I track round numbers. I detect duplicate or invalid questions.",
+    Type = MemoryType.Procedural,
+    Scope = Scope.Session,
+    Tier = Tier.Long,
+    ImportanceScore = 1.0f
+});
 
 // Initialize Beta's memory with game rules and strategy phases
-await memoryService.StoreAsync(
-    BETA_USER_ID,
-    @"[GAME_RULES] I am Beta, the Guesser in 20 Questions.
+await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    UserId = BETA_USER_ID,
+    SessionId = BETA_SESSION_ID,
+    Content = @"[GAME_RULES] I am Beta, the Guesser in 20 Questions.
 Goal: Identify Alpha's secret within 20 yes/no questions.
 Strategy: Use binary search to halve possibilities each round.
 Round 20: MUST make final guess regardless of certainty.",
-    MemoryType.Procedural,
-    importance: 1.0f);
+    Type = MemoryType.Procedural,
+    Scope = Scope.Session,
+    Tier = Tier.Long,
+    ImportanceScore = 1.0f
+});
 
-await memoryService.StoreAsync(
-    BETA_USER_ID,
-    @"[STRATEGY_PHASE1] Rounds 1-3: Establish category
+await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    UserId = BETA_USER_ID,
+    SessionId = BETA_SESSION_ID,
+    Content = @"[STRATEGY_PHASE1] Rounds 1-3: Establish category
 - Alive vs non-living
 - Natural vs man-made
 - Physical object vs place/concept
 These questions split the entire possibility space.",
-    MemoryType.Procedural,
-    importance: 0.95f);
+    Type = MemoryType.Procedural,
+    Scope = Scope.Session,
+    Tier = Tier.Long,
+    ImportanceScore = 0.95f
+});
 
-await memoryService.StoreAsync(
-    BETA_USER_ID,
-    @"[STRATEGY_PHASE2] Rounds 4-8: Narrow domain
+await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    UserId = BETA_USER_ID,
+    SessionId = BETA_SESSION_ID,
+    Content = @"[STRATEGY_PHASE2] Rounds 4-8: Narrow domain
 - Size comparisons (bigger than X?)
 - Location (indoors/outdoors, specific regions)
 - Common usage patterns
 Each question should eliminate ~50% of remaining options.",
-    MemoryType.Procedural,
-    importance: 0.9f);
+    Type = MemoryType.Procedural,
+    Scope = Scope.Session,
+    Tier = Tier.Long,
+    ImportanceScore = 0.9f
+});
 
-await memoryService.StoreAsync(
-    BETA_USER_ID,
-    @"[DEDUCTION_TEMPLATE] After each answer, I record:
+await memoryPrimitives.EncodeAsync(new EncodeRequest
+{
+    UserId = BETA_USER_ID,
+    SessionId = BETA_SESSION_ID,
+    Content = @"[DEDUCTION_TEMPLATE] After each answer, I record:
 - Yes → CONFIRMED: secret HAS this property
 - No → RULED OUT: secret does NOT have this property
 - Maybe → UNCERTAIN: need different angle
 I must check these before each question to avoid redundancy.",
-    MemoryType.Procedural,
-    importance: 0.85f);
+    Type = MemoryType.Procedural,
+    Scope = Scope.Session,
+    Tier = Tier.Long,
+    ImportanceScore = 0.85f
+});
 
 Console.WriteLine("[INIT] Game initialized. Starting rounds...\n");
 
@@ -223,17 +283,27 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
     Console.WriteLine();
 
     // Store round info
-    await memoryService.StoreAsync(
-        ALPHA_USER_ID,
-        $"[ROUND] Current round: {round}/{MAX_ROUNDS}",
-        MemoryType.Episodic,
-        importance: 0.7f);
+    await memoryPrimitives.EncodeAsync(new EncodeRequest
+    {
+        UserId = ALPHA_USER_ID,
+        SessionId = ALPHA_SESSION_ID,
+        Content = $"[ROUND] Current round: {round}/{MAX_ROUNDS}",
+        Type = MemoryType.Episodic,
+        Scope = Scope.Session,
+        Tier = Tier.Short,
+        ImportanceScore = 0.7f
+    });
 
-    await memoryService.StoreAsync(
-        BETA_USER_ID,
-        $"[ROUND] Current round: {round}/{MAX_ROUNDS}. Remaining: {MAX_ROUNDS - round}",
-        MemoryType.Episodic,
-        importance: 0.7f);
+    await memoryPrimitives.EncodeAsync(new EncodeRequest
+    {
+        UserId = BETA_USER_ID,
+        SessionId = BETA_SESSION_ID,
+        Content = $"[ROUND] Current round: {round}/{MAX_ROUNDS}. Remaining: {MAX_ROUNDS - round}",
+        Type = MemoryType.Episodic,
+        Scope = Scope.Session,
+        Tier = Tier.Short,
+        ImportanceScore = 0.7f
+    });
 
     // ═══════════════════════════════════════════════════════════════════════
     // BETA's TURN: Receives ONLY Alpha's last response (no history!)
@@ -245,10 +315,14 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
 
     // Beta recalls its own memories to understand game state
     var betaRecallSw = Stopwatch.StartNew();
-    var betaMemories = await memoryService.RecallAsync(
-        BETA_USER_ID,
-        $"game rules strategy previous questions answers deductions round {round}",
-        limit: 15);
+    var betaMemories = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+    {
+        UserId = BETA_USER_ID,
+        SessionId = BETA_SESSION_ID,
+        Query = $"game rules strategy previous questions answers deductions round {round}",
+        Limit = 15,
+        MinScore = 0.3f
+    });
     betaRecallSw.Stop();
     roundMetrics.BetaRecallMs = betaRecallSw.ElapsedMilliseconds;
 
@@ -320,11 +394,16 @@ Output ONLY the question or guess. No explanations.";
     Console.ResetColor();
 
     // Store Beta's question in Beta's memory
-    await memoryService.StoreAsync(
-        BETA_USER_ID,
-        $"[MY_QUESTION_R{round}] I asked: {betaQuestion}",
-        MemoryType.Episodic,
-        importance: 0.9f);
+    await memoryPrimitives.EncodeAsync(new EncodeRequest
+    {
+        UserId = BETA_USER_ID,
+        SessionId = BETA_SESSION_ID,
+        Content = $"[MY_QUESTION_R{round}] I asked: {betaQuestion}",
+        Type = MemoryType.Episodic,
+        Scope = Scope.Session,
+        Tier = Tier.Short,
+        ImportanceScore = 0.9f
+    });
 
     // ═══════════════════════════════════════════════════════════════════════
     // ALPHA's TURN: Receives ONLY Beta's question (no history!)
@@ -336,10 +415,14 @@ Output ONLY the question or guess. No explanations.";
 
     // Alpha recalls its memories (secret, rules, previous Q&A)
     var alphaRecallSw = Stopwatch.StartNew();
-    var alphaMemories = await memoryService.RecallAsync(
-        ALPHA_USER_ID,
-        $"secret rules previous questions answers {betaQuestion}",
-        limit: 15);
+    var alphaMemories = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+    {
+        UserId = ALPHA_USER_ID,
+        SessionId = ALPHA_SESSION_ID,
+        Query = $"secret rules previous questions answers {betaQuestion}",
+        Limit = 15,
+        MinScore = 0.3f
+    });
     alphaRecallSw.Stop();
     roundMetrics.AlphaRecallMs = alphaRecallSw.ElapsedMilliseconds;
 
@@ -372,18 +455,28 @@ Output ONLY the question or guess. No explanations.";
             if (isDirectIdentification && !isExplicitGuess)
             {
                 // Store the question in Alpha's memory first
-                await memoryService.StoreAsync(
-                    ALPHA_USER_ID,
-                    $"[QUESTION_R{round}] Beta asked: {betaQuestion}",
-                    MemoryType.Episodic,
-                    importance: 0.9f);
+                await memoryPrimitives.EncodeAsync(new EncodeRequest
+                {
+                    UserId = ALPHA_USER_ID,
+                    SessionId = ALPHA_SESSION_ID,
+                    Content = $"[QUESTION_R{round}] Beta asked: {betaQuestion}",
+                    Type = MemoryType.Episodic,
+                    Scope = Scope.Session,
+                    Tier = Tier.Short,
+                    ImportanceScore = 0.9f
+                });
 
                 // Alpha confirms with "Yes"
-                await memoryService.StoreAsync(
-                    ALPHA_USER_ID,
-                    $"[ANSWER_R{round}] I answered 'Yes' to: {betaQuestion}",
-                    MemoryType.Episodic,
-                    importance: 0.85f);
+                await memoryPrimitives.EncodeAsync(new EncodeRequest
+                {
+                    UserId = ALPHA_USER_ID,
+                    SessionId = ALPHA_SESSION_ID,
+                    Content = $"[ANSWER_R{round}] I answered 'Yes' to: {betaQuestion}",
+                    Type = MemoryType.Episodic,
+                    Scope = Scope.Session,
+                    Tier = Tier.Short,
+                    ImportanceScore = 0.85f
+                });
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"[ALPHA] >>> Yes");
@@ -424,10 +517,14 @@ Output ONLY the question or guess. No explanations.";
 
     // Check for duplicate questions using semantic similarity
     var dupCheckSw = Stopwatch.StartNew();
-    var duplicateCheck = await memoryService.RecallAsync(
-        ALPHA_USER_ID,
-        betaQuestion,
-        limit: 5);
+    var duplicateCheck = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+    {
+        UserId = ALPHA_USER_ID,
+        SessionId = ALPHA_SESSION_ID,
+        Query = betaQuestion,
+        Limit = 5,
+        MinScore = 0.3f
+    });
     dupCheckSw.Stop();
     roundMetrics.DuplicateCheckMs = dupCheckSw.ElapsedMilliseconds;
 
@@ -446,11 +543,16 @@ Output ONLY the question or guess. No explanations.";
     else
     {
         // Store the question in Alpha's memory
-        await memoryService.StoreAsync(
-            ALPHA_USER_ID,
-            $"[QUESTION_R{round}] Beta asked: {betaQuestion}",
-            MemoryType.Episodic,
-            importance: 0.9f);
+        await memoryPrimitives.EncodeAsync(new EncodeRequest
+        {
+            UserId = ALPHA_USER_ID,
+            SessionId = ALPHA_SESSION_ID,
+            Content = $"[QUESTION_R{round}] Beta asked: {betaQuestion}",
+            Type = MemoryType.Episodic,
+            Scope = Scope.Session,
+            Tier = Tier.Short,
+            ImportanceScore = 0.9f
+        });
 
         // Alpha generates response using ONLY the question + recalled memories
         string alphaSystemPrompt = $@"You are Alpha, the QuizMaster in 20 Questions.
@@ -486,11 +588,16 @@ Be honest and consistent with your previous answers.";
         alphaResponse = NormalizeResponse(alphaResponse);
 
         // Store Alpha's answer
-        await memoryService.StoreAsync(
-            ALPHA_USER_ID,
-            $"[ANSWER_R{round}] I answered '{alphaResponse}' to: {betaQuestion}",
-            MemoryType.Episodic,
-            importance: 0.85f);
+        await memoryPrimitives.EncodeAsync(new EncodeRequest
+        {
+            UserId = ALPHA_USER_ID,
+            SessionId = ALPHA_SESSION_ID,
+            Content = $"[ANSWER_R{round}] I answered '{alphaResponse}' to: {betaQuestion}",
+            Type = MemoryType.Episodic,
+            Scope = Scope.Session,
+            Tier = Tier.Short,
+            ImportanceScore = 0.85f
+        });
     }
 
     Console.ForegroundColor = ConsoleColor.Green;
@@ -503,13 +610,18 @@ Be honest and consistent with your previous answers.";
     Console.ResetColor();
 
     // Store the exchange in Beta's memory
-    await memoryService.StoreAsync(
-        BETA_USER_ID,
-        $"[QA_R{round}] Q: {betaQuestion} -> A: {alphaResponse}",
-        MemoryType.Episodic,
-        importance: 0.95f);
+    await memoryPrimitives.EncodeAsync(new EncodeRequest
+    {
+        UserId = BETA_USER_ID,
+        SessionId = BETA_SESSION_ID,
+        Content = $"[QA_R{round}] Q: {betaQuestion} -> A: {alphaResponse}",
+        Type = MemoryType.Episodic,
+        Scope = Scope.Session,
+        Tier = Tier.Short,
+        ImportanceScore = 0.95f
+    });
 
-    // Extract semantic knowledge from Q&A (Phase 25.1)
+    // Extract semantic knowledge from Q&A
     if (!alphaResponse.StartsWith("INVALID") && !alphaResponse.StartsWith("Wrong guess"))
     {
         try
@@ -531,11 +643,16 @@ Be honest and consistent with your previous answers.";
 
             foreach (var fact in extractedFacts)
             {
-                await memoryService.StoreAsync(
-                    BETA_USER_ID,
-                    $"[EXTRACTED_R{round}] {fact.Content}",
-                    MemoryType.Semantic,
-                    importance: fact.Importance);
+                await memoryPrimitives.EncodeAsync(new EncodeRequest
+                {
+                    UserId = BETA_USER_ID,
+                    SessionId = BETA_SESSION_ID,
+                    Content = $"[EXTRACTED_R{round}] {fact.Content}",
+                    Type = MemoryType.Semantic,
+                    Scope = Scope.Session,
+                    Tier = Tier.Long,
+                    ImportanceScore = fact.Importance
+                });
             }
 
             if (extractedFacts.Count > 0)
@@ -564,11 +681,16 @@ Be honest and consistent with your previous answers.";
         else
             deduction = $"[DEDUCTION_R{round}] UNCERTAIN: The secret may or may not have the property asked in '{betaQuestion}'";
 
-        await memoryService.StoreAsync(
-            BETA_USER_ID,
-            deduction,
-            MemoryType.Semantic,
-            importance: 0.9f);
+        await memoryPrimitives.EncodeAsync(new EncodeRequest
+        {
+            UserId = BETA_USER_ID,
+            SessionId = BETA_SESSION_ID,
+            Content = deduction,
+            Type = MemoryType.Semantic,
+            Scope = Scope.Session,
+            Tier = Tier.Long,
+            ImportanceScore = 0.9f
+        });
     }
 
     // Update lastAlphaResponse for next round
@@ -606,39 +728,42 @@ else
 Console.ResetColor();
 Console.WriteLine();
 
-// Show memory statistics with Phase 20 validation
-var allAlphaMemories = await memoryService.GetAllAsync(ALPHA_USER_ID);
-var allBetaMemories = await memoryService.GetAllAsync(BETA_USER_ID);
+// Show memory statistics
+var allAlphaMemories = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+{
+    UserId = ALPHA_USER_ID,
+    Query = "*",
+    Limit = 10000,
+    MinScore = 0.0f
+});
+var allBetaMemories = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+{
+    UserId = BETA_USER_ID,
+    Query = "*",
+    Limit = 10000,
+    MinScore = 0.0f
+});
 var alphaMemoryCount = allAlphaMemories.Count;
 var betaMemoryCount = allBetaMemories.Count;
 var totalMemories = alphaMemoryCount + betaMemoryCount;
 
-// Expected memory count calculation (for Phase 20 validation)
+// Expected memory count calculation
 int expectedMinMemories = 2 + 4; // Alpha: 2 initial, Beta: 4 initial
 int expectedRoundMemories = metrics.Rounds.Count * 4; // Per round: ROUND, MY_QUESTION, QA, DEDUCTION
 int expectedMaxMemories = expectedMinMemories + expectedRoundMemories;
-int expectedWithDedup = (int)(expectedMaxMemories * 0.66); // Phase 20: 34% reduction target
 
 Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
-Console.WriteLine("║  MEMORY SYSTEM VALIDATION (Phase 20)                         ║");
+Console.WriteLine("║  MEMORY SYSTEM STATISTICS                                     ║");
 Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
 Console.WriteLine($"  Alpha memories:        {alphaMemoryCount}");
 Console.WriteLine($"  Beta memories:         {betaMemoryCount}");
 Console.WriteLine($"  Total memories:        {totalMemories}");
 Console.WriteLine();
 Console.WriteLine($"  Expected (no dedup):   ~{expectedMaxMemories} memories");
-Console.WriteLine($"  Expected (with dedup): ~{expectedWithDedup} memories (34% reduction)");
-Console.WriteLine($"  Actual reduction:      {(1 - (float)totalMemories / expectedMaxMemories) * 100:F1}%");
+Console.WriteLine($"  Actual stored:         {totalMemories} memories");
 Console.WriteLine();
 
 // Analyze recall quality
-var avgBetaRecallScore = metrics.Rounds
-    .Where(r => r.BetaContextChars > 0)
-    .Average(r => r.BetaContextChars / 100.0); // Rough quality estimate
-var avgAlphaRecallScore = metrics.Rounds
-    .Where(r => r.AlphaContextChars > 0)
-    .Average(r => r.AlphaContextChars / 100.0);
-
 Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
 Console.WriteLine("  │ RECALL QUALITY ANALYSIS                                     │");
 Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
@@ -649,11 +774,11 @@ Console.WriteLine("  └──────────────────�
 Console.WriteLine();
 
 // Check for memory types distribution
-var betaMemoryTypes = allBetaMemories.GroupBy(m => m.Type).ToDictionary(g => g.Key, g => g.Count());
-var alphaMemoryTypes = allAlphaMemories.GroupBy(m => m.Type).ToDictionary(g => g.Key, g => g.Count());
+var betaMemoryTypes = allBetaMemories.GroupBy(m => m.Memory.Type).ToDictionary(g => g.Key, g => g.Count());
+var alphaMemoryTypes = allAlphaMemories.GroupBy(m => m.Memory.Type).ToDictionary(g => g.Key, g => g.Count());
 
 Console.WriteLine("  ┌─────────────────────────────────────────────────────────────┐");
-Console.WriteLine("  │ MEMORY TYPE DISTRIBUTION                                    │");
+Console.WriteLine("  │ MEMORY TYPE DISTRIBUTION (3-Axis Model)                     │");
 Console.WriteLine("  ├─────────────────────────────────────────────────────────────┤");
 Console.WriteLine("  │ Beta:                                                       │");
 foreach (var kvp in betaMemoryTypes.OrderByDescending(x => x.Value))
@@ -736,10 +861,11 @@ Console.WriteLine("  └───────┴──────────�
 Console.WriteLine();
 
 Console.WriteLine("  ┌────────────────────────────────────────────────────────┐");
-Console.WriteLine("  │ KEY DEMONSTRATION:                                     │");
+Console.WriteLine("  │ KEY DEMONSTRATION (3-Axis Model):                      │");
 Console.WriteLine("  │ - Each LLM call received ONLY the opponent's last msg  │");
 Console.WriteLine("  │ - NO chat history was passed                           │");
-Console.WriteLine("  │ - Context came 100% from memory-indexer recall         │");
+Console.WriteLine("  │ - Context came 100% from IMemoryPrimitives recall      │");
+Console.WriteLine("  │ - Explicit Type × Scope × Tier control demonstrated    │");
 Console.WriteLine("  └────────────────────────────────────────────────────────┘");
 Console.WriteLine();
 
@@ -748,10 +874,36 @@ Console.Write("Delete game memories? (y/N): ");
 var cleanup = Console.ReadLine()?.Trim().ToLower();
 if (cleanup == "y" || cleanup == "yes")
 {
-    var all1 = await memoryService.GetAllAsync(ALPHA_USER_ID);
-    var all2 = await memoryService.GetAllAsync(BETA_USER_ID);
-    foreach (var m in all1) await memoryService.DeleteAsync(m.Id, hardDelete: true);
-    foreach (var m in all2) await memoryService.DeleteAsync(m.Id, hardDelete: true);
+    var all1 = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+    {
+        UserId = ALPHA_USER_ID,
+        Query = "*",
+        Limit = 10000,
+        MinScore = 0.0f
+    });
+    var all2 = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+    {
+        UserId = BETA_USER_ID,
+        Query = "*",
+        Limit = 10000,
+        MinScore = 0.0f
+    });
+    foreach (var m in all1)
+    {
+        await memoryPrimitives.DeleteAsync(new DeleteRequest
+        {
+            MemoryId = m.Memory.Id,
+            HardDelete = true
+        });
+    }
+    foreach (var m in all2)
+    {
+        await memoryPrimitives.DeleteAsync(new DeleteRequest
+        {
+            MemoryId = m.Memory.Id,
+            HardDelete = true
+        });
+    }
     Console.WriteLine("Game memories deleted.");
 }
 
@@ -763,7 +915,7 @@ Console.WriteLine("\nThank you for playing!");
 
 void PrintRecalledMemories(
     string agentName,
-    IReadOnlyList<MemorySearchResult> memories,
+    IReadOnlyList<RetrieveResult> memories,
     long recallMs,
     int contextChars,
     bool fullMode)
