@@ -1699,6 +1699,74 @@ public enum NormalizationStrategy
 - ✅ Cache metrics available in observability dashboard
 - ✅ Type-specific scoring models operational
 
+## Phase 25: Semantic Knowledge Extraction ✅
+
+**Status**: Complete (2026-01-07)
+**Priority**: 🔴 High
+**Commit**: 5886936
+
+**Goal**: Extract factual knowledge from Q&A exchanges to generate Semantic memories, addressing memory type imbalance observed in Twenty Questions game (Beta: 0% Semantic, target 30%)
+
+### Phase 25.0: Rule-based Knowledge Extractor
+
+**Status**: ✅ Complete
+
+**Problem**: Q&A conversations naturally create Episodic memories (57% in Beta) but lack Semantic knowledge extraction, leading to memory type imbalance.
+
+**Solution**: Pattern-matching extractor for common Q&A patterns:
+- ✅ "Is it X?" → Property assertions (e.g., "The ocean is blue")
+- ✅ "Is it a/an X?" → Category assertions (e.g., "The ocean is a liquid")
+- ✅ "Does it have X?" → Possession/feature assertions (e.g., "The ocean has waves")
+- ✅ "Can it X?" → Capability assertions (e.g., "The ocean can move")
+- ✅ Answer normalization: Yes/No/Maybe with confidence scoring
+- ✅ Subject tracking and capitalization
+- ✅ Pattern priority ordering (most specific first)
+
+**Implementation**:
+- ✅ `IKnowledgeExtractor` interface (src/MemoryIndexer/Interfaces/)
+- ✅ `KnowledgeExtractionContext` model (Question, Answer, Subject, UserId, Metadata)
+- ✅ `ExtractedFact` model (Content, Confidence, Importance, Source, Topics, Entities)
+- ✅ `LocalKnowledgeExtractor` with 4 regex patterns
+- ✅ DI registration in ServiceCollectionExtensions
+- ✅ 30 comprehensive unit tests covering all patterns and edge cases
+
+**Confidence Scoring**:
+- Yes answers: 0.75-0.85 (varies by pattern)
+- No answers: 0.8-0.9 (higher confidence for negations)
+- Maybe answers: 0.5 (lower confidence for uncertainty)
+
+**Importance Scoring**:
+- Category assertions (IsItA): 0.75 (highest)
+- Property assertions (IsIt): 0.7
+- Possession assertions (DoesItHave): 0.65
+- Capability assertions (CanIt): 0.6
+
+**Test Coverage**:
+- ✅ All 4 pattern types with Yes/No/Maybe variations
+- ✅ Answer normalization (yes/y/true, no/n/false, maybe/m/uncertain)
+- ✅ Edge cases: missing subject, unknown answers, no pattern match
+- ✅ Case insensitivity, question marks, parentheses
+- ✅ Confidence and importance scoring validation
+- ✅ 30 tests total, all passing (798 total tests in suite)
+
+**Future Enhancements** (Phase 25.1):
+- [ ] LLM-based extraction for complex patterns
+- [ ] Multi-turn dialogue context tracking
+- [ ] Confidence adjustment based on context
+- [ ] Entity and topic extraction integration
+
+**Success Criteria**:
+- ✅ Rule-based extraction for 4 common Q&A patterns
+- ✅ Confidence scoring based on answer type
+- ✅ Importance scoring based on assertion type
+- ✅ All tests passing (798/798)
+- ✅ Pattern priority ordering prevents false matches
+
+**Expected Impact**:
+- Semantic memory generation from Q&A: 0% → 15-25%
+- Improved memory type balance (Episodic: 57% → 40%, Semantic: 0% → 30%)
+- Foundation for future LLM-based extraction
+
 ---
 
 ## Research References

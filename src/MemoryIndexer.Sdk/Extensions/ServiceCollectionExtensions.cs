@@ -5,6 +5,7 @@ using MemoryIndexer.Sdk.Embedding.Providers;
 using MemoryIndexer.Sdk.Intelligence.Classification;
 using MemoryIndexer.Sdk.Intelligence.Chunking;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
+using MemoryIndexer.Sdk.Intelligence.Extraction;
 using MemoryIndexer.Sdk.Intelligence.Consolidation;
 using MemoryIndexer.Sdk.Intelligence.Graph;
 using MemoryIndexer.Sdk.Intelligence.Compression;
@@ -161,6 +162,9 @@ public static class ServiceCollectionExtensions
 
         // Register memory classifier (Phase 5.5)
         services.TryAddSingleton<IMemoryClassifier, LocalMemoryClassifier>();
+
+        // Register knowledge extractor (Phase 25)
+        services.TryAddSingleton<IKnowledgeExtractor, LocalKnowledgeExtractor>();
 
         // Register intelligence services (Phase 2)
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();
