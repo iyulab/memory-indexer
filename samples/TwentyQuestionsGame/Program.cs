@@ -104,6 +104,9 @@ services.AddMemoryIndexer(options =>
     options.Completion.Model = openAiModel;
     options.Completion.DefaultTemperature = 0.1f;
     options.Completion.DefaultMaxTokens = 300;
+
+    // Disable reranking (avoid ONNX Runtime issues in demo)
+    options.Search.EnableReranking = false;
 });
 
 services.AddHttpClient("LLM", client =>
