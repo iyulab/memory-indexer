@@ -36,19 +36,19 @@ public class SensoryPromoterServiceTests
                 return Task.FromResult<IReadOnlyList<ReadOnlyMemory<float>>>(embeddings);
             });
 
-        // Setup recently buffer
+        // Setup sensory buffer
         var bufferOptions = new MemoryIndexerOptions
         {
-            RecentlyBuffer = new RecentlyBufferOptions
+            SensoryBuffer = new SensoryBufferOptions
             {
                 IdleTimeout = TimeSpan.FromSeconds(60),
                 TokenThreshold = 500,
                 TurnThreshold = 3
             }
         };
-        _recentlyBuffer = new RecentlyBufferService(
+        _recentlyBuffer = new SensoryBufferService(
             Options.Create(bufferOptions),
-            NullLogger<RecentlyBufferService>.Instance);
+            NullLogger<SensoryBufferService>.Instance);
 
         // Setup working memory
         var workingOptions = new WorkingMemoryOptions { Capacity = 7 };

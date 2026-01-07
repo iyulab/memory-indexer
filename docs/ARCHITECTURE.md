@@ -33,9 +33,9 @@ samples/
 └── MemoryChatApp/               # Web frontend sample
 ```
 
-## 4-Tier Virtual Context Management
+## 4-Tier Cognitive Architecture
 
-Memory Indexer implements a 4-tier memory architecture inspired by human cognitive systems:
+Memory Indexer implements a 4-tier cognitive memory architecture inspired by Atkinson-Shiffrin and Tulving's memory models:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -44,56 +44,60 @@ Memory Indexer implements a 4-tier memory architecture inspired by human cogniti
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  RECENTLY BUFFER (Tier 0)                                                │
+│  SENSORY BUFFER (T0)                                                     │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │ Raw conversation staging • Full text • Async processing          │  │
 │  │ TTL: 60s idle | 500 tokens | 3 turns (OR logic)                  │  │
+│  │ (Atkinson-Shiffrin sensory memory store)                         │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────┬─────────────────────────────────────────┘
-                                │ BufferPromoter
+                                │ SensoryPromoter
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  WORKING MEMORY (L1)                                                     │
+│  WORKING MEMORY (T1)                                                     │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │ Topic-grouped • Summarized chunks • Active context               │  │
 │  │ Capacity: 4-7 items • TTL: 10min | 2K tokens | topic change      │  │
+│  │ (Baddeley's working memory model)                                │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │ WorkingMemoryOrchestrator
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  SESSION MEMORY (L2)                                                     │
+│  EPISODIC STORE (T2)                                                     │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ Session summaries • Extracted facts • Compressed representation  │  │
+│  │ Session experiences • Temporal events • Compressed episodes      │  │
 │  │ Storage: Vector DB (Qdrant/SQLite-vec)                           │  │
+│  │ (Tulving's episodic memory - event-based)                        │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │ AND logic promotion
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  USER PROFILE (L3)                                                       │
+│  SEMANTIC STORE (T3)                                                     │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ Long-term facts • Preferences • Identity • Cross-session          │  │
+│  │ Long-term knowledge • Preferences • Identity • Cross-session      │  │
 │  │ Promotion: Confidence >= 0.8 AND Confirmations >= 3               │  │
+│  │ (Tulving's semantic memory - fact-based)                         │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Tier Interfaces
 
-| Tier | Interface | Implementation |
-|------|-----------|----------------|
-| Recently | `IRecentlyBuffer` | `RecentlyBufferService` |
-| Working | `IWorkingMemory` | `WorkingMemoryService` |
-| Session | `ISessionStore` | `InMemorySessionStore` |
-| User | `IUserProfile` | `UserProfileService` |
+| Tier | Interface | Implementation | Cognitive Model |
+|------|-----------|----------------|-----------------|
+| Sensory (T0) | `ISensoryBuffer` | `SensoryBufferService` | Atkinson-Shiffrin sensory memory |
+| Working (T1) | `IWorkingMemory` | `WorkingMemoryService` | Baddeley's working memory |
+| Episodic (T2) | `IEpisodicStore` | `InMemoryEpisodicStore` | Tulving's episodic memory |
+| Semantic (T3) | `ISemanticStore` | `SemanticStoreService` | Tulving's semantic memory |
 
 ### Promotion Services
 
 | Transition | Interface | Implementation |
 |------------|-----------|----------------|
-| Recently → Working | `IBufferPromoter` | `BufferPromoterService` |
-| Working → Session | `IWorkingMemoryOrchestrator` | `WorkingMemoryOrchestratorService` |
+| Sensory → Working | `ISensoryPromoter` | `SensoryPromoterService` |
+| Working → Episodic | `IWorkingMemoryOrchestrator` | `WorkingMemoryOrchestratorService` |
 
 ## Layer Diagram
 
@@ -111,10 +115,11 @@ Memory Indexer implements a 4-tier memory architecture inspired by human cogniti
 └───────────────────────┬─────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────┐
-│  4-Tier Memory Layer                                │
+│  4-Tier Cognitive Memory Layer                      │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-│  │Recently │→│ Working │→│ Session │→│  User   │   │
-│  │ Buffer  │ │  Memory │ │  Store  │ │ Profile │   │
+│  │ Sensory │→│ Working │→│Episodic │→│Semantic │   │
+│  │ Buffer  │ │  Memory │ │  Store  │ │  Store  │   │
+│  │  (T0)   │ │  (T1)   │ │  (T2)   │ │  (T3)   │   │
 │  └─────────┘ └─────────┘ └─────────┘ └─────────┘   │
 └───────────────────────┬─────────────────────────────┘
                         │
@@ -167,16 +172,16 @@ public class MemoryUnit
 }
 ```
 
-### UserProfileEntry
+### SemanticStoreEntry
 
-Long-term user knowledge with confirmation tracking:
+Long-term knowledge with confirmation tracking (Tulving's semantic memory):
 
 ```csharp
-public class UserProfileEntry
+public class SemanticStoreEntry
 {
     public required string Key { get; init; }
     public required string Value { get; set; }
-    public UserProfileCategory Category { get; set; }
+    public SemanticStoreCategory Category { get; set; }
     public float Confidence { get; set; }           // 0.0 - 1.0
     public int ConfirmationCount { get; set; }      // Track mentions
     public List<string> SourceSessions { get; init; }
@@ -189,12 +194,12 @@ public class UserProfileEntry
 }
 ```
 
-### RecentlyMemory
+### SensoryMemory
 
-Raw buffer entry before processing:
+Raw buffer entry before processing (Atkinson-Shiffrin sensory store):
 
 ```csharp
-public record RecentlyMemory
+public record SensoryMemory
 {
     public required string Content { get; init; }
     public DateTime Timestamp { get; init; }
@@ -208,36 +213,27 @@ public record RecentlyMemory
 
 ### OR Logic (Lower Tiers)
 
-Recently → Working and Working → Session use OR logic for aggressive cleanup:
+Sensory → Working and Working → Episodic use OR logic for aggressive cleanup:
 
 ```csharp
-public enum RecentlyPromotionTrigger
+public enum PromotionTriggerType
 {
     None = 0,
-    IdleTimeout = 1,      // 60 seconds
-    TokenThreshold = 2,   // 500 tokens
-    TurnThreshold = 3,    // 3 turns
-    Manual = 4
-}
-
-public enum WorkingPromotionTrigger
-{
-    None = 0,
-    IdleTimeout = 1,      // 10 minutes
-    TokenThreshold = 2,   // 2000 tokens
-    TurnThreshold = 3,    // 10 turns
-    TopicChange = 4,
+    IdleTimeout = 1,      // Sensory: 60s, Working: 10min
+    TokenThreshold = 2,   // Sensory: 500, Working: 2K
+    TurnThreshold = 3,    // Sensory: 3, Working: 10
+    TopicChange = 4,      // Working only
     Manual = 5,
-    SessionEnd = 6
+    SessionEnd = 6        // Working only
 }
 ```
 
-### AND Logic (User Tier)
+### AND Logic (Semantic Tier)
 
-Session → User uses AND logic for conservative promotion:
+Episodic → Semantic uses AND logic for conservative promotion:
 
 ```csharp
-public class UserProfileOptions
+public class SemanticStoreOptions
 {
     public int MinConfirmationCount { get; set; } = 3;
     public float MinConfidenceThreshold { get; set; } = 0.8f;
@@ -277,12 +273,13 @@ Registers (core services):
 - `IEmbeddingService` (based on Embedding.Provider)
 - `IScoringService`
 
-Registers (4-tier architecture):
-- `IRecentlyBuffer` → `RecentlyBufferService`
-- `IWorkingMemory` → `WorkingMemoryService`
-- `IBufferPromoter` → `BufferPromoterService`
-- `IWorkingMemoryOrchestrator` → `WorkingMemoryOrchestratorService`
-- `IUserProfile` → `UserProfileService`
+Registers (4-tier cognitive architecture):
+- `ISensoryBuffer` → `SensoryBufferService` (T0)
+- `IWorkingMemory` → `WorkingMemoryService` (T1)
+- `IEpisodicStore` → `InMemoryEpisodicStore` (T2)
+- `ISemanticStore` → `SemanticStoreService` (T3)
+- `ISensoryPromoter` → `SensoryPromoterService` (T0→T1)
+- `IWorkingMemoryOrchestrator` → `WorkingMemoryOrchestratorService` (T1→T2)
 
 Registers (intelligence):
 - `IMemoryClassifier` → `LocalMemoryClassifier`
@@ -321,7 +318,7 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
         "Capacity": 7,
         "DefaultTtl": "00:10:00"
       },
-      "RecentlyBuffer": {
+      "SensoryBuffer": {
         "MaxIdleSeconds": 60,
         "TokenThreshold": 500,
         "TurnThreshold": 3
@@ -331,7 +328,7 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
         "TokenThreshold": 2000,
         "TurnThreshold": 10
       },
-      "UserProfile": {
+      "SemanticStore": {
         "MinConfirmationCount": 3,
         "MinConfidenceThreshold": 0.8
       }
