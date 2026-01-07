@@ -240,10 +240,10 @@ public sealed class ScopeManager : IScopeManager
                 return false;
             }
 
-            // Include memories with narrower (higher numeric value) scopes
-            // Scope enum: Turn=3, Topic=2, Session=1, User=0
-            // Higher value = narrower scope
-            return m.Scope > targetScope;
+            // Include memories with narrower (lower numeric value) scopes
+            // Scope enum: Turn=0, Topic=1, Session=2, User=3
+            // Lower value = narrower scope
+            return m.Scope < targetScope;
         }).ToList();
 
         _logger.LogTrace("Filtered {Count} memories for scope {Scope} (includeNarrower: {IncludeNarrower})",
