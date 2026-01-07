@@ -129,6 +129,33 @@ const string BETA_SESSION_ID = "game_session_beta";
 const int MAX_ROUNDS = 20;
 const float HIGH_SIMILARITY_THRESHOLD = 0.85f;
 
+// Phase 37: Strategic questioning phases for Beta
+const string BETA_STRATEGY_PHASE1 = @"[STRATEGY_PHASE1] Rounds 1-5: Establish category
+- Alive vs non-living
+- Natural vs man-made
+- Physical object vs place/concept
+Split the entire possibility space into broad categories.";
+
+const string BETA_STRATEGY_PHASE2 = @"[STRATEGY_PHASE2] Rounds 6-12: Physical properties
+- Size: hand-held, room-sized, larger?
+- Material: metal, plastic, wood, fabric, organic?
+- Location: indoor, outdoor, specific room?
+- Electronic: requires power, battery, manual?
+Narrow down based on physical characteristics.";
+
+const string BETA_STRATEGY_PHASE3 = @"[STRATEGY_PHASE3] Rounds 13-18: Usage and purpose
+- Function: what does it do? (tool, furniture, decoration, food, etc.)
+- User: who uses it? (everyone, specific profession, children, etc.)
+- Frequency: daily use, occasional, rare?
+- Necessity: essential, luxury, optional?
+Focus on how and why the object is used.";
+
+const string BETA_STRATEGY_PHASE4 = @"[STRATEGY_PHASE4] Rounds 19-20: Final deduction
+- Review ALL confirmed and ruled-out properties
+- Generate 3-5 candidate objects matching criteria
+- Rank by probability based on common objects
+- Round 20: MUST make final guess (best candidate)";
+
 // Metrics tracking
 var metrics = new GameMetrics();
 var gameStopwatch = Stopwatch.StartNew();
@@ -322,8 +349,8 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
     {
         UserId = BETA_USER_ID,
         SessionId = BETA_SESSION_ID,
-        Query = $"game rules strategy previous questions answers deductions round {round}",
-        Limit = 15,
+        Query = $"game rules strategy previous questions asked by me Alpha's answers yes no maybe latest deductions confirmed ruled-out properties round {round}",
+        Limit = 30,  // Phase 37: Increased from 15 to capture more past questions/deductions
         MinScore = 0.3f
     });
     betaRecallSw.Stop();
@@ -337,6 +364,7 @@ for (int round = 1; round <= MAX_ROUNDS && !gameOver; round++)
 
     // Beta generates a question using ONLY last message + recalled memories
     bool isFinalRound = round == MAX_ROUNDS;
+    var currentStrategy = GetStrategyPhase(round);
     string betaSystemPrompt = $@"You are Beta, playing 20 Questions.
 
 YOUR RECALLED MEMORIES:
@@ -346,14 +374,18 @@ CURRENT SITUATION:
 - Round {round}/{MAX_ROUNDS}
 - Alpha's last response: ""{lastAlphaResponse}""
 
+CURRENT STRATEGY PHASE:
+{currentStrategy}
+
 YOUR TASK:
 {(isFinalRound ?
     @"This is round 20 - FINAL ROUND! You MUST make your final guess.
 Format: ""My final guess is: [your answer]""
-Look at your memories for CONFIRMED (Yes) and RULED OUT (No) facts." :
-    $@"Ask ONE strategic yes/no question to narrow down the secret.
-Use your memories to build on what you already know.
-Start broad (category), then narrow down (features).")}
+Review ALL CONFIRMED and RULED OUT properties from your memories.
+Generate 3-5 candidates matching criteria, pick the most probable." :
+    $@"Ask ONE strategic yes/no question following the current strategy phase.
+Use your memories to avoid repeating questions.
+Each question should eliminate ~50% of remaining possibilities.")}
 
 Output ONLY the question or guess. No explanations.";
 
@@ -405,7 +437,7 @@ Output ONLY the question or guess. No explanations.";
         Type = MemoryType.Episodic,
         Scope = Scope.Session,
         Tier = Tier.Short,
-        ImportanceScore = 0.9f
+        ImportanceScore = 0.95f  // Phase 37: Increased importance for questions
     });
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -422,8 +454,8 @@ Output ONLY the question or guess. No explanations.";
     {
         UserId = ALPHA_USER_ID,
         SessionId = ALPHA_SESSION_ID,
-        Query = $"secret rules previous questions answers {betaQuestion}",
-        Limit = 15,
+        Query = $"secret answer game rules previous questions from Beta my answers duplicate detection history {betaQuestion} round {round}",
+        Limit = 30,  // Phase 37: Increased from 15 to capture duplicate question patterns
         MinScore = 0.3f
     });
     alphaRecallSw.Stop();
@@ -466,7 +498,7 @@ Output ONLY the question or guess. No explanations.";
                     Type = MemoryType.Episodic,
                     Scope = Scope.Session,
                     Tier = Tier.Short,
-                    ImportanceScore = 0.9f
+                    ImportanceScore = 0.95f  // Phase 37: Increased importance for questions
                 });
 
                 // Alpha confirms with "Yes"
@@ -554,7 +586,7 @@ Output ONLY the question or guess. No explanations.";
             Type = MemoryType.Episodic,
             Scope = Scope.Session,
             Tier = Tier.Short,
-            ImportanceScore = 0.9f
+            ImportanceScore = 0.95f  // Phase 37: Increased importance for questions
         });
 
         // Alpha generates response using ONLY the question + recalled memories
@@ -692,7 +724,7 @@ Be honest and consistent with your previous answers.";
             Type = MemoryType.Semantic,
             Scope = Scope.Session,
             Tier = Tier.Long,
-            ImportanceScore = 0.9f
+            ImportanceScore = 0.95f  // Phase 37: Increased importance for deductions
         });
     }
 
@@ -915,6 +947,18 @@ Console.WriteLine("\nThank you for playing!");
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+string GetStrategyPhase(int round)
+{
+    if (round <= 5)
+        return BETA_STRATEGY_PHASE1;
+    else if (round <= 12)
+        return BETA_STRATEGY_PHASE2;
+    else if (round <= 18)
+        return BETA_STRATEGY_PHASE3;
+    else
+        return BETA_STRATEGY_PHASE4;
+}
 
 void PrintRecalledMemories(
     string agentName,
