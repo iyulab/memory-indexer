@@ -1,4 +1,6 @@
 using DotNetEnv;
+using LMSupply.Generator;
+using LMSupply.Generator.Abstractions;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -20,8 +22,10 @@ using TwentyQuestionsGame.ToolCall;
 
 // Parse CLI arguments
 var benchmarkMode = args.Contains("--benchmark") || args.Contains("-b");
+var useLocalLlm = args.Contains("--local") || args.Contains("-l");
 var iterations = GetIntArg(args, "--iterations", "-n") ?? 1;
 var outputPath = GetStringArg(args, "--output", "-o");
+var localModelId = GetStringArg(args, "--model", "-m") ?? LocalGenerator.DefaultModel;
 
 if (args.Contains("--help") || args.Contains("-h"))
 {
@@ -45,16 +49,39 @@ var gpuStackUrl = Environment.GetEnvironmentVariable("GPUSTACK_URL");
 var gpuStackApiKey = Environment.GetEnvironmentVariable("GPUSTACK_APIKEY");
 var gpuStackModel = Environment.GetEnvironmentVariable("GPUSTACK_MODEL") ?? "gpt-oss-20b";
 
-// OpenAI configuration (embedding fallback)
-var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-    ?? throw new InvalidOperationException("OPENAI_API_KEY not found");
+// OpenAI configuration (embedding + fallback LLM)
+var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 var embeddingModel = Environment.GetEnvironmentVariable("EMBEDDING_MODEL") ?? "text-embedding-3-small";
 
-// Use GPUStack if available, otherwise OpenAI
-var useGpuStack = !string.IsNullOrEmpty(gpuStackUrl) && !string.IsNullOrEmpty(gpuStackApiKey);
-var llmModel = useGpuStack ? gpuStackModel : (Environment.GetEnvironmentVariable("LLM_MODEL") ?? "gpt-4o");
+// Determine LLM provider priority: --local > GPUStack > OpenAI
+var useGpuStack = !useLocalLlm && !string.IsNullOrEmpty(gpuStackUrl) && !string.IsNullOrEmpty(gpuStackApiKey);
+var useOpenAi = !useLocalLlm && !useGpuStack && !string.IsNullOrEmpty(openAiKey);
 
-Console.WriteLine($"[CONFIG] LLM Provider: {(useGpuStack ? "GPUStack" : "OpenAI")}");
+// Require at least one provider
+if (!useLocalLlm && !useGpuStack && !useOpenAi)
+{
+    throw new InvalidOperationException("No LLM provider available. Set GPUSTACK_URL/GPUSTACK_APIKEY, OPENAI_API_KEY, or use --local flag.");
+}
+
+string llmProvider;
+string llmModel;
+if (useLocalLlm)
+{
+    llmProvider = "LMSupply (Local)";
+    llmModel = localModelId;
+}
+else if (useGpuStack)
+{
+    llmProvider = "GPUStack";
+    llmModel = gpuStackModel;
+}
+else
+{
+    llmProvider = "OpenAI";
+    llmModel = Environment.GetEnvironmentVariable("LLM_MODEL") ?? "gpt-4o";
+}
+
+Console.WriteLine($"[CONFIG] LLM Provider: {llmProvider}");
 Console.WriteLine($"[CONFIG] LLM Model: {llmModel}");
 Console.WriteLine($"[CONFIG] Embedding: {embeddingModel}");
 if (benchmarkMode)
@@ -78,29 +105,51 @@ services.AddMemoryIndexer(options =>
 {
     options.Storage.Type = StorageType.SqliteVec;
     options.Storage.ConnectionString = "Data Source=game_memory.db";
-    options.Embedding.Provider = EmbeddingProvider.OpenAI;
-    options.Embedding.Model = embeddingModel;
-    options.Embedding.ApiKey = openAiKey;
-    options.Embedding.Dimensions = 1536;
     options.Deduplication.Enabled = false;
-
-    // Disable reranking - LMSupply v0.8.6 tokenizer type mismatch issue
     options.Search.EnableReranking = false;
+
+    // Embedding: prefer OpenAI if available, fallback to local
+    if (!string.IsNullOrEmpty(openAiKey))
+    {
+        options.Embedding.Provider = EmbeddingProvider.OpenAI;
+        options.Embedding.Model = embeddingModel;
+        options.Embedding.ApiKey = openAiKey;
+        options.Embedding.Dimensions = 1536;
+    }
+    else
+    {
+        // Local embedding (LMSupply.Embedder)
+        Console.WriteLine("[CONFIG] Using local embedding (bge-small-en-v1.5)");
+        options.Embedding.Provider = EmbeddingProvider.Local;
+        options.Embedding.Model = "BAAI/bge-small-en-v1.5";
+        options.Embedding.Dimensions = 384;
+    }
 });
 
-// LLM ChatClient (GPUStack or OpenAI)
-if (useGpuStack)
+// LLM Provider Registration (LMSupply / GPUStack / OpenAI)
+IGeneratorModel? localModel = null;
+if (useLocalLlm)
+{
+    Console.WriteLine($"[INIT] Loading local model: {localModelId}...");
+    localModel = await LocalGenerator.LoadAsync(localModelId);
+    await localModel.WarmupAsync();
+    Console.WriteLine($"[INIT] Local model loaded (max context: {localModel.MaxContextLength})");
+    services.AddSingleton(localModel);
+    services.AddSingleton(sp => new LlmClient(sp.GetRequiredService<IGeneratorModel>()));
+}
+else if (useGpuStack)
 {
     var gpuStackCredential = new System.ClientModel.ApiKeyCredential(gpuStackApiKey!);
     var gpuStackOptions = new OpenAI.OpenAIClientOptions { Endpoint = new Uri(gpuStackUrl!) };
     var gpuStackClient = new OpenAI.OpenAIClient(gpuStackCredential, gpuStackOptions);
     services.AddSingleton(gpuStackClient.GetChatClient(llmModel));
+    services.AddSingleton(sp => new LlmClient(sp.GetRequiredService<ChatClient>()));
 }
 else
 {
-    services.AddSingleton(new ChatClient(model: llmModel, apiKey: openAiKey));
+    services.AddSingleton(new ChatClient(model: llmModel, apiKey: openAiKey!));
+    services.AddSingleton(sp => new LlmClient(sp.GetRequiredService<ChatClient>()));
 }
-services.AddSingleton<LlmClient>();
 
 // Game components
 services.AddSingleton<ToolCallParser>();
@@ -175,14 +224,22 @@ static void PrintHelp()
 
         Options:
           -b, --benchmark      Enable benchmark mode
+          -l, --local          Use LMSupply local model (no API key needed)
+          -m, --model MODEL    Specify local model ID (default: microsoft/Phi-4-mini-instruct-onnx)
           -n, --iterations N   Number of games to run (default: 1)
           -o, --output FILE    Output benchmark results to JSON file
           -h, --help           Show this help message
 
+        LLM Provider Priority:
+          1. --local flag → LMSupply (local ONNX model)
+          2. GPUSTACK_URL + GPUSTACK_APIKEY env → GPUStack
+          3. OPENAI_API_KEY env → OpenAI
+
         Examples:
-          dotnet run                           # Single game
-          dotnet run --benchmark               # Single benchmark game
-          dotnet run -b -n 10                  # 10 benchmark games
+          dotnet run                           # GPUStack/OpenAI (auto-detect)
+          dotnet run --local                   # Local Phi-4 model
+          dotnet run -l -m "microsoft/Phi-3-mini-4k-instruct-onnx"
+          dotnet run --benchmark               # Benchmark with default provider
           dotnet run -b -n 5 -o results.json   # 5 games, save to JSON
         """);
 }
