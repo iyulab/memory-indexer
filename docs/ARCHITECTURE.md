@@ -161,7 +161,7 @@ Storage location based on persistence and lifespan.
 ┌───────────────────────▼─────────────────────────────┐
 │  Orchestration Layer                                │
 │  VirtualContextManager: coordinates all 3 axes      │
-│  MemoryPrimitives: 12 fundamental operations        │
+│  MemoryPrimitives: 13 fundamental operations        │
 └───────────────────────┬─────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────┐
@@ -206,10 +206,22 @@ Storage location based on persistence and lifespan.
 
 ### Promotion Services
 
-| Transition | Interface | Implementation |
-|------------|-----------|----------------|
-| Buffer → Short | `IBufferPromoter` | `BufferPromoterService` |
-| Short → Long | `IShortTermMemoryOrchestrator` | `ShortTermMemoryOrchestratorService` |
+| Transition | Interface | Implementation | Logic |
+|------------|-----------|----------------|-------|
+| Buffer → Short | `ISensoryPromoter` | `SensoryPromoterService` | OR |
+| Short → Long | `IShortTermMemoryOrchestrator` | `ShortTermMemoryOrchestratorService` | OR |
+| Long → Archive | `ILongTermPromoter` | `LongTermPromoterService` | AND |
+
+### Memory Primitives (13 Operations)
+
+| Category | Primitives |
+|----------|------------|
+| Content | Encode, Update, Split, Merge |
+| Lifecycle | Delete, Expire, Lock |
+| Classification | Label |
+| Retrieval | Retrieve, Summarize |
+| Tier | Promote, Demote |
+| Validation | Confirm (Phase 53) |
 
 ## Core Components
 
@@ -305,6 +317,7 @@ Tools registered via `[McpServerTool]` attribute:
 | `memory_list` | List with filters |
 | `memory_update` | Update content/importance |
 | `memory_delete` | Soft or hard delete |
+| `memory_confirm` | Confirm memory (Phase 53: increments ConfirmCount for Archive eligibility) |
 
 ## Dependency Injection
 
@@ -328,9 +341,10 @@ Registers (3-Axis architecture):
 - `IBuffer` → `BufferService` (T0)
 - `IShortTermMemory` → `ShortTermMemoryService` (T1)
 - `ILongTermStore` → `InMemoryEpisodicStore` (T2)
-- `IArchiveStore` → `SemanticStoreService` (T3)
-- `IBufferPromoter` → `BufferPromoterService` (T0→T1)
+- `IArchiveStore` → `ArchiveStoreService` (T3)
+- `ISensoryPromoter` → `SensoryPromoterService` (T0→T1)
 - `IShortTermMemoryOrchestrator` → `ShortTermMemoryOrchestratorService` (T1→T2)
+- `ILongTermPromoter` → `LongTermPromoterService` (T2→T3, Phase 52)
 
 Registers (intelligence):
 - `IMemoryClassifier` → `LocalMemoryClassifier`

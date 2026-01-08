@@ -13,26 +13,31 @@ namespace MemoryIndexer.Sdk.Services;
 /// Promotion Pipeline:
 /// - Tier 0→1: Buffer → Working Memory (via ISensoryPromoter)
 /// - Tier 1→2: Working Memory → Session Storage (via IShortTermMemoryOrchestrator)
+/// - Tier 2→3: Session Storage → Archive (via ILongTermPromoter) - Phase 52
 ///
 /// Triggers checked every 5 seconds (configurable):
 /// - Buffer: TTL (60s), Token threshold (500), Turn threshold (3)
 /// - Working: Idle timeout (10min), Token threshold (2K), Turn threshold (10), Topic change
+/// - Long→Archive: AND logic (confidence ≥ 0.8 AND confirmations ≥ 3)
 /// </remarks>
 public sealed class MemoryPromotionBackgroundService : BackgroundService
 {
     private readonly ISensoryPromoter _sensoryPromoter;
     private readonly IShortTermMemoryOrchestrator _orchestrator;
+    private readonly ILongTermPromoter _longTermPromoter;
     private readonly ILogger<MemoryPromotionBackgroundService> _logger;
     private readonly MemoryPromotionBackgroundOptions _options;
 
     public MemoryPromotionBackgroundService(
         ISensoryPromoter sensoryPromoter,
         IShortTermMemoryOrchestrator orchestrator,
+        ILongTermPromoter longTermPromoter,
         IOptions<MemoryPromotionBackgroundOptions> options,
         ILogger<MemoryPromotionBackgroundService> logger)
     {
         _sensoryPromoter = sensoryPromoter;
         _orchestrator = orchestrator;
+        _longTermPromoter = longTermPromoter;
         _options = options.Value;
         _logger = logger;
     }
@@ -54,6 +59,9 @@ public sealed class MemoryPromotionBackgroundService : BackgroundService
 
                 // Phase 2: Check Working Memory → Session archival (T1→T2)
                 await CheckWorkingMemoryArchivalAsync(stoppingToken);
+
+                // Phase 3: Check Long → Archive promotion (T2→T3) - Phase 52
+                await CheckLongTermArchivalAsync(stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -173,6 +181,62 @@ public sealed class MemoryPromotionBackgroundService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "[BACKGROUND] Error checking working memory archival");
+        }
+    }
+
+    /// <summary>
+    /// Checks for Long tier memories eligible for Archive promotion (T2→T3) and executes them.
+    /// Implements Tulving's Episodic→Semantic transition with AND logic.
+    /// </summary>
+    /// <remarks>
+    /// Phase 52: AND logic requirements (both must be satisfied):
+    /// - Confidence >= 0.8
+    /// - ConfirmCount >= 3
+    /// </remarks>
+    private async Task CheckLongTermArchivalAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var usersWithCandidates = await _longTermPromoter.GetUsersWithCandidatesAsync(cancellationToken);
+
+            if (usersWithCandidates.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var userId in usersWithCandidates)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var candidates = await _longTermPromoter.CheckPromotionCandidatesAsync(userId, cancellationToken);
+                var eligibleCount = candidates.Count(c => c.IsEligible);
+
+                if (eligibleCount > 0)
+                {
+                    _logger.LogInformation(
+                        "[BACKGROUND] Found {Eligible}/{Total} Long tier memories eligible for Archive (user {UserId})",
+                        eligibleCount, candidates.Count, userId);
+
+                    var result = await _longTermPromoter.PromoteToArchiveAsync(userId, cancellationToken);
+
+                    if (result.Success)
+                    {
+                        _logger.LogInformation(
+                            "[BACKGROUND] ✅ Archive promotion succeeded: {Promoted} promoted, {Skipped} skipped (AND logic)",
+                            result.MemoriesPromoted, result.MemoriesSkipped);
+                    }
+                    else
+                    {
+                        _logger.LogError(
+                            "[BACKGROUND] ❌ Archive promotion failed: {Error}",
+                            result.Error);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[BACKGROUND] Error checking Long→Archive promotion");
         }
     }
 }

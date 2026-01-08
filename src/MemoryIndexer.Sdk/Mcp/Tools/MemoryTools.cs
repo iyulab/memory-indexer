@@ -11,7 +11,7 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 /// MCP tools for memory operations.
 /// </summary>
 [McpServerToolType]
-public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memoryStore)
+public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memoryStore, IMemoryPrimitives memoryPrimitives)
 {
     private const string DefaultUserId = "default";
 
@@ -292,6 +292,62 @@ public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memory
         };
     }
 
+    /// <summary>
+    /// Confirms a memory, incrementing its confirmation count.
+    /// Used for Archive tier promotion eligibility (AND logic: ConfirmCount >= 3).
+    /// </summary>
+    /// <param name="memoryId">The ID of the memory to confirm.</param>
+    /// <param name="confidenceBoost">Optional confidence boost (0-0.2).</param>
+    /// <param name="source">Source of confirmation.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Confirmation result.</returns>
+    [McpServerTool]
+    [Description("Confirm a memory to increase its confirmation count. Memories with 3+ confirmations and high confidence become eligible for Archive tier promotion.")]
+    public async Task<ConfirmMemoryResult> ConfirmMemory(
+        [Description("Memory ID to confirm")] string memoryId,
+        [Description("Optional confidence boost (0-0.2)")] float? confidenceBoost = null,
+        [Description("Source of confirmation (e.g., 'user', 'deduplication')")] string? source = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(memoryId, out var id))
+        {
+            return new ConfirmMemoryResult
+            {
+                Success = false,
+                Message = "Invalid memory ID format"
+            };
+        }
+
+        var result = await memoryPrimitives.ConfirmAsync(new ConfirmRequest
+        {
+            MemoryId = id,
+            ConfidenceBoost = confidenceBoost,
+            Source = source ?? "mcp_tool"
+        }, cancellationToken);
+
+        if (!result.Success)
+        {
+            return new ConfirmMemoryResult
+            {
+                Success = false,
+                Message = result.Error ?? "Confirmation failed"
+            };
+        }
+
+        return new ConfirmMemoryResult
+        {
+            Success = true,
+            Message = result.IsArchiveEligible
+                ? $"Memory confirmed ({result.NewConfirmCount} confirmations). Now eligible for Archive promotion!"
+                : $"Memory confirmed ({result.NewConfirmCount}/3 confirmations, {result.NewConfidence:F2}/0.80 confidence)",
+            PreviousConfirmCount = result.PreviousConfirmCount,
+            NewConfirmCount = result.NewConfirmCount,
+            PreviousConfidence = result.PreviousConfidence,
+            NewConfidence = result.NewConfidence,
+            IsArchiveEligible = result.IsArchiveEligible
+        };
+    }
+
     private static MemoryType ParseMemoryType(string type) => type.ToLowerInvariant() switch
     {
         "episodic" => MemoryType.Episodic,
@@ -370,6 +426,20 @@ public sealed class MemoryDetail
     public List<string> Topics { get; set; } = [];
     public List<string> Entities { get; set; } = [];
     public Dictionary<string, string> Metadata { get; set; } = [];
+}
+
+/// <summary>
+/// Result of confirming a memory (Phase 53).
+/// </summary>
+public sealed class ConfirmMemoryResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = default!;
+    public int PreviousConfirmCount { get; set; }
+    public int NewConfirmCount { get; set; }
+    public float PreviousConfidence { get; set; }
+    public float NewConfidence { get; set; }
+    public bool IsArchiveEligible { get; set; }
 }
 
 #endregion

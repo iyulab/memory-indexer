@@ -3,7 +3,7 @@ using MemoryIndexer.Models;
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
-/// Memory Primitives - The 12 fundamental operations for memory management.
+/// Memory Primitives - The 13 fundamental operations for memory management.
 /// These form the "instruction set" of the memory system.
 /// </summary>
 /// <remarks>
@@ -15,6 +15,7 @@ namespace MemoryIndexer.Interfaces;
 /// - Classification Operations: Label
 /// - Retrieval Operations: Retrieve, Summarize
 /// - Tier Operations: Promote, Demote
+/// - Validation Operations: Confirm (Phase 53)
 /// </remarks>
 public interface IMemoryPrimitives
 {
@@ -145,6 +146,27 @@ public interface IMemoryPrimitives
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The demoted memory, or null if not found or at lowest tier.</returns>
     Task<MemoryUnit?> DemoteAsync(DemoteRequest request, CancellationToken cancellationToken = default);
+
+    #endregion
+
+    #region Validation Operations
+
+    /// <summary>
+    /// Confirms a memory, incrementing its confirmation count.
+    /// Used for Archive tier promotion eligibility (AND logic: ConfirmCount >= 3).
+    /// </summary>
+    /// <remarks>
+    /// Phase 53: Memory Confirmation System
+    ///
+    /// Implements Tulving's episodic→semantic transition:
+    /// - Repeated confirmations strengthen memory
+    /// - High confidence + multiple confirmations = semantic knowledge
+    /// - Triggers potential Archive promotion check
+    /// </remarks>
+    /// <param name="request">Confirm request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The confirmed memory with updated count, or null if not found.</returns>
+    Task<ConfirmResult> ConfirmAsync(ConfirmRequest request, CancellationToken cancellationToken = default);
 
     #endregion
 }
@@ -699,6 +721,98 @@ public enum DemoteReason
     /// Context optimization.
     /// </summary>
     ContextOptimization
+}
+
+/// <summary>
+/// Request for confirming a memory (Phase 53).
+/// </summary>
+public sealed class ConfirmRequest
+{
+    /// <summary>
+    /// Memory ID to confirm.
+    /// </summary>
+    public required Guid MemoryId { get; init; }
+
+    /// <summary>
+    /// Optional confidence boost to apply (0-0.2).
+    /// Each confirmation can slightly increase confidence.
+    /// </summary>
+    public float? ConfidenceBoost { get; init; }
+
+    /// <summary>
+    /// Source of confirmation (e.g., "user", "deduplication", "retrieval").
+    /// </summary>
+    public string? Source { get; init; }
+
+    /// <summary>
+    /// Whether to check for Archive promotion after confirmation.
+    /// Default: true.
+    /// </summary>
+    public bool CheckPromotion { get; init; } = true;
+}
+
+/// <summary>
+/// Result of a memory confirmation operation.
+/// </summary>
+public sealed record ConfirmResult
+{
+    /// <summary>
+    /// Whether the confirmation succeeded.
+    /// </summary>
+    public bool Success { get; init; }
+
+    /// <summary>
+    /// The confirmed memory with updated values.
+    /// </summary>
+    public MemoryUnit? Memory { get; init; }
+
+    /// <summary>
+    /// Previous confirmation count before this confirmation.
+    /// </summary>
+    public int PreviousConfirmCount { get; init; }
+
+    /// <summary>
+    /// New confirmation count after this confirmation.
+    /// </summary>
+    public int NewConfirmCount { get; init; }
+
+    /// <summary>
+    /// Previous confidence before this confirmation.
+    /// </summary>
+    public float PreviousConfidence { get; init; }
+
+    /// <summary>
+    /// New confidence after this confirmation.
+    /// </summary>
+    public float NewConfidence { get; init; }
+
+    /// <summary>
+    /// Whether the memory is now eligible for Archive promotion.
+    /// </summary>
+    public bool IsArchiveEligible { get; init; }
+
+    /// <summary>
+    /// Error message if confirmation failed.
+    /// </summary>
+    public string? Error { get; init; }
+
+    /// <summary>
+    /// Creates a failure result.
+    /// </summary>
+    public static ConfirmResult Failure(string error) => new()
+    {
+        Success = false,
+        Error = error
+    };
+
+    /// <summary>
+    /// Creates a not-found result.
+    /// </summary>
+    public static ConfirmResult NotFound(Guid memoryId) => new()
+    {
+        Success = false,
+        Error = $"Memory {memoryId} not found"
+    };
 }
 
 #endregion

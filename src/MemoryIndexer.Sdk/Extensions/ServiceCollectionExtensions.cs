@@ -297,6 +297,9 @@ public static class ServiceCollectionExtensions
             .BindConfiguration("MemoryIndexer:VCM:SemanticStore");
         services.TryAddSingleton<IArchiveStore, ArchiveStoreService>();
 
+        // Register Long → Archive promotion service (Phase 52)
+        services.TryAddSingleton<ILongTermPromoter, LongTermPromoterService>();
+
         // Register memory promotion background worker (Phase 47)
         services.AddOptions<MemoryPromotionBackgroundOptions>()
             .BindConfiguration("MemoryIndexer:VCM:PromotionBackground");

@@ -9,11 +9,19 @@ using Microsoft.Extensions.Options;
 namespace MemoryIndexer.Services;
 
 /// <summary>
-/// Implementation of the 12 Memory Primitives.
+/// Implementation of the 13 Memory Primitives.
 /// Core operations for memory management system.
 /// </summary>
 /// <remarks>
 /// Research reference: research-04.md Section 2.2 "Memory Primitives"
+///
+/// Primitives:
+/// - Content: Encode, Update, Split, Merge
+/// - Lifecycle: Delete, Expire, Lock
+/// - Classification: Label
+/// - Retrieval: Retrieve, Summarize
+/// - Tier: Promote, Demote
+/// - Validation: Confirm (Phase 53)
 /// </remarks>
 public sealed class MemoryPrimitivesService : IMemoryPrimitives
 {
@@ -833,6 +841,70 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             request.MemoryId, targetTier, request.Reason);
 
         return memory;
+    }
+
+    #endregion
+
+    #region Validation Operations
+
+    /// <inheritdoc />
+    public async Task<ConfirmResult> ConfirmAsync(ConfirmRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        if (memory == null)
+        {
+            _logger.LogWarning("[CONFIRM] Memory {MemoryId} not found", request.MemoryId);
+            return ConfirmResult.NotFound(request.MemoryId);
+        }
+
+        // Store previous values
+        var previousConfirmCount = memory.ConfirmCount;
+        var previousConfidence = memory.Confidence;
+
+        // Increment confirmation count
+        memory.ConfirmCount++;
+
+        // Apply optional confidence boost (capped at 1.0)
+        if (request.ConfidenceBoost.HasValue && request.ConfidenceBoost.Value > 0)
+        {
+            var boost = Math.Min(request.ConfidenceBoost.Value, 0.2f);
+            memory.Confidence = Math.Min(1.0f, memory.Confidence + boost);
+        }
+
+        // Record confirmation source in metadata
+        if (!string.IsNullOrEmpty(request.Source))
+        {
+            memory.Metadata[$"confirm_source_{memory.ConfirmCount}"] = request.Source;
+        }
+        memory.Metadata["last_confirmed_at"] = DateTime.UtcNow.ToString("O");
+
+        memory.MarkUpdated();
+        await _memoryStore.UpdateAsync(memory, cancellationToken);
+
+        // Check Archive eligibility (AND logic: Confidence >= 0.8 AND ConfirmCount >= 3)
+        const float minConfidence = 0.8f;
+        const int minConfirmCount = 3;
+        var isArchiveEligible = memory.Confidence >= minConfidence && memory.ConfirmCount >= minConfirmCount;
+
+        _logger.LogInformation(
+            "[CONFIRM] Memory {MemoryId} confirmed: {PrevCount}→{NewCount}, confidence {PrevConf:F2}→{NewConf:F2}, eligible={Eligible}",
+            request.MemoryId,
+            previousConfirmCount, memory.ConfirmCount,
+            previousConfidence, memory.Confidence,
+            isArchiveEligible);
+
+        return new ConfirmResult
+        {
+            Success = true,
+            Memory = memory,
+            PreviousConfirmCount = previousConfirmCount,
+            NewConfirmCount = memory.ConfirmCount,
+            PreviousConfidence = previousConfidence,
+            NewConfidence = memory.Confidence,
+            IsArchiveEligible = isArchiveEligible
+        };
     }
 
     #endregion
