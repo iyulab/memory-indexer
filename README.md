@@ -1,35 +1,63 @@
 # Memory Indexer
 
-**Cognitive Memory System for LLMs** — A .NET SDK and MCP server implementing human-inspired memory architecture with 3-Axis Memory Model.
+A cognitive memory system for LLMs implementing human-inspired 4-tier memory architecture.
 
 [![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-## Why Memory Indexer?
-
-LLMs face a fundamental constraint: **finite context windows**. Memory Indexer solves this by implementing a cognitive architecture inspired by human memory systems—where forgetting is not a bug, but a feature.
+## Philosophy
 
 > *"The goal of memory is not to transmit the most accurate information over time, but to guide and optimize intelligent decision-making by only preserving valuable information."*
-> — Richards & Frankland (2017), "The Persistence and Transience of Memory"
+> — Richards & Frankland (2017)
 
-### Core Value
+LLMs face a fundamental constraint: **finite context windows**. Memory Indexer solves this by implementing forgetting as a feature, not a bug—inspired by how human memory actually works.
 
-| Feature | Description |
-|---------|-------------|
-| **Zero Configuration** | Works out-of-the-box with sensible defaults |
-| **3-Axis Memory Model** | Type × Scope × Tier (cognitive science-inspired) |
-| **Intelligent Forgetting** | Ebbinghaus curve-based decay with importance weighting |
-| **Domain Agnostic** | General-purpose memory primitives, not tied to specific use cases |
-| **Research-Based** | Built on MemGPT, Mem0, H-MEM, and cognitive psychology research |
+## Role & Scope
+
+| What It Is | What It Isn't |
+|------------|---------------|
+| General-purpose memory primitives | A chatbot framework |
+| Cognitive science-based architecture | A vector database |
+| MCP server for any LLM client | Tied to specific use cases |
+| Domain-agnostic building blocks | An opinionated application |
+
+## Core Architecture
+
+```
+4-Tier Cognitive Memory (Atkinson-Shiffrin + Tulving):
+
+┌────────────────────────────────────────────────────┐
+│  Buffer (T0) - Sensory Store                       │
+│  TTL: 60s idle │ 500 tokens │ 3 turns              │
+├────────────────────────────────────────────────────┤
+│  Short (T1) - Working Memory (Baddeley's 7±2)      │
+│  Capacity: 9 items, auto-promote when exceeded     │
+├────────────────────────────────────────────────────┤
+│  Long (T2) - Episodic Memory                       │
+│  Session-level events and experiences              │
+├────────────────────────────────────────────────────┤
+│  Archive (T3) - Semantic Memory                    │
+│  Promotion: Confidence ≥ 0.8 AND Confirms ≥ 3      │
+└────────────────────────────────────────────────────┘
+```
+
+## Benchmark Summary
+
+| Operation | Latency | Throughput |
+|-----------|---------|------------|
+| Store | ~2.3 μs | 435K ops/s |
+| Recall (limit 5) | ~1.5 μs | 667K ops/s |
+| Store→Recall workflow | ~3.8 μs | 263K ops/s |
+
+> In-memory storage with mock embeddings. See [Benchmark Details](docs/BENCHMARKS.md) for full results.
 
 ## Quick Start
 
-### As MCP Server (with Claude Desktop)
+### As MCP Server
 
 ```bash
-# Install
 dotnet tool install -g MemoryIndexer.Mcp
 ```
 
@@ -38,14 +66,13 @@ Configure Claude Desktop (`%APPDATA%\Claude\claude_desktop_config.json`):
 {
   "mcpServers": {
     "memory-indexer": {
-      "command": "memory-indexer-mcp",
-      "args": []
+      "command": "memory-indexer-mcp"
     }
   }
 }
 ```
 
-### As SDK (in your .NET application)
+### As SDK
 
 ```bash
 dotnet add package MemoryIndexer.Sdk
@@ -60,112 +87,34 @@ services.AddMemoryIndexer(options =>
 });
 
 // Store
-await memoryService.StoreAsync(
-    userId: "user123",
-    content: "User prefers dark mode",
-    importance: 0.8f
-);
+await memoryService.StoreAsync("user123", "User prefers dark mode", importance: 0.8f);
 
 // Recall
-var results = await memoryService.RecallAsync(
-    userId: "user123",
-    query: "UI preferences",
-    limit: 5
-);
+var results = await memoryService.RecallAsync("user123", "UI preferences", limit: 5);
 ```
-
-## 3-Axis Memory Model
-
-Memory Indexer implements a **3-Axis Memory Model** where each memory has three independent, orthogonal dimensions:
-
-```
-Type × Scope × Tier
- ↓      ↓       ↓
-What   When   Where
-```
-
-### Type (What kind of memory)
-
-| Type | Description | Example |
-|------|-------------|---------|
-| **Episodic** | Events with temporal context | "User asked about auth on Dec 8th" |
-| **Semantic** | General facts and knowledge | "User prefers dark mode" |
-| **Procedural** | How-to patterns and workflows | "Deploy: test → build → staging" |
-| **Fact** | Specific verifiable facts | "User's company is Acme Corp" |
-| **Reflection** | Synthesized inferences | "User prioritizes security over convenience" |
-
-### Scope (Temporal reach)
-
-| Scope | Level | Lifetime | API |
-|-------|-------|----------|-----|
-| **Turn** | S3 | ~seconds | Internal |
-| **Topic** | S2 | ~minutes | Internal |
-| **Session** | S1 | ~hours | Exposed |
-| **User** | S0 | ~forever | Exposed |
-
-### Tier (Storage layer)
-
-| Tier | TTL/Promotion | Cognitive Basis |
-|------|---------------|-----------------|
-| **Buffer** (T0) | 60s idle OR 500 tokens OR 3 turns | Atkinson-Shiffrin sensory memory |
-| **Short** (T1) | 10min OR 2K tokens OR topic change | Baddeley's working memory |
-| **Long** (T2) | Session duration, vector DB | Tulving's episodic memory |
-| **Archive** (T3) | Confidence ≥ 0.8 AND Confirms ≥ 3 | Tulving's semantic memory |
-
-## Key Features
-
-- **Hybrid Search**: Semantic (embeddings) + Keyword (BM25) + Metadata boosting
-- **Smart Deduplication**: Content-aware duplicate detection (configurable thresholds)
-- **Query Intent Classification**: Factual/Contextual/Temporal/Relational routing
-- **Graph Memory Network**: Entity extraction, community detection, PageRank importance
-- **Self-Directed Management**: MemGPT-inspired autonomous consolidation
-- **Production Observability**: OpenTelemetry integration, health checks, metrics
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design and 3-Axis model details |
-| [Vision](docs/VISION.md) | Research basis and design principles |
-| [Tier × Type Matrix](docs/TIER_TYPE_MATRIX.md) | Understanding memory dimensions |
-| [Usage Guides](docs/GUIDES.md) | Common patterns and best practices |
-| [Integrations](docs/INTEGRATIONS.md) | Semantic Kernel, LangChain, AutoGen |
+| [Architecture](docs/ARCHITECTURE.md) | System design and 4-tier model |
+| [Vision](docs/VISION.md) | Research basis and design philosophy |
+| [Benchmarks](docs/BENCHMARKS.md) | Performance measurements |
+| [Guides](docs/GUIDES.md) | Common patterns and best practices |
+| [Changelog](CHANGELOG.md) | Version history |
 
-## Configuration
+## Research Foundation
 
-```json
-{
-  "MemoryIndexer": {
-    "Storage": {
-      "Type": "SqliteVec",
-      "ConnectionString": "memory.db"
-    },
-    "Embedding": {
-      "Provider": "Ollama",
-      "Model": "bge-m3",
-      "Dimensions": 1024
-    },
-    "VCM": {
-      "ShortTermMemory": { "Capacity": 7, "DefaultTtl": "00:10:00" },
-      "Buffer": { "MaxIdleSeconds": 60, "TokenThreshold": 500 }
-    }
-  }
-}
-```
-
-## Research References
-
-Memory Indexer builds on cutting-edge research:
+Built on cutting-edge memory research:
 - **MemGPT**: OS-inspired virtual memory paging
 - **Mem0/Mem0g**: Graph-based memory networks
 - **H-MEM**: Hierarchical memory with index routing
-- **AFM**: Adaptive fidelity memory
-- **SLEEP Paradigm**: Memory consolidation during rest cycles
+- **Cognitive Psychology**: Atkinson-Shiffrin, Baddeley, Tulving models
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Built with ❤️ by [iyulab](https://github.com/iyulab)**
+**Built by [iyulab](https://github.com/iyulab)**
