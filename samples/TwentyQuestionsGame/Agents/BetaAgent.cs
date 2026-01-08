@@ -24,6 +24,8 @@ public sealed class BetaAgent(
         _systemPromptTemplate = systemPromptTemplate;
     }
 
+    private const int MaxRetryAttempts = 2;
+
     /// <summary>
     /// Generates a question based on Alpha's last response.
     /// </summary>
@@ -36,15 +38,25 @@ public sealed class BetaAgent(
         var systemPrompt = BuildSystemPrompt(currentRound, alphaLastResponse);
 
         // ==========================================================================
-        // Phase 62 Experiment: Question History Injection Removed
+        // Phase 48: Forced Recall + Retry Logic
         // ==========================================================================
-        // Previous: Injected all previous Q&A into user message
-        // Now: Rely on Memory Indexer's recall to provide context
-        // LLM uses memory_recall results to avoid duplicates
+        // Pre-inject previous Q&A to ensure LLM has context even if it doesn't recall
+        // Retry if LLM fails to produce a valid question
         // ==========================================================================
 
         var userMessageBuilder = new System.Text.StringBuilder();
         userMessageBuilder.Append($"Alpha says: \"{alphaLastResponse}\"\n\n");
+
+        // Inject question history as context (in case LLM doesn't call memory_recall)
+        if (questionHistory != null && questionHistory.Count > 0)
+        {
+            userMessageBuilder.AppendLine("=== PREVIOUS Q&A (for reference - avoid duplicates!) ===");
+            foreach (var (q, a) in questionHistory.TakeLast(10)) // Last 10 for context
+            {
+                userMessageBuilder.AppendLine($"- Q: {q} → A: {a}");
+            }
+            userMessageBuilder.AppendLine();
+        }
 
         if (currentRound >= 19)
         {
@@ -52,15 +64,35 @@ public sealed class BetaAgent(
         }
         else
         {
-            userMessageBuilder.Append("Use memory_recall to check previous Q&A, then ask your next question.");
+            userMessageBuilder.Append("Now follow the MANDATORY REASONING CHAIN. Output your ANALYSIS, QUESTION SELECTION, then your question.");
         }
 
         var userMessage = userMessageBuilder.ToString();
 
-        var response = await ProcessWithToolsAsync(systemPrompt, userMessage, ct);
+        AgentResponse response;
+        string question;
+        var attempt = 0;
 
-        // Extract the question (clean up any remaining formatting)
-        var question = CleanQuestion(response.FinalOutput);
+        do
+        {
+            attempt++;
+            response = await ProcessWithToolsAsync(systemPrompt, userMessage, ct);
+            question = CleanQuestion(response.FinalOutput);
+
+            // If empty question and not last attempt, add stronger instruction
+            if (string.IsNullOrEmpty(question) && attempt < MaxRetryAttempts)
+            {
+                userMessage = $"{userMessage}\n\n⚠️ YOUR PREVIOUS RESPONSE DID NOT CONTAIN A VALID QUESTION. You MUST output a yes/no question ending with '?' or a final guess starting with 'My final guess is:'";
+                logger.LogWarning("Beta failed to generate question (attempt {Attempt}), retrying...", attempt);
+            }
+        } while (string.IsNullOrEmpty(question) && attempt < MaxRetryAttempts);
+
+        // If still no question after retries, generate a fallback based on context
+        if (string.IsNullOrEmpty(question))
+        {
+            question = GenerateContextualFallback(questionHistory, currentRound);
+            logger.LogWarning("Beta failed to generate question after {Attempts} attempts, using fallback: {Fallback}", attempt, question);
+        }
 
         // Enforce final guess format on Round 19-20
         if (currentRound >= 19 && !question.StartsWith("My final guess", StringComparison.OrdinalIgnoreCase))
@@ -197,10 +229,11 @@ public sealed class BetaAgent(
             question = lines.LastOrDefault(l => !string.IsNullOrWhiteSpace(l)) ?? question;
         }
 
-        // If question is empty or just punctuation, provide fallback
+        // If question is empty or just punctuation, return empty - let caller detect failure
+        // DO NOT provide hardcoded fallback - this caused duplicate question bugs!
         if (string.IsNullOrWhiteSpace(question) || question.Length < 3)
         {
-            question = "Is it a common household item";
+            return ""; // Empty signals failure, caller should retry or handle
         }
 
         // Ensure it ends with a question mark
@@ -275,25 +308,119 @@ public sealed class BetaAgent(
     }
 
     // ==========================================================================
-    // Phase 62 Experiment: Hardcoding Removed
+    // Phase 48: Restored Duplicate Detection + Contextual Fallback
     // ==========================================================================
-    // Previous implementation used Jaccard similarity for duplicate detection.
-    // Now relying on Memory Indexer's semantic search + LLM judgment.
-    // The LLM sees recalled memories and should avoid asking similar questions.
+    // Phase 62 removed hardcoding but caused duplicate question bugs.
+    // Restoring Jaccard similarity for duplicate detection as safety net.
     // ==========================================================================
 
     /// <summary>
-    /// Duplicate detection now relies on Memory Indexer's semantic search.
-    /// The LLM receives recalled Q&A history and should avoid duplicates.
-    /// This method returns no-duplicate to let memory indexer + LLM handle it.
+    /// Generates a contextual fallback question when LLM fails to produce one.
+    /// Uses question history to pick an unanswered category question.
+    /// </summary>
+    private static string GenerateContextualFallback(
+        IReadOnlyList<(string Question, string Answer)>? questionHistory,
+        int currentRound)
+    {
+        // Standard category questions in order of usefulness
+        var categoryQuestions = new[]
+        {
+            "Is it a living thing?",
+            "Is it man-made?",
+            "Is it a physical object?",
+            "Is it larger than a car?",
+            "Is it found indoors?",
+            "Is it located in Europe?",
+            "Is it located in Asia?",
+            "Is it something famous?",
+            "Is it used for entertainment?",
+            "Is it edible?"
+        };
+
+        if (questionHistory == null || questionHistory.Count == 0)
+        {
+            return categoryQuestions[0];
+        }
+
+        // Find a question that hasn't been asked yet
+        var askedQuestions = questionHistory.Select(h => NormalizeQuestion(h.Question)).ToHashSet();
+
+        foreach (var q in categoryQuestions)
+        {
+            if (!askedQuestions.Contains(NormalizeQuestion(q)))
+            {
+                return q;
+            }
+        }
+
+        // If all category questions asked, generate based on round
+        return currentRound >= 15
+            ? "Is it something that can be visited by tourists?"
+            : "Is it something that exists in nature?";
+    }
+
+    /// <summary>
+    /// Check for duplicate questions using Jaccard similarity.
+    /// Restored from Phase 62 experiment - LLM-only duplicate detection was unreliable.
     /// </summary>
     private static (bool IsDuplicate, int? OriginalRound, float SimilarityScore) CheckForDuplicate(
         string currentQuestion,
         IReadOnlyList<(string Question, string Answer)>? questionHistory)
     {
-        // Phase 62: Hardcoding removed - trust Memory Indexer + LLM
-        // Memory Indexer provides semantic search, LLM judges duplicates
-        return (false, null, 0f);
+        if (questionHistory == null || questionHistory.Count == 0)
+        {
+            return (false, null, 0f);
+        }
+
+        var currentNormalized = NormalizeQuestion(currentQuestion);
+        var currentWords = currentNormalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+
+        var bestMatch = (IsDuplicate: false, Round: (int?)null, Score: 0f);
+
+        for (int i = 0; i < questionHistory.Count; i++)
+        {
+            var prevNormalized = NormalizeQuestion(questionHistory[i].Question);
+            var prevWords = prevNormalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+
+            // Jaccard similarity
+            var intersection = currentWords.Intersect(prevWords).Count();
+            var union = currentWords.Union(prevWords).Count();
+            var similarity = union > 0 ? (float)intersection / union : 0f;
+
+            if (similarity > bestMatch.Score)
+            {
+                bestMatch = (similarity >= 0.7f, i + 1, similarity); // Round is 1-indexed
+            }
+        }
+
+        return bestMatch;
+    }
+
+    /// <summary>
+    /// Normalizes a question for comparison.
+    /// </summary>
+    private static string NormalizeQuestion(string question)
+    {
+        // Remove punctuation, lowercase, remove common words
+        var normalized = question.ToLowerInvariant()
+            .Replace("?", "")
+            .Replace("!", "")
+            .Replace(".", "")
+            .Replace(",", "")
+            .Trim();
+
+        // Remove common question prefixes
+        var prefixes = new[] { "is it ", "are there ", "does it ", "can it ", "will it ", "has it ", "my final guess is " };
+        foreach (var prefix in prefixes)
+        {
+            if (normalized.StartsWith(prefix))
+            {
+                normalized = normalized[prefix.Length..];
+                break;
+            }
+        }
+
+        return normalized;
     }
 }
 
