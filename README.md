@@ -1,6 +1,6 @@
 # Memory Indexer
 
-**Cognitive Memory System for LLMs** — An MCP server implementing human-inspired memory architecture with 4-Tier Virtual Context Management.
+**Cognitive Memory System for LLMs** — A .NET SDK and MCP server implementing human-inspired memory architecture with 4-Tier Virtual Context Management.
 
 [![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
