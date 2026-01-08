@@ -648,7 +648,5 @@ NBomberRunner.RegisterScenarios(scenario).Run();
 
 ## Further Reading
 
-- [Architecture Deep Dive](ARCHITECTURE.md)
+- [Architecture Deep Dive](ARCHITECTURE.md) (includes 3-axis model and tier/type details)
 - [Integration Examples](INTEGRATIONS.md)
-- [Tier × Type Matrix](TIER_TYPE_MATRIX.md)
-- [Vision & Philosophy](VISION.md)

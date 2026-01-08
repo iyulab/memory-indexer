@@ -45,7 +45,7 @@ What   When   Where
 
 ### Axis 1: Type (What kind of memory)
 
-Content classification based on cognitive psychology.
+Content classification based on cognitive psychology (Tulving's memory classification).
 
 | Type | Description | Example |
 |------|-------------|---------|
@@ -54,6 +54,14 @@ Content classification based on cognitive psychology.
 | `Procedural` | How-to patterns and workflows | "Deploy: test → build → staging" |
 | `Fact` | Specific verifiable facts | "User's company is Acme Corp" |
 | `Reflection` | Synthesized inferences from consolidation | "User prioritizes security over convenience" |
+
+**Type Details:**
+
+- **Episodic**: Contains WHO, WHAT, WHEN, WHERE context. Tied to specific sessions. Example: *"Yesterday we spent 3 hours debugging the auth issue"*
+- **Semantic**: Context-free factual knowledge. High reusability across sessions. Example: *"User prefers Python for backend development"*
+- **Procedural**: Sequential steps and processes. Action-oriented. Example: *"To deploy: run tests → build → push to staging → smoke test"*
+- **Fact**: Atomic discrete data points. Key-value structured. Example: *"API key expires on 2025-01-15"*
+- **Reflection**: Generalized patterns from multiple episodes. Example: *"User frequently encounters JWT issues during auth debugging"*
 
 ### Axis 2: Scope (Temporal reach)
 
@@ -453,3 +461,73 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
 - **MinMaxScoreNormalizer**: Linear 0-1 scaling for well-distributed scores
 - **PercentileScoreNormalizer**: Rank-based normalization forcing full 0-1 spread
 - **ZScoreNormalizer**: Mean/stddev based normalization (±3σ → 0-1 mapping)
+
+## 3-Axis Mental Model
+
+**Understanding the Orthogonality:**
+
+- Think of **Tier** as the "container" (cup, bucket, tank, reservoir)
+- Think of **Type** as the "liquid" (water, juice, milk, soda)
+- Any liquid can go in any container
+- Container size/rules determine promotion (overflow → next container)
+- Liquid type determines how it's used (drink, cook, clean)
+
+**Key Insight**: Type and Tier are independent dimensions. Any memory Type can exist at any Tier.
+
+```
+Type × Scope × Tier = 5 × 4 × 4 = 80 possible combinations
+
+                │ Episodic │ Semantic │ Procedural │ Fact │ Reflection
+────────────────┼──────────┼──────────┼────────────┼──────┼────────────
+Buffer (T0)     │    ✓     │    ✓     │     ✓      │  ✓   │     ✓
+Short (T1)      │    ✓     │    ✓     │     ✓      │  ✓   │     ✓
+Long (T2)       │    ✓     │    ✓     │     ✓      │  ✓   │     ✓
+Archive (T3)    │    ✓     │    ✓     │     ✓      │  ✓   │     ✓
+```
+
+## Common Misconceptions
+
+### ❌ "Long only contains Episodic type"
+
+**Reality**: Long (T2) stores SESSION MEMORIES. Those sessions can contain ANY type:
+- Episodic: "User asked about auth on 2024-12-10"
+- Semantic: "User prefers REST over GraphQL" (extracted from session)
+- Procedural: "Deployment workflow: test → build → deploy"
+- Fact: "Database has 1.2M users" (mentioned in session)
+
+### ❌ "Archive only contains Semantic type"
+
+**Reality**: Archive (T3) stores LONG-TERM CONFIRMED KNOWLEDGE. Any repeatedly confirmed knowledge qualifies:
+- Semantic: "User's timezone is UTC-5"
+- Procedural: "User's code review process: 1) Format 2) Test 3) Review"
+- Fact: "User's GitHub username is @johndoe"
+
+### ❌ "Types determine promotion between tiers"
+
+**Reality**: Promotion is TIER-driven, not TYPE-driven:
+- **T0 → T1**: Time (60s) OR Tokens (500) OR Turns (3) [OR logic]
+- **T1 → T2**: Time (10min) OR Tokens (2K) OR Topic Change [OR logic]
+- **T2 → T3**: Confidence (≥0.8) AND Confirmations (≥3) [AND logic]
+
+All types follow the same promotion rules.
+
+## Design Principles
+
+### Separation of Concerns
+
+| Dimension | Concerns |
+|-----------|----------|
+| **Tier** | WHERE stored, WHEN promoted, HOW LONG persists |
+| **Type** | WHAT kind of content, HOW to interpret, WHY it matters |
+| **Scope** | HOW FAR it reaches (turn → user lifetime) |
+
+### Memory Lifecycle Example
+
+**"User prefers dark mode"** journey:
+
+1. **T0 Buffer** (Semantic): Raw statement captured
+2. **T1 Short** (Semantic): Topic-grouped "User Preferences"
+3. **T2 Long** (Semantic): Session extract "dark mode preference"
+4. **T3 Archive** (Semantic): Confirmed after 3 mentions across sessions
+
+**Type unchanged, Tier evolved**: Semantic → Semantic → Semantic → Semantic

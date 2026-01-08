@@ -7,12 +7,51 @@ A cognitive memory system for LLMs implementing human-inspired 3-axis memory arc
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-## Philosophy
+## The Problem
+
+LLMs face a fundamental constraint: **finite context windows**.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Session 1  │  Session 2  │  Session 3  │  Current  │
+│   (lost)    │   (lost)    │   (lost)    │  (active) │
+└─────────────────────────────────────────────────────┘
+```
+
+**Current workarounds fall short:**
+
+| Approach | Limitation |
+|----------|------------|
+| Summarization | Information loss, extra LLM calls |
+| Sliding Window | Important early context lost |
+| Full History | Hits token limits quickly |
+| RAG | Not optimized for conversation context |
+
+## The Solution
+
+Memory Indexer provides **Zero Context Engineering**—you focus on your prompt, we handle all memory management.
+
+**Before** (manual context management):
+```python
+class ChatService:
+    def chat(self, message):
+        # You manage: history, summarization, token counting,
+        # context assembly, profile loading, fact extraction...
+        if self.count_tokens(self.history) > MAX_TOKENS:
+            self.history = self.summarize(self.history)  # 😓
+```
+
+**After** (with Memory Indexer):
+```python
+class ChatService:
+    def chat(self, message):
+        await memory.store(session, message)           # Auto-classify, auto-place
+        context = await memory.recall(message)         # Intelligent retrieval
+        return await llm.generate(context, message)    # Done.
+```
 
 > *"The goal of memory is not to transmit the most accurate information over time, but to guide and optimize intelligent decision-making by only preserving valuable information."*
 > — Richards & Frankland (2017)
-
-LLMs face a fundamental constraint: **finite context windows**. Memory Indexer solves this by implementing forgetting as a feature, not a bug—inspired by how human memory actually works.
 
 ## Role & Scope
 
@@ -109,11 +148,9 @@ var results = await memoryService.RecallAsync("user123", "UI preferences", limit
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design and 3-axis model |
-| [Tier×Type Matrix](docs/TIER_TYPE_MATRIX.md) | Detailed 3-axis memory organization |
+| [Architecture](docs/ARCHITECTURE.md) | System design, 3-axis model, tier/type details |
 | [Roadmap](docs/ROADMAP.md) | Feature timeline and status |
 | [Benchmarks](docs/BENCHMARKS.md) | Performance measurements |
-| [Vision](docs/VISION.md) | Research basis and design philosophy |
 | [Changelog](CHANGELOG.md) | Version history |
 
 ## Research Foundation
