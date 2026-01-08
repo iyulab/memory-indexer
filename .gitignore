@@ -84,6 +84,8 @@ $RECYCLE.BIN/
 .LSOverride
 
 # Memory Indexer specific
+samples/TwentyQuestionsGame/game_log_*.txt
+samples/TwentyQuestionsGame/game_output*.txt
 memory.db
 memory.db-*
 chat_memories.db
