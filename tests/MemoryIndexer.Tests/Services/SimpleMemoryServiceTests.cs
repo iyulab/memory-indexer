@@ -461,6 +461,7 @@ public class SimpleMemoryServiceTests
         public Task<MemoryUnit> SummarizeAsync(SummarizeRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<MemoryUnit?> PromoteAsync(PromoteRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<MemoryUnit?> DemoteAsync(DemoteRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<ConfirmResult> ConfirmAsync(ConfirmRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     private class MockMemoryClassifier : IMemoryClassifier

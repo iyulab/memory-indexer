@@ -149,6 +149,10 @@ Storage location based on persistence and lifespan.
 - Confidence >= 0.8 **AND**
 - Confirmation count >= 3
 
+**Confirmation Sources** (Phase 55):
+- Explicit: `memory_confirm` MCP tool call
+- Implicit: Duplicate detection during encoding (repeated mention = confirmation)
+
 ## Layer Diagram
 
 ```
@@ -433,10 +437,11 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
 
 - **SemanticOperationDecider**: ADD/UPDATE/DELETE/MERGE decisions
 - **DeduplicationService**: Tiered semantic deduplication with content-type awareness
-  - Exact duplicates (≥0.95): Skip storage
-  - High similarity (0.85-0.94): Merge content
-  - Medium similarity (0.75-0.84): Update existing
+  - Exact duplicates (≥0.95): Skip storage + implicit confirm (+0.10 confidence boost)
+  - High similarity (0.85-0.94): Merge content + implicit confirm (+0.05 confidence boost)
+  - Medium similarity (0.75-0.84): Update existing + implicit confirm (+0.02 confidence boost)
   - Low similarity (0.65-0.74): Add with relation
+  - **Phase 55**: Duplicate detection = repeated mention = implicit confirmation → enables Archive promotion
 - **ImportanceAnalyzer**: Value assessment scoring
 
 ### Score Normalization

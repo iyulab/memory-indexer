@@ -96,11 +96,15 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                     case DuplicateAction.Skip:
                         _logger.LogInformation("Skipping duplicate memory (similarity: {Score:F3})",
                             dupCheck.SimilarityScore);
+                        // Phase 55: Implicit confirmation - duplicate = repeated mention
+                        await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         return dupCheck.ExistingMemory!;
 
                     case DuplicateAction.Update:
                         _logger.LogInformation("Updating existing memory {Id} with new content",
                             dupCheck.ExistingMemory!.Id);
+                        // Phase 55: Implicit confirmation before update
+                        await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         return await UpdateAsync(new UpdateRequest
                         {
                             MemoryId = dupCheck.ExistingMemory.Id,
@@ -111,6 +115,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                     case DuplicateAction.Merge:
                         _logger.LogInformation("Merging with existing memory {Id}",
                             dupCheck.ExistingMemory!.Id);
+                        // Phase 55: Implicit confirmation before merge
+                        await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         // Boost importance and update access count
                         dupCheck.ExistingMemory.ImportanceScore = Math.Min(1.0f,
                             dupCheck.ExistingMemory.ImportanceScore + 0.1f);
@@ -910,6 +916,57 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
     #endregion
 
     #region Helper Methods
+
+    /// <summary>
+    /// Phase 55: Implicit confirmation when duplicate is detected.
+    /// Duplicate detection = same information mentioned again = implicit confirmation.
+    /// This enables Archive tier promotion via ConfirmCount accumulation.
+    /// </summary>
+    /// <remarks>
+    /// Confidence boost is proportional to similarity:
+    /// - Exact duplicate (>= 0.95): +0.1 boost
+    /// - High similarity (>= 0.85): +0.05 boost
+    /// - Medium similarity (>= 0.75): +0.02 boost
+    /// </remarks>
+    private async Task ConfirmDuplicateAsync(
+        MemoryUnit existingMemory,
+        float similarityScore,
+        CancellationToken cancellationToken)
+    {
+        // Calculate confidence boost based on similarity score
+        var boost = similarityScore switch
+        {
+            >= 0.95f => 0.1f,   // Exact duplicate
+            >= 0.85f => 0.05f,  // High similarity
+            >= 0.75f => 0.02f,  // Medium similarity
+            _ => 0.01f          // Fallback
+        };
+
+        var result = await ConfirmAsync(new ConfirmRequest
+        {
+            MemoryId = existingMemory.Id,
+            ConfidenceBoost = boost,
+            Source = $"deduplication (similarity: {similarityScore:F3})"
+        }, cancellationToken);
+
+        if (result.Success)
+        {
+            _logger.LogInformation(
+                "[DEDUP_CONFIRM] Memory {MemoryId} confirmed via deduplication: " +
+                "ConfirmCount {PrevCount}→{NewCount}, Confidence {PrevConf:F2}→{NewConf:F2}, " +
+                "ArchiveEligible={Eligible}",
+                existingMemory.Id,
+                result.PreviousConfirmCount, result.NewConfirmCount,
+                result.PreviousConfidence, result.NewConfidence,
+                result.IsArchiveEligible);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "[DEDUP_CONFIRM] Failed to confirm memory {MemoryId}: {Error}",
+                existingMemory.Id, result.Error);
+        }
+    }
 
     private static string ComputeContentHash(string content)
     {
