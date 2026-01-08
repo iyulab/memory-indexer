@@ -8,6 +8,12 @@ All notable changes to Memory Indexer are documented here.
 
 This release completes the 4-Tier Cognitive Memory Architecture with full tier promotion pipeline and cognitive compliance validation.
 
+#### Phase 58: Null Reference Warning Fixes
+- **Fixed**: 19 CS8602/CS8603/CS8604 nullable warnings in source code
+- **Scope**: MemoryPrimitivesService, MemoryService, AdvancedMemoryTools, MemoryTools
+- **Pattern**: `??=` initialization for Metadata, `?? []` coalescing for collections
+- **Files**: Core services and MCP tools
+
 #### Phase 56: Per-User Cognitive Compliance Fix
 - **Fixed**: Cognitive compliance check now evaluates per-user instead of globally
 - **Root Cause**: Compliance summed Short tier across all users; enforcement was per-user
