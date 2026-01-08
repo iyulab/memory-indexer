@@ -77,7 +77,8 @@ public class RollingSummaryManagerTests
         // Assert
         Assert.Null(result);
         var state = _manager.GetState("session-1");
-        Assert.Equal(1, state!.WindowMemories.Count);
+        Assert.NotNull(state);
+        Assert.Single(state.WindowMemories);
         Assert.Equal(1, state.TotalMemoriesProcessed);
     }
 
@@ -127,7 +128,7 @@ public class RollingSummaryManagerTests
         // Assert final state
         var state = _manager.GetState("session-1");
         Assert.NotNull(state);
-        Assert.Equal(0, state.WindowMemories.Count); // Cleared after summarization
+        Assert.Empty(state.WindowMemories); // Cleared after summarization
         Assert.Equal(1, state.TotalSummariesGenerated);
     }
 
@@ -240,7 +241,8 @@ public class RollingSummaryManagerTests
         // Assert
         Assert.Equal("Forced summary", result.Content);
         var state = _manager.GetState("session-1");
-        Assert.Equal(0, state!.WindowMemories.Count);
+        Assert.NotNull(state);
+        Assert.Empty(state.WindowMemories);
         Assert.Equal(1, state.TotalSummariesGenerated);
     }
 

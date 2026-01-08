@@ -112,7 +112,7 @@ public class MemGPTStyleMemoryManagerTests
             deduplicationServiceMock.Object,
             pressureMonitorMock.Object,
             growthMonitorMock.Object,
-            null, // IMemoryConflictResolver (optional)
+            null!, // IMemoryConflictResolver (optional, null is valid)
             optionsMock) { CallBase = true };
 
         _manager = new MemGPTStyleMemoryManager(

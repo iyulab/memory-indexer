@@ -180,7 +180,7 @@ public sealed class SleepBasedConsolidatorTests
         // Assert
         Assert.NotEmpty(result);
         var crossTopicReflection = result.FirstOrDefault(r =>
-            r.Metadata.ContainsKey("source_type") && r.Metadata["source_type"] == "cross_topic_reflection");
+            r.Metadata != null && r.Metadata.ContainsKey("source_type") && r.Metadata["source_type"] == "cross_topic_reflection");
         Assert.NotNull(crossTopicReflection);
     }
 

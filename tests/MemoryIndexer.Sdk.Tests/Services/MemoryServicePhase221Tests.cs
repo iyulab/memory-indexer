@@ -84,6 +84,7 @@ public sealed class MemoryServicePhase221Tests
 
         // Assert
         Assert.NotNull(result);
+        Assert.NotNull(result.Metadata);
         Assert.True(result.Metadata.ContainsKey("Filtered"));
         Assert.Equal("true", result.Metadata["Filtered"]);
         Assert.Contains("ImportanceScore", result.Metadata["Reason"]);
@@ -113,6 +114,7 @@ public sealed class MemoryServicePhase221Tests
 
         // Assert
         Assert.NotNull(result);
+        Assert.NotNull(result.Metadata);
         Assert.False(result.Metadata.ContainsKey("Filtered"));
 
         // Verify memory was stored
@@ -148,9 +150,11 @@ public sealed class MemoryServicePhase221Tests
 
         // Assert
         Assert.NotNull(result1);
+        Assert.NotNull(result1.Metadata);
         Assert.False(result1.Metadata.ContainsKey("Filtered"));
 
         Assert.NotNull(result2);
+        Assert.NotNull(result2.Metadata);
         Assert.True(result2.Metadata.ContainsKey("Filtered"));
         Assert.Contains("Duplicate topic", result2.Metadata["Reason"]);
 
@@ -179,6 +183,8 @@ public sealed class MemoryServicePhase221Tests
         var result2 = await _memoryService.StoreAsync(userId, content2, importance: 0.8f);
 
         // Assert
+        Assert.NotNull(result1.Metadata);
+        Assert.NotNull(result2.Metadata);
         Assert.False(result1.Metadata.ContainsKey("Filtered"));
         Assert.False(result2.Metadata.ContainsKey("Filtered"));
 
@@ -203,6 +209,7 @@ public sealed class MemoryServicePhase221Tests
         var result = await _memoryService.StoreAsync(userId, content, importance: 0.8f);
 
         // Assert - Topic should be extracted (first sentence)
+        Assert.NotNull(result.Metadata);
         Assert.True(result.Metadata.ContainsKey("Topic"));
         Assert.Equal("Machine learning is about teaching computers", result.Metadata["Topic"]);
     }
@@ -219,6 +226,7 @@ public sealed class MemoryServicePhase221Tests
 
         // Assert - Default importance is 0.5, which is > 0.3 threshold
         Assert.Equal(0.5f, result.ImportanceScore);
+        Assert.NotNull(result.Metadata);
         Assert.False(result.Metadata.ContainsKey("Filtered"));
 
         // Verify memory was stored
