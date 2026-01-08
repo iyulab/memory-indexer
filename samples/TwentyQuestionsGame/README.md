@@ -90,6 +90,57 @@ dotnet run
    Total tokens: 45,000
 ```
 
+## Benchmark Mode
+
+Run multiple games and collect metrics aligned with cognitive science principles (MemoryBench dimensions).
+
+```bash
+# Single game with benchmark output
+dotnet run -- --benchmark
+
+# Multiple iterations
+dotnet run -- -b -n 10
+
+# Save results to JSON
+dotnet run -- -b -n 5 -o benchmark_results.json
+```
+
+### Benchmark Metrics
+
+| Category | Metric | Description |
+|----------|--------|-------------|
+| **Effectiveness** | Win Rate | Beta success rate across games |
+| | Rounds to Win | Average rounds needed |
+| | Recall Precision | Relevant memories / total recalled |
+| **Efficiency** | Tokens/Game | Total token consumption |
+| | LLM Time | Total LLM latency |
+| | Recall Overhead | Memory recall time vs LLM time |
+| **Cognitive Compliance** | Working Memory (7±2) | Baddeley's capacity adherence |
+| | Healthy Tier Flow | Buffer < Short < Long distribution |
+
+### Sample Benchmark Output
+
+```
+══════════════════════════════════════════════════════════════════════
+  BENCHMARK RESULTS
+══════════════════════════════════════════════════════════════════════
+
+📊 EFFECTIVENESS:
+   Win Rate:           70.0% (7/10)
+   Avg Rounds to Win:  15.3
+   Avg Recall Precision: 85.0%
+
+⚡ EFFICIENCY:
+   Avg Tokens/Game:    42,500
+   Avg LLM Time:       25,000ms
+   Avg Recall Time:    1,200ms
+   Recall Overhead:    4.8%
+
+🧠 COGNITIVE SCIENCE COMPLIANCE:
+   Working Memory (7±2): 80.0%
+   Healthy Tier Flow:    100.0%
+```
+
 ## Key Config
 
 ```csharp

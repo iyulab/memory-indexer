@@ -58,4 +58,18 @@ public sealed class GameState
                 EndGame(betaWins: false);
         }
     }
+
+
+    /// <summary>
+    /// Reset state for a new game (used in benchmark mode).
+    /// </summary>
+    public void Reset()
+    {
+        CurrentRound = 1;
+        IsGameOver = false;
+        BetaWon = false;
+        LastAlphaResponse = "The game has started. Ask your first question!";
+        LastBetaQuestion = null;
+        _questionHistory.Clear();
+    }
 }

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 using TwentyQuestionsGame.Agents;
+using TwentyQuestionsGame.Benchmark;
 using TwentyQuestionsGame.Game;
 using TwentyQuestionsGame.LLM;
 using TwentyQuestionsGame.ToolCall;
@@ -16,6 +17,17 @@ using TwentyQuestionsGame.ToolCall;
 //  Twenty Questions Game - Memory Indexer Demo
 //  AI vs AI: Alpha generates secret, Beta guesses through memory-only context
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Parse CLI arguments
+var benchmarkMode = args.Contains("--benchmark") || args.Contains("-b");
+var iterations = GetIntArg(args, "--iterations", "-n") ?? 1;
+var outputPath = GetStringArg(args, "--output", "-o");
+
+if (args.Contains("--help") || args.Contains("-h"))
+{
+    PrintHelp();
+    return;
+}
 
 Console.WriteLine("""
     ╔══════════════════════════════════════════════════════════════╗
@@ -35,6 +47,12 @@ var embeddingModel = Environment.GetEnvironmentVariable("EMBEDDING_MODEL") ?? "t
 
 Console.WriteLine($"[CONFIG] LLM: {llmModel}");
 Console.WriteLine($"[CONFIG] Embedding: {embeddingModel}");
+if (benchmarkMode)
+{
+    Console.WriteLine($"[CONFIG] Mode: BENCHMARK ({iterations} iteration(s))");
+    if (!string.IsNullOrEmpty(outputPath))
+        Console.WriteLine($"[CONFIG] Output: {outputPath}");
+}
 
 // 2. Setup DI
 var services = new ServiceCollection();
@@ -86,26 +104,84 @@ var betaAgent = serviceProvider.GetRequiredService<BetaAgent>();
 alphaAgent.Initialize(alphaPrompt);
 betaAgent.Initialize(betaPrompt);
 
-// 5. Clear previous game memories
-Console.WriteLine("\n[INIT] Clearing previous game memories...");
+// Get services for memory operations
 var memoryPrimitives = serviceProvider.GetRequiredService<IMemoryPrimitives>();
 var memoryStore = serviceProvider.GetRequiredService<IMemoryStore>();
+var gameRunner = serviceProvider.GetRequiredService<GameRunner>();
+var gameState = serviceProvider.GetRequiredService<GameState>();
 
-await ClearUserMemoriesAsync(memoryStore, GameConfiguration.AlphaUserId, GameConfiguration.AlphaSessionId);
-await ClearUserMemoriesAsync(memoryStore, GameConfiguration.BetaUserId, GameConfiguration.BetaSessionId);
+// Reset function for benchmark mode
+async Task ResetGameStateAsync()
+{
+    // Clear memories
+    await ClearUserMemoriesAsync(memoryStore, GameConfiguration.AlphaUserId, GameConfiguration.AlphaSessionId);
+    await ClearUserMemoriesAsync(memoryStore, GameConfiguration.BetaUserId, GameConfiguration.BetaSessionId);
 
-// 6. Store initial game rules (no secret - Alpha will generate it on Round 1)
-await StoreInitialMemoriesAsync(memoryPrimitives);
+    // Store initial memories
+    await StoreInitialMemoriesAsync(memoryPrimitives);
 
-// 7. Run the game
-Console.WriteLine("[INIT] Starting game...\n");
-var runner = serviceProvider.GetRequiredService<GameRunner>();
-await runner.RunAsync();
+    // Reset game state
+    gameState.Reset();
+}
 
-// 8. Cleanup
-Console.WriteLine("\n[CLEANUP] Game completed. Database: game_memory.db");
+// 5. Run game(s)
+if (benchmarkMode)
+{
+    // Benchmark mode: run multiple games
+    var benchmarkRunner = new BenchmarkRunner(gameRunner, ResetGameStateAsync);
+    var result = await benchmarkRunner.RunAsync(iterations);
+    await benchmarkRunner.OutputResultsAsync(result, outputPath);
+}
+else
+{
+    // Normal mode: single game
+    Console.WriteLine("\n[INIT] Clearing previous game memories...");
+    await ResetGameStateAsync();
+
+    Console.WriteLine("[INIT] Starting game...\n");
+    await gameRunner.RunAsync();
+
+    Console.WriteLine("\n[CLEANUP] Game completed. Database: game_memory.db");
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
+
+static void PrintHelp()
+{
+    Console.WriteLine("""
+        Twenty Questions Game - Memory Indexer Demo
+
+        Usage: dotnet run [options]
+
+        Options:
+          -b, --benchmark      Enable benchmark mode
+          -n, --iterations N   Number of games to run (default: 1)
+          -o, --output FILE    Output benchmark results to JSON file
+          -h, --help           Show this help message
+
+        Examples:
+          dotnet run                           # Single game
+          dotnet run --benchmark               # Single benchmark game
+          dotnet run -b -n 10                  # 10 benchmark games
+          dotnet run -b -n 5 -o results.json   # 5 games, save to JSON
+        """);
+}
+
+static int? GetIntArg(string[] args, string longName, string shortName)
+{
+    var index = Array.FindIndex(args, a => a == longName || a == shortName);
+    if (index >= 0 && index + 1 < args.Length && int.TryParse(args[index + 1], out var value))
+        return value;
+    return null;
+}
+
+static string? GetStringArg(string[] args, string longName, string shortName)
+{
+    var index = Array.FindIndex(args, a => a == longName || a == shortName);
+    if (index >= 0 && index + 1 < args.Length)
+        return args[index + 1];
+    return null;
+}
 
 static async Task ClearUserMemoriesAsync(IMemoryStore store, string userId, string sessionId)
 {

@@ -2,6 +2,8 @@ using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using TwentyQuestionsGame.Agents;
+using TwentyQuestionsGame.Benchmark;
+using TwentyQuestionsGame.Game;
 
 namespace TwentyQuestionsGame.Game;
 
@@ -12,10 +14,13 @@ public sealed class GameRunner(
     AlphaAgent alpha,
     BetaAgent beta,
     GameState state,
-    IMemoryPrimitives memoryPrimitives)
+    IMemoryPrimitives memoryPrimitives,
+    IMemoryStore memoryStore)
 {
     private readonly List<RoundMetrics> _roundMetrics = [];
     private string? _winningGuess;
+    private string? _detectedSecret;
+    private int _duplicateCount;
 
     public IReadOnlyList<RoundMetrics> RoundMetrics => _roundMetrics;
 
@@ -56,6 +61,7 @@ public sealed class GameRunner(
         // Warn if duplicate question detected
         if (betaResult.IsDuplicate)
         {
+            _duplicateCount++;
             GameConsole.WriteWarning($"   ⚠️ Duplicate detected! Similar to R{betaResult.DuplicateOfRound} (similarity: {betaResult.SimilarityScore:P0})");
         }
 
@@ -245,6 +251,9 @@ public sealed class GameRunner(
             return false;
         }
 
+        // Track secret for benchmark metrics
+        _detectedSecret = secret;
+
         var normalizedSecret = NormalizeGuess(secret);
         var normalizedGuess = NormalizeGuess(betaQuestion);
 
@@ -293,6 +302,74 @@ public sealed class GameRunner(
         normalized = normalized.TrimEnd('?', '.', '!', ',');
 
         return normalized.Trim();
+    }
+
+    /// <summary>
+    /// Generates benchmark result after game completion.
+    /// </summary>
+    public GameBenchmarkResult GenerateBenchmarkResult(DateTime startTime, DateTime endTime)
+    {
+        var totalTokens = _roundMetrics.Sum(r => r.BetaTokens + r.AlphaTokens);
+        var betaTokens = _roundMetrics.Sum(r => r.BetaTokens);
+        var alphaTokens = _roundMetrics.Sum(r => r.AlphaTokens);
+        var totalLlmMs = _roundMetrics.Sum(r => r.BetaLatencyMs + r.AlphaLatencyMs);
+        var totalRecallMs = _roundMetrics.Sum(r => r.BetaRecallMs + r.AlphaRecallMs);
+        var totalDurationMs = _roundMetrics.Sum(r => r.TotalDurationMs);
+
+        // Get tier counts from memory store
+        var tierStats = GetTierMetricsAsync().GetAwaiter().GetResult();
+
+        // Calculate recall precision (simplified: ratio of useful recalls)
+        var recallHits = _roundMetrics.Count(r => r.BetaRecallMs > 0);
+        var recallMisses = _roundMetrics.Count - recallHits;
+
+        return new GameBenchmarkResult
+        {
+            Secret = _detectedSecret ?? "unknown",
+            BetaWon = state.BetaWon,
+            RoundsPlayed = _roundMetrics.Count,
+            StartTime = startTime,
+            EndTime = endTime,
+            RecallPrecision = recallHits > 0 ? (double)recallHits / _roundMetrics.Count : 0,
+            DuplicateQuestions = _duplicateCount,
+            TotalTokens = totalTokens,
+            BetaTokens = betaTokens,
+            AlphaTokens = alphaTokens,
+            AvgTokensPerRound = _roundMetrics.Count > 0 ? (double)totalTokens / _roundMetrics.Count : 0,
+            TotalLlmMs = totalLlmMs,
+            TotalRecallMs = totalRecallMs,
+            TotalDurationMs = totalDurationMs,
+            TierStats = tierStats,
+            MemoryStoreCount = tierStats.Total,
+            MemoryRecallCount = recallHits + recallMisses,
+            RecallHits = recallHits,
+            RecallMisses = recallMisses
+        };
+    }
+
+    /// <summary>
+    /// Gets tier distribution metrics from memory store.
+    /// </summary>
+    private async Task<TierMetrics> GetTierMetricsAsync()
+    {
+        var betaMemories = await memoryStore.GetAllAsync(
+            GameConfiguration.BetaUserId,
+            new MemoryFilterOptions { SessionId = GameConfiguration.BetaSessionId });
+
+        var alphaMemories = await memoryStore.GetAllAsync(
+            GameConfiguration.AlphaUserId,
+            new MemoryFilterOptions { SessionId = GameConfiguration.AlphaSessionId });
+
+        var allMemories = betaMemories.Concat(alphaMemories).ToList();
+
+        return new TierMetrics
+        {
+            BufferCount = allMemories.Count(m => m.Tier == Tier.Buffer),
+            ShortCount = allMemories.Count(m => m.Tier == Tier.Short),
+            LongCount = allMemories.Count(m => m.Tier == Tier.Long),
+            ArchiveCount = allMemories.Count(m => m.Tier == Tier.Archive),
+            PromotionCount = 0  // Would need promotion tracking to measure
+        };
     }
 }
 
