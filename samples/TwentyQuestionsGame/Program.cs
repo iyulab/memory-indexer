@@ -40,12 +40,22 @@ Console.WriteLine("""
 Env.Load(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", ".env"));
 Env.Load(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".env"));
 
+// GPUStack configuration (primary LLM)
+var gpuStackUrl = Environment.GetEnvironmentVariable("GPUSTACK_URL");
+var gpuStackApiKey = Environment.GetEnvironmentVariable("GPUSTACK_APIKEY");
+var gpuStackModel = Environment.GetEnvironmentVariable("GPUSTACK_MODEL") ?? "gpt-oss-20b";
+
+// OpenAI configuration (embedding fallback)
 var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
     ?? throw new InvalidOperationException("OPENAI_API_KEY not found");
-var llmModel = Environment.GetEnvironmentVariable("LLM_MODEL") ?? "gpt-4o";
 var embeddingModel = Environment.GetEnvironmentVariable("EMBEDDING_MODEL") ?? "text-embedding-3-small";
 
-Console.WriteLine($"[CONFIG] LLM: {llmModel}");
+// Use GPUStack if available, otherwise OpenAI
+var useGpuStack = !string.IsNullOrEmpty(gpuStackUrl) && !string.IsNullOrEmpty(gpuStackApiKey);
+var llmModel = useGpuStack ? gpuStackModel : (Environment.GetEnvironmentVariable("LLM_MODEL") ?? "gpt-4o");
+
+Console.WriteLine($"[CONFIG] LLM Provider: {(useGpuStack ? "GPUStack" : "OpenAI")}");
+Console.WriteLine($"[CONFIG] LLM Model: {llmModel}");
 Console.WriteLine($"[CONFIG] Embedding: {embeddingModel}");
 if (benchmarkMode)
 {
@@ -78,8 +88,18 @@ services.AddMemoryIndexer(options =>
     options.Search.EnableReranking = false;
 });
 
-// OpenAI ChatClient (official SDK)
-services.AddSingleton(new ChatClient(model: llmModel, apiKey: openAiKey));
+// LLM ChatClient (GPUStack or OpenAI)
+if (useGpuStack)
+{
+    var gpuStackCredential = new System.ClientModel.ApiKeyCredential(gpuStackApiKey!);
+    var gpuStackOptions = new OpenAI.OpenAIClientOptions { Endpoint = new Uri(gpuStackUrl!) };
+    var gpuStackClient = new OpenAI.OpenAIClient(gpuStackCredential, gpuStackOptions);
+    services.AddSingleton(gpuStackClient.GetChatClient(llmModel));
+}
+else
+{
+    services.AddSingleton(new ChatClient(model: llmModel, apiKey: openAiKey));
+}
 services.AddSingleton<LlmClient>();
 
 // Game components
