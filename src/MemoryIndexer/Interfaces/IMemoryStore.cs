@@ -185,6 +185,16 @@ public sealed class MemoryFilterOptions
     public MemoryType[]? Types { get; set; }
 
     /// <summary>
+    /// Memory tiers to include (Phase 51: 3-axis model support).
+    /// </summary>
+    public Tier[]? Tiers { get; set; }
+
+    /// <summary>
+    /// Memory scopes to include (Phase 51: 3-axis model support).
+    /// </summary>
+    public Scope[]? Scopes { get; set; }
+
+    /// <summary>
     /// Filter by creation time (start).
     /// </summary>
     public DateTime? CreatedAfter { get; set; }

@@ -118,7 +118,13 @@ public enum WorkingPromotionTrigger
     /// <summary>
     /// Session end triggered archival.
     /// </summary>
-    SessionEnd = 6
+    SessionEnd = 6,
+
+    /// <summary>
+    /// Capacity exceeded (Baddeley's 7±2 limit).
+    /// Phase 51: Triggers when Short tier exceeds working memory capacity.
+    /// </summary>
+    CapacityExceeded = 7
 }
 
 /// <summary>
@@ -276,4 +282,19 @@ public sealed class WorkingMemoryOrchestratorOptions
     /// Whether to summarize before archiving.
     /// </summary>
     public bool SummarizeBeforeArchival { get; set; } = true;
+
+    /// <summary>
+    /// Maximum items in Short tier before triggering capacity-based promotion.
+    /// Based on Baddeley's Working Memory Model (7±2 items).
+    /// Default: 9 (upper bound of 7±2).
+    /// Phase 51: Added for cognitive compliance.
+    /// </summary>
+    public int Capacity { get; set; } = 9;
+
+    /// <summary>
+    /// Whether to enable capacity-based promotion.
+    /// When enabled, oldest items are promoted to Long tier when capacity is exceeded.
+    /// Default: true.
+    /// </summary>
+    public bool EnableCapacityEnforcement { get; set; } = true;
 }

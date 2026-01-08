@@ -83,6 +83,73 @@ public sealed class MemoryIndexerOptions
     /// Phase 23.1: Memory Type Distribution Balancing.
     /// </summary>
     public TypeBalancerOptions TypeBalancing { get; set; } = new();
+
+    /// <summary>
+    /// Working memory (Short tier) orchestration configuration.
+    /// Phase 51: Cognitive Compliance - Baddeley's 7±2 capacity enforcement.
+    /// </summary>
+    public WorkingMemoryOptions WorkingMemory { get; set; } = new();
+}
+
+/// <summary>
+/// Working memory (Short tier) configuration options.
+/// Phase 51: Implements Baddeley's Working Memory Model capacity constraints.
+/// </summary>
+/// <remarks>
+/// Controls Short tier capacity and promotion triggers:
+/// - Capacity limit based on Baddeley's 7±2 chunking model
+/// - Automatic promotion of excess items to Long tier
+/// - Multiple trigger signals for Working→Long promotion
+/// </remarks>
+public sealed class WorkingMemoryOptions
+{
+    /// <summary>
+    /// Maximum items in Short tier before triggering capacity-based promotion.
+    /// Based on Baddeley's Working Memory Model (7±2 items).
+    /// Default: 9 (upper bound of 7±2).
+    /// </summary>
+    public int Capacity { get; set; } = 9;
+
+    /// <summary>
+    /// Whether to enable capacity-based promotion.
+    /// When enabled, oldest items are promoted to Long tier when capacity is exceeded.
+    /// Default: true.
+    /// </summary>
+    public bool EnableCapacityEnforcement { get; set; } = true;
+
+    /// <summary>
+    /// Idle timeout before triggering archival.
+    /// Default: 10 minutes.
+    /// </summary>
+    public TimeSpan IdleTimeout { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// Token threshold for triggering archival.
+    /// Default: 2000 tokens.
+    /// </summary>
+    public int TokenThreshold { get; set; } = 2000;
+
+    /// <summary>
+    /// Turn threshold for triggering archival.
+    /// Default: 10 turns.
+    /// </summary>
+    public int TurnThreshold { get; set; } = 10;
+
+    /// <summary>
+    /// Whether to enable topic change detection.
+    /// </summary>
+    public bool EnableTopicChangeDetection { get; set; } = true;
+
+    /// <summary>
+    /// Similarity threshold for topic change detection.
+    /// Below this threshold, a topic change is detected.
+    /// </summary>
+    public float TopicChangeSimilarityThreshold { get; set; } = 0.5f;
+
+    /// <summary>
+    /// Whether to summarize before archiving to Long tier.
+    /// </summary>
+    public bool SummarizeBeforeArchival { get; set; } = true;
 }
 
 /// <summary>

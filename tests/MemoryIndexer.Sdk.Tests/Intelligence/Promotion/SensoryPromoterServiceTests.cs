@@ -51,7 +51,7 @@ public class SensoryPromoterServiceTests
             NullLogger<BufferService>.Instance);
 
         // Setup working memory
-        var workingOptions = new WorkingMemoryOptions { Capacity = 7 };
+        var workingOptions = new MemoryIndexer.Services.WorkingMemoryOptions { Capacity = 7 };
         _workingMemory = new ShortTermMemoryService(
             new MemoryCache(new MemoryCacheOptions()),
             Options.Create(workingOptions));
@@ -293,7 +293,7 @@ public class SensoryPromoterServiceTests
     public async Task PromoteAsync_AtCapacity_EvictsOldest()
     {
         // Arrange - fill working memory to capacity
-        var smallWorkingOptions = new WorkingMemoryOptions { Capacity = 2 };
+        var smallWorkingOptions = new MemoryIndexer.Services.WorkingMemoryOptions { Capacity = 2 };
         var smallWorkingMemory = new ShortTermMemoryService(
             new MemoryCache(new MemoryCacheOptions()),
             Options.Create(smallWorkingOptions));

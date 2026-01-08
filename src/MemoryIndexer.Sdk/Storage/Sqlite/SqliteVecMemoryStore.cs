@@ -979,6 +979,20 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             conditions.Add($"({typeConditions})");
         }
 
+        // Phase 51: Tier filtering (3-axis model support)
+        if (options?.Tiers?.Length > 0)
+        {
+            var tierConditions = string.Join(" OR ", options.Tiers.Select(t => $"tier = {(int)t}"));
+            conditions.Add($"({tierConditions})");
+        }
+
+        // Phase 51: Scope filtering (3-axis model support)
+        if (options?.Scopes?.Length > 0)
+        {
+            var scopeConditions = string.Join(" OR ", options.Scopes.Select(s => $"scope = {(int)s}"));
+            conditions.Add($"({scopeConditions})");
+        }
+
         // Phase 28: Metadata filtering
         if (options?.MetadataFilter != null && options.MetadataFilter.Count > 0)
         {

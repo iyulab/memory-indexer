@@ -26,6 +26,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
     private readonly IMemoryClassifier? _memoryClassifier;
     private readonly IShortTermMemoryOrchestrator _orchestrator;
     private readonly SearchOptions _searchOptions;
+    private readonly Configuration.WorkingMemoryOptions _workingMemoryOptions;
     private readonly ILogger<MemoryPrimitivesService> _logger;
 
     public MemoryPrimitivesService(
@@ -49,6 +50,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         _memoryClassifier = memoryClassifier;
         _orchestrator = orchestrator;
         _searchOptions = options.Value.Search;
+        _workingMemoryOptions = options.Value.WorkingMemory;
         _logger = logger;
     }
 
@@ -1009,6 +1011,15 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                     "[AUTO_CONSOLIDATION] No triggers satisfied for user {UserId}",
                     memory.UserId);
             }
+
+            // Phase 51: Capacity enforcement - Baddeley's 7±2 working memory limit
+            if (_workingMemoryOptions.EnableCapacityEnforcement)
+            {
+                await EnforceWorkingMemoryCapacityAsync(
+                    memory.UserId,
+                    memory.SessionId,
+                    cancellationToken);
+            }
         }
         catch (Exception ex)
         {
@@ -1018,6 +1029,76 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                 "Main operation succeeded, but automatic archival could not proceed.",
                 memory.UserId);
         }
+    }
+
+    /// <summary>
+    /// Enforces Baddeley's 7±2 working memory capacity limit.
+    /// Phase 51: Promotes oldest Short tier items to Long tier when capacity exceeded.
+    /// </summary>
+    private async Task EnforceWorkingMemoryCapacityAsync(
+        string userId,
+        string? sessionId,
+        CancellationToken cancellationToken)
+    {
+        var capacity = _workingMemoryOptions.Capacity;
+
+        // Query current Short tier count
+        var shortTierMemories = await _memoryStore.GetAllAsync(
+            userId,
+            new MemoryFilterOptions
+            {
+                SessionId = sessionId,
+                Tiers = [Tier.Short],
+                OrderBy = MemoryOrderBy.CreatedAtAsc // Oldest first for promotion
+            },
+            cancellationToken);
+
+        var currentCount = shortTierMemories.Count;
+
+        if (currentCount <= capacity)
+        {
+            _logger.LogDebug(
+                "[CAPACITY_ENFORCEMENT] Short tier within capacity: {Count}/{Capacity}",
+                currentCount, capacity);
+            return;
+        }
+
+        // Calculate excess items to promote
+        var excessCount = currentCount - capacity;
+
+        _logger.LogInformation(
+            "[CAPACITY_ENFORCEMENT] 🧠 Short tier exceeds capacity: {Count}/{Capacity}. " +
+            "Promoting {Excess} oldest items to Long tier (Baddeley's 7±2 model).",
+            currentCount, capacity, excessCount);
+
+        // Promote oldest items (already sorted by CreatedAtAsc)
+        var itemsToPromote = shortTierMemories.Take(excessCount).ToList();
+
+        foreach (var memory in itemsToPromote)
+        {
+            memory.Tier = Tier.Long;
+            memory.UpdatedAt = DateTime.UtcNow;
+
+            var updated = await _memoryStore.UpdateAsync(memory, cancellationToken);
+
+            if (updated)
+            {
+                _logger.LogDebug(
+                    "[CAPACITY_ENFORCEMENT] ✅ Promoted memory {MemoryId} from Short → Long tier",
+                    memory.Id);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "[CAPACITY_ENFORCEMENT] ⚠️ Failed to promote memory {MemoryId}",
+                    memory.Id);
+            }
+        }
+
+        _logger.LogInformation(
+            "[CAPACITY_ENFORCEMENT] ✅ Capacity enforcement complete: " +
+            "Promoted {Promoted} items, new Short tier count: {NewCount}/{Capacity}",
+            itemsToPromote.Count, currentCount - itemsToPromote.Count, capacity);
     }
 
     #endregion
