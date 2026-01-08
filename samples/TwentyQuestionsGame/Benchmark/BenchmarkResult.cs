@@ -47,24 +47,33 @@ public sealed record GameBenchmarkResult
     public required int RecallMisses { get; init; }
 
     // === Cognitive Science Alignment ===
-    /// <summary>Baddeley working memory: should maintain 7±2 items in Short tier</summary>
-    public bool WorkingMemoryCompliant => TierStats.ShortCount is >= 5 and <= 9;
+    /// <summary>
+    /// Phase 56: Per-user working memory compliance.
+    /// Baddeley's 7±2 model applies to each user (mind) independently.
+    /// Each user's Short tier must be ≤9 items.
+    /// </summary>
+    public bool WorkingMemoryCompliant =>
+        TierStats.Alpha.Short <= 9 &&
+        TierStats.Beta.Short <= 9;
 
     /// <summary>
-    /// Phase 50: Healthy cognitive memory distribution.
+    /// Phase 56: Per-user healthy cognitive memory distribution.
     /// - Buffer minimal (≤2): Items staged briefly before processing
-    /// - Short bounded (≤9): Working memory capacity constraint
+    /// - Short bounded (≤9): Working memory capacity constraint per user
     /// - Long has critical items (≥1): Persistent episodic storage
     /// Note: S > L is valid when working memory is active (Q&A reasoning)
     /// </summary>
     public bool HealthyTierFlow =>
-        TierStats.BufferCount <= 2 &&
-        TierStats.ShortCount <= 9 &&
+        TierStats.Alpha.Buffer <= 2 &&
+        TierStats.Alpha.Short <= 9 &&
+        TierStats.Beta.Buffer <= 2 &&
+        TierStats.Beta.Short <= 9 &&
         TierStats.LongCount >= 1;
 }
 
 /// <summary>
 /// Memory distribution across tiers (Atkinson-Shiffrin model alignment)
+/// Phase 56: Enhanced with per-user metrics for cognitive compliance.
 /// </summary>
 public sealed record TierMetrics
 {
@@ -83,7 +92,26 @@ public sealed record TierMetrics
     /// <summary>Number of tier promotions during game</summary>
     public required int PromotionCount { get; init; }
 
+    /// <summary>Phase 56: Per-user tier distribution for cognitive compliance.</summary>
+    public required PerUserTierMetrics Alpha { get; init; }
+
+    /// <summary>Phase 56: Per-user tier distribution for cognitive compliance.</summary>
+    public required PerUserTierMetrics Beta { get; init; }
+
     public int Total => BufferCount + ShortCount + LongCount + ArchiveCount;
+}
+
+/// <summary>
+/// Phase 56: Per-user tier distribution metrics.
+/// Each user (agent) has its own working memory capacity (Baddeley's 7±2).
+/// </summary>
+public sealed record PerUserTierMetrics
+{
+    public required int Buffer { get; init; }
+    public required int Short { get; init; }
+    public required int Long { get; init; }
+    public required int Archive { get; init; }
+    public int Total => Buffer + Short + Long + Archive;
 }
 
 /// <summary>

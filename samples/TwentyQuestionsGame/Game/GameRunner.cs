@@ -187,27 +187,31 @@ public sealed class GameRunner(
         GameConsole.WriteAlpha($"     Tokens: {alphaTokens:N0} | LLM: {alphaLlm:N0}ms | Recall: {alphaRecall:N0}ms");
 
         // Phase 49: Print tier statistics for cognitive compliance verification
+        // Phase 56: Enhanced with per-user tier distribution
         var tierStats = GetTierMetricsAsync().GetAwaiter().GetResult();
         Console.WriteLine();
         GameConsole.WriteSystem("🧠 Cognitive Memory Tier Distribution:");
-        GameConsole.WriteSystem($"   Buffer (T0): {tierStats.BufferCount}");
-        GameConsole.WriteSystem($"   Short  (T1): {tierStats.ShortCount} (Working Memory, 7±2 capacity)");
-        GameConsole.WriteSystem($"   Long   (T2): {tierStats.LongCount}");
-        GameConsole.WriteSystem($"   Archive(T3): {tierStats.ArchiveCount}");
-        GameConsole.WriteSystem($"   Total: {tierStats.Total}");
+        GameConsole.WriteSystem($"   Total: Buffer={tierStats.BufferCount}, Short={tierStats.ShortCount}, Long={tierStats.LongCount}, Archive={tierStats.ArchiveCount}");
+        GameConsole.WriteAlpha($"   Alpha: B={tierStats.Alpha.Buffer}, S={tierStats.Alpha.Short}, L={tierStats.Alpha.Long}, A={tierStats.Alpha.Archive}");
+        GameConsole.WriteBeta($"   Beta:  B={tierStats.Beta.Buffer}, S={tierStats.Beta.Short}, L={tierStats.Beta.Long}, A={tierStats.Beta.Archive}");
 
-        // Phase 50: Cognitive compliance check (aligned with cognitive science)
-        // - WorkingMemory: Baddeley's 7±2 capacity in Short tier
-        // - HealthyFlow: Buffer minimal (≤2), Short bounded (≤9), Long has critical items (≥1)
-        var workingMemoryOk = tierStats.ShortCount is >= 5 and <= 9;
-        var healthyFlow = tierStats.BufferCount <= 2 &&
-                         tierStats.ShortCount <= 9 &&
-                         tierStats.LongCount >= 1;
+        // Phase 56: Per-user cognitive compliance check (correct Baddeley's 7±2 model)
+        // Each user (mind) has its own working memory capacity, not shared globally.
+        // - WorkingMemory: Each user's Short tier must be within 7±2 (5-9 items)
+        // - HealthyFlow: Per-user: Buffer minimal (≤2), Short bounded (≤9), Long has items (≥0)
+        var alphaWorkingMemoryOk = tierStats.Alpha.Short <= 9;
+        var betaWorkingMemoryOk = tierStats.Beta.Short <= 9;
+        var workingMemoryOk = alphaWorkingMemoryOk && betaWorkingMemoryOk;
+
+        var alphaHealthyFlow = tierStats.Alpha.Buffer <= 2 && tierStats.Alpha.Short <= 9;
+        var betaHealthyFlow = tierStats.Beta.Buffer <= 2 && tierStats.Beta.Short <= 9;
+        var hasLongTermMemory = tierStats.LongCount >= 1;
+        var healthyFlow = alphaHealthyFlow && betaHealthyFlow && hasLongTermMemory;
 
         Console.WriteLine();
-        GameConsole.WriteSystem("✅ Cognitive Compliance:");
-        GameConsole.WriteSystem($"   WorkingMemory(7±2): {(workingMemoryOk ? "✓ PASS" : "✗ FAIL")} (Short={tierStats.ShortCount}, range 5-9)");
-        GameConsole.WriteSystem($"   HealthyTierFlow: {(healthyFlow ? "✓ PASS" : "✗ FAIL")} (B≤2:{tierStats.BufferCount}, S≤9:{tierStats.ShortCount}, L≥1:{tierStats.LongCount})");
+        GameConsole.WriteSystem("✅ Cognitive Compliance (Phase 56: Per-User):");
+        GameConsole.WriteSystem($"   WorkingMemory(≤9): {(workingMemoryOk ? "✓ PASS" : "✗ FAIL")} (Alpha.S={tierStats.Alpha.Short}≤9:{(alphaWorkingMemoryOk ? "✓" : "✗")}, Beta.S={tierStats.Beta.Short}≤9:{(betaWorkingMemoryOk ? "✓" : "✗")})");
+        GameConsole.WriteSystem($"   HealthyTierFlow: {(healthyFlow ? "✓ PASS" : "✗ FAIL")} (α.B≤2:{tierStats.Alpha.Buffer}, α.S≤9:{tierStats.Alpha.Short}, β.B≤2:{tierStats.Beta.Buffer}, β.S≤9:{tierStats.Beta.Short}, L≥1:{tierStats.LongCount})");
 
         Console.WriteLine(new string('═', 70));
     }
@@ -373,6 +377,7 @@ public sealed class GameRunner(
 
     /// <summary>
     /// Gets tier distribution metrics from memory store.
+    /// Phase 56: Enhanced with per-user metrics for cognitive compliance.
     /// </summary>
     private async Task<TierMetrics> GetTierMetricsAsync()
     {
@@ -386,13 +391,32 @@ public sealed class GameRunner(
 
         var allMemories = betaMemories.Concat(alphaMemories).ToList();
 
+        // Phase 56: Calculate per-user tier metrics for cognitive compliance
+        var alphaMetrics = new PerUserTierMetrics
+        {
+            Buffer = alphaMemories.Count(m => m.Tier == Tier.Buffer),
+            Short = alphaMemories.Count(m => m.Tier == Tier.Short),
+            Long = alphaMemories.Count(m => m.Tier == Tier.Long),
+            Archive = alphaMemories.Count(m => m.Tier == Tier.Archive)
+        };
+
+        var betaMetrics = new PerUserTierMetrics
+        {
+            Buffer = betaMemories.Count(m => m.Tier == Tier.Buffer),
+            Short = betaMemories.Count(m => m.Tier == Tier.Short),
+            Long = betaMemories.Count(m => m.Tier == Tier.Long),
+            Archive = betaMemories.Count(m => m.Tier == Tier.Archive)
+        };
+
         return new TierMetrics
         {
             BufferCount = allMemories.Count(m => m.Tier == Tier.Buffer),
             ShortCount = allMemories.Count(m => m.Tier == Tier.Short),
             LongCount = allMemories.Count(m => m.Tier == Tier.Long),
             ArchiveCount = allMemories.Count(m => m.Tier == Tier.Archive),
-            PromotionCount = 0  // Would need promotion tracking to measure
+            PromotionCount = 0,  // Would need promotion tracking to measure
+            Alpha = alphaMetrics,
+            Beta = betaMetrics
         };
     }
 }
