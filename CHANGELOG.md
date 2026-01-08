@@ -2,11 +2,23 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.4.0] - 2025-01-09
+## [v0.4.0] - 2026-01-09
 
 ### Cognitive Architecture Completion
 
 This release completes the 4-Tier Cognitive Memory Architecture with full tier promotion pipeline and cognitive compliance validation.
+
+#### Phase 60: Test Code Warning Fixes
+- **Fixed**: CS0219, CS8602, CS8625, xUnit2002, xUnit1026, xUnit2013 warnings in tests
+- **Scope**: 5 test files across MemoryIndexer.Tests and MemoryIndexer.Sdk.Tests
+- **Pattern**: Null checks for Metadata, proper xUnit assertion usage
+- **Tests**: All 1015 tests passing (216 core + 799 SDK)
+
+#### Phase 59: Benchmarks and Documentation
+- **Added**: `benchmarks/run_bench.ps1` PowerShell script for automated benchmarks
+- **Added**: `docs/BENCHMARKS.md` with detailed performance measurements
+- **Updated**: README.md simplified with core architecture and quick start
+- **Performance**: Store ~2.2μs, Recall ~1.5μs, Vector search ~812ns
 
 #### Phase 58: Null Reference Warning Fixes
 - **Fixed**: 19 CS8602/CS8603/CS8604 nullable warnings in source code
