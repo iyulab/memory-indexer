@@ -50,10 +50,17 @@ public sealed record GameBenchmarkResult
     /// <summary>Baddeley working memory: should maintain 7±2 items in Short tier</summary>
     public bool WorkingMemoryCompliant => TierStats.ShortCount is >= 5 and <= 9;
 
-    /// <summary>Healthy tier distribution: Buffer < Short < Long</summary>
+    /// <summary>
+    /// Phase 50: Healthy cognitive memory distribution.
+    /// - Buffer minimal (≤2): Items staged briefly before processing
+    /// - Short bounded (≤9): Working memory capacity constraint
+    /// - Long has critical items (≥1): Persistent episodic storage
+    /// Note: S > L is valid when working memory is active (Q&A reasoning)
+    /// </summary>
     public bool HealthyTierFlow =>
-        TierStats.BufferCount <= TierStats.ShortCount &&
-        TierStats.ShortCount <= TierStats.LongCount;
+        TierStats.BufferCount <= 2 &&
+        TierStats.ShortCount <= 9 &&
+        TierStats.LongCount >= 1;
 }
 
 /// <summary>

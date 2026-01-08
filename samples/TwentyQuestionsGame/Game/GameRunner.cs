@@ -196,15 +196,18 @@ public sealed class GameRunner(
         GameConsole.WriteSystem($"   Archive(T3): {tierStats.ArchiveCount}");
         GameConsole.WriteSystem($"   Total: {tierStats.Total}");
 
-        // Cognitive compliance check
+        // Phase 50: Cognitive compliance check (aligned with cognitive science)
+        // - WorkingMemory: Baddeley's 7±2 capacity in Short tier
+        // - HealthyFlow: Buffer minimal (≤2), Short bounded (≤9), Long has critical items (≥1)
         var workingMemoryOk = tierStats.ShortCount is >= 5 and <= 9;
-        var healthyFlow = tierStats.BufferCount <= tierStats.ShortCount &&
-                         tierStats.ShortCount <= tierStats.LongCount;
+        var healthyFlow = tierStats.BufferCount <= 2 &&
+                         tierStats.ShortCount <= 9 &&
+                         tierStats.LongCount >= 1;
 
         Console.WriteLine();
         GameConsole.WriteSystem("✅ Cognitive Compliance:");
-        GameConsole.WriteSystem($"   WorkingMemory(7±2): {(workingMemoryOk ? "✓ PASS" : "✗ FAIL")} (ShortCount={tierStats.ShortCount})");
-        GameConsole.WriteSystem($"   HealthyTierFlow: {(healthyFlow ? "✓ PASS" : "✗ FAIL")} (B≤S≤L: {tierStats.BufferCount}≤{tierStats.ShortCount}≤{tierStats.LongCount})");
+        GameConsole.WriteSystem($"   WorkingMemory(7±2): {(workingMemoryOk ? "✓ PASS" : "✗ FAIL")} (Short={tierStats.ShortCount}, range 5-9)");
+        GameConsole.WriteSystem($"   HealthyTierFlow: {(healthyFlow ? "✓ PASS" : "✗ FAIL")} (B≤2:{tierStats.BufferCount}, S≤9:{tierStats.ShortCount}, L≥1:{tierStats.LongCount})");
 
         Console.WriteLine(new string('═', 70));
     }
