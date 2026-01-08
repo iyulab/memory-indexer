@@ -127,6 +127,8 @@ public sealed class GameRunner(
             AlphaAnswer = alphaResult.Answer,
             BetaLatencyMs = betaResult.LatencyMs,
             AlphaLatencyMs = alphaResult.LatencyMs,
+            BetaRecallMs = betaResult.MemoryRecallMs,
+            AlphaRecallMs = alphaResult.MemoryRecallMs,
             BetaTokens = betaResult.PromptTokens + betaResult.CompletionTokens,
             AlphaTokens = alphaResult.PromptTokens + alphaResult.CompletionTokens,
             TotalDurationMs = (long)(DateTime.UtcNow - roundStart).TotalMilliseconds
@@ -153,15 +155,30 @@ public sealed class GameRunner(
 
         // Print statistics
         var totalTokens = _roundMetrics.Sum(r => r.BetaTokens + r.AlphaTokens);
-        var totalLatency = _roundMetrics.Sum(r => r.BetaLatencyMs + r.AlphaLatencyMs);
+        var totalLlmLatency = _roundMetrics.Sum(r => r.BetaLatencyMs + r.AlphaLatencyMs);
+        var totalRecallTime = _roundMetrics.Sum(r => r.BetaRecallMs + r.AlphaRecallMs);
         var totalDuration = _roundMetrics.Sum(r => r.TotalDurationMs);
 
         Console.WriteLine();
         GameConsole.WriteSystem("📊 Game Statistics:");
         GameConsole.WriteSystem($"   Rounds played: {_roundMetrics.Count}");
         GameConsole.WriteSystem($"   Total tokens: {totalTokens:N0}");
-        GameConsole.WriteSystem($"   LLM time: {totalLatency:N0}ms");
+        GameConsole.WriteSystem($"   LLM time: {totalLlmLatency:N0}ms");
+        GameConsole.WriteSystem($"   Memory Recall time: {totalRecallTime:N0}ms");
         GameConsole.WriteSystem($"   Total time: {totalDuration:N0}ms");
+        
+        // Per-agent breakdown
+        var betaTokens = _roundMetrics.Sum(r => r.BetaTokens);
+        var alphaTokens = _roundMetrics.Sum(r => r.AlphaTokens);
+        var betaLlm = _roundMetrics.Sum(r => r.BetaLatencyMs);
+        var alphaLlm = _roundMetrics.Sum(r => r.AlphaLatencyMs);
+        var betaRecall = _roundMetrics.Sum(r => r.BetaRecallMs);
+        var alphaRecall = _roundMetrics.Sum(r => r.AlphaRecallMs);
+        
+        Console.WriteLine();
+        GameConsole.WriteSystem("   Agent Breakdown:");
+        GameConsole.WriteBeta($"     Tokens: {betaTokens:N0} | LLM: {betaLlm:N0}ms | Recall: {betaRecall:N0}ms");
+        GameConsole.WriteAlpha($"     Tokens: {alphaTokens:N0} | LLM: {alphaLlm:N0}ms | Recall: {alphaRecall:N0}ms");
         Console.WriteLine(new string('═', 70));
     }
 
@@ -289,6 +306,8 @@ public sealed record RoundMetrics
     public string AlphaAnswer { get; init; } = "";
     public long BetaLatencyMs { get; init; }
     public long AlphaLatencyMs { get; init; }
+    public long BetaRecallMs { get; init; }
+    public long AlphaRecallMs { get; init; }
     public int BetaTokens { get; init; }
     public int AlphaTokens { get; init; }
     public long TotalDurationMs { get; init; }

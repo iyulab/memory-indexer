@@ -70,7 +70,8 @@ public sealed class AlphaAgent(
                 RawResponse = response.RawContent,
                 PromptTokens = response.PromptTokens,
                 CompletionTokens = response.CompletionTokens,
-                LatencyMs = response.LatencyMs
+                LatencyMs = response.LatencyMs,
+                MemoryRecallMs = response.MemoryRecallMs
             };
         }
 
@@ -85,7 +86,8 @@ public sealed class AlphaAgent(
             RawResponse = response.RawContent,
             PromptTokens = response.PromptTokens,
             CompletionTokens = response.CompletionTokens,
-            LatencyMs = response.LatencyMs
+            LatencyMs = response.LatencyMs,
+            MemoryRecallMs = response.MemoryRecallMs
         };
     }
 
@@ -133,4 +135,5 @@ public sealed record AlphaAnswerResult
     public int PromptTokens { get; init; }
     public int CompletionTokens { get; init; }
     public long LatencyMs { get; init; }
+    public long MemoryRecallMs { get; init; }
 }

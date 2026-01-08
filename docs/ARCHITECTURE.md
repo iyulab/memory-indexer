@@ -1,6 +1,6 @@
 # Architecture
 
-## Project Structure (v0.3.0)
+## Project Structure
 
 ```
 src/
@@ -33,75 +33,9 @@ samples/
 └── MemoryChatApp/               # Web frontend sample
 ```
 
-## 4-Tier Cognitive Architecture
+## 3-Axis Memory Model
 
-Memory Indexer implements a 4-tier cognitive memory architecture inspired by Atkinson-Shiffrin and Tulving's memory models:
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           USER INPUT                                      │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  SENSORY BUFFER (T0)                                                     │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ Raw conversation staging • Full text • Async processing          │  │
-│  │ TTL: 60s idle | 500 tokens | 3 turns (OR logic)                  │  │
-│  │ (Atkinson-Shiffrin sensory memory store)                         │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │ BufferPromoter
-                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  WORKING MEMORY (T1)                                                     │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ Topic-grouped • Summarized chunks • Active context               │  │
-│  │ Capacity: 4-7 items • TTL: 10min | 2K tokens | topic change      │  │
-│  │ (Baddeley's working memory model)                                │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │ ShortTermMemoryOrchestrator
-                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  EPISODIC STORE (T2)                                                     │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ Session experiences • Temporal events • Compressed episodes      │  │
-│  │ Storage: Vector DB (Qdrant/SQLite-vec)                           │  │
-│  │ (Tulving's episodic memory - event-based)                        │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │ AND logic promotion
-                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  SEMANTIC STORE (T3)                                                     │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ Long-term knowledge • Preferences • Identity • Cross-session      │  │
-│  │ Promotion: Confidence >= 0.8 AND Confirmations >= 3               │  │
-│  │ (Tulving's semantic memory - fact-based)                         │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Tier Interfaces
-
-| Tier | Interface | Implementation | Cognitive Model |
-|------|-----------|----------------|-----------------|
-| Buffer (T0) | `IBuffer` | `BufferService` | Atkinson-Shiffrin sensory memory |
-| Short-Term (T1) | `IShortTermMemory` | `ShortTermMemoryService` | Baddeley's working memory |
-| Long-Term (T2) | `ILongTermStore` | `InMemoryEpisodicStore` | Tulving's episodic memory |
-| Archive (T3) | `IArchiveStore` | `SemanticStoreService` | Tulving's semantic memory |
-
-### Promotion Services
-
-| Transition | Interface | Implementation |
-|------------|-----------|----------------|
-| Sensory → Working | `IBufferPromoter` | `BufferPromoterService` |
-| Working → Episodic | `IShortTermMemoryOrchestrator` | `ShortTermMemoryOrchestratorService` |
-
-## 3-Axis Memory Model (v0.4.1)
-
-**Phase 32.3**: Memory Indexer implements a 3-Axis Memory Model where each memory has three independent, orthogonal dimensions:
+Memory Indexer implements a **3-Axis Memory Model** where each memory has three independent, orthogonal dimensions:
 
 ```
 Type × Scope × Tier
@@ -109,27 +43,94 @@ Type × Scope × Tier
 What   When   Where
 ```
 
-### Three Dimensions
+### Axis 1: Type (What kind of memory)
 
-**Type (What)**: Memory category
-- `Episodic`: Events and experiences
-- `Semantic`: Facts and knowledge
-- `Procedural`: Skills and procedures
-- `Fact`: Atomic verified facts
+Content classification based on cognitive psychology.
 
-**Scope (When)**: Temporal containment
-- `Turn` (S3): Single conversation turn
-- `Topic` (S2): Conversation topic cluster
-- `Session` (S1): Single conversation session
-- `User` (S0): Cross-session, permanent
+| Type | Description | Example |
+|------|-------------|---------|
+| `Episodic` | Events with temporal context | "User asked about auth on Dec 8th" |
+| `Semantic` | General facts and knowledge | "User prefers dark mode" |
+| `Procedural` | How-to patterns and workflows | "Deploy: test → build → staging" |
+| `Fact` | Specific verifiable facts | "User's company is Acme Corp" |
+| `Reflection` | Synthesized inferences from consolidation | "User prioritizes security over convenience" |
 
-**Tier (Where)**: Storage location
-- `Buffer` (T0): Sensory buffer
-- `Short` (T1): Working memory
-- `Long` (T2): Episodic store
-- `Archive` (T3): Semantic store
+### Axis 2: Scope (Temporal reach)
 
-### 3-Axis Coordination Services
+Defines how far a memory reaches across conversations.
+
+| Scope | Level | Lifetime | API Visibility |
+|-------|-------|----------|----------------|
+| `Turn` | S3 | ~seconds | Internal (VCM) |
+| `Topic` | S2 | ~minutes | Internal (VCM) |
+| `Session` | S1 | ~hours | Exposed |
+| `User` | S0 | ~forever | Exposed |
+
+**Cognitive Science Basis:**
+- Tulving's Episodic/Semantic distinction (context-bound vs context-free)
+- Cowan's Short-Term Memory Model (attention focus vs background context)
+- Oberauer's Concentric Model (focus of attention → activated LTM)
+
+### Axis 3: Tier (Storage layer)
+
+Storage location based on persistence and lifespan.
+
+| Tier | TTL/Promotion | Storage | Cognitive Basis |
+|------|---------------|---------|-----------------|
+| `Buffer` (T0) | 60s idle OR 500 tokens OR 3 turns | In-memory | Atkinson-Shiffrin sensory memory |
+| `Short` (T1) | 10min OR 2K tokens OR topic change | Memory cache | Baddeley's working memory |
+| `Long` (T2) | Session duration | Vector DB (SQLite-vec, Qdrant) | Tulving's episodic memory |
+| `Archive` (T3) | Confidence ≥ 0.8 AND Confirms ≥ 3 | Vector DB (persistent) | Tulving's semantic memory |
+
+## Memory Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           USER INPUT                                     │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  BUFFER (T0)                                                            │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ Raw conversation staging • Full text • Async processing           │  │
+│  │ TTL: 60s idle | 500 tokens | 3 turns (OR logic)                   │  │
+│  │ Scope: Turn (S3)                                                  │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │ BufferPromoter (OR logic)
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  SHORT (T1)                                                             │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ Topic-grouped • Summarized chunks • Active context                │  │
+│  │ Capacity: 4-7 items • TTL: 10min | 2K tokens | topic change       │  │
+│  │ Scope: Topic (S2) → Session (S1)                                  │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │ ShortTermMemoryOrchestrator (OR logic)
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LONG (T2)                                                              │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ Session experiences • Temporal events • Compressed episodes       │  │
+│  │ Storage: Vector DB (SQLite-vec or Qdrant)                         │  │
+│  │ Scope: Session (S1)                                               │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │ AND logic promotion
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ARCHIVE (T3)                                                           │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ Long-term knowledge • Preferences • Identity • Cross-session      │  │
+│  │ Promotion: Confidence >= 0.8 AND Confirmations >= 3               │  │
+│  │ Scope: User (S0)                                                  │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## 3-Axis Coordination Services
 
 | Service | Interface | Responsibility |
 |---------|-----------|----------------|
@@ -137,7 +138,7 @@ What   When   Where
 | **Tier Manager** | `ITierManager` | Evaluates tier promotions/demotions, enforces OR/AND logic, manages transitions |
 | **Virtual Context Manager** | `IVirtualContextManager` | Orchestrates all three dimensions, coordinates IScopeManager and ITierManager |
 
-### Promotion Logic
+## Promotion Logic
 
 **Buffer → Short → Long** (OR Logic):
 - Time elapsed >= threshold **OR**
@@ -147,26 +148,6 @@ What   When   Where
 **Long → Archive** (AND Logic):
 - Confidence >= 0.8 **AND**
 - Confirmation count >= 3
-
-### MemoryPrimitives Scope Support
-
-```csharp
-// Encode with explicit Scope
-var memory = await memoryPrimitives.EncodeAsync(new EncodeRequest
-{
-    Content = "User prefers dark mode",
-    Type = MemoryType.Fact,
-    Scope = Scope.User,  // Cross-session preference
-    Tier = Tier.Archive
-});
-
-// Retrieve filtered by Scope
-var results = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
-{
-    Query = "user preferences",
-    Scopes = new[] { Scope.User, Scope.Session }
-});
-```
 
 ## Layer Diagram
 
@@ -179,15 +160,14 @@ var results = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
                         │
 ┌───────────────────────▼─────────────────────────────┐
 │  Orchestration Layer                                │
-│  VirtualContextManager: coordinates all tiers       │
+│  VirtualContextManager: coordinates all 3 axes      │
 │  MemoryPrimitives: 12 fundamental operations        │
 └───────────────────────┬─────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────┐
-│  4-Tier Cognitive Memory Layer                      │
+│  3-Axis Memory Layer                                │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-│  │ Sensory │→│ Working │→│Episodic │→│Semantic │   │
-│  │ Buffer  │ │  Memory │ │  Store  │ │  Store  │   │
+│  │ Buffer  │→│  Short  │→│  Long   │→│ Archive │   │
 │  │  (T0)   │ │  (T1)   │ │  (T2)   │ │  (T3)   │   │
 │  └─────────┘ └─────────┘ └─────────┘ └─────────┘   │
 └───────────────────────┬─────────────────────────────┘
@@ -213,6 +193,24 @@ var results = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
 └─────────────────────────────────────────────────────┘
 ```
 
+## Core Interfaces
+
+### Tier Interfaces
+
+| Tier | Interface | Implementation |
+|------|-----------|----------------|
+| Buffer (T0) | `IBuffer` | `BufferService` |
+| Short (T1) | `IShortTermMemory` | `ShortTermMemoryService` |
+| Long (T2) | `ILongTermStore` | `InMemoryEpisodicStore` |
+| Archive (T3) | `IArchiveStore` | `SemanticStoreService` |
+
+### Promotion Services
+
+| Transition | Interface | Implementation |
+|------------|-----------|----------------|
+| Buffer → Short | `IBufferPromoter` | `BufferPromoterService` |
+| Short → Long | `IShortTermMemoryOrchestrator` | `ShortTermMemoryOrchestratorService` |
+
 ## Core Components
 
 ### MemoryUnit
@@ -234,75 +232,59 @@ public class MemoryUnit
     [VectorStoreVector(Dimensions: 1024)]
     public ReadOnlyMemory<float>? Embedding { get; set; }
 
-    public MemoryType Type { get; set; }      // Episodic, Semantic, Procedural, Fact
-    public MemoryTier Tier { get; set; }      // Working, Session, User
+    public MemoryType Type { get; set; }      // Episodic, Semantic, Procedural, Fact, Reflection
+    public Tier Tier { get; set; }            // Buffer, Short, Long, Archive
+    public Scope Scope { get; set; }          // Turn, Topic, Session, User
     public float ImportanceScore { get; set; }
     public int AccessCount { get; set; }
 }
 ```
 
-### SemanticStoreEntry
-
-Long-term knowledge with confirmation tracking (Tulving's semantic memory):
+### MemoryPrimitives Scope Support
 
 ```csharp
-public class SemanticStoreEntry
+// Encode with explicit Scope
+var memory = await memoryPrimitives.EncodeAsync(new EncodeRequest
 {
-    public required string Key { get; init; }
-    public required string Value { get; set; }
-    public SemanticStoreCategory Category { get; set; }
-    public float Confidence { get; set; }           // 0.0 - 1.0
-    public int ConfirmationCount { get; set; }      // Track mentions
-    public List<string> SourceSessions { get; init; }
-    public DateTime CreatedAt { get; init; }
-    public DateTime UpdatedAt { get; set; }
-    public ReadOnlyMemory<float>? Embedding { get; set; }
+    Content = "User prefers dark mode",
+    Type = MemoryType.Fact,
+    Scope = Scope.User,  // Cross-session preference
+    Tier = Tier.Archive
+});
 
-    // Promotion requires: ConfirmationCount >= 3 AND Confidence >= 0.8
-    public bool IsConfirmed => ConfirmationCount >= 3 && Confidence >= 0.8f;
-}
-```
-
-### BufferMemory
-
-Raw buffer entry before processing (Atkinson-Shiffrin sensory store):
-
-```csharp
-public record BufferMemory
+// Retrieve filtered by Scope
+var results = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
 {
-    public required string Content { get; init; }
-    public DateTime Timestamp { get; init; }
-    public int TokenCount { get; init; }
-    public int TurnIndex { get; init; }
-    public ReadOnlyMemory<float>? Embedding { get; set; }
-}
+    Query = "user preferences",
+    Scopes = new[] { Scope.User, Scope.Session }
+});
 ```
 
 ## Promotion Triggers
 
 ### OR Logic (Lower Tiers)
 
-Sensory → Working and Working → Episodic use OR logic for aggressive cleanup:
+Buffer → Short and Short → Long use OR logic for aggressive cleanup:
 
 ```csharp
 public enum PromotionTriggerType
 {
     None = 0,
-    IdleTimeout = 1,      // Sensory: 60s, Working: 10min
-    TokenThreshold = 2,   // Sensory: 500, Working: 2K
-    TurnThreshold = 3,    // Sensory: 3, Working: 10
-    TopicChange = 4,      // Working only
+    IdleTimeout = 1,      // Buffer: 60s, Short: 10min
+    TokenThreshold = 2,   // Buffer: 500, Short: 2K
+    TurnThreshold = 3,    // Buffer: 3, Short: 10
+    TopicChange = 4,      // Short only
     Manual = 5,
-    SessionEnd = 6        // Working only
+    SessionEnd = 6        // Short only
 }
 ```
 
-### AND Logic (Semantic Tier)
+### AND Logic (Archive Tier)
 
-Episodic → Semantic uses AND logic for conservative promotion:
+Long → Archive uses AND logic for conservative promotion:
 
 ```csharp
-public class SemanticStoreOptions
+public class ArchiveStoreOptions
 {
     public int MinConfirmationCount { get; set; } = 3;
     public float MinConfidenceThreshold { get; set; } = 0.8f;
@@ -342,7 +324,7 @@ Registers (core services):
 - `IEmbeddingService` (based on Embedding.Provider)
 - `IScoringService`
 
-Registers (4-tier cognitive architecture):
+Registers (3-Axis architecture):
 - `IBuffer` → `BufferService` (T0)
 - `IShortTermMemory` → `ShortTermMemoryService` (T1)
 - `ILongTermStore` → `InMemoryEpisodicStore` (T2)
@@ -392,12 +374,12 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
         "TokenThreshold": 500,
         "TurnThreshold": 3
       },
-      "WorkingOrchestrator": {
+      "ShortOrchestrator": {
         "IdleTimeout": "00:10:00",
         "TokenThreshold": 2000,
         "TurnThreshold": 10
       },
-      "SemanticStore": {
+      "ArchiveStore": {
         "MinConfirmationCount": 3,
         "MinConfidenceThreshold": 0.8
       }

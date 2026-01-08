@@ -84,6 +84,7 @@ public sealed class BetaAgent(
             PromptTokens = response.PromptTokens,
             CompletionTokens = response.CompletionTokens,
             LatencyMs = response.LatencyMs,
+            MemoryRecallMs = response.MemoryRecallMs,
             ToolCallIterations = response.ToolCallIterations,
             IsDuplicate = duplicateInfo.IsDuplicate,
             DuplicateOfRound = duplicateInfo.OriginalRound,
@@ -306,6 +307,7 @@ public sealed record BetaQuestionResult
     public int PromptTokens { get; init; }
     public int CompletionTokens { get; init; }
     public long LatencyMs { get; init; }
+    public long MemoryRecallMs { get; init; }
     public int ToolCallIterations { get; init; }
 
     /// <summary>

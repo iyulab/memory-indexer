@@ -1,6 +1,6 @@
 # Memory Indexer
 
-**Cognitive Memory System for LLMs** — A .NET SDK and MCP server implementing human-inspired memory architecture with 4-Tier Virtual Context Management.
+**Cognitive Memory System for LLMs** — A .NET SDK and MCP server implementing human-inspired memory architecture with 3-Axis Memory Model.
 
 [![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
@@ -19,7 +19,7 @@ LLMs face a fundamental constraint: **finite context windows**. Memory Indexer s
 | Feature | Description |
 |---------|-------------|
 | **Zero Configuration** | Works out-of-the-box with sensible defaults |
-| **4-Tier Cognitive Architecture** | Buffer → Short-Term → Long-Term → Archive (cognitive science-inspired) |
+| **3-Axis Memory Model** | Type × Scope × Tier (cognitive science-inspired) |
 | **Intelligent Forgetting** | Ebbinghaus curve-based decay with importance weighting |
 | **Domain Agnostic** | General-purpose memory primitives, not tied to specific use cases |
 | **Research-Based** | Built on MemGPT, Mem0, H-MEM, and cognitive psychology research |
@@ -74,32 +74,48 @@ var results = await memoryService.RecallAsync(
 );
 ```
 
-## 4-Tier Cognitive Architecture
+## 3-Axis Memory Model
+
+Memory Indexer implements a **3-Axis Memory Model** where each memory has three independent, orthogonal dimensions:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Buffer (T0): Raw conversation staging                  │
-│  TTL: 60s idle OR 500 tokens OR 3 turns                 │
-│  (Atkinson-Shiffrin sensory memory)                     │
-├─────────────────────────────────────────────────────────┤
-│  Short-Term (T1): Active context, 4-7 chunks            │
-│  TTL: 10min OR 2K tokens OR topic change                │
-│  (Baddeley's working memory model)                      │
-├─────────────────────────────────────────────────────────┤
-│  Long-Term (T2): Session experiences, vector search     │
-│  Storage: SQLite-vec (default) or Qdrant                │
-│  (Tulving's episodic memory - event-based)              │
-├─────────────────────────────────────────────────────────┤
-│  Archive (T3): Long-term knowledge dictionary           │
-│  Promotion: Confidence ≥ 0.8 AND Confirms ≥ 3           │
-│  (Tulving's semantic memory - fact-based)               │
-└─────────────────────────────────────────────────────────┘
+Type × Scope × Tier
+ ↓      ↓       ↓
+What   When   Where
 ```
+
+### Type (What kind of memory)
+
+| Type | Description | Example |
+|------|-------------|---------|
+| **Episodic** | Events with temporal context | "User asked about auth on Dec 8th" |
+| **Semantic** | General facts and knowledge | "User prefers dark mode" |
+| **Procedural** | How-to patterns and workflows | "Deploy: test → build → staging" |
+| **Fact** | Specific verifiable facts | "User's company is Acme Corp" |
+| **Reflection** | Synthesized inferences | "User prioritizes security over convenience" |
+
+### Scope (Temporal reach)
+
+| Scope | Level | Lifetime | API |
+|-------|-------|----------|-----|
+| **Turn** | S3 | ~seconds | Internal |
+| **Topic** | S2 | ~minutes | Internal |
+| **Session** | S1 | ~hours | Exposed |
+| **User** | S0 | ~forever | Exposed |
+
+### Tier (Storage layer)
+
+| Tier | TTL/Promotion | Cognitive Basis |
+|------|---------------|-----------------|
+| **Buffer** (T0) | 60s idle OR 500 tokens OR 3 turns | Atkinson-Shiffrin sensory memory |
+| **Short** (T1) | 10min OR 2K tokens OR topic change | Baddeley's working memory |
+| **Long** (T2) | Session duration, vector DB | Tulving's episodic memory |
+| **Archive** (T3) | Confidence ≥ 0.8 AND Confirms ≥ 3 | Tulving's semantic memory |
 
 ## Key Features
 
 - **Hybrid Search**: Semantic (embeddings) + Keyword (BM25) + Metadata boosting
-- **Smart Deduplication**: Content-aware duplicate detection (80% similarity threshold)
+- **Smart Deduplication**: Content-aware duplicate detection (configurable thresholds)
 - **Query Intent Classification**: Factual/Contextual/Temporal/Relational routing
 - **Graph Memory Network**: Entity extraction, community detection, PageRank importance
 - **Self-Directed Management**: MemGPT-inspired autonomous consolidation
@@ -109,9 +125,9 @@ var results = await memoryService.RecallAsync(
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design and 4-tier VCM details |
+| [Architecture](docs/ARCHITECTURE.md) | System design and 3-Axis model details |
 | [Vision](docs/VISION.md) | Research basis and design principles |
-| [Tier × Type Matrix](docs/TIER_TYPE_MATRIX.md) | Understanding memory tiers vs types |
+| [Tier × Type Matrix](docs/TIER_TYPE_MATRIX.md) | Understanding memory dimensions |
 | [Usage Guides](docs/GUIDES.md) | Common patterns and best practices |
 | [Integrations](docs/INTEGRATIONS.md) | Semantic Kernel, LangChain, AutoGen |
 

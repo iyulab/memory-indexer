@@ -29,6 +29,7 @@ public abstract class AgentBase(
         var totalPromptTokens = 0;
         var totalCompletionTokens = 0;
         var totalLatencyMs = 0L;
+        var totalRecallMs = 0L;
 
         // Initial LLM call
         var response = await llmClient.CallAsync(systemPrompt, userMessage, ct);
@@ -47,6 +48,9 @@ public abstract class AgentBase(
 
             var toolCalls = parser.Parse(content);
             var results = await executor.ExecuteAllAsync(toolCalls, UserId, SessionId, ct);
+
+            // Aggregate recall time from tool results
+            totalRecallMs += results.Sum(r => r.RecallMs);
 
             // Format tool results
             var toolResultsText = FormatToolResults(toolCalls, results);
@@ -74,6 +78,7 @@ public abstract class AgentBase(
             PromptTokens = totalPromptTokens,
             CompletionTokens = totalCompletionTokens,
             LatencyMs = totalLatencyMs,
+            MemoryRecallMs = totalRecallMs,
             ToolCallIterations = iteration
         };
     }
@@ -113,5 +118,6 @@ public sealed record AgentResponse
     public int PromptTokens { get; init; }
     public int CompletionTokens { get; init; }
     public long LatencyMs { get; init; }
+    public long MemoryRecallMs { get; init; }
     public int ToolCallIterations { get; init; }
 }

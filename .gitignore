@@ -109,3 +109,4 @@ nupkg/
 *.db
 *.db-shm
 *.db-wal
+nul

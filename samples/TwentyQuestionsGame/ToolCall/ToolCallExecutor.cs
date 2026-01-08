@@ -121,7 +121,7 @@ public sealed class ToolCallExecutor(IMemoryPrimitives memoryPrimitives)
                 {
                     GameConsole.WriteBetaMemory("RECALL", $"No memories found for '{query}' ({recallMs}ms)");
                 }
-                return ToolCallResult.Success("No relevant memories found.");
+                return ToolCallResult.Success("No relevant memories found.", recallMs);
             }
 
             // Output all recalled memories with color and timing
@@ -139,7 +139,7 @@ public sealed class ToolCallExecutor(IMemoryPrimitives memoryPrimitives)
             var formatted = string.Join("\n", results.Select(r =>
                 $"[{r.Score:F2}] {r.Memory.Content}"));
 
-            return ToolCallResult.Success(formatted);
+            return ToolCallResult.Success(formatted, recallMs);
         }
         catch (Exception ex)
         {
@@ -157,7 +157,8 @@ public sealed record ToolCallResult
     public bool IsSuccess { get; init; }
     public string Data { get; init; } = "";
     public string? ErrorMessage { get; init; }
+    public long RecallMs { get; init; }
 
-    public static ToolCallResult Success(string data) => new() { IsSuccess = true, Data = data };
+    public static ToolCallResult Success(string data, long recallMs = 0) => new() { IsSuccess = true, Data = data, RecallMs = recallMs };
     public static ToolCallResult Error(string message) => new() { IsSuccess = false, ErrorMessage = message };
 }
