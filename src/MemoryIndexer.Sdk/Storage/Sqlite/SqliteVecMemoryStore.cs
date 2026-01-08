@@ -70,6 +70,9 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             // Create schema
             await CreateSchemaAsync(cancellationToken);
 
+            // Phase 49: Migrate existing databases to add tier/scope columns
+            await MigrateTierScopeColumnsAsync(cancellationToken);
+
             // Start automatic maintenance timers if enabled
             if (_options.EnableAutoMaintenance)
             {
@@ -126,6 +129,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
     private async Task CreateSchemaAsync(CancellationToken cancellationToken)
     {
         // Main memories table
+        // Phase 49: Added tier and scope columns for 3-axis memory model
         var createTableSql = $@"
             CREATE TABLE IF NOT EXISTS {TableName} (
                 id TEXT PRIMARY KEY,
@@ -134,6 +138,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
                 content TEXT NOT NULL,
                 content_hash TEXT,
                 type INTEGER NOT NULL DEFAULT 0,
+                tier INTEGER NOT NULL DEFAULT 1,
+                scope INTEGER NOT NULL DEFAULT 2,
                 importance_score REAL DEFAULT 0.5,
                 access_count INTEGER DEFAULT 0,
                 created_at TEXT NOT NULL,
@@ -150,6 +156,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             CREATE INDEX IF NOT EXISTS idx_{TableName}_session_id ON {TableName}(session_id);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_created_at ON {TableName}(created_at);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_type ON {TableName}(type);
+            CREATE INDEX IF NOT EXISTS idx_{TableName}_tier ON {TableName}(tier);
+            CREATE INDEX IF NOT EXISTS idx_{TableName}_scope ON {TableName}(scope);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_is_deleted ON {TableName}(is_deleted);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_importance ON {TableName}(importance_score);
 
@@ -157,6 +165,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_scope ON {TableName}(user_id, is_deleted);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_session ON {TableName}(user_id, session_id, created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_type ON {TableName}(user_id, type, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_tier ON {TableName}(user_id, tier, created_at DESC);
         ";
 
         await ExecuteNonQueryAsync(createTableSql, cancellationToken);
@@ -168,6 +177,55 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         }
 
         _logger.LogDebug("Schema created with FTS={FtsEnabled}", _options.EnableFullTextSearch);
+    }
+
+    /// <summary>
+    /// Phase 49: Migrate existing databases to add tier and scope columns.
+    /// Uses ALTER TABLE ADD COLUMN which is idempotent-safe in SQLite.
+    /// </summary>
+    private async Task MigrateTierScopeColumnsAsync(CancellationToken cancellationToken)
+    {
+        // Check if tier column exists by querying pragma
+        var checkSql = $"PRAGMA table_info({TableName})";
+        var hasTier = false;
+        var hasScope = false;
+
+        using (var command = CreateCommand(checkSql))
+        using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var columnName = reader.GetString(1); // name column
+                if (columnName == "tier") hasTier = true;
+                if (columnName == "scope") hasScope = true;
+            }
+        }
+
+        // Add missing columns (ALTER TABLE ADD COLUMN is safe if column doesn't exist)
+        if (!hasTier)
+        {
+            var alterSql = $"ALTER TABLE {TableName} ADD COLUMN tier INTEGER NOT NULL DEFAULT 1";
+            await ExecuteNonQueryAsync(alterSql, cancellationToken);
+            _logger.LogInformation("Migrated database: added 'tier' column to {Table}", TableName);
+        }
+
+        if (!hasScope)
+        {
+            var alterSql = $"ALTER TABLE {TableName} ADD COLUMN scope INTEGER NOT NULL DEFAULT 2";
+            await ExecuteNonQueryAsync(alterSql, cancellationToken);
+            _logger.LogInformation("Migrated database: added 'scope' column to {Table}", TableName);
+        }
+
+        // Create indexes if they don't exist
+        if (!hasTier || !hasScope)
+        {
+            var indexSql = $@"
+                CREATE INDEX IF NOT EXISTS idx_{TableName}_tier ON {TableName}(tier);
+                CREATE INDEX IF NOT EXISTS idx_{TableName}_scope ON {TableName}(scope);
+                CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_tier ON {TableName}(user_id, tier, created_at DESC);
+            ";
+            await ExecuteNonQueryAsync(indexSql, cancellationToken);
+        }
     }
 
     private async Task CreateFtsTableAsync(CancellationToken cancellationToken)
@@ -246,13 +304,14 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             memory.Id = Guid.NewGuid();
         }
 
+        // Phase 49: Added tier and scope columns for 3-axis memory model
         var sql = $@"
             INSERT OR REPLACE INTO {TableName} (
-                id, user_id, session_id, content, content_hash, type,
+                id, user_id, session_id, content, content_hash, type, tier, scope,
                 importance_score, access_count, created_at, updated_at,
                 last_accessed_at, is_deleted, topics, entities, metadata, embedding
             ) VALUES (
-                @id, @user_id, @session_id, @content, @content_hash, @type,
+                @id, @user_id, @session_id, @content, @content_hash, @type, @tier, @scope,
                 @importance_score, @access_count, @created_at, @updated_at,
                 @last_accessed_at, @is_deleted, @topics, @entities, @metadata, @embedding
             )
@@ -281,13 +340,14 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         {
             foreach (var memory in memoryList)
             {
+                // Phase 49: Added tier and scope columns for 3-axis memory model
                 var sql = $@"
                     INSERT OR REPLACE INTO {TableName} (
-                        id, user_id, session_id, content, content_hash, type,
+                        id, user_id, session_id, content, content_hash, type, tier, scope,
                         importance_score, access_count, created_at, updated_at,
                         last_accessed_at, is_deleted, topics, entities, metadata, embedding
                     ) VALUES (
-                        @id, @user_id, @session_id, @content, @content_hash, @type,
+                        @id, @user_id, @session_id, @content, @content_hash, @type, @tier, @scope,
                         @importance_score, @access_count, @created_at, @updated_at,
                         @last_accessed_at, @is_deleted, @topics, @entities, @metadata, @embedding
                     )
@@ -484,6 +544,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         memory.MarkUpdated();
 
+        // Phase 49: Added tier and scope columns for 3-axis memory model
         var sql = $@"
             UPDATE {TableName} SET
                 user_id = @user_id,
@@ -491,6 +552,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
                 content = @content,
                 content_hash = @content_hash,
                 type = @type,
+                tier = @tier,
+                scope = @scope,
                 importance_score = @importance_score,
                 access_count = @access_count,
                 updated_at = @updated_at,
@@ -771,6 +834,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         return result == null || result == DBNull.Value ? default : (T)result;
     }
 
+    // Phase 49: Added tier and scope parameters for 3-axis memory model
     private static void AddMemoryParameters(SqliteCommand command, MemoryUnit memory)
     {
         command.Parameters.AddWithValue("@id", memory.Id.ToString());
@@ -779,6 +843,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         command.Parameters.AddWithValue("@content", memory.Content);
         command.Parameters.AddWithValue("@content_hash", (object?)memory.ContentHash ?? DBNull.Value);
         command.Parameters.AddWithValue("@type", (int)memory.Type);
+        command.Parameters.AddWithValue("@tier", (int)memory.Tier);
+        command.Parameters.AddWithValue("@scope", (int)memory.Scope);
         command.Parameters.AddWithValue("@importance_score", memory.ImportanceScore);
         command.Parameters.AddWithValue("@access_count", memory.AccessCount);
         command.Parameters.AddWithValue("@created_at", memory.CreatedAt.ToString("O"));
@@ -803,6 +869,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         }
     }
 
+    // Phase 49: Added tier and scope reading for 3-axis memory model
     private static MemoryUnit ReadMemoryFromReader(SqliteDataReader reader)
     {
         var memory = new MemoryUnit
@@ -817,6 +884,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
                 ? null
                 : reader.GetString(reader.GetOrdinal("content_hash")),
             Type = (MemoryType)reader.GetInt32(reader.GetOrdinal("type")),
+            Tier = (Tier)reader.GetInt32(reader.GetOrdinal("tier")),
+            Scope = (Scope)reader.GetInt32(reader.GetOrdinal("scope")),
             ImportanceScore = reader.GetFloat(reader.GetOrdinal("importance_score")),
             AccessCount = reader.GetInt32(reader.GetOrdinal("access_count")),
             CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("created_at"))),
