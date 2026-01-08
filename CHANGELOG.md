@@ -6,7 +6,7 @@ All notable changes to Memory Indexer are documented here.
 
 ### Cognitive Architecture Completion
 
-This release completes the 4-Tier Cognitive Memory Architecture with full tier promotion pipeline and cognitive compliance validation.
+This release completes the 3-Axis Cognitive Memory Architecture (Type × Scope × Tier) with full tier promotion pipeline and cognitive compliance validation.
 
 #### Phase 60: Test Code Warning Fixes
 - **Fixed**: CS0219, CS8602, CS8625, xUnit2002, xUnit1026, xUnit2013 warnings in tests
@@ -72,8 +72,13 @@ This release completes the 4-Tier Cognitive Memory Architecture with full tier p
 
 ### Architecture Highlights
 
+**3-Axis Memory Model** (Type × Scope × Tier):
+- **Type**: Episodic, Semantic, Procedural, Fact, Reflection (Tulving)
+- **Scope**: Turn, Topic, Session, User (temporal reach)
+- **Tier**: Buffer, Short, Long, Archive (Atkinson-Shiffrin + Baddeley)
+
 ```
-4-Tier Cognitive Memory Architecture:
+Tier Promotion Pipeline:
 ┌─────────────────────────────────────────────────────────┐
 │  Buffer (T0) - Sensory Store (Atkinson-Shiffrin)        │
 │  TTL: 60s idle OR 500 tokens OR 3 turns                 │

@@ -6,13 +6,12 @@ Development roadmap for Memory Indexer.
 
 ### v0.4.0 - Cognitive Architecture (Current)
 
-4-Tier Cognitive Memory Architecture implementing Atkinson-Shiffrin and Tulving's memory models.
+**3-Axis Memory Model** implementing Atkinson-Shiffrin, Baddeley, and Tulving's memory models.
 
-**Key Features:**
-- **Buffer (T0)**: Sensory memory store with TTL-based expiration
-- **Short-Term (T1)**: Baddeley's working memory (7±2 capacity limit)
-- **Long-Term (T2)**: Tulving's episodic memory for session events
-- **Archive (T3)**: Tulving's semantic memory with confirmation-based promotion
+**3-Axis Model (Type × Scope × Tier):**
+- **Type**: Episodic, Semantic, Procedural, Fact, Reflection
+- **Scope**: Turn, Topic, Session, User (temporal reach)
+- **Tier**: Buffer, Short, Long, Archive (storage layer)
 
 **Tier Promotion Pipeline:**
 - Buffer → Short: Idle timeout, token threshold, or turn count

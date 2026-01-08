@@ -1,6 +1,6 @@
 # Memory Indexer
 
-A cognitive memory system for LLMs implementing human-inspired 4-tier memory architecture.
+A cognitive memory system for LLMs implementing human-inspired 3-axis memory architecture.
 
 [![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
@@ -25,22 +25,34 @@ LLMs face a fundamental constraint: **finite context windows**. Memory Indexer s
 
 ## Core Architecture
 
-```
-4-Tier Cognitive Memory (Atkinson-Shiffrin + Tulving):
+**3-Axis Memory Model** where each memory has three orthogonal dimensions:
 
-┌────────────────────────────────────────────────────┐
-│  Buffer (T0) - Sensory Store                       │
-│  TTL: 60s idle │ 500 tokens │ 3 turns              │
-├────────────────────────────────────────────────────┤
-│  Short (T1) - Working Memory (Baddeley's 7±2)      │
-│  Capacity: 9 items, auto-promote when exceeded     │
-├────────────────────────────────────────────────────┤
-│  Long (T2) - Episodic Memory                       │
-│  Session-level events and experiences              │
-├────────────────────────────────────────────────────┤
-│  Archive (T3) - Semantic Memory                    │
-│  Promotion: Confidence ≥ 0.8 AND Confirms ≥ 3      │
-└────────────────────────────────────────────────────┘
+```
+Type × Scope × Tier = What × When × Where
+```
+
+| Axis | Values | Cognitive Basis |
+|------|--------|-----------------|
+| **Type** | Episodic, Semantic, Procedural, Fact, Reflection | Tulving's memory classification |
+| **Scope** | Turn, Topic, Session, User | Temporal reach (seconds → forever) |
+| **Tier** | Buffer, Short, Long, Archive | Atkinson-Shiffrin + Baddeley |
+
+```
+Tier Promotion Pipeline (Atkinson-Shiffrin + Tulving):
+
+┌─────────────────────────────────────────────────────┐
+│  Buffer (T0) - Sensory Store                        │
+│  TTL: 60s idle │ 500 tokens │ 3 turns               │
+├─────────────────────────────────────────────────────┤
+│  Short (T1) - Working Memory (Baddeley's 7±2)       │
+│  Capacity: 9 items, auto-promote when exceeded      │
+├─────────────────────────────────────────────────────┤
+│  Long (T2) - Episodic Memory                        │
+│  Session-level events and experiences               │
+├─────────────────────────────────────────────────────┤
+│  Archive (T3) - Semantic Memory                     │
+│  Promotion: Confidence ≥ 0.8 AND Confirms ≥ 3       │
+└─────────────────────────────────────────────────────┘
 ```
 
 ## Benchmark Summary
@@ -97,10 +109,11 @@ var results = await memoryService.RecallAsync("user123", "UI preferences", limit
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design and 4-tier model |
-| [Vision](docs/VISION.md) | Research basis and design philosophy |
+| [Architecture](docs/ARCHITECTURE.md) | System design and 3-axis model |
+| [Tier×Type Matrix](docs/TIER_TYPE_MATRIX.md) | Detailed 3-axis memory organization |
+| [Roadmap](docs/ROADMAP.md) | Feature timeline and status |
 | [Benchmarks](docs/BENCHMARKS.md) | Performance measurements |
-| [Guides](docs/GUIDES.md) | Common patterns and best practices |
+| [Vision](docs/VISION.md) | Research basis and design philosophy |
 | [Changelog](CHANGELOG.md) | Version history |
 
 ## Research Foundation
