@@ -185,6 +185,27 @@ public sealed class GameRunner(
         GameConsole.WriteSystem("   Agent Breakdown:");
         GameConsole.WriteBeta($"     Tokens: {betaTokens:N0} | LLM: {betaLlm:N0}ms | Recall: {betaRecall:N0}ms");
         GameConsole.WriteAlpha($"     Tokens: {alphaTokens:N0} | LLM: {alphaLlm:N0}ms | Recall: {alphaRecall:N0}ms");
+
+        // Phase 49: Print tier statistics for cognitive compliance verification
+        var tierStats = GetTierMetricsAsync().GetAwaiter().GetResult();
+        Console.WriteLine();
+        GameConsole.WriteSystem("🧠 Cognitive Memory Tier Distribution:");
+        GameConsole.WriteSystem($"   Buffer (T0): {tierStats.BufferCount}");
+        GameConsole.WriteSystem($"   Short  (T1): {tierStats.ShortCount} (Working Memory, 7±2 capacity)");
+        GameConsole.WriteSystem($"   Long   (T2): {tierStats.LongCount}");
+        GameConsole.WriteSystem($"   Archive(T3): {tierStats.ArchiveCount}");
+        GameConsole.WriteSystem($"   Total: {tierStats.Total}");
+
+        // Cognitive compliance check
+        var workingMemoryOk = tierStats.ShortCount is >= 5 and <= 9;
+        var healthyFlow = tierStats.BufferCount <= tierStats.ShortCount &&
+                         tierStats.ShortCount <= tierStats.LongCount;
+
+        Console.WriteLine();
+        GameConsole.WriteSystem("✅ Cognitive Compliance:");
+        GameConsole.WriteSystem($"   WorkingMemory(7±2): {(workingMemoryOk ? "✓ PASS" : "✗ FAIL")} (ShortCount={tierStats.ShortCount})");
+        GameConsole.WriteSystem($"   HealthyTierFlow: {(healthyFlow ? "✓ PASS" : "✗ FAIL")} (B≤S≤L: {tierStats.BufferCount}≤{tierStats.ShortCount}≤{tierStats.LongCount})");
+
         Console.WriteLine(new string('═', 70));
     }
 

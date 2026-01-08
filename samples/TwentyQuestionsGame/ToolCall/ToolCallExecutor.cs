@@ -55,6 +55,11 @@ public sealed class ToolCallExecutor(IMemoryPrimitives memoryPrimitives)
             return ToolCallResult.Error("memory_store requires 'content' argument");
         }
 
+        // Phase 49: Cognitive-aware tier selection
+        // - High importance (secrets, rules): Long (episodic)
+        // - Regular content (Q&A): Short (working memory, Baddeley 7±2)
+        var tier = SelectTierByContent(content, importance);
+
         try
         {
             await memoryPrimitives.EncodeAsync(new EncodeRequest
@@ -64,7 +69,7 @@ public sealed class ToolCallExecutor(IMemoryPrimitives memoryPrimitives)
                 Content = content,
                 ImportanceScore = importance,
                 Scope = Scope.Session,
-                Tier = Tier.Long
+                Tier = tier
             }, ct);
 
             // Output with color based on agent
@@ -84,6 +89,38 @@ public sealed class ToolCallExecutor(IMemoryPrimitives memoryPrimitives)
             GameConsole.WriteError($"Store failed: {ex.Message}");
             return ToolCallResult.Error($"Store failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Phase 49: Cognitive-aware tier selection based on content and importance.
+    /// Aligns with Baddeley's Working Memory model (7±2 items in Short tier).
+    /// </summary>
+    private static Tier SelectTierByContent(string content, float importance)
+    {
+        // High importance items → Long (episodic memory, persistent)
+        if (importance >= 0.9f)
+        {
+            return Tier.Long;
+        }
+
+        // Important secrets/rules → Long (critical game state)
+        if (content.Contains("MY_SECRET", StringComparison.OrdinalIgnoreCase) ||
+            content.Contains("GAME_RULES", StringComparison.OrdinalIgnoreCase) ||
+            content.Contains("[GAME_RULES]", StringComparison.OrdinalIgnoreCase))
+        {
+            return Tier.Long;
+        }
+
+        // Q&A round data → Short (working memory, 7±2 capacity)
+        // This enables cognitive compliance: WorkingMemory(7±2) metric
+        if (content.Contains("Round", StringComparison.OrdinalIgnoreCase) ||
+            content.Contains("Q=", StringComparison.OrdinalIgnoreCase))
+        {
+            return Tier.Short;
+        }
+
+        // Default: Short (working memory) for regular game content
+        return Tier.Short;
     }
 
     private async Task<ToolCallResult> ExecuteRecallAsync(
