@@ -201,7 +201,7 @@ public sealed class AdvancedMemoryTools
             RecommendedAction = result.RecommendedAction.ToString().ToLowerInvariant(),
             ExistingMemoryId = result.ExistingMemory?.Id.ToString(),
             ExistingContent = result.ExistingMemory?.Content,
-            SimilarCount = result.SimilarMemories.Count
+            SimilarCount = result.SimilarMemories?.Count ?? 0
         };
     }
 

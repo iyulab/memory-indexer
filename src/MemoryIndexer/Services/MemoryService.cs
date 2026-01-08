@@ -98,7 +98,7 @@ public class MemoryService(
             // Check if memory with same topic already exists for this user
             var existingMemories = await memoryStore.GetAllAsync(userId, cancellationToken: cancellationToken);
             var duplicateTopic = existingMemories.FirstOrDefault(m =>
-                m.Metadata.TryGetValue("Topic", out var existingTopic) &&
+                m.Metadata?.TryGetValue("Topic", out var existingTopic) == true &&
                 existingTopic.Equals(topic, StringComparison.OrdinalIgnoreCase));
 
             if (duplicateTopic != null)

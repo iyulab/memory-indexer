@@ -265,6 +265,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         // Merge metadata if provided
         if (request.Metadata != null)
         {
+            memory.Metadata ??= new Dictionary<string, string>();
             foreach (var kvp in request.Metadata)
             {
                 memory.Metadata[kvp.Key] = kvp.Value;
@@ -318,9 +319,9 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                 Tier = memory.Tier,
                 ImportanceScore = memory.ImportanceScore,
                 ContentHash = ComputeContentHash(chunk),
-                Topics = new List<string>(memory.Topics),
-                Entities = new List<string>(memory.Entities),
-                Metadata = new Dictionary<string, string>(memory.Metadata)
+                Topics = new List<string>(memory.Topics ?? []),
+                Entities = new List<string>(memory.Entities ?? []),
+                Metadata = new Dictionary<string, string>(memory.Metadata ?? [])
                 {
                     ["split_source"] = memory.Id.ToString(),
                     ["split_index"] = i.ToString(),
@@ -379,8 +380,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             : MemoryType.Semantic);
 
         // Merge topics and entities
-        var mergedTopics = memories.SelectMany(m => m.Topics).Distinct().ToList();
-        var mergedEntities = memories.SelectMany(m => m.Entities).Distinct().ToList();
+        var mergedTopics = memories.SelectMany(m => m.Topics ?? []).Distinct().ToList();
+        var mergedEntities = memories.SelectMany(m => m.Entities ?? []).Distinct().ToList();
 
         // Calculate merged importance (max of sources)
         var mergedImportance = memories.Max(m => m.ImportanceScore);
@@ -507,12 +508,13 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             memory.Stability = MemoryStability.Permanent;
             if (!string.IsNullOrEmpty(request.Reason))
             {
+                memory.Metadata ??= new Dictionary<string, string>();
                 memory.Metadata["lock_reason"] = request.Reason;
             }
         }
         else
         {
-            memory.Metadata.Remove("lock_reason");
+            memory.Metadata?.Remove("lock_reason");
         }
 
         memory.MarkUpdated();
@@ -553,12 +555,13 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         {
             if (request.AddTopics != null)
             {
+                memory.Topics ??= [];
                 memory.Topics.AddRange(request.AddTopics.Except(memory.Topics));
             }
 
             if (request.RemoveTopics != null)
             {
-                memory.Topics.RemoveAll(t => request.RemoveTopics.Contains(t));
+                memory.Topics?.RemoveAll(t => request.RemoveTopics.Contains(t));
             }
         }
 
@@ -748,8 +751,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             Tier = firstMemory.Tier,
             ImportanceScore = memories.Max(m => m.ImportanceScore),
             ContentHash = ComputeContentHash(summaryContent),
-            Topics = memories.SelectMany(m => m.Topics).Distinct().ToList(),
-            Entities = memories.SelectMany(m => m.Entities).Distinct().ToList(),
+            Topics = memories.SelectMany(m => m.Topics ?? []).Distinct().ToList(),
+            Entities = memories.SelectMany(m => m.Entities ?? []).Distinct().ToList(),
             Metadata = new Dictionary<string, string>
             {
                 ["summary_of"] = string.Join(",", request.MemoryIds),
@@ -839,6 +842,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         }
 
         memory.Tier = targetTier;
+        memory.Metadata ??= new Dictionary<string, string>();
         memory.Metadata["demote_reason"] = request.Reason.ToString();
         memory.MarkUpdated();
         await _memoryStore.UpdateAsync(memory, cancellationToken);
@@ -880,6 +884,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         }
 
         // Record confirmation source in metadata
+        memory.Metadata ??= new Dictionary<string, string>();
         if (!string.IsNullOrEmpty(request.Source))
         {
             memory.Metadata[$"confirm_source_{memory.ConfirmCount}"] = request.Source;

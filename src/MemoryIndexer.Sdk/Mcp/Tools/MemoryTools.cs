@@ -285,9 +285,9 @@ public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memory
                 LastAccessedAt = memory.LastAccessedAt,
                 AccessCount = memory.AccessCount,
                 SessionId = memory.SessionId,
-                Topics = memory.Topics,
-                Entities = memory.Entities,
-                Metadata = memory.Metadata
+                Topics = memory.Topics ?? [],
+                Entities = memory.Entities ?? [],
+                Metadata = memory.Metadata ?? []
             }
         };
     }
