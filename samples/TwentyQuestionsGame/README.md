@@ -1,183 +1,101 @@
-# Twenty Questions Game - AI vs AI Demo
+# Twenty Questions Game
 
-이 샘플은 **memory-indexer**의 핵심 기능을 증명합니다: 대화 히스토리 없이 메모리만으로 컨텍스트 유지
+AI vs AI demo proving **memory-indexer**'s core value: context without chat history.
 
-## 핵심 개념
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    전통적인 방식 (채팅 히스토리 전달)              │
-├─────────────────────────────────────────────────────────────────┤
-│  LLM API 호출:                                                   │
-│  messages: [                                                     │
-│    { system: "..." },                                            │
-│    { user: "Is it alive?" },                                     │
-│    { assistant: "Yes" },                                         │
-│    { user: "Is it an animal?" },                                 │
-│    { assistant: "Yes" },                                         │
-│    { user: "Is it a pet?" },      ← 모든 히스토리 전달           │
-│    ...                                                           │
-│  ]                                                               │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│                    이 데모 (Memory-Only)                         │
-├─────────────────────────────────────────────────────────────────┤
-│  LLM API 호출:                                                   │
-│  messages: [                                                     │
-│    { system: "너의 기억:\n[recall된 메모리들...]" },              │
-│    { user: "Yes" }               ← 상대방 응답 1개만!            │
-│  ]                                                               │
-│                                                                  │
-│  컨텍스트 = 100% memory-indexer recall                          │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## 게임 플로우
+## Concept
 
 ```
-Round 1:
-  Alpha: "게임 시작! 질문하세요"
-    ↓ (Beta는 이 메시지 1개만 받음)
-  Beta: [메모리 recall] → "Is it alive?"
-    ↓ (Alpha는 이 질문 1개만 받음)
-  Alpha: [메모리 recall - secret 확인] → "Yes"
+Traditional: Pass full chat history to LLM each turn
+┌─────────────────────────────────────────────┐
+│ messages: [Q1, A1, Q2, A2, Q3, A3, ...]    │ ← Growing context
+└─────────────────────────────────────────────┘
 
-Round 2:
-  Beta: [메모리 recall - 이전 Q&A 기억] → "Is it an animal?"
-    ↓
-  Alpha: [메모리 recall] → "Yes"
-
-... (20 라운드 계속)
+This Demo: Memory-only context
+┌─────────────────────────────────────────────┐
+│ system: [recalled memories...]              │
+│ user: "Yes"        ← Only last response    │
+└─────────────────────────────────────────────┘
 ```
 
-## 메모리 격리
+## Architecture
 
-Alpha와 Beta는 완전히 분리된 메모리 공간을 사용합니다 (3-Axis Model: Type × Scope × Tier):
-
-| Agent | User ID | Session ID | 저장하는 기억 |
-|-------|---------|------------|---------------|
-| Alpha | `alpha_quizmaster` | `game_session_alpha` | 비밀 답, 게임 규칙, Q&A 기록 |
-| Beta | `beta_guesser` | `game_session_beta` | 게임 규칙, 전략, Q&A 기록, 추론 |
-
-각 메모리는 다음과 같이 분류됩니다:
-- **Type**: Episodic (Q&A 기록), Semantic (게임 규칙), Procedural (전략)
-- **Scope**: Session (현재 게임에만 유효)
-- **Tier**: Long (장기 기억, 게임 종료까지 유지)
-
-## 주요 기능 시연
-
-### 1. 중복 질문 감지
-Alpha는 벡터 유사도로 중복 질문을 탐지합니다:
-```csharp
-var duplicateCheck = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
-{
-    UserId = ALPHA_USER_ID,
-    SessionId = ALPHA_SESSION_ID,
-    Query = betaQuestion,
-    Limit = 5
-});
-var isDuplicate = duplicateCheck.Any(m => m.Score > 0.85f);
+```
+samples/TwentyQuestionsGame/
+├── Program.cs              # DI + game setup (~130 lines)
+├── Game/
+│   ├── Game.cs             # GameConfiguration + GameState
+│   └── GameRunner.cs       # Game loop orchestrator
+├── Agents/
+│   ├── AgentBase.cs        # Tool call processing loop
+│   ├── AlphaAgent.cs       # QuizMaster (answers Yes/No/Maybe)
+│   └── BetaAgent.cs        # Guesser (asks questions)
+├── ToolCall/
+│   ├── ToolCallParser.cs   # Parse <tool_call> XML
+│   └── ToolCallExecutor.cs # Execute memory_store/recall
+├── LLM/
+│   └── LlmClient.cs        # OpenAI HTTP client + DTOs
+└── Prompts/
+    ├── AlphaSystemPrompt.md
+    └── BetaSystemPrompt.md
 ```
 
-### 2. 추론 저장
-Beta는 각 Q&A에서 추론을 저장합니다 (Type=Semantic, Scope=Session, Tier=Long):
-```csharp
-await memoryPrimitives.EncodeAsync(new EncodeRequest
-{
-    UserId = BETA_USER_ID,
-    SessionId = BETA_SESSION_ID,
-    Content = "[DEDUCTION_R3] CONFIRMED: The secret HAS the property \"alive\"",
-    Type = MemoryType.Semantic,
-    Scope = Scope.Session,
-    Tier = Tier.Long,
-    ImportanceScore = 0.9f
-});
+## How It Works
+
+1. **Beta asks** → LLM calls `memory_recall()` → gets previous Q&A → asks new question
+2. **Alpha answers** → LLM calls `memory_recall()` → checks secret → responds Yes/No/Maybe
+3. **Q&A stored** → Both agents can recall in future rounds
+4. **Repeat** until Beta guesses correctly or 20 rounds pass
+
+```xml
+<!-- LLM tool call format -->
+<tool_call>
+memory_recall(query="GAME_QA asked answered", limit=20)
+</tool_call>
 ```
 
-### 3. 라운드 추적
-각 AI는 현재 라운드를 메모리에 저장하고 recall합니다.
+## Memory Isolation
 
-### 4. 20번째 라운드 강제 추측
-Beta는 마지막 라운드에서 반드시 정답을 추측합니다.
+| Agent | User ID | Session ID | Purpose |
+|-------|---------|------------|---------|
+| Alpha | `alpha` | `alpha-session` | Stores secret, Q&A history |
+| Beta | `beta` | `beta-session` | Stores Q&A history, strategy |
 
-### 5. LLM 재시도 메커니즘
-LLM 호출 실패 시 exponential backoff로 최대 3회 재시도:
-```csharp
-// 재시도 간격: 1초 → 2초 → 4초 (exponential backoff)
-// 재시도마다 temperature를 0.1씩 증가 (0.7 → 0.8 → 0.9)
-var delay = baseDelay * Math.Pow(2, attempt - 1);
-```
-
-## 실행 방법
+## Run
 
 ```bash
-# 저장소 루트의 .env 파일 설정 필요
+# Set OPENAI_API_KEY in .env (project root)
 cd samples/TwentyQuestionsGame
 dotnet run
 ```
 
-### 필요한 환경 변수 (.env)
-```
-OPENAI_API_KEY=sk-your-api-key
-
-# Optional: 채팅 모델 선택 (기본값: gpt-4o-mini)
-OPENAI_CHAT_MODEL=gpt-4o-mini
-```
-
-## 샘플 출력
+## Sample Output
 
 ```
-╔══════════════════════════════════════════════════════════════╗
-║          Twenty Questions Game - Memory Demo                  ║
-║          AI vs AI: 상대 응답 1개만 + Memory Recall            ║
-╚══════════════════════════════════════════════════════════════╝
+═══════════════════ Round 1/20 ═══════════════════
+[BETA] >>> Is it a living thing?
+       ⏱️ LLM: 1200ms | 🔧 Tool iterations: 1
+[ALPHA] >>> No
+        ⏱️ LLM: 800ms | Guess: False
 
-[SECRET] Alpha is thinking of: "a golden retriever" (hidden from Beta)
+═══════════════════ Round 19/20 ═══════════════════
+[BETA] >>> My final guess is: the Eiffel Tower
+       ⏱️ LLM: 1500ms | 🔧 Tool iterations: 1
+[ALPHA] >>> Correct! You got it!
 
-══════════════════════════ Round 1/20 ══════════════════════════
+══════════════════════════════════════════════════
+🎉 BETA WINS! Correctly guessed "the Eiffel Tower" in round 19!
 
-[BETA] Received from Alpha: "The game has started. Ask your first question!"
-[BETA] Recalling memories to understand context...
-[BETA] Recalled 4 memories
-[BETA] >>> Is it something that is alive?
-[ALPHA] Received question: "Is it something that is alive?"
-[ALPHA] Recalling memories...
-[ALPHA] Recalled 3 memories
-[ALPHA] >>> Yes
-
-══════════════════════════ Round 2/20 ══════════════════════════
-
-[BETA] Received from Alpha: "Yes"
-[BETA] Recalling memories to understand context...
-[BETA] Recalled 7 memories
-[BETA] >>> Is it an animal?
-...
-
-╔══════════════════════════════════════════════════════════════╗
-║  GAME OVER                                                    ║
-╚══════════════════════════════════════════════════════════════╝
-
-  🎉 BETA WINS! Successfully guessed: a golden retriever
-
-╔══════════════════════════════════════════════════════════════╗
-║  MEMORY STATISTICS                                            ║
-╚══════════════════════════════════════════════════════════════╝
-  Alpha memories: 28
-  Beta memories:  35
-  Total:          63
-
-  ┌────────────────────────────────────────────────────────────┐
-  │ KEY DEMONSTRATION:                                         │
-  │ - Each LLM call received ONLY the opponent's last msg      │
-  │ - NO chat history was passed                               │
-  │ - Context came 100% from memory-indexer recall             │
-  └────────────────────────────────────────────────────────────┘
+📊 Game Statistics:
+   Rounds played: 19
+   Total tokens: 45,000
 ```
 
-## 왜 이것이 중요한가?
+## Key Config
 
-1. **토큰 효율성**: 대화가 길어져도 컨텍스트 윈도우 증가 없음
-2. **선택적 회상**: 관련 있는 기억만 recall됨
-3. **지속적 컨텍스트**: 세션이 종료되어도 기억 유지
-4. **확장성**: 수천 개의 대화에도 동일하게 동작
+```csharp
+// Program.cs
+services.AddMemoryIndexer(options =>
+{
+    options.Deduplication.Enabled = false;  // Preserve all Q&A pairs as separate memories
+});
+```

@@ -23,6 +23,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
     private readonly IShortTermMemory _workingMemory;
     private readonly IRerankerService? _rerankerService;
     private readonly IDeduplicationService? _deduplicationService;
+    private readonly IMemoryClassifier? _memoryClassifier;
+    private readonly IShortTermMemoryOrchestrator _orchestrator;
     private readonly SearchOptions _searchOptions;
     private readonly ILogger<MemoryPrimitivesService> _logger;
 
@@ -33,8 +35,10 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         IShortTermMemory workingMemory,
         IOptions<MemoryIndexerOptions> options,
         ILogger<MemoryPrimitivesService> logger,
+        IShortTermMemoryOrchestrator orchestrator,
         IRerankerService? rerankerService = null,
-        IDeduplicationService? deduplicationService = null)
+        IDeduplicationService? deduplicationService = null,
+        IMemoryClassifier? memoryClassifier = null)
     {
         _memoryStore = memoryStore;
         _embeddingService = embeddingService;
@@ -42,6 +46,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         _workingMemory = workingMemory;
         _rerankerService = rerankerService;
         _deduplicationService = deduplicationService;
+        _memoryClassifier = memoryClassifier;
+        _orchestrator = orchestrator;
         _searchOptions = options.Value.Search;
         _logger = logger;
     }
@@ -120,6 +126,50 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         // Generate embedding
         var embedding = await _embeddingService.GenerateEmbeddingAsync(request.Content, cancellationToken);
 
+        // Auto-classify Type and ImportanceScore if not explicitly specified
+        MemoryType memoryType = request.Type ?? MemoryType.Episodic;
+        float importanceScore = request.ImportanceScore ?? 0.5f;
+        List<string> topics = request.Topics?.ToList() ?? [];
+
+        if (_memoryClassifier != null && (request.Type == null || request.ImportanceScore == null))
+        {
+            try
+            {
+                var classification = await _memoryClassifier.ClassifyAsync(
+                    request.Content,
+                    new ClassificationContext
+                    {
+                        UserId = request.UserId,
+                        SessionId = request.SessionId
+                    },
+                    cancellationToken);
+
+                if (request.Type == null)
+                {
+                    memoryType = classification.Type;
+                    _logger.LogDebug("Auto-classified Type as {Type} with confidence {Confidence:F2}",
+                        memoryType, classification.Confidence);
+                }
+
+                if (request.ImportanceScore == null)
+                {
+                    importanceScore = classification.Importance;
+                    _logger.LogDebug("Auto-classified ImportanceScore as {Score:F2}",
+                        importanceScore);
+                }
+
+                // Use classified topics if none provided
+                if (topics.Count == 0 && classification.Topics.Count > 0)
+                {
+                    topics = classification.Topics.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Auto-classification failed, using defaults");
+            }
+        }
+
         // Create memory unit (3-axis model: Type × Scope × Tier)
         var memory = new MemoryUnit
         {
@@ -127,12 +177,12 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             SessionId = request.SessionId,
             Content = request.Content,
             Embedding = embedding,
-            Type = request.Type ?? MemoryType.Episodic,
+            Type = memoryType,
             Scope = request.Scope,  // 3-axis: Scope dimension
             Tier = request.Tier,    // 3-axis: Tier dimension
-            ImportanceScore = request.ImportanceScore ?? 0.5f,
+            ImportanceScore = importanceScore,
             ContentHash = ComputeContentHash(request.Content),
-            Topics = request.Topics ?? [],
+            Topics = topics,
             Metadata = request.Metadata ?? [],
             IsLocked = request.IsLocked,
             ExpiresAt = request.ExpiresAt,
@@ -143,6 +193,13 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         var stored = await _memoryStore.StoreAsync(memory, cancellationToken);
 
         _logger.LogInformation("Encoded memory {MemoryId} at tier {Tier}", stored.Id, stored.Tier);
+
+        // Phase 48: Auto-trigger consolidation for Working Memory (Tier.Short)
+        // This enables automatic promotion without requiring buffer routing
+        if (stored.Tier == Tier.Short)
+        {
+            await TriggerConsolidationIfNeededAsync(stored, cancellationToken);
+        }
 
         return stored;
     }
@@ -880,6 +937,88 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         Tier.Archive => Tier.Archive,
         _ => current
     };
+
+    /// <summary>
+    /// Auto-trigger consolidation check after encoding to Working Memory.
+    /// This enables automatic Working→Session promotion for direct tier writes.
+    /// Phase 48: Clean solution for memory retention without buffer routing.
+    /// </summary>
+    private async Task TriggerConsolidationIfNeededAsync(
+        MemoryUnit memory,
+        CancellationToken cancellationToken)
+    {
+        // Skip if no session ID (consolidation requires session context)
+        if (string.IsNullOrWhiteSpace(memory.SessionId))
+        {
+            _logger.LogDebug(
+                "[AUTO_CONSOLIDATION] Skipping - no session ID for memory {MemoryId}",
+                memory.Id);
+            return;
+        }
+
+        try
+        {
+            // Step 1: Record activity (updates turn count, tokens, timestamp)
+            _logger.LogDebug(
+                "[AUTO_CONSOLIDATION] Recording activity for user {UserId}, session {SessionId}",
+                memory.UserId, memory.SessionId);
+
+            await _orchestrator.RecordActivityAsync(
+                memory.UserId,
+                memory.SessionId,
+                memory,
+                cancellationToken);
+
+            // Step 2: Check if any consolidation trigger is satisfied
+            var trigger = await _orchestrator.CheckArchivalTriggerAsync(
+                memory.UserId,
+                cancellationToken);
+
+            if (trigger.HasValue)
+            {
+                _logger.LogInformation(
+                    "[AUTO_CONSOLIDATION] ✅ Trigger detected: {Trigger} for user {UserId}. " +
+                    "Initiating archival to Session tier.",
+                    trigger.Value, memory.UserId);
+
+                // Step 3: Archive Working Memory → Session
+                var result = await _orchestrator.ArchiveToSessionAsync(
+                    memory.UserId,
+                    trigger.Value,
+                    summarize: true,
+                    cancellationToken);
+
+                if (result.Success)
+                {
+                    _logger.LogInformation(
+                        "[AUTO_CONSOLIDATION] ✅ Successfully archived {Count} memories. " +
+                        "Summary ID: {SummaryId}",
+                        result.MemoriesArchived,
+                        result.SummaryId?.ToString() ?? "none");
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "[AUTO_CONSOLIDATION] ⚠️ Archival failed: {Error}",
+                        result.Error);
+                }
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "[AUTO_CONSOLIDATION] No triggers satisfied for user {UserId}",
+                    memory.UserId);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Never fail the main EncodeAsync operation due to consolidation issues
+            _logger.LogError(ex,
+                "[AUTO_CONSOLIDATION] ❌ Consolidation check failed for user {UserId}. " +
+                "Main operation succeeded, but automatic archival could not proceed.",
+                memory.UserId);
+        }
+    }
 
     #endregion
 }

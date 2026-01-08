@@ -9,6 +9,12 @@
     <Title>Memory Indexer Core</Title>
     <PackageProjectUrl>https://github.com/iyulab/memory-indexer</PackageProjectUrl>
     <PackageReleaseNotes>
+v0.4.0:
+- Cognitive terminology alignment (Buffer, Short-Term, Long-Term, Archive)
+- Documentation consolidation and cleanup
+- Domain-agnostic architecture validation (Phase 62 success)
+- 848 tests passing
+
 v0.3.0:
 - Major restructuring: Core abstractions separated from SDK
 - Minimal dependencies for maximum flexibility

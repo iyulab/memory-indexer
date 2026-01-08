@@ -650,5 +650,5 @@ NBomberRunner.RegisterScenarios(scenario).Run();
 
 - [Architecture Deep Dive](ARCHITECTURE.md)
 - [Integration Examples](INTEGRATIONS.md)
-- [Migration Guide](MIGRATION_GUIDE.md)
-- [Roadmap & Features](ROADMAP.md)
+- [Tier × Type Matrix](TIER_TYPE_MATRIX.md)
+- [Vision & Philosophy](VISION.md)

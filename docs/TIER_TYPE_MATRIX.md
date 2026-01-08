@@ -728,4 +728,4 @@ var userProfile = await semanticStore.GetAllAsync("user123");
 **Next Steps**:
 - See `ARCHITECTURE.md` for detailed tier specifications
 - See `VISION.md` for cognitive science foundations
-- See `MIGRATION_V0.4.md` for v0.3→v0.4 migration guide
+- See `GUIDES.md` for common usage patterns

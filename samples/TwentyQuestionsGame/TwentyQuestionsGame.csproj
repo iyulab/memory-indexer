@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNetEnv" />
+    <PackageReference Include="OpenAI" />
   </ItemGroup>
 
 </Project>
