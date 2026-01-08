@@ -67,11 +67,14 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             // Configure SQLite settings
             await ConfigureSqliteAsync(cancellationToken);
 
-            // Create schema
-            await CreateSchemaAsync(cancellationToken);
-
-            // Phase 49: Migrate existing databases to add tier/scope columns
+            // Phase 49: Migrate existing databases to add tier/scope columns FIRST
+            // This must happen before CreateSchemaAsync because existing tables
+            // don't have tier/scope columns, and the schema creation includes
+            // CREATE INDEX statements that reference these columns.
             await MigrateTierScopeColumnsAsync(cancellationToken);
+
+            // Create schema (including indexes on tier/scope columns)
+            await CreateSchemaAsync(cancellationToken);
 
             // Start automatic maintenance timers if enabled
             if (_options.EnableAutoMaintenance)
@@ -185,6 +188,22 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
     /// </summary>
     private async Task MigrateTierScopeColumnsAsync(CancellationToken cancellationToken)
     {
+        // First check if the table exists at all (for new databases)
+        var tableExistsSql = $"SELECT name FROM sqlite_master WHERE type='table' AND name='{TableName}'";
+        bool tableExists;
+        using (var command = CreateCommand(tableExistsSql))
+        {
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            tableExists = result != null;
+        }
+
+        // If table doesn't exist, CreateSchemaAsync will create it with tier/scope columns
+        if (!tableExists)
+        {
+            _logger.LogDebug("Table {Table} does not exist yet, skipping migration", TableName);
+            return;
+        }
+
         // Check if tier column exists by querying pragma
         var checkSql = $"PRAGMA table_info({TableName})";
         var hasTier = false;
