@@ -3,6 +3,7 @@
 A cognitive memory system for LLMs implementing human-inspired 3-axis memory architecture.
 
 [![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-1015-success?logo=testcafe)](tests/)
 [![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
