@@ -13,7 +13,7 @@ public abstract class AgentBase(
     ToolCallExecutor executor,
     ILogger logger)
 {
-    protected const int MaxToolCallIterations = 3;
+    protected const int MaxToolCallIterations = 1;
 
     protected abstract string UserId { get; }
     protected abstract string SessionId { get; }
