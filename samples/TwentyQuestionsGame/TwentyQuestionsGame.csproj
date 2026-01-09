@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MemoryIndexer.Sdk\MemoryIndexer.Sdk.csproj" />
+    <ProjectReference Include="..\..\tools\SharedLib\SharedLib.csproj" />
   </ItemGroup>
 
   <ItemGroup>

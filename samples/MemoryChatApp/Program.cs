@@ -5,6 +5,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Extensions;
+using SharedLib.Embedding;
 
 // Load .env file
 var envPaths = new[] {
@@ -40,27 +41,30 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Embedding service: register BEFORE AddMemoryIndexer (uses TryAddSingleton)
+if (useGpuStackEmbed)
+{
+    // Use OpenAI-compatible GPUStack embedding via SharedLib
+    builder.Services.AddSingleton<IEmbeddingService>(new OpenAIEmbeddingService(
+        apiKey: gpuStackApiKey!,
+        model: gpuStackEmbedModel!,
+        dimensions: 1024,
+        endpoint: new Uri(gpuStackUrl!.TrimEnd('/') + "/v1")));
+}
+
 // Memory Indexer services
 builder.Services.AddMemoryIndexer(options =>
 {
     options.Storage.Type = StorageType.SqliteVec;
     options.Storage.ConnectionString = "chat_memories.db";
+    options.Embedding.Dimensions = 1024;
+    options.Storage.VectorDimensions = 1024;
 
-    if (useGpuStackEmbed)
+    if (!useGpuStackEmbed)
     {
-        options.Embedding.Provider = EmbeddingProvider.Custom;
-        options.Embedding.Endpoint = gpuStackUrl!;
-        options.Embedding.ApiKey = gpuStackApiKey!;
-        options.Embedding.Model = gpuStackEmbedModel!;
-        options.Embedding.Dimensions = 1024;
-        options.Storage.VectorDimensions = 1024;
-    }
-    else
-    {
+        // Local embedding (LMSupply.Embedder)
         options.Embedding.Provider = EmbeddingProvider.Local;
         options.Embedding.Model = "bge-large-en-v1.5";
-        options.Embedding.Dimensions = 1024;
-        options.Storage.VectorDimensions = 1024;
     }
 });
 

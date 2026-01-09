@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
+using SharedLib.Embedding;
 using TwentyQuestionsGame.Agents;
 using TwentyQuestionsGame.Benchmark;
 using TwentyQuestionsGame.Game;
@@ -100,6 +101,24 @@ services.AddSingleton<IConfiguration>(configuration);
 services.AddLogging(builder => builder
     .SetMinimumLevel(LogLevel.None));  // Disable all framework logging - game uses GameConsole
 
+// Embedding service: register BEFORE AddMemoryIndexer (uses TryAddSingleton)
+int embeddingDimensions;
+if (!string.IsNullOrEmpty(openAiKey))
+{
+    // Use OpenAI embedding from SharedLib
+    services.AddSingleton<IEmbeddingService>(new OpenAIEmbeddingService(
+        apiKey: openAiKey,
+        model: embeddingModel,
+        dimensions: 1536));
+    embeddingDimensions = 1536;
+}
+else
+{
+    // Local embedding will be registered by AddMemoryIndexer
+    Console.WriteLine("[CONFIG] Using local embedding (bge-small-en-v1.5)");
+    embeddingDimensions = 384;
+}
+
 // Memory Indexer
 services.AddMemoryIndexer(options =>
 {
@@ -108,21 +127,18 @@ services.AddMemoryIndexer(options =>
     options.Deduplication.Enabled = false;
     options.Search.EnableReranking = false;
 
-    // Embedding: prefer OpenAI if available, fallback to local
-    if (!string.IsNullOrEmpty(openAiKey))
-    {
-        options.Embedding.Provider = EmbeddingProvider.OpenAI;
-        options.Embedding.Model = embeddingModel;
-        options.Embedding.ApiKey = openAiKey;
-        options.Embedding.Dimensions = 1536;
-    }
-    else
+    // Embedding: set dimensions for vector store
+    if (string.IsNullOrEmpty(openAiKey))
     {
         // Local embedding (LMSupply.Embedder)
-        Console.WriteLine("[CONFIG] Using local embedding (bge-small-en-v1.5)");
         options.Embedding.Provider = EmbeddingProvider.Local;
         options.Embedding.Model = "BAAI/bge-small-en-v1.5";
         options.Embedding.Dimensions = 384;
+    }
+    else
+    {
+        // OpenAI service already registered above
+        options.Embedding.Dimensions = embeddingDimensions;
     }
 });
 
