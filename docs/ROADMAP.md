@@ -32,11 +32,7 @@ Development roadmap for Memory Indexer.
 
 Initial release with basic memory primitives and vector storage.
 
----
-
-## Planned
-
-### v0.5.0 - Intelligence Integration (In Progress)
+### v0.5.0 - Intelligence Integration (Complete)
 
 Focus: Expose existing SDK intelligence features via MCP tools and production polish.
 
@@ -47,19 +43,23 @@ Focus: Expose existing SDK intelligence features via MCP tools and production po
 
 **Integration & Testing:**
 - [x] Unit tests for Graph Traversal MCP tools (14 tests)
-- [ ] End-to-end integration tests with real LLM providers
+- [x] End-to-end integration tests (IntelligenceIntegrationTests: 17 tests covering configuration validation, token budget, recall patterns, query intent, conflict resolution)
 - [x] TwentyQuestionsGame sample: Beta reasoning chain improvements (done in v0.4.0)
 
 **Production Polish:**
 - [x] OpenTelemetry metrics for recall pattern analysis (query cache hits, duplicates, rapid-fire)
 - [x] OpenTelemetry metrics for remaining intelligence operations (classification, summarization, deduplication, reranking, graph, token budget)
 - [x] Configuration validation and better defaults (IConfigurationValidator, 21 validation rules)
-- [ ] Documentation for advanced intelligence features
+- [x] Documentation for advanced intelligence features (docs/INTELLIGENCE.md)
 
 **Efficiency Improvements** (from TwentyQuestionsGame evaluation):
 - [x] Session-level recall caching (SHA256 cache keys, configurable TTL via LatencyOptions)
 - [x] Recall pattern telemetry (RecallPatternAnalyzer: duplicates, rapid-fire, recommendations)
 - [x] Token budget awareness hooks (ITokenBudgetMonitor: events, recommendations, session tracking)
+
+---
+
+## Planned
 
 ### v0.6.0 - Production Readiness
 
@@ -78,4 +78,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.5.0-preview.2)*
+*Last updated: 2026-01-09 (v0.5.0)*

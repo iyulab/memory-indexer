@@ -34,4 +34,14 @@ public static class TestCategories
     /// Quality improvement validation tests
     /// </summary>
     public const string QualityImprovement = "QualityImprovement";
+
+    /// <summary>
+    /// End-to-end tests with real LLM providers - requires API keys
+    /// </summary>
+    public const string LlmProvider = "LlmProvider";
+
+    /// <summary>
+    /// Intelligence feature integration tests
+    /// </summary>
+    public const string Intelligence = "Intelligence";
 }

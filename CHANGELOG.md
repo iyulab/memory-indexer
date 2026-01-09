@@ -2,6 +2,42 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.5.0] - 2026-01-09
+
+### Intelligence Integration Release
+
+This release completes the v0.5.0 Intelligence Integration phase, exposing existing SDK intelligence features via MCP tools for LLM consumption with comprehensive documentation and testing.
+
+#### Documentation: Advanced Intelligence Features (`docs/INTELLIGENCE.md`)
+- **Conflict Resolution**: Contradiction detection and resolution strategies
+  - `DetectContradiction`, `ResolveContradiction`, `AutoResolveContradiction`, `GetResolutionStrategy`
+  - Configurable thresholds and semantic/rule-based hybrid detection
+- **Adaptive Retrieval**: Intent-based query routing and tiered memory access
+  - `ClassifyQueryIntent`, `AdaptiveRecall`, `TieredRecall`, `GetRetrievalRecommendation`
+  - Query intent types: Factual, Contextual, Temporal, Relational, General
+- **Graph Traversal**: Entity-based memory navigation and community detection
+  - `DetectCommunities`, `ComputeImportance`, `GetTopEntities`, `FindRelatedMemories`, `ExtractSubgraph`
+  - PageRank importance propagation, Label propagation community detection
+- **Efficiency Features**: Token budget monitoring, recall pattern analysis, configuration validation
+- **OpenTelemetry Metrics**: Complete observability integration
+
+#### Integration Tests (`IntelligenceIntegrationTests.cs`)
+- 17 tests covering complete intelligence pipeline
+- Configuration validation (valid, invalid, Baddeley warnings)
+- Token budget monitoring (sessions, thresholds, recommendations)
+- Recall pattern analysis (duplicates, recommendations)
+- Query intent classification (Factual, Contextual, Temporal)
+- Conflict resolution workflow (detection, strategy, resolution)
+- Full pipeline integration test
+
+#### DI Registration Fix
+- Registered `IQueryIntentClassifier` → `LocalQueryIntentClassifier` in `ServiceCollectionExtensions`
+- Enables query intent classification via dependency injection
+
+**Tests**: All 1100 tests passing (237 core + 863 SDK)
+
+---
+
 ## [v0.5.0-preview.2] - 2026-01-09
 
 ### Production Polish Phase

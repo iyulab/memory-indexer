@@ -17,6 +17,7 @@ using MemoryIndexer.Sdk.Intelligence.Evaluation;
 using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
 using MemoryIndexer.Sdk.Intelligence.Operations;
 using MemoryIndexer.Sdk.Intelligence.Reranking;
+using MemoryIndexer.Sdk.Intelligence.Retrieval;
 using MemoryIndexer.Scoring;
 using MemoryIndexer.Sdk.Intelligence.Scoring;
 using MemoryIndexer.Sdk.Intelligence.Search;
@@ -273,6 +274,9 @@ public static class ServiceCollectionExtensions
 
         // Register graph-based retrieval services (Phase 8.2)
         services.TryAddSingleton<IGraphRetriever, InMemoryGraphRetriever>();
+
+        // Register query intent classification (Phase v0.5.0)
+        services.TryAddSingleton<IQueryIntentClassifier, LocalQueryIntentClassifier>();
 
         // Register graph intelligence services (Phase v0.5.0)
         services.TryAddSingleton<IMemoryGraphService, MemoryGraphService>();
