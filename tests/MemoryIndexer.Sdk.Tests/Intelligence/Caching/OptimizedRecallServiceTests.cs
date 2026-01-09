@@ -2,6 +2,7 @@ using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Caching;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -14,6 +15,7 @@ public class OptimizedRecallServiceTests
     private readonly MockEmbeddingService _mockEmbedding;
     private readonly MockScoringService _mockScoring;
     private readonly MockLatencyProfiler _mockProfiler;
+    private readonly IMemoryCache _memoryCache;
     private readonly OptimizedRecallService _service;
     private readonly MemoryIndexerOptions _options;
 
@@ -29,7 +31,9 @@ public class OptimizedRecallServiceTests
                 EarlyTerminationConfidence = 0.9f,
                 EarlyTerminationMinResults = 3,
                 BatchProcessingEnabled = true,
-                MaxBatchSize = 10
+                MaxBatchSize = 10,
+                QueryCacheEnabled = true,
+                QueryCacheTtlMinutes = 10
             }
         };
 
@@ -37,11 +41,13 @@ public class OptimizedRecallServiceTests
         _mockEmbedding = new MockEmbeddingService();
         _mockScoring = new MockScoringService();
         _mockProfiler = new MockLatencyProfiler();
+        _memoryCache = new MemoryCache(new MemoryCacheOptions());
 
         _service = new OptimizedRecallService(
             _mockStore,
             _mockEmbedding,
             _mockScoring,
+            _memoryCache,
             _mockProfiler,
             NullLogger<OptimizedRecallService>.Instance,
             Options.Create(_options));
@@ -148,6 +154,7 @@ public class OptimizedRecallServiceTests
             _mockStore,
             _mockEmbedding,
             _mockScoring,
+            _memoryCache,
             _mockProfiler,
             NullLogger<OptimizedRecallService>.Instance,
             Options.Create(options));
@@ -215,6 +222,7 @@ public class OptimizedRecallServiceTests
             _mockStore,
             _mockEmbedding,
             _mockScoring,
+            _memoryCache,
             _mockProfiler,
             NullLogger<OptimizedRecallService>.Instance,
             Options.Create(options));
@@ -278,6 +286,109 @@ public class OptimizedRecallServiceTests
         Assert.Equal(25, results.Count);
         // Batches should be processed (MaxBatchSize = 10, so 3 batches: 10, 10, 5)
     }
+
+    #region Query Result Caching Tests (Phase v0.5.0)
+
+    [Fact]
+    public async Task RecallAsync_DuplicateQuery_ShouldReturnCachedResult()
+    {
+        // Arrange
+        const string userId = "user1";
+        const string query = "duplicate query test";
+        const string tier = "Working";
+
+        _mockStore.SetSearchResults(CreateMemorySearchResults(5));
+
+        // Act - First call
+        var firstResult = await _service.RecallAsync(userId, query, tier, limit: 5);
+        var firstCallCount = _mockStore.SearchCallCount;
+
+        // Act - Second call (should hit cache)
+        var secondResult = await _service.RecallAsync(userId, query, tier, limit: 5);
+        var secondCallCount = _mockStore.SearchCallCount;
+
+        // Assert
+        Assert.Equal(5, firstResult.Count);
+        Assert.Equal(5, secondResult.Count);
+        Assert.Equal(1, firstCallCount); // First call hits store
+        Assert.Equal(1, secondCallCount); // Second call should NOT hit store (cached)
+    }
+
+    [Fact]
+    public async Task RecallAsync_DifferentQueries_ShouldNotShareCache()
+    {
+        // Arrange
+        const string userId = "user1";
+        const string tier = "Working";
+
+        _mockStore.SetSearchResults(CreateMemorySearchResults(5));
+
+        // Act
+        await _service.RecallAsync(userId, "query1", tier, limit: 5);
+        await _service.RecallAsync(userId, "query2", tier, limit: 5);
+
+        // Assert - Both should hit the store
+        Assert.Equal(2, _mockStore.SearchCallCount);
+    }
+
+    [Fact]
+    public async Task RecallAsync_DifferentLimits_ShouldNotShareCache()
+    {
+        // Arrange
+        const string userId = "user1";
+        const string query = "same query";
+        const string tier = "Working";
+
+        _mockStore.SetSearchResults(CreateMemorySearchResults(10));
+
+        // Act
+        await _service.RecallAsync(userId, query, tier, limit: 5);
+        await _service.RecallAsync(userId, query, tier, limit: 10);
+
+        // Assert - Both should hit the store (different cache keys)
+        Assert.Equal(2, _mockStore.SearchCallCount);
+    }
+
+    [Fact]
+    public void GetCacheStatistics_ShouldTrackHitsAndMisses()
+    {
+        // Arrange & Act
+        var stats = _service.GetCacheStatistics();
+
+        // Assert
+        Assert.Equal(0, stats.CacheHits);
+        Assert.Equal(0, stats.CacheMisses);
+        Assert.Equal(0, stats.DuplicateQueryCount);
+        Assert.Equal(0f, stats.HitRatio);
+    }
+
+    [Fact]
+    public async Task GetCacheStatistics_AfterDuplicateQueries_ShouldReflectCacheUsage()
+    {
+        // Arrange
+        const string userId = "user1";
+        const string query = "cached query";
+        const string tier = "Working";
+
+        _mockStore.SetSearchResults(CreateMemorySearchResults(3));
+
+        // Act - First call (cache miss)
+        await _service.RecallAsync(userId, query, tier, limit: 3);
+        // Second call (cache hit)
+        await _service.RecallAsync(userId, query, tier, limit: 3);
+        // Third call (cache hit)
+        await _service.RecallAsync(userId, query, tier, limit: 3);
+
+        var stats = _service.GetCacheStatistics();
+
+        // Assert
+        Assert.Equal(2, stats.CacheHits); // Two cache hits
+        Assert.Equal(1, stats.CacheMisses); // One cache miss (first call)
+        Assert.Equal(2, stats.DuplicateQueryCount); // Two duplicate queries
+        Assert.True(stats.HitRatio > 0.6f); // ~66% hit ratio
+    }
+
+    #endregion
 
     // Helper methods
     private static List<MemorySearchResult> CreateMemorySearchResults(int count, float scoreStart = 0.8f)
