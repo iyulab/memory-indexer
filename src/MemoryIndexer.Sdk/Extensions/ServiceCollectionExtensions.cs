@@ -30,6 +30,7 @@ using MemoryIndexer.Sdk.Intelligence.Promotion;
 using MemoryIndexer.Sdk.Intelligence.Quality;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Intelligence.Caching;
+using MemoryIndexer.Sdk.Intelligence.ResourceManagement;
 using MemoryIndexer.Sdk.Services;
 using MemoryIndexer.Sdk.Services.Export;
 using MemoryIndexer.Sdk.Observability;
@@ -268,6 +269,10 @@ public static class ServiceCollectionExtensions
 
         // Register memory export/import services (Phase v0.6.0-β)
         services.TryAddSingleton<IMemoryExporter, JsonMemoryExporter>();
+
+        // Register resource management services (Phase v0.6.0-γ)
+        services.TryAddSingleton<IUsageTracker, InMemoryUsageTracker>();
+        services.TryAddSingleton<IResourceLimitEnforcer, ResourceLimitEnforcer>();
 
         // Register temporal entity store (Phase 8.1)
         services.TryAddSingleton<ITemporalEntityStore, InMemoryTemporalEntityStore>();

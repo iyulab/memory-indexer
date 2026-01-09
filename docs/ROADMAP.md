@@ -74,9 +74,18 @@ Initial release with basic memory primitives and vector storage.
 - [x] BackupRestoreTools MCP (ExportMemories, ImportMemories, GetBackupStats)
 - [x] Incremental backup support via Since/Until filters
 
+**Resource Management (Complete):**
+- [x] IResourceLimitEnforcer interface with enforcement logic
+- [x] IUsageTracker interface with thread-safe in-memory implementation
+- [x] Per-user resource limits (max memories, max storage bytes)
+- [x] Multi-tenant limit configuration (tenant-specific limits)
+- [x] OpenTelemetry metrics for resource usage telemetry
+- [x] ResourceManagementTools MCP (GetUsage, GetLimits, CanStore, CanStoreBatch, GetTenantUsage, GetGlobalSummary, RefreshUsage)
+- [x] Enforcement integration in MCP MemoryTools (pre-store checks)
+
 **Remaining:**
 - [ ] Distributed Storage: Redis, PostgreSQL backends
-- [ ] Multi-tenancy: Isolated user contexts with resource limits
+- [ ] Multi-tenancy: Full tenant isolation (resource limits now available)
 
 ---
 
@@ -99,4 +108,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.6.0-preview.2)*
+*Last updated: 2026-01-09 (v0.6.0-preview.3)*

@@ -11,7 +11,12 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 /// MCP tools for memory operations.
 /// </summary>
 [McpServerToolType]
-public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memoryStore, IMemoryPrimitives memoryPrimitives)
+public sealed class MemoryTools(
+    MemoryService memoryService,
+    IMemoryStore memoryStore,
+    IMemoryPrimitives memoryPrimitives,
+    IResourceLimitEnforcer? resourceEnforcer = null,
+    IUsageTracker? usageTracker = null)
 {
     private const string DefaultUserId = "default";
 
@@ -35,6 +40,21 @@ public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memory
         [Description("Session ID to group related memories")] string? sessionId = null,
         CancellationToken cancellationToken = default)
     {
+        // Check resource limits before storing (Phase v0.6.0-γ)
+        if (resourceEnforcer != null)
+        {
+            var estimatedSize = content.Length * 2; // UTF-16 estimate
+            var enforcementResult = await resourceEnforcer.CanStoreAsync(DefaultUserId, estimatedSize, cancellationToken);
+            if (!enforcementResult.IsAllowed)
+            {
+                return new StoreMemoryResult
+                {
+                    Success = false,
+                    Message = $"Resource limit exceeded: {enforcementResult.DenialReason}"
+                };
+            }
+        }
+
         var memoryType = ParseMemoryType(type);
         var metadata = new Dictionary<string, string>();
 
@@ -51,6 +71,13 @@ public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memory
             Math.Clamp(importance, 0f, 1f),
             metadata,
             cancellationToken);
+
+        // Record usage after successful store (Phase v0.6.0-γ)
+        if (usageTracker != null)
+        {
+            var storedSize = (content.Length * 2) + (memory.Embedding?.Length * 4 ?? 0) + 200;
+            usageTracker.RecordStore(DefaultUserId, storedSize, memory.Tier, memory.Type);
+        }
 
         return new StoreMemoryResult
         {
@@ -228,7 +255,22 @@ public sealed class MemoryTools(MemoryService memoryService, IMemoryStore memory
             };
         }
 
+        // Get memory details for usage tracking before deletion (Phase v0.6.0-γ)
+        MemoryUnit? memoryForTracking = null;
+        if (usageTracker != null)
+        {
+            memoryForTracking = await memoryStore.GetByIdAsync(id, cancellationToken);
+        }
+
         var deleted = await memoryService.DeleteAsync(id, permanent, cancellationToken);
+
+        // Record deletion in usage tracker (Phase v0.6.0-γ)
+        if (deleted && usageTracker != null && memoryForTracking != null)
+        {
+            var size = (memoryForTracking.Content?.Length * 2 ?? 0) +
+                       (memoryForTracking.Embedding?.Length * 4 ?? 0) + 200;
+            usageTracker.RecordDelete(DefaultUserId, size, memoryForTracking.Tier, memoryForTracking.Type);
+        }
 
         return new DeleteMemoryResult
         {

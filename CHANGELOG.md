@@ -2,6 +2,63 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.6.0-preview.3] - 2026-01-09
+
+### Resource Management
+
+This preview adds comprehensive resource limit enforcement and usage tracking for multi-tenant deployments.
+
+#### IResourceLimitEnforcer Interface (`IResourceLimitEnforcer.cs`)
+- **Enforcement Methods**: `CanStoreAsync`, `CanStoreBatchAsync`
+- **Query Methods**: `GetLimits`, `GetUsageAsync`
+- **EnforcementResult**: IsAllowed, DenialReason, ExceededLimit, CurrentUsage, Limits
+- **ResourceLimits**: MaxMemories, MaxStorageBytes, EnforcementEnabled, WarningThresholdPercent, Source
+- **LimitType**: MemoryCount, StorageSize enum for exceeded limit identification
+
+#### IUsageTracker Interface (`IUsageTracker.cs`)
+- **Recording**: `RecordStore`, `RecordDelete`, `RecordTierPromotion`
+- **Queries**: `GetUsage`, `GetTenantUsage`, `GetGlobalSummary`, `GetTrackedUsers`
+- **Maintenance**: `RefreshFromStoreAsync`, `ClearUser`
+- **ResourceUsage**: UserId, TenantId, MemoryCount, StorageSizeBytes, ByTier, ByType, CalculatedAt
+
+#### InMemoryUsageTracker Implementation (`InMemoryUsageTracker.cs`)
+- Thread-safe tracking with `ConcurrentDictionary` and `Interlocked` operations
+- Per-user breakdown by Tier and MemoryType
+- Tenant-level aggregation with user breakdown
+- Global summary with top users by count and storage
+- Automatic refresh from memory store
+
+#### ResourceLimitEnforcer Implementation (`ResourceLimitEnforcer.cs`)
+- Configuration-based limits via `ResourceLimitOptions`
+- Tenant-specific limit overrides via `ITenantContext`
+- OpenTelemetry telemetry for enforcement events and warnings
+- Warning threshold detection (default 80%)
+
+#### Configuration Options (`ResourceLimitOptions`)
+- `MaxMemoriesPerUser`: Default 100,000
+- `MaxStorageBytesPerUser`: Default 1GB
+- `EnforcementEnabled`: Toggle for enforcement
+- `WarningThresholdPercent`: Alert threshold (80%)
+
+#### ResourceManagementTools MCP (`ResourceManagementTools.cs`)
+- `GetUsage`: Get current resource usage statistics
+- `GetLimits`: Get applicable resource limits
+- `CanStore`: Check if store operation allowed
+- `CanStoreBatch`: Check if batch operation allowed
+- `GetTenantUsage`: Get tenant-level aggregation
+- `GetGlobalSummary`: Get global usage statistics
+- `RefreshUsage`: Force refresh from store
+
+#### MCP MemoryTools Integration
+- Pre-store enforcement check in `StoreMemory`
+- Usage recording on successful store/delete
+- Denial response with clear reason messaging
+
+**Tests**: 43 new tests (ResourceLimitEnforcerTests: 19, InMemoryUsageTrackerTests: 24)
+**Total Tests**: All 1154 tests passing (237 core + 917 SDK)
+
+---
+
 ## [v0.6.0-preview.2] - 2026-01-09
 
 ### Memory Export/Import (Backup/Restore)

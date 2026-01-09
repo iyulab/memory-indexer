@@ -89,6 +89,12 @@ public sealed class MemoryIndexerOptions
     /// Phase 51: Cognitive Compliance - Baddeley's 7±2 capacity enforcement.
     /// </summary>
     public WorkingMemoryOptions WorkingMemory { get; set; } = new();
+
+    /// <summary>
+    /// Resource limits configuration.
+    /// Phase v0.6.0-γ: Resource Management.
+    /// </summary>
+    public ResourceLimitOptions? ResourceLimits { get; set; }
 }
 
 /// <summary>
@@ -1086,4 +1092,40 @@ public enum CompletionProvider
     /// Custom HTTP endpoint (OpenAI-compatible).
     /// </summary>
     Custom
+}
+
+/// <summary>
+/// Resource limit configuration options.
+/// Phase v0.6.0-γ: Resource Management.
+/// </summary>
+/// <remarks>
+/// Controls per-user resource limits for memory storage.
+/// Integrates with multi-tenancy for tenant-specific limits.
+/// </remarks>
+public sealed class ResourceLimitOptions
+{
+    /// <summary>
+    /// Maximum number of memories per user.
+    /// Default: 100,000 memories.
+    /// </summary>
+    public long MaxMemoriesPerUser { get; set; } = 100_000;
+
+    /// <summary>
+    /// Maximum storage size per user in bytes.
+    /// Default: 1 GB (1,073,741,824 bytes).
+    /// </summary>
+    public long MaxStorageBytesPerUser { get; set; } = 1_073_741_824;
+
+    /// <summary>
+    /// Whether enforcement is enabled.
+    /// When disabled, limits are tracked but not enforced.
+    /// </summary>
+    public bool EnforcementEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Warning threshold percentage (0-100).
+    /// Emits telemetry when usage exceeds this percentage.
+    /// Default: 80%.
+    /// </summary>
+    public int WarningThresholdPercent { get; set; } = 80;
 }

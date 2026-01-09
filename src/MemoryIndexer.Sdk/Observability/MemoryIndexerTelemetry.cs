@@ -193,6 +193,24 @@ public static class MemoryIndexerTelemetry
         unit: "{query}",
         description: "Total number of knowledge graph queries");
 
+    /// <summary>
+    /// Count of resource limit exceeded events.
+    /// Phase v0.6.0-γ: Resource Management.
+    /// </summary>
+    public static readonly Counter<long> ResourceLimitExceeded = Meter.CreateCounter<long>(
+        "memory_indexer.resource_limit_exceeded",
+        unit: "{exceeded}",
+        description: "Total number of resource limit exceeded events");
+
+    /// <summary>
+    /// Count of resource warning events.
+    /// Phase v0.6.0-γ: Resource Management.
+    /// </summary>
+    public static readonly Counter<long> ResourceWarnings = Meter.CreateCounter<long>(
+        "memory_indexer.resource_warnings",
+        unit: "{warning}",
+        description: "Total number of resource usage warning events");
+
     #endregion
 
     #endregion
@@ -568,6 +586,33 @@ public static class MemoryIndexerTelemetry
             new KeyValuePair<string, object?>("query_type", queryType),
             new KeyValuePair<string, object?>("result_count", resultCount));
         GraphQueryLatency.Record(latencyMs);
+    }
+
+    /// <summary>
+    /// Record a resource limit exceeded event.
+    /// Phase v0.6.0-γ: Resource Management.
+    /// </summary>
+    public static void RecordResourceLimitExceeded(string userId, string? tenantId, string limitType, long current, long limit)
+    {
+        ResourceLimitExceeded.Add(1,
+            new KeyValuePair<string, object?>("user_id", userId),
+            new KeyValuePair<string, object?>("tenant_id", tenantId ?? "default"),
+            new KeyValuePair<string, object?>("limit_type", limitType),
+            new KeyValuePair<string, object?>("current_value", current),
+            new KeyValuePair<string, object?>("limit_value", limit));
+    }
+
+    /// <summary>
+    /// Record a resource warning event.
+    /// Phase v0.6.0-γ: Resource Management.
+    /// </summary>
+    public static void RecordResourceWarning(string userId, string? tenantId, string resourceType, double usagePercent)
+    {
+        ResourceWarnings.Add(1,
+            new KeyValuePair<string, object?>("user_id", userId),
+            new KeyValuePair<string, object?>("tenant_id", tenantId ?? "default"),
+            new KeyValuePair<string, object?>("resource_type", resourceType),
+            new KeyValuePair<string, object?>("usage_percent", usagePercent));
     }
 
     #endregion
