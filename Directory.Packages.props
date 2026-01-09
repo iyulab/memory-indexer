@@ -51,21 +51,21 @@
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
 
     <!-- LMSupply (iyulab-rnd open source) -->
-    <PackageVersion Include="LMSupply.Embedder" Version="0.8.9" />
-    <PackageVersion Include="LMSupply.Reranker" Version="0.8.9" />
-    <PackageVersion Include="LMSupply.Generator" Version="0.8.9" />
+    <PackageVersion Include="LMSupply.Embedder" Version="0.8.10" />
+    <PackageVersion Include="LMSupply.Reranker" Version="0.8.10" />
+    <PackageVersion Include="LMSupply.Generator" Version="0.8.10" />
 
     <!-- Environment -->
     <PackageVersion Include="DotNetEnv" Version="3.1.1" />
 
     <!-- OpenAI -->
-    <PackageVersion Include="OpenAI" Version="2.2.0" />
+    <PackageVersion Include="OpenAI" Version="2.8.0" />
 
     <!-- ASP.NET Core -->
-    <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.OpenApi" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.3.0" />
 
     <!-- OpenTelemetry Observability -->
     <PackageVersion Include="OpenTelemetry" Version="1.14.0" />
