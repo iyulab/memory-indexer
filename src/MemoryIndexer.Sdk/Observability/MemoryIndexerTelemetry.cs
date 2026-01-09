@@ -111,6 +111,90 @@ public static class MemoryIndexerTelemetry
         unit: "{error}",
         description: "Total number of errors");
 
+    #region Intelligence Counters (Phase v0.5.0)
+
+    /// <summary>
+    /// Count of memory classification operations.
+    /// </summary>
+    public static readonly Counter<long> ClassificationOperations = Meter.CreateCounter<long>(
+        "memory_indexer.intelligence.classifications",
+        unit: "{classification}",
+        description: "Total number of memory classification operations");
+
+    /// <summary>
+    /// Count of summarization operations.
+    /// </summary>
+    public static readonly Counter<long> SummarizationOperations = Meter.CreateCounter<long>(
+        "memory_indexer.intelligence.summarizations",
+        unit: "{summarization}",
+        description: "Total number of summarization operations");
+
+    /// <summary>
+    /// Count of deduplication operations.
+    /// </summary>
+    public static readonly Counter<long> DeduplicationOperations = Meter.CreateCounter<long>(
+        "memory_indexer.intelligence.deduplications",
+        unit: "{deduplication}",
+        description: "Total number of deduplication operations");
+
+    /// <summary>
+    /// Count of conflict detection operations.
+    /// </summary>
+    public static readonly Counter<long> ConflictDetections = Meter.CreateCounter<long>(
+        "memory_indexer.intelligence.conflict_detections",
+        unit: "{detection}",
+        description: "Total number of conflict detection operations");
+
+    /// <summary>
+    /// Count of entity extraction operations.
+    /// </summary>
+    public static readonly Counter<long> EntityExtractions = Meter.CreateCounter<long>(
+        "memory_indexer.intelligence.entity_extractions",
+        unit: "{extraction}",
+        description: "Total number of entity extraction operations");
+
+    /// <summary>
+    /// Count of reranking operations.
+    /// </summary>
+    public static readonly Counter<long> RerankingOperations = Meter.CreateCounter<long>(
+        "memory_indexer.intelligence.rerankings",
+        unit: "{reranking}",
+        description: "Total number of reranking operations");
+
+    /// <summary>
+    /// Count of tier promotion events.
+    /// </summary>
+    public static readonly Counter<long> TierPromotions = Meter.CreateCounter<long>(
+        "memory_indexer.tier_promotions",
+        unit: "{promotion}",
+        description: "Total number of tier promotion events");
+
+    /// <summary>
+    /// Count of token budget warnings.
+    /// </summary>
+    public static readonly Counter<long> TokenBudgetWarnings = Meter.CreateCounter<long>(
+        "memory_indexer.token_budget_warnings",
+        unit: "{warning}",
+        description: "Total number of token budget warning events");
+
+    /// <summary>
+    /// Count of token budget exceeded events.
+    /// </summary>
+    public static readonly Counter<long> TokenBudgetExceeded = Meter.CreateCounter<long>(
+        "memory_indexer.token_budget_exceeded",
+        unit: "{exceeded}",
+        description: "Total number of token budget exceeded events");
+
+    /// <summary>
+    /// Count of knowledge graph queries.
+    /// </summary>
+    public static readonly Counter<long> GraphQueries = Meter.CreateCounter<long>(
+        "memory_indexer.intelligence.graph_queries",
+        unit: "{query}",
+        description: "Total number of knowledge graph queries");
+
+    #endregion
+
     #endregion
 
     #region Histograms
@@ -146,6 +230,58 @@ public static class MemoryIndexerTelemetry
         "memory_indexer.similarity_scores",
         unit: "{score}",
         description: "Vector similarity scores for recall operations");
+
+    #region Intelligence Histograms (Phase v0.5.0)
+
+    /// <summary>
+    /// Duration of classification operations in milliseconds.
+    /// </summary>
+    public static readonly Histogram<double> ClassificationLatency = Meter.CreateHistogram<double>(
+        "memory_indexer.intelligence.classification_latency",
+        unit: "ms",
+        description: "Duration of memory classification operations");
+
+    /// <summary>
+    /// Duration of summarization operations in milliseconds.
+    /// </summary>
+    public static readonly Histogram<double> SummarizationLatency = Meter.CreateHistogram<double>(
+        "memory_indexer.intelligence.summarization_latency",
+        unit: "ms",
+        description: "Duration of summarization operations");
+
+    /// <summary>
+    /// Duration of deduplication operations in milliseconds.
+    /// </summary>
+    public static readonly Histogram<double> DeduplicationLatency = Meter.CreateHistogram<double>(
+        "memory_indexer.intelligence.deduplication_latency",
+        unit: "ms",
+        description: "Duration of deduplication operations");
+
+    /// <summary>
+    /// Duration of reranking operations in milliseconds.
+    /// </summary>
+    public static readonly Histogram<double> RerankingLatency = Meter.CreateHistogram<double>(
+        "memory_indexer.intelligence.reranking_latency",
+        unit: "ms",
+        description: "Duration of reranking operations");
+
+    /// <summary>
+    /// Duration of graph query operations in milliseconds.
+    /// </summary>
+    public static readonly Histogram<double> GraphQueryLatency = Meter.CreateHistogram<double>(
+        "memory_indexer.intelligence.graph_query_latency",
+        unit: "ms",
+        description: "Duration of knowledge graph query operations");
+
+    /// <summary>
+    /// Token budget usage ratio per session.
+    /// </summary>
+    public static readonly Histogram<double> TokenBudgetUsage = Meter.CreateHistogram<double>(
+        "memory_indexer.token_budget_usage",
+        unit: "{ratio}",
+        description: "Token budget usage ratio per session");
+
+    #endregion
 
     #endregion
 
@@ -326,5 +462,116 @@ public static class MemoryIndexerTelemetry
         Interlocked.Exchange(ref _totalMemoriesStored, count);
     }
 
+    #region Intelligence Recording Methods (Phase v0.5.0)
+
+    /// <summary>
+    /// Record a classification operation.
+    /// </summary>
+    public static void RecordClassificationOperation(double latencyMs, string classifiedType)
+    {
+        ClassificationOperations.Add(1,
+            new KeyValuePair<string, object?>("classified_type", classifiedType));
+        ClassificationLatency.Record(latencyMs);
+    }
+
+    /// <summary>
+    /// Record a summarization operation.
+    /// </summary>
+    public static void RecordSummarizationOperation(double latencyMs, int inputTokens, int outputTokens)
+    {
+        SummarizationOperations.Add(1,
+            new KeyValuePair<string, object?>("input_tokens", inputTokens),
+            new KeyValuePair<string, object?>("output_tokens", outputTokens));
+        SummarizationLatency.Record(latencyMs);
+    }
+
+    /// <summary>
+    /// Record a deduplication operation.
+    /// </summary>
+    public static void RecordDeduplicationOperation(double latencyMs, string action, double similarity)
+    {
+        DeduplicationOperations.Add(1,
+            new KeyValuePair<string, object?>("action", action),
+            new KeyValuePair<string, object?>("similarity", similarity));
+        DeduplicationLatency.Record(latencyMs);
+    }
+
+    /// <summary>
+    /// Record a conflict detection operation.
+    /// </summary>
+    public static void RecordConflictDetection(bool conflictFound, string? conflictType = null)
+    {
+        ConflictDetections.Add(1,
+            new KeyValuePair<string, object?>("conflict_found", conflictFound),
+            new KeyValuePair<string, object?>("conflict_type", conflictType ?? "none"));
+    }
+
+    /// <summary>
+    /// Record an entity extraction operation.
+    /// </summary>
+    public static void RecordEntityExtraction(int entitiesExtracted, int relationsExtracted)
+    {
+        EntityExtractions.Add(1,
+            new KeyValuePair<string, object?>("entities_extracted", entitiesExtracted),
+            new KeyValuePair<string, object?>("relations_extracted", relationsExtracted));
+    }
+
+    /// <summary>
+    /// Record a reranking operation.
+    /// </summary>
+    public static void RecordRerankingOperation(double latencyMs, int candidateCount, int resultCount)
+    {
+        RerankingOperations.Add(1,
+            new KeyValuePair<string, object?>("candidate_count", candidateCount),
+            new KeyValuePair<string, object?>("result_count", resultCount));
+        RerankingLatency.Record(latencyMs);
+    }
+
+    /// <summary>
+    /// Record a tier promotion event.
+    /// </summary>
+    public static void RecordTierPromotion(string sourceTier, string targetTier, int memoryCount)
+    {
+        TierPromotions.Add(memoryCount,
+            new KeyValuePair<string, object?>("source_tier", sourceTier),
+            new KeyValuePair<string, object?>("target_tier", targetTier));
+    }
+
+    /// <summary>
+    /// Record a token budget warning event.
+    /// </summary>
+    public static void RecordTokenBudgetWarning(string sessionId, float usageRatio)
+    {
+        TokenBudgetWarnings.Add(1,
+            new KeyValuePair<string, object?>("session_id", sessionId),
+            new KeyValuePair<string, object?>("usage_ratio", usageRatio));
+        TokenBudgetUsage.Record(usageRatio);
+    }
+
+    /// <summary>
+    /// Record a token budget exceeded event.
+    /// </summary>
+    public static void RecordTokenBudgetExceeded(string sessionId, float usageRatio)
+    {
+        TokenBudgetExceeded.Add(1,
+            new KeyValuePair<string, object?>("session_id", sessionId),
+            new KeyValuePair<string, object?>("usage_ratio", usageRatio));
+        TokenBudgetUsage.Record(usageRatio);
+    }
+
+    /// <summary>
+    /// Record a knowledge graph query.
+    /// </summary>
+    public static void RecordGraphQuery(double latencyMs, string queryType, int resultCount)
+    {
+        GraphQueries.Add(1,
+            new KeyValuePair<string, object?>("query_type", queryType),
+            new KeyValuePair<string, object?>("result_count", resultCount));
+        GraphQueryLatency.Record(latencyMs);
+    }
+
+    #endregion
+
     #endregion
 }
+
