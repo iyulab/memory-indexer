@@ -52,14 +52,14 @@ Focus: Expose existing SDK intelligence features via MCP tools and production po
 
 **Production Polish:**
 - [x] OpenTelemetry metrics for recall pattern analysis (query cache hits, duplicates, rapid-fire)
-- [ ] OpenTelemetry metrics for remaining intelligence operations
-- [ ] Configuration validation and better defaults
+- [x] OpenTelemetry metrics for remaining intelligence operations (classification, summarization, deduplication, reranking, graph, token budget)
+- [x] Configuration validation and better defaults (IConfigurationValidator, 21 validation rules)
 - [ ] Documentation for advanced intelligence features
 
 **Efficiency Improvements** (from TwentyQuestionsGame evaluation):
 - [x] Session-level recall caching (SHA256 cache keys, configurable TTL via LatencyOptions)
 - [x] Recall pattern telemetry (RecallPatternAnalyzer: duplicates, rapid-fire, recommendations)
-- [ ] Token budget awareness hooks (optional callback when usage exceeds thresholds)
+- [x] Token budget awareness hooks (ITokenBudgetMonitor: events, recommendations, session tracking)
 
 ### v0.6.0 - Production Readiness
 
@@ -78,4 +78,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.5.0-preview.1)*
+*Last updated: 2026-01-09 (v0.5.0-preview.2)*

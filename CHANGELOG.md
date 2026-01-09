@@ -2,6 +2,40 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.5.0-preview.2] - 2026-01-09
+
+### Production Polish Phase
+
+This preview adds configuration validation, token budget awareness, and complete OTel intelligence metrics.
+
+#### Token Budget Awareness Hooks (`ITokenBudgetMonitor`)
+- Session-level token tracking with configurable warning thresholds
+- Events: `OnBudgetWarning`, `OnBudgetExceeded`, `OnSessionEnded`
+- Token estimation (~4 chars/token approximation)
+- Recommendation system: Continue → ReduceScope → Compress → Conserve → Stop
+- Operation breakdown tracking for analysis
+- Global stats aggregation across sessions
+- 16 tests covering all functionality
+
+#### Configuration Validation (`IConfigurationValidator`)
+- Validates all `MemoryIndexerOptions` sections at startup
+- Returns structured errors and warnings
+- Validates thresholds (0-1 ranges), positive values, required fields
+- Cross-field constraints (MaxLimit >= DefaultLimit)
+- Cognitive model warnings (Baddeley's 7±2 capacity)
+- Type distribution sum validation
+- API key warnings for cloud providers
+- 21 tests covering comprehensive validation scenarios
+
+#### Complete OpenTelemetry Intelligence Metrics
+- **Counters**: Classifications, Summarizations, Deduplications, Conflict detections, Entity extractions, Rerankings, Tier promotions, Token budget warnings/exceeded, Graph queries
+- **Histograms**: Classification, Summarization, Deduplication, Reranking, Graph query latency, Token budget usage ratio
+- Helper methods for all intelligence operations with appropriate tags
+
+**Tests**: All 1085 tests passing (237 core + 848 SDK)
+
+---
+
 ## [v0.5.0-preview.1] - 2026-01-09
 
 ### Intelligence Integration Preview
