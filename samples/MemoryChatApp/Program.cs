@@ -6,6 +6,7 @@ using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Extensions;
 using SharedLib.Embedding;
+using CachingEmbeddingService = MemoryIndexer.Services.CachingEmbeddingService;
 
 // Load .env file
 var envPaths = new[] {
@@ -44,12 +45,18 @@ builder.Services.AddCors(options =>
 // Embedding service: register BEFORE AddMemoryIndexer (uses TryAddSingleton)
 if (useGpuStackEmbed)
 {
-    // Use OpenAI-compatible GPUStack embedding via SharedLib
-    builder.Services.AddSingleton<IEmbeddingService>(new OpenAIEmbeddingService(
+    // Use OpenAI-compatible GPUStack embedding via SharedLib, wrapped with caching
+    var gpuStackEmbed = new OpenAIEmbeddingService(
         apiKey: gpuStackApiKey!,
         model: gpuStackEmbedModel!,
         dimensions: 1024,
-        endpoint: new Uri(gpuStackUrl!.TrimEnd('/') + "/v1")));
+        endpoint: new Uri(gpuStackUrl!.TrimEnd('/') + "/v1"));
+    var cached = new CachingEmbeddingService(gpuStackEmbed, new EmbeddingCacheOptions
+    {
+        Ttl = TimeSpan.FromMinutes(30),
+        MaxSize = 5000
+    });
+    builder.Services.AddSingleton<IEmbeddingService>(cached);
 }
 
 // Memory Indexer services

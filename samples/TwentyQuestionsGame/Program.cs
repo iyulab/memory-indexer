@@ -5,6 +5,7 @@ using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Extensions;
+using MemoryIndexer.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -105,11 +106,17 @@ services.AddLogging(builder => builder
 int embeddingDimensions;
 if (!string.IsNullOrEmpty(openAiKey))
 {
-    // Use OpenAI embedding from SharedLib
-    services.AddSingleton<IEmbeddingService>(new OpenAIEmbeddingService(
+    // Use OpenAI embedding from SharedLib, wrapped with caching
+    var openAi = new OpenAIEmbeddingService(
         apiKey: openAiKey,
         model: embeddingModel,
-        dimensions: 1536));
+        dimensions: 1536);
+    var cached = new CachingEmbeddingService(openAi, new EmbeddingCacheOptions
+    {
+        Ttl = TimeSpan.FromMinutes(30),
+        MaxSize = 5000
+    });
+    services.AddSingleton<IEmbeddingService>(cached);
     embeddingDimensions = 1536;
 }
 else
