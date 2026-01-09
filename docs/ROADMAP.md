@@ -36,13 +36,13 @@ Initial release with basic memory primitives and vector storage.
 
 ## Planned
 
-### v0.5.0 - Intelligence Integration
+### v0.5.0 - Intelligence Integration (In Progress)
 
 Focus: Expose existing SDK intelligence features via MCP tools and production polish.
 
 **MCP Tool Enhancements:**
-- [ ] Conflict detection/resolution MCP tools
-- [ ] Adaptive retrieval MCP tools (query intent, tiered retrieval)
+- [x] Conflict detection/resolution MCP tools (DetectContradiction, ResolveContradiction, AutoResolve, GetResolutionStrategy)
+- [x] Adaptive retrieval MCP tools (ClassifyQueryIntent, AdaptiveRecall, TieredRecall, GetRetrievalRecommendation)
 - [ ] Graph traversal MCP tools (community detection, importance propagation)
 
 **Integration & Testing:**
@@ -72,4 +72,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.4.0)*
+*Last updated: 2026-01-09 (v0.5.0-preview.1)*

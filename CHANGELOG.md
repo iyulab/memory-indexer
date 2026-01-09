@@ -2,6 +2,34 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.5.0-preview.1] - 2026-01-09
+
+### Intelligence Integration Preview
+
+This preview release exposes existing SDK intelligence features via MCP tools for LLM consumption.
+
+#### New MCP Tools
+
+**Conflict Resolution Tools** (`ConflictResolutionTools.cs`):
+- `DetectContradiction` - Detect if new content contradicts existing memories
+- `ResolveContradiction` - Resolve contradiction between new content and existing memory
+- `AutoResolveContradiction` - Automatically detect and resolve contradictions
+- `GetResolutionStrategy` - Get recommendation for handling contradiction types
+
+**Adaptive Retrieval Tools** (`AdaptiveRetrievalTools.cs`):
+- `ClassifyQueryIntent` - Classify query intent for optimal retrieval strategy
+- `AdaptiveRecall` - Smart retrieval with auto-selected strategy based on intent
+- `TieredRecall` - Retrieve from specific tiers with custom priority order
+- `GetRetrievalRecommendation` - Get recommendations for information type retrieval
+
+#### Technical Details
+- All tools use existing SDK intelligence services (no new implementations)
+- ConflictResolutionTools uses `IContradictionDetector` and `IContradictionResolver`
+- AdaptiveRetrievalTools uses `IQueryIntentClassifier` and `TieredMemoryRetriever`
+- Tests: All 1015 tests passing (216 core + 799 SDK)
+
+---
+
 ## [v0.4.0] - 2026-01-09
 
 ### Cognitive Architecture Completion
