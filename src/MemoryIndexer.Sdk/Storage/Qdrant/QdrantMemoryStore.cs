@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Text.Json;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
+using MemoryIndexer.Sdk.Observability;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
@@ -100,20 +102,44 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
     /// <inheritdoc />
     public async Task<MemoryUnit> StoreAsync(MemoryUnit memory, CancellationToken cancellationToken = default)
     {
-        await EnsureCollectionExistsAsync(cancellationToken);
+        using var activity = MemoryIndexerTelemetry.StartOperation("StorageStore", "storage");
+        activity?.SetTag("storage.provider", "qdrant");
+        activity?.SetTag("storage.collection", _collectionName);
+        activity?.SetTag("storage.memory_id", memory.Id.ToString());
+        activity?.SetTag("storage.user_id", memory.UserId);
+        activity?.SetTag("storage.type", memory.Type.ToString());
+        activity?.SetTag("storage.tier", memory.Tier.ToString());
 
-        if (!memory.Embedding.HasValue)
+        var sw = Stopwatch.StartNew();
+
+        try
         {
-            throw new ArgumentException("Memory must have an embedding for Qdrant storage", nameof(memory));
+            await EnsureCollectionExistsAsync(cancellationToken);
+
+            if (!memory.Embedding.HasValue)
+            {
+                throw new ArgumentException("Memory must have an embedding for Qdrant storage", nameof(memory));
+            }
+
+            var point = CreatePointFromMemory(memory);
+            await _client.UpsertAsync(_collectionName, new[] { point }, cancellationToken: cancellationToken);
+
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+            _logger.LogDebug("Stored memory {MemoryId} in Qdrant collection {Collection}",
+                memory.Id, _collectionName);
+
+            return memory;
         }
-
-        var point = CreatePointFromMemory(memory);
-        await _client.UpsertAsync(_collectionName, new[] { point }, cancellationToken: cancellationToken);
-
-        _logger.LogDebug("Stored memory {MemoryId} in Qdrant collection {Collection}",
-            memory.Id, _collectionName);
-
-        return memory;
+        catch (Exception ex)
+        {
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+            throw;
+        }
+        finally
+        {
+            sw.Stop();
+            MemoryIndexerTelemetry.RecordStoreOperation(sw.Elapsed.TotalMilliseconds);
+        }
     }
 
     /// <inheritdoc />
@@ -221,27 +247,54 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
         MemorySearchOptions options,
         CancellationToken cancellationToken = default)
     {
-        await EnsureCollectionExistsAsync(cancellationToken);
+        using var activity = MemoryIndexerTelemetry.StartOperation("StorageSearch", "storage");
+        activity?.SetTag("storage.provider", "qdrant");
+        activity?.SetTag("storage.collection", _collectionName);
+        activity?.SetTag("storage.user_id", options.UserId);
+        activity?.SetTag("storage.limit", options.Limit);
+        activity?.SetTag("storage.min_score", options.MinScore);
 
-        var filter = BuildSearchFilter(options);
+        var sw = Stopwatch.StartNew();
 
-        var searchResult = await _client.SearchAsync(
-            _collectionName,
-            queryEmbedding.ToArray(),
-            filter: filter,
-            limit: (ulong)options.Limit,
-            payloadSelector: true,
-            vectorsSelector: true,
-            cancellationToken: cancellationToken);
+        try
+        {
+            await EnsureCollectionExistsAsync(cancellationToken);
 
-        return searchResult
-            .Where(r => r.Score >= options.MinScore)
-            .Select(r => new MemorySearchResult
-            {
-                Memory = PointToMemory(r),
-                Score = r.Score
-            })
-            .ToList();
+            var filter = BuildSearchFilter(options);
+
+            var searchResult = await _client.SearchAsync(
+                _collectionName,
+                queryEmbedding.ToArray(),
+                filter: filter,
+                limit: (ulong)options.Limit,
+                payloadSelector: true,
+                vectorsSelector: true,
+                cancellationToken: cancellationToken);
+
+            var results = searchResult
+                .Where(r => r.Score >= options.MinScore)
+                .Select(r => new MemorySearchResult
+                {
+                    Memory = PointToMemory(r),
+                    Score = r.Score
+                })
+                .ToList();
+
+            activity?.SetTag("storage.results_count", results.Count);
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+            throw;
+        }
+        finally
+        {
+            sw.Stop();
+            MemoryIndexerTelemetry.RecordRecallOperation(sw.Elapsed.TotalMilliseconds);
+        }
     }
 
     /// <inheritdoc />

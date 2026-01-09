@@ -31,6 +31,7 @@ using MemoryIndexer.Sdk.Intelligence.Quality;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Intelligence.Caching;
 using MemoryIndexer.Sdk.Services;
+using MemoryIndexer.Sdk.Services.Export;
 using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.InMemory;
 using MemoryIndexer.Mock;
@@ -264,6 +265,9 @@ public static class ServiceCollectionExtensions
 
         // Register observability services (Phase 4.5)
         services.TryAddSingleton<InstrumentedMemoryService>();
+
+        // Register memory export/import services (Phase v0.6.0-β)
+        services.TryAddSingleton<IMemoryExporter, JsonMemoryExporter>();
 
         // Register temporal entity store (Phase 8.1)
         services.TryAddSingleton<ITemporalEntityStore, InMemoryTemporalEntityStore>();

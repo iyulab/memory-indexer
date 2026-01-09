@@ -2,6 +2,69 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.6.0-preview.2] - 2026-01-09
+
+### Memory Export/Import (Backup/Restore)
+
+This preview adds complete backup and restore capabilities via JSON export/import.
+
+#### IMemoryExporter Interface (`IMemoryExporter.cs`)
+- **Export Operations**: `ExportAsync`, `ExportToStreamAsync`
+- **Import Operations**: `ImportAsync`, `ImportFromStreamAsync`
+- **ExportOptions**: UserId, SessionId, Since/Until filters, Tiers, Types, IncludeEmbeddings, IncludeMetadata
+- **ImportOptions**: ConflictResolution, PreserveIds, ValidateChecksum, DryRun
+- **ImportConflictResolution**: Skip, Replace, KeepNewer, KeepHigherConfidence, Fail
+
+#### JsonMemoryExporter Implementation (`JsonMemoryExporter.cs`)
+- JSON-based serialization with camelCase naming
+- SHA256 checksum for data integrity verification
+- Comprehensive conflict resolution strategies
+- Activity tracing integration via `MemoryIndexerTelemetry`
+- Statistics tracking: ByTier, ByType, UniqueUsers, EmbeddingsIncluded
+
+#### BackupRestoreTools MCP (`BackupRestoreTools.cs`)
+- `ExportMemories`: Export memories to JSON with filtering options
+- `ImportMemories`: Import memories from JSON with conflict resolution
+- `GetBackupStats`: Get export statistics without performing full export
+
+#### InMemoryMemoryStore Enhancement
+- Preserves explicitly set `CreatedAt`/`UpdatedAt` timestamps (only sets defaults when values are `default`)
+- Enables accurate timestamp-based filtering for incremental backups
+
+**Tests**: 11 new tests covering export, import, filtering, conflict resolution, streaming
+
+---
+
+## [v0.6.0-preview.1] - 2026-01-09
+
+### OpenTelemetry Distributed Tracing
+
+This preview adds comprehensive distributed tracing across all memory operations.
+
+#### Activity Source Integration (`MemoryIndexerTelemetry`)
+- **Source Name**: `MemoryIndexer` with version tracking
+- **Store Operations**: `memory_indexer.store`, `memory_indexer.store_batch`
+- **Recall Operations**: `memory_indexer.recall`, `memory_indexer.recall_advanced`
+- **Update Operations**: `memory_indexer.update`, `memory_indexer.delete`
+- **VCM Operations**: `memory_indexer.vcm_store`, `memory_indexer.vcm_recall`, `memory_indexer.vcm_sync`
+- **Intelligence Operations**: `memory_indexer.classify`, `memory_indexer.summarize`, `memory_indexer.rerank`
+
+#### Activity Tags (OpenTelemetry Semantic Conventions)
+- `user.id`, `session.id`: User and session context
+- `memory.type`, `memory.tier`, `memory.scope`: 3-axis model dimensions
+- `memory.count`, `result.count`: Operation metrics
+- `db.operation`, `db.system`: Database conventions
+- Error tracking: `otel.status_code`, `exception.type`, `exception.message`
+
+#### Instrumented Services
+- `InstrumentedMemoryPrimitives`: Wraps IMemoryPrimitives with Activity spans
+- `InstrumentedVCM`: Wraps IVirtualContextManager with Activity spans
+- All intelligence services emit Activities for tracing
+
+**Tests**: All 1111 tests passing (237 core + 874 SDK)
+
+---
+
 ## [v0.5.0] - 2026-01-09
 
 ### Intelligence Integration Release

@@ -4,7 +4,31 @@ Development roadmap for Memory Indexer.
 
 ## Released
 
-### v0.4.0 - Cognitive Architecture (Current)
+### v0.5.0 - Intelligence Integration (Current)
+
+Focus: Expose existing SDK intelligence features via MCP tools and production polish.
+
+**MCP Tool Enhancements:**
+- [x] Conflict detection/resolution MCP tools (DetectContradiction, ResolveContradiction, AutoResolve, GetResolutionStrategy)
+- [x] Adaptive retrieval MCP tools (ClassifyQueryIntent, AdaptiveRecall, TieredRecall, GetRetrievalRecommendation)
+- [x] Graph traversal MCP tools (DetectCommunities, ComputeImportance, GetTopEntities, FindRelatedMemories, ExtractSubgraph)
+
+**Integration & Testing:**
+- [x] Unit tests for Graph Traversal MCP tools (14 tests)
+- [x] End-to-end integration tests (IntelligenceIntegrationTests: 17 tests)
+- [x] TwentyQuestionsGame sample: Beta reasoning chain improvements
+
+**Production Polish:**
+- [x] OpenTelemetry metrics for intelligence operations
+- [x] Configuration validation (IConfigurationValidator, 21 validation rules)
+- [x] Documentation for advanced intelligence features (docs/INTELLIGENCE.md)
+
+**Efficiency Improvements:**
+- [x] Session-level recall caching (SHA256 cache keys, configurable TTL)
+- [x] Recall pattern telemetry (RecallPatternAnalyzer)
+- [x] Token budget awareness hooks (ITokenBudgetMonitor)
+
+### v0.4.0 - Cognitive Architecture
 
 **3-Axis Memory Model** implementing Atkinson-Shiffrin, Baddeley, and Tulving's memory models.
 
@@ -32,41 +56,38 @@ Development roadmap for Memory Indexer.
 
 Initial release with basic memory primitives and vector storage.
 
-### v0.5.0 - Intelligence Integration (Complete)
+---
 
-Focus: Expose existing SDK intelligence features via MCP tools and production polish.
+## In Progress
 
-**MCP Tool Enhancements:**
-- [x] Conflict detection/resolution MCP tools (DetectContradiction, ResolveContradiction, AutoResolve, GetResolutionStrategy)
-- [x] Adaptive retrieval MCP tools (ClassifyQueryIntent, AdaptiveRecall, TieredRecall, GetRetrievalRecommendation)
-- [x] Graph traversal MCP tools (DetectCommunities, ComputeImportance, GetTopEntities, FindRelatedMemories, ExtractSubgraph)
+### v0.6.0 - Production Readiness
 
-**Integration & Testing:**
-- [x] Unit tests for Graph Traversal MCP tools (14 tests)
-- [x] End-to-end integration tests (IntelligenceIntegrationTests: 17 tests covering configuration validation, token budget, recall patterns, query intent, conflict resolution)
-- [x] TwentyQuestionsGame sample: Beta reasoning chain improvements (done in v0.4.0)
+**Observability (Complete):**
+- [x] OpenTelemetry distributed tracing via Activity Source
+- [x] Instrumented services (InstrumentedMemoryPrimitives, InstrumentedVCM)
+- [x] Semantic conventions for all operation types
 
-**Production Polish:**
-- [x] OpenTelemetry metrics for recall pattern analysis (query cache hits, duplicates, rapid-fire)
-- [x] OpenTelemetry metrics for remaining intelligence operations (classification, summarization, deduplication, reranking, graph, token budget)
-- [x] Configuration validation and better defaults (IConfigurationValidator, 21 validation rules)
-- [x] Documentation for advanced intelligence features (docs/INTELLIGENCE.md)
+**Backup/Restore (Complete):**
+- [x] IMemoryExporter interface with export/import operations
+- [x] JsonMemoryExporter implementation with checksum verification
+- [x] Conflict resolution strategies (Skip, Replace, KeepNewer, KeepHigherConfidence, Fail)
+- [x] BackupRestoreTools MCP (ExportMemories, ImportMemories, GetBackupStats)
+- [x] Incremental backup support via Since/Until filters
 
-**Efficiency Improvements** (from TwentyQuestionsGame evaluation):
-- [x] Session-level recall caching (SHA256 cache keys, configurable TTL via LatencyOptions)
-- [x] Recall pattern telemetry (RecallPatternAnalyzer: duplicates, rapid-fire, recommendations)
-- [x] Token budget awareness hooks (ITokenBudgetMonitor: events, recommendations, session tracking)
+**Remaining:**
+- [ ] Distributed Storage: Redis, PostgreSQL backends
+- [ ] Multi-tenancy: Isolated user contexts with resource limits
 
 ---
 
 ## Planned
 
-### v0.6.0 - Production Readiness
+### v0.7.0 - Enterprise Features
 
-- **Distributed Storage**: Redis, PostgreSQL backends
-- **Multi-tenancy**: Isolated user contexts with resource limits
-- **Backup/Restore**: Memory state persistence and migration
-- **Observability**: Full OpenTelemetry tracing integration
+- **Advanced Storage**: Redis cluster, PostgreSQL with pgvector
+- **Multi-tenancy**: Tenant isolation, resource quotas, usage metering
+- **Administration**: Memory analytics dashboard, usage reporting
+- **Compliance**: GDPR tools, data retention policies
 
 ---
 
@@ -78,4 +99,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.5.0)*
+*Last updated: 2026-01-09 (v0.6.0-preview.2)*

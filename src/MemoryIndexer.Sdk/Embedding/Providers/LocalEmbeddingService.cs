@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using LMSupply.Embedder;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
+using MemoryIndexer.Sdk.Observability;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -92,31 +94,63 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
         string text,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        using var activity = MemoryIndexerTelemetry.StartOperation("EmbeddingGenerate", "embedding");
+        activity?.SetTag("embedding.provider", CacheKeyPrefix);
+        activity?.SetTag("embedding.model", _modelId);
+        activity?.SetTag("embedding.dimensions", Dimensions);
+        activity?.SetTag("embedding.text_length", text?.Length ?? 0);
 
-        if (string.IsNullOrWhiteSpace(text))
+        var sw = Stopwatch.StartNew();
+        var cacheHit = false;
+
+        try
         {
-            return new float[Dimensions];
-        }
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
-        var cacheKey = GetCacheKey(text);
-        if (_cacheTtl > TimeSpan.Zero && _cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                activity?.SetTag("embedding.empty_input", true);
+                return new float[Dimensions];
+            }
+
+            var cacheKey = GetCacheKey(text);
+            if (_cacheTtl > TimeSpan.Zero && _cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
+            {
+                cacheHit = true;
+                activity?.SetTag("embedding.cache_hit", true);
+                MemoryIndexerTelemetry.EmbeddingCacheHits.Add(1,
+                    new KeyValuePair<string, object?>("provider", CacheKeyPrefix));
+                _logger.LogDebug("Cache hit for embedding");
+                return cached;
+            }
+
+            activity?.SetTag("embedding.cache_hit", false);
+            await EnsureModelLoadedAsync(cancellationToken);
+
+            var embedding = await _model!.EmbedAsync(text);
+            ReadOnlyMemory<float> result = embedding;
+
+            if (_cacheTtl > TimeSpan.Zero)
+            {
+                _cache.Set(cacheKey, result, _cacheTtl);
+            }
+
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+            return result;
+        }
+        catch (Exception ex)
         {
-            _logger.LogDebug("Cache hit for embedding");
-            return cached;
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+            throw;
         }
-
-        await EnsureModelLoadedAsync(cancellationToken);
-
-        var embedding = await _model!.EmbedAsync(text);
-        ReadOnlyMemory<float> result = embedding;
-
-        if (_cacheTtl > TimeSpan.Zero)
+        finally
         {
-            _cache.Set(cacheKey, result, _cacheTtl);
+            sw.Stop();
+            if (!cacheHit)
+            {
+                MemoryIndexerTelemetry.RecordEmbeddingOperation(sw.Elapsed.TotalMilliseconds);
+            }
         }
-
-        return result;
     }
 
     /// <inheritdoc />
@@ -124,65 +158,102 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
         IEnumerable<string> texts,
         CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        using var activity = MemoryIndexerTelemetry.StartOperation("EmbeddingBatchGenerate", "embedding");
+        activity?.SetTag("embedding.provider", CacheKeyPrefix);
+        activity?.SetTag("embedding.model", _modelId);
+        activity?.SetTag("embedding.dimensions", Dimensions);
 
-        var textList = texts.ToList();
-        if (textList.Count == 0)
+        var sw = Stopwatch.StartNew();
+
+        try
         {
-            return [];
-        }
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
-        _logger.LogDebug("Generating batch embeddings for {Count} texts", textList.Count);
+            var textList = texts.ToList();
+            activity?.SetTag("embedding.batch_size", textList.Count);
 
-        await EnsureModelLoadedAsync(cancellationToken);
-
-        var results = new ReadOnlyMemory<float>[textList.Count];
-        var uncached = new List<(int Index, string Text)>();
-
-        // Check cache first
-        for (var i = 0; i < textList.Count; i++)
-        {
-            var text = textList[i];
-            if (string.IsNullOrWhiteSpace(text))
+            if (textList.Count == 0)
             {
-                results[i] = new float[Dimensions];
-                continue;
+                activity?.SetTag("embedding.empty_batch", true);
+                return [];
             }
 
-            var cacheKey = GetCacheKey(text);
-            if (_cacheTtl > TimeSpan.Zero && _cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
-            {
-                results[i] = cached;
-            }
-            else
-            {
-                uncached.Add((i, text));
-            }
-        }
+            _logger.LogDebug("Generating batch embeddings for {Count} texts", textList.Count);
 
-        if (uncached.Count == 0)
-        {
-            _logger.LogDebug("All {Count} embeddings found in cache", textList.Count);
+            await EnsureModelLoadedAsync(cancellationToken);
+
+            var results = new ReadOnlyMemory<float>[textList.Count];
+            var uncached = new List<(int Index, string Text)>();
+            var cacheHits = 0;
+
+            // Check cache first
+            for (var i = 0; i < textList.Count; i++)
+            {
+                var text = textList[i];
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    results[i] = new float[Dimensions];
+                    continue;
+                }
+
+                var cacheKey = GetCacheKey(text);
+                if (_cacheTtl > TimeSpan.Zero && _cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
+                {
+                    results[i] = cached;
+                    cacheHits++;
+                }
+                else
+                {
+                    uncached.Add((i, text));
+                }
+            }
+
+            activity?.SetTag("embedding.cache_hits", cacheHits);
+            activity?.SetTag("embedding.uncached_count", uncached.Count);
+
+            // Record cache hits
+            if (cacheHits > 0)
+            {
+                MemoryIndexerTelemetry.EmbeddingCacheHits.Add(cacheHits,
+                    new KeyValuePair<string, object?>("provider", CacheKeyPrefix));
+            }
+
+            if (uncached.Count == 0)
+            {
+                _logger.LogDebug("All {Count} embeddings found in cache", textList.Count);
+                MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+                return results;
+            }
+
+            // Use native batch API for uncached texts
+            var uncachedTexts = uncached.Select(x => x.Text).ToArray();
+            var embeddings = await _model!.EmbedAsync(uncachedTexts);
+
+            for (var j = 0; j < uncached.Count; j++)
+            {
+                var (index, text) = uncached[j];
+                ReadOnlyMemory<float> embedding = embeddings[j];
+                results[index] = embedding;
+
+                if (_cacheTtl > TimeSpan.Zero)
+                {
+                    _cache.Set(GetCacheKey(text), embedding, _cacheTtl);
+                }
+            }
+
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
             return results;
         }
-
-        // Use native batch API for uncached texts
-        var uncachedTexts = uncached.Select(x => x.Text).ToArray();
-        var embeddings = await _model!.EmbedAsync(uncachedTexts);
-
-        for (var j = 0; j < uncached.Count; j++)
+        catch (Exception ex)
         {
-            var (index, text) = uncached[j];
-            ReadOnlyMemory<float> embedding = embeddings[j];
-            results[index] = embedding;
-
-            if (_cacheTtl > TimeSpan.Zero)
-            {
-                _cache.Set(GetCacheKey(text), embedding, _cacheTtl);
-            }
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+            throw;
         }
-
-        return results;
+        finally
+        {
+            sw.Stop();
+            MemoryIndexerTelemetry.RecordEmbeddingOperation(sw.Elapsed.TotalMilliseconds);
+        }
     }
 
     private async Task EnsureModelLoadedAsync(CancellationToken cancellationToken)
@@ -196,21 +267,39 @@ public sealed class LocalEmbeddingService : IEmbeddingService, IAsyncDisposable
             if (_model != null)
                 return;
 
+            using var activity = MemoryIndexerTelemetry.StartOperation("EmbeddingModelLoad", "embedding");
+            activity?.SetTag("embedding.provider", CacheKeyPrefix);
+            activity?.SetTag("embedding.model", _modelId);
+
             _logger.LogInformation("Loading local embedding model: {ModelId}", _modelId);
-            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var sw = Stopwatch.StartNew();
 
-            _model = await LocalEmbedder.LoadAsync(_modelId);
-
-            sw.Stop();
-            _logger.LogInformation(
-                "Model {ModelId} loaded in {ElapsedMs}ms, dimensions: {Dimensions}",
-                _modelId, sw.ElapsedMilliseconds, _model.Dimensions);
-
-            if (_model.Dimensions != Dimensions)
+            try
             {
-                _logger.LogWarning(
-                    "Model dimensions ({ModelDims}) differ from configured dimensions ({ConfigDims})",
-                    _model.Dimensions, Dimensions);
+                _model = await LocalEmbedder.LoadAsync(_modelId);
+
+                sw.Stop();
+                activity?.SetTag("embedding.load_time_ms", sw.ElapsedMilliseconds);
+                activity?.SetTag("embedding.model_dimensions", _model.Dimensions);
+
+                _logger.LogInformation(
+                    "Model {ModelId} loaded in {ElapsedMs}ms, dimensions: {Dimensions}",
+                    _modelId, sw.ElapsedMilliseconds, _model.Dimensions);
+
+                if (_model.Dimensions != Dimensions)
+                {
+                    activity?.SetTag("embedding.dimension_mismatch", true);
+                    _logger.LogWarning(
+                        "Model dimensions ({ModelDims}) differ from configured dimensions ({ConfigDims})",
+                        _model.Dimensions, Dimensions);
+                }
+
+                MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+            }
+            catch (Exception ex)
+            {
+                MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+                throw;
             }
         }
         finally

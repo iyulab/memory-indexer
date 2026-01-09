@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
+using MemoryIndexer.Sdk.Observability;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -41,27 +43,58 @@ public abstract class CachedEmbeddingServiceBase : IEmbeddingService
         string text,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        using var activity = MemoryIndexerTelemetry.StartOperation("EmbeddingGenerate", "embedding");
+        activity?.SetTag("embedding.provider", CacheKeyPrefix);
+        activity?.SetTag("embedding.dimensions", Dimensions);
+        activity?.SetTag("embedding.text_length", text?.Length ?? 0);
+
+        var sw = Stopwatch.StartNew();
+        var cacheHit = false;
+
+        try
         {
-            return new float[Dimensions];
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                activity?.SetTag("embedding.empty_input", true);
+                return new float[Dimensions];
+            }
+
+            var cacheKey = GetCacheKey(text);
+
+            if (CacheTtl > TimeSpan.Zero && Cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
+            {
+                cacheHit = true;
+                activity?.SetTag("embedding.cache_hit", true);
+                MemoryIndexerTelemetry.EmbeddingCacheHits.Add(1,
+                    new KeyValuePair<string, object?>("provider", CacheKeyPrefix));
+                Logger.LogDebug("Cache hit for embedding");
+                return cached;
+            }
+
+            activity?.SetTag("embedding.cache_hit", false);
+            var embedding = await GenerateSingleEmbeddingAsync(text, cancellationToken);
+
+            if (CacheTtl > TimeSpan.Zero)
+            {
+                Cache.Set(cacheKey, embedding, CacheTtl);
+            }
+
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+            return embedding;
         }
-
-        var cacheKey = GetCacheKey(text);
-
-        if (CacheTtl > TimeSpan.Zero && Cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
+        catch (Exception ex)
         {
-            Logger.LogDebug("Cache hit for embedding");
-            return cached;
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+            throw;
         }
-
-        var embedding = await GenerateSingleEmbeddingAsync(text, cancellationToken);
-
-        if (CacheTtl > TimeSpan.Zero)
+        finally
         {
-            Cache.Set(cacheKey, embedding, CacheTtl);
+            sw.Stop();
+            if (!cacheHit)
+            {
+                MemoryIndexerTelemetry.RecordEmbeddingOperation(sw.Elapsed.TotalMilliseconds);
+            }
         }
-
-        return embedding;
     }
 
     /// <inheritdoc />
@@ -69,48 +102,84 @@ public abstract class CachedEmbeddingServiceBase : IEmbeddingService
         IEnumerable<string> texts,
         CancellationToken cancellationToken = default)
     {
+        using var activity = MemoryIndexerTelemetry.StartOperation("EmbeddingBatchGenerate", "embedding");
+        activity?.SetTag("embedding.provider", CacheKeyPrefix);
+        activity?.SetTag("embedding.dimensions", Dimensions);
+
+        var sw = Stopwatch.StartNew();
         var textList = texts.ToList();
-        if (textList.Count == 0)
+        activity?.SetTag("embedding.batch_size", textList.Count);
+
+        try
         {
-            return [];
-        }
-
-        Logger.LogDebug("Generating batch embeddings for {Count} texts", textList.Count);
-
-        var results = new ReadOnlyMemory<float>[textList.Count];
-        var uncached = new List<(int Index, string Text)>();
-
-        // Check cache first
-        for (var i = 0; i < textList.Count; i++)
-        {
-            var text = textList[i];
-            if (string.IsNullOrWhiteSpace(text))
+            if (textList.Count == 0)
             {
-                results[i] = new float[Dimensions];
-                continue;
+                activity?.SetTag("embedding.empty_batch", true);
+                return [];
             }
 
-            var cacheKey = GetCacheKey(text);
-            if (CacheTtl > TimeSpan.Zero && Cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
-            {
-                results[i] = cached;
-            }
-            else
-            {
-                uncached.Add((i, text));
-            }
-        }
+            Logger.LogDebug("Generating batch embeddings for {Count} texts", textList.Count);
 
-        if (uncached.Count == 0)
-        {
-            Logger.LogDebug("All {Count} embeddings found in cache", textList.Count);
+            var results = new ReadOnlyMemory<float>[textList.Count];
+            var uncached = new List<(int Index, string Text)>();
+            var cacheHits = 0;
+
+            // Check cache first
+            for (var i = 0; i < textList.Count; i++)
+            {
+                var text = textList[i];
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    results[i] = new float[Dimensions];
+                    continue;
+                }
+
+                var cacheKey = GetCacheKey(text);
+                if (CacheTtl > TimeSpan.Zero && Cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
+                {
+                    results[i] = cached;
+                    cacheHits++;
+                }
+                else
+                {
+                    uncached.Add((i, text));
+                }
+            }
+
+            activity?.SetTag("embedding.cache_hits", cacheHits);
+            activity?.SetTag("embedding.uncached_count", uncached.Count);
+
+            // Record cache hits
+            if (cacheHits > 0)
+            {
+                MemoryIndexerTelemetry.EmbeddingCacheHits.Add(cacheHits,
+                    new KeyValuePair<string, object?>("provider", CacheKeyPrefix));
+            }
+
+            if (uncached.Count == 0)
+            {
+                Logger.LogDebug("All {Count} embeddings found in cache", textList.Count);
+                MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+                return results;
+            }
+
+            // Process uncached texts
+            await ProcessUncachedBatchAsync(textList, results, uncached, cancellationToken);
+
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
             return results;
         }
-
-        // Process uncached texts
-        await ProcessUncachedBatchAsync(textList, results, uncached, cancellationToken);
-
-        return results;
+        catch (Exception ex)
+        {
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+            throw;
+        }
+        finally
+        {
+            sw.Stop();
+            // Record embedding operation for uncached items
+            MemoryIndexerTelemetry.RecordEmbeddingOperation(sw.Elapsed.TotalMilliseconds);
+        }
     }
 
     /// <summary>

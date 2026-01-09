@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Text.Json;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
+using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -315,33 +317,57 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
     /// <inheritdoc />
     public async Task<MemoryUnit> StoreAsync(MemoryUnit memory, CancellationToken cancellationToken = default)
     {
-        await EnsureCollectionExistsAsync(cancellationToken);
+        using var activity = MemoryIndexerTelemetry.StartOperation("StorageStore", "storage");
+        activity?.SetTag("storage.provider", "sqlite");
+        activity?.SetTag("storage.memory_id", memory.Id.ToString());
+        activity?.SetTag("storage.user_id", memory.UserId);
+        activity?.SetTag("storage.type", memory.Type.ToString());
+        activity?.SetTag("storage.tier", memory.Tier.ToString());
 
-        // Generate new ID if empty
-        if (memory.Id == Guid.Empty)
+        var sw = Stopwatch.StartNew();
+
+        try
         {
-            memory.Id = Guid.NewGuid();
+            await EnsureCollectionExistsAsync(cancellationToken);
+
+            // Generate new ID if empty
+            if (memory.Id == Guid.Empty)
+            {
+                memory.Id = Guid.NewGuid();
+                activity?.SetTag("storage.memory_id", memory.Id.ToString());
+            }
+
+            // Phase 49: Added tier and scope columns for 3-axis memory model
+            var sql = $@"
+                INSERT OR REPLACE INTO {TableName} (
+                    id, user_id, session_id, content, content_hash, type, tier, scope,
+                    importance_score, access_count, created_at, updated_at,
+                    last_accessed_at, is_deleted, topics, entities, metadata, embedding
+                ) VALUES (
+                    @id, @user_id, @session_id, @content, @content_hash, @type, @tier, @scope,
+                    @importance_score, @access_count, @created_at, @updated_at,
+                    @last_accessed_at, @is_deleted, @topics, @entities, @metadata, @embedding
+                )
+            ";
+
+            using var command = CreateCommand(sql);
+            AddMemoryParameters(command, memory);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+            _logger.LogDebug("Stored memory {MemoryId}", memory.Id);
+            return memory;
         }
-
-        // Phase 49: Added tier and scope columns for 3-axis memory model
-        var sql = $@"
-            INSERT OR REPLACE INTO {TableName} (
-                id, user_id, session_id, content, content_hash, type, tier, scope,
-                importance_score, access_count, created_at, updated_at,
-                last_accessed_at, is_deleted, topics, entities, metadata, embedding
-            ) VALUES (
-                @id, @user_id, @session_id, @content, @content_hash, @type, @tier, @scope,
-                @importance_score, @access_count, @created_at, @updated_at,
-                @last_accessed_at, @is_deleted, @topics, @entities, @metadata, @embedding
-            )
-        ";
-
-        using var command = CreateCommand(sql);
-        AddMemoryParameters(command, memory);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-
-        _logger.LogDebug("Stored memory {MemoryId}", memory.Id);
-        return memory;
+        catch (Exception ex)
+        {
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+            throw;
+        }
+        finally
+        {
+            sw.Stop();
+            MemoryIndexerTelemetry.RecordStoreOperation(sw.Elapsed.TotalMilliseconds);
+        }
     }
 
     /// <inheritdoc />
@@ -481,42 +507,68 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         MemorySearchOptions options,
         CancellationToken cancellationToken = default)
     {
-        await EnsureCollectionExistsAsync(cancellationToken);
+        using var activity = MemoryIndexerTelemetry.StartOperation("StorageSearch", "storage");
+        activity?.SetTag("storage.provider", "sqlite");
+        activity?.SetTag("storage.user_id", options.UserId);
+        activity?.SetTag("storage.limit", options.Limit);
+        activity?.SetTag("storage.min_score", options.MinScore);
 
-        // Get all candidate memories with CTE-based tenant-scoped filters
-        var filterSql = BuildSearchFilterQuery(options);
-        using var command = CreateCommand(filterSql);
+        var sw = Stopwatch.StartNew();
 
-        // Bind parameters for CTE query
-        AddSearchParameters(command, options);
-
-        var candidates = new List<MemoryUnit>();
-        using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        try
         {
-            while (await reader.ReadAsync(cancellationToken))
+            await EnsureCollectionExistsAsync(cancellationToken);
+
+            // Get all candidate memories with CTE-based tenant-scoped filters
+            var filterSql = BuildSearchFilterQuery(options);
+            using var command = CreateCommand(filterSql);
+
+            // Bind parameters for CTE query
+            AddSearchParameters(command, options);
+
+            var candidates = new List<MemoryUnit>();
+            using (var reader = await command.ExecuteReaderAsync(cancellationToken))
             {
-                candidates.Add(ReadMemoryFromReader(reader));
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    candidates.Add(ReadMemoryFromReader(reader));
+                }
             }
+
+            activity?.SetTag("storage.candidates_count", candidates.Count);
+
+            // Calculate cosine similarity for each candidate
+            var queryVector = queryEmbedding.ToArray();
+            var results = candidates
+                .Where(m => m.Embedding.HasValue)
+                .Select(m => new MemorySearchResult
+                {
+                    Memory = m,
+                    Score = VectorMath.CosineSimilarity(queryVector, m.Embedding!.Value.ToArray())
+                })
+                .Where(r => r.Score >= options.MinScore)
+                .OrderByDescending(r => r.Score)
+                .Take(options.Limit)
+                .ToList();
+
+            activity?.SetTag("storage.results_count", results.Count);
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
+
+            _logger.LogDebug("Vector search found {Count} results from {Total} candidates (CTE pre-filtered)",
+                results.Count, candidates.Count);
+
+            return results;
         }
-
-        // Calculate cosine similarity for each candidate
-        var queryVector = queryEmbedding.ToArray();
-        var results = candidates
-            .Where(m => m.Embedding.HasValue)
-            .Select(m => new MemorySearchResult
-            {
-                Memory = m,
-                Score = VectorMath.CosineSimilarity(queryVector, m.Embedding!.Value.ToArray())
-            })
-            .Where(r => r.Score >= options.MinScore)
-            .OrderByDescending(r => r.Score)
-            .Take(options.Limit)
-            .ToList();
-
-        _logger.LogDebug("Vector search found {Count} results from {Total} candidates (CTE pre-filtered)",
-            results.Count, candidates.Count);
-
-        return results;
+        catch (Exception ex)
+        {
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
+            throw;
+        }
+        finally
+        {
+            sw.Stop();
+            MemoryIndexerTelemetry.RecordRecallOperation(sw.Elapsed.TotalMilliseconds);
+        }
     }
 
     /// <summary>

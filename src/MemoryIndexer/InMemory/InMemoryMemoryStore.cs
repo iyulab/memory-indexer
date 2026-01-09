@@ -18,8 +18,8 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
     public Task<MemoryUnit> StoreAsync(MemoryUnit memory, CancellationToken cancellationToken = default)
     {
         memory.Id = memory.Id == Guid.Empty ? Guid.NewGuid() : memory.Id;
-        memory.CreatedAt = DateTime.UtcNow;
-        memory.UpdatedAt = DateTime.UtcNow;
+        memory.CreatedAt = memory.CreatedAt == default ? DateTime.UtcNow : memory.CreatedAt;
+        memory.UpdatedAt = memory.UpdatedAt == default ? DateTime.UtcNow : memory.UpdatedAt;
 
         _memories[memory.Id] = memory;
         logger.LogDebug("Stored memory {MemoryId} for user {UserId}", memory.Id, memory.UserId);
