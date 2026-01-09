@@ -102,8 +102,10 @@ None in this release.
 
 - .NET 10.0
 - ModelContextProtocol 0.5.0-preview.1
-- Microsoft.Extensions.VectorData.Abstractions 9.5.0
-- LMSupply 0.8.5
+- Microsoft.Extensions.VectorData.Abstractions 9.7.0
+- LMSupply 0.8.10
+- OpenAI 2.8.0
+- Swashbuckle.AspNetCore 10.1.0
 
 ---
 

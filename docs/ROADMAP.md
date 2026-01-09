@@ -36,19 +36,31 @@ Initial release with basic memory primitives and vector storage.
 
 ## Planned
 
-### v0.5.0 - Intelligence Enhancement
+### v0.5.0 - Intelligence Integration
 
-- **Adaptive Retrieval**: Context-aware recall strategies
-- **Conflict Resolution**: Automated contradiction handling
-- **Graph Memory**: Entity relationship tracking (Mem0-inspired)
-- **Multi-modal**: Support for structured data types
+Focus: Expose existing SDK intelligence features via MCP tools and production polish.
+
+**MCP Tool Enhancements:**
+- [ ] Conflict detection/resolution MCP tools
+- [ ] Adaptive retrieval MCP tools (query intent, tiered retrieval)
+- [ ] Graph traversal MCP tools (community detection, importance propagation)
+
+**Integration & Testing:**
+- [ ] End-to-end integration tests for intelligence features
+- [ ] TwentyQuestionsGame sample: Beta reasoning chain improvements
+- [ ] Sample validation with real LLM providers
+
+**Production Polish:**
+- [ ] OpenTelemetry metrics for intelligence operations
+- [ ] Configuration validation and better defaults
+- [ ] Documentation for advanced intelligence features
 
 ### v0.6.0 - Production Readiness
 
 - **Distributed Storage**: Redis, PostgreSQL backends
-- **Observability**: OpenTelemetry integration
-- **Multi-tenancy**: Isolated user contexts
-- **Backup/Restore**: Memory state persistence
+- **Multi-tenancy**: Isolated user contexts with resource limits
+- **Backup/Restore**: Memory state persistence and migration
+- **Observability**: Full OpenTelemetry tracing integration
 
 ---
 
