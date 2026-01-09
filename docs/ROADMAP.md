@@ -55,6 +55,11 @@ Focus: Expose existing SDK intelligence features via MCP tools and production po
 - [ ] Configuration validation and better defaults
 - [ ] Documentation for advanced intelligence features
 
+**Efficiency Improvements** (from TwentyQuestionsGame evaluation):
+- [ ] Session-level recall caching (TTL-based deduplication for identical queries)
+- [ ] Recall pattern telemetry (detect inefficient usage patterns like repeated identical queries)
+- [ ] Token budget awareness hooks (optional callback when usage exceeds thresholds)
+
 ### v0.6.0 - Production Readiness
 
 - **Distributed Storage**: Redis, PostgreSQL backends

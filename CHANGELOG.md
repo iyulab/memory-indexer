@@ -39,6 +39,19 @@ This preview release exposes existing SDK intelligence features via MCP tools fo
 - AdaptiveRetrievalTools uses `IQueryIntentClassifier` and `TieredMemoryRetriever`
 - Tests: All 1029 tests passing (216 core + 813 SDK)
 
+#### Lessons Learned (TwentyQuestionsGame Evaluation)
+
+**Validated Strengths:**
+- Recall latency ~5ms (sufficient for real-time conversation)
+- Core memory similarity 0.95 (critical information preserved)
+- Cognitive compliance (7±2 rule) working correctly
+- 21-minute session with zero errors
+
+**Identified Improvements (added to v0.5.0 roadmap):**
+- Session-level recall caching needed (LLM made 3x identical queries per turn)
+- Recall pattern telemetry for detecting inefficient usage
+- Token budget awareness hooks for resource monitoring
+
 ---
 
 ## [v0.4.0] - 2026-01-09
