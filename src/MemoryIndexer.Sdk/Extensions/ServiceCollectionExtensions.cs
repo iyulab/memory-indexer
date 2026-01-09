@@ -1,6 +1,7 @@
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Services;
+using Microsoft.Extensions.Hosting;
 using MemoryIndexer.Sdk.Embedding.Providers;
 using MemoryIndexer.Sdk.Completion.Providers;
 using MemoryIndexer.Sdk.Intelligence.Classification;
@@ -65,6 +66,9 @@ public static class ServiceCollectionExtensions
         {
             services.Configure(configure);
         }
+
+        // Register configuration validator (Phase v0.5.0)
+        services.TryAddSingleton<IConfigurationValidator, ConfigurationValidator>();
 
         // Register core services
         services.TryAddSingleton<MemoryService>();
