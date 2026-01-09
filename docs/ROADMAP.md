@@ -43,12 +43,12 @@ Focus: Expose existing SDK intelligence features via MCP tools and production po
 **MCP Tool Enhancements:**
 - [x] Conflict detection/resolution MCP tools (DetectContradiction, ResolveContradiction, AutoResolve, GetResolutionStrategy)
 - [x] Adaptive retrieval MCP tools (ClassifyQueryIntent, AdaptiveRecall, TieredRecall, GetRetrievalRecommendation)
-- [ ] Graph traversal MCP tools (community detection, importance propagation)
+- [x] Graph traversal MCP tools (DetectCommunities, ComputeImportance, GetTopEntities, FindRelatedMemories, ExtractSubgraph)
 
 **Integration & Testing:**
-- [ ] End-to-end integration tests for intelligence features
-- [ ] TwentyQuestionsGame sample: Beta reasoning chain improvements
-- [ ] Sample validation with real LLM providers
+- [x] Unit tests for Graph Traversal MCP tools (14 tests)
+- [ ] End-to-end integration tests with real LLM providers
+- [x] TwentyQuestionsGame sample: Beta reasoning chain improvements (done in v0.4.0)
 
 **Production Polish:**
 - [ ] OpenTelemetry metrics for intelligence operations

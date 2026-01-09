@@ -266,6 +266,11 @@ public static class ServiceCollectionExtensions
         // Register graph-based retrieval services (Phase 8.2)
         services.TryAddSingleton<IGraphRetriever, InMemoryGraphRetriever>();
 
+        // Register graph intelligence services (Phase v0.5.0)
+        services.TryAddSingleton<IMemoryGraphService, MemoryGraphService>();
+        services.TryAddSingleton<IImportancePropagator, PageRankImportancePropagator>();
+        services.TryAddSingleton<ICommunityDetector, LabelPropagationCommunityDetector>();
+
         // Register memory consolidation services (Phase 9)
         services.TryAddSingleton<IMemoryConsolidator, SleepBasedConsolidator>();
 

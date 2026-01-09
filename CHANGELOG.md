@@ -10,6 +10,16 @@ This preview release exposes existing SDK intelligence features via MCP tools fo
 
 #### New MCP Tools
 
+**Graph Traversal Tools** (`GraphTraversalTools.cs`):
+- `DetectCommunities` - Detect memory clusters using label propagation algorithm
+- `GetCommunityMemories` - Get all memories in a specific community
+- `GetCommunitySummary` - Get topic labels and key entities for a community
+- `ComputeImportance` - Run PageRank to compute entity importance scores
+- `GetEntityImportance` - Get importance score for a specific entity
+- `GetTopEntities` - Get ranked list of most important entities
+- `FindRelatedMemories` - Find memories related through shared entities
+- `ExtractSubgraph` - Extract focused subgraph around specific memories
+
 **Conflict Resolution Tools** (`ConflictResolutionTools.cs`):
 - `DetectContradiction` - Detect if new content contradicts existing memories
 - `ResolveContradiction` - Resolve contradiction between new content and existing memory
@@ -24,9 +34,10 @@ This preview release exposes existing SDK intelligence features via MCP tools fo
 
 #### Technical Details
 - All tools use existing SDK intelligence services (no new implementations)
+- GraphTraversalTools uses `IMemoryGraphService`, `IImportancePropagator`, and `ICommunityDetector`
 - ConflictResolutionTools uses `IContradictionDetector` and `IContradictionResolver`
 - AdaptiveRetrievalTools uses `IQueryIntentClassifier` and `TieredMemoryRetriever`
-- Tests: All 1015 tests passing (216 core + 799 SDK)
+- Tests: All 1029 tests passing (216 core + 813 SDK)
 
 ---
 
