@@ -51,13 +51,14 @@ Focus: Expose existing SDK intelligence features via MCP tools and production po
 - [x] TwentyQuestionsGame sample: Beta reasoning chain improvements (done in v0.4.0)
 
 **Production Polish:**
-- [ ] OpenTelemetry metrics for intelligence operations
+- [x] OpenTelemetry metrics for recall pattern analysis (query cache hits, duplicates, rapid-fire)
+- [ ] OpenTelemetry metrics for remaining intelligence operations
 - [ ] Configuration validation and better defaults
 - [ ] Documentation for advanced intelligence features
 
 **Efficiency Improvements** (from TwentyQuestionsGame evaluation):
-- [ ] Session-level recall caching (TTL-based deduplication for identical queries)
-- [ ] Recall pattern telemetry (detect inefficient usage patterns like repeated identical queries)
+- [x] Session-level recall caching (SHA256 cache keys, configurable TTL via LatencyOptions)
+- [x] Recall pattern telemetry (RecallPatternAnalyzer: duplicates, rapid-fire, recommendations)
 - [ ] Token budget awareness hooks (optional callback when usage exceeds thresholds)
 
 ### v0.6.0 - Production Readiness

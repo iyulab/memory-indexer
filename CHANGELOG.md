@@ -32,12 +32,33 @@ This preview release exposes existing SDK intelligence features via MCP tools fo
 - `TieredRecall` - Retrieve from specific tiers with custom priority order
 - `GetRetrievalRecommendation` - Get recommendations for information type retrieval
 
+#### Efficiency Improvements
+
+**Session-level Recall Caching** (`OptimizedRecallService`):
+- Query result caching with SHA256 cache keys for collision resistance
+- TTL controlled via `LatencyOptions.QueryCacheTtlMinutes` (default: 10 min)
+- `RecallCacheStatistics` for monitoring: hits, misses, duplicates, hit ratio
+- Eliminates redundant embedding generation and vector search operations
+
+**Recall Pattern Telemetry** (`RecallPatternAnalyzer`):
+- Duplicate query detection with per-user tracking
+- Rapid-fire recall pattern detection (configurable threshold)
+- Per-user and global statistics (`RecallPatternStatistics`)
+- Alert generation for problematic patterns (`RecallPatternAlert`)
+- Optimization recommendations: caching, batching, query consolidation
+
+**OpenTelemetry Metrics** (`MemoryIndexerTelemetry`):
+- `memory_indexer.query_cache_hits` - Query result cache hits
+- `memory_indexer.duplicate_recalls` - Duplicate recall queries detected
+- `memory_indexer.rapid_fire_recalls` - Rapid-fire patterns detected
+- Helper methods: `RecordQueryCacheHit`, `RecordDuplicateRecall`, `RecordRapidFireRecall`
+
 #### Technical Details
 - All tools use existing SDK intelligence services (no new implementations)
 - GraphTraversalTools uses `IMemoryGraphService`, `IImportancePropagator`, and `ICommunityDetector`
 - ConflictResolutionTools uses `IContradictionDetector` and `IContradictionResolver`
 - AdaptiveRetrievalTools uses `IQueryIntentClassifier` and `TieredMemoryRetriever`
-- Tests: All 1029 tests passing (216 core + 813 SDK)
+- Tests: All 1048 tests passing (216 core + 832 SDK)
 
 #### Lessons Learned (TwentyQuestionsGame Evaluation)
 
