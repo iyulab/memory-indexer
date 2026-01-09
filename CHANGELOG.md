@@ -2,6 +2,33 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.6.0] - 2026-01-09
+
+### Production Readiness Release
+
+This release focuses on production-ready infrastructure: comprehensive observability, backup/restore capabilities, resource management, and a simplified provider architecture.
+
+#### Highlights
+- **Observability**: Full OpenTelemetry integration with distributed tracing and semantic conventions
+- **Backup/Restore**: Export/import memories with checksum verification and conflict resolution
+- **Resource Management**: Per-user/tenant limits with enforcement and usage tracking
+- **Provider Architecture**: Simplified to Local (LMSupply) and Mock providers; interface-based design for external implementations
+
+#### Provider Architecture Changes (Breaking)
+- **Removed**: Built-in Ollama/OpenAI implementations
+- **Added**: `LocalEmbeddingService` (LMSupply.Embedder), `LocalTextCompletionService` (LMSupply.Generator)
+- **Interface-based design**: Register your own `IEmbeddingService`/`ITextCompletionService` for external LLMs
+
+#### New MCP Tools
+- `ExportMemories`, `ImportMemories`, `GetBackupStats` - Backup/restore operations
+- `GetUsage`, `GetLimits`, `CanStore`, `CanStoreBatch`, `GetTenantUsage`, `GetGlobalSummary`, `RefreshUsage` - Resource management
+
+See preview releases below for detailed changes.
+
+**Tests**: 1148 passing (237 core + 911 SDK)
+
+---
+
 ## [v0.6.0-preview.5] - 2026-01-09
 
 ### LocalTextCompletionService

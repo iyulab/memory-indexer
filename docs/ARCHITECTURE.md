@@ -15,7 +15,8 @@ src/
 │
 └── MemoryIndexer.Sdk/           # Full implementation (heavy package)
     ├── Storage/                 # Sqlite, Qdrant
-    ├── Embedding/               # Local, Ollama, OpenAI
+    ├── Embedding/               # Local (LMSupply), Mock
+    ├── Completion/              # Local (LMSupply), Mock
     ├── Intelligence/            # All AI/ML features
     ├── Mcp/                     # MCP tools
     ├── Observability/           # OpenTelemetry

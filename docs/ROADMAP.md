@@ -4,7 +4,38 @@ Development roadmap for Memory Indexer.
 
 ## Released
 
-### v0.5.0 - Intelligence Integration (Current)
+### v0.6.0 - Production Readiness (Current)
+
+**Observability:**
+- [x] OpenTelemetry distributed tracing via Activity Source
+- [x] Instrumented services (InstrumentedMemoryPrimitives, InstrumentedVCM)
+- [x] Semantic conventions for all operation types
+
+**Backup/Restore:**
+- [x] IMemoryExporter interface with export/import operations
+- [x] JsonMemoryExporter implementation with checksum verification
+- [x] Conflict resolution strategies (Skip, Replace, KeepNewer, KeepHigherConfidence, Fail)
+- [x] BackupRestoreTools MCP (ExportMemories, ImportMemories, GetBackupStats)
+- [x] Incremental backup support via Since/Until filters
+
+**Resource Management:**
+- [x] IResourceLimitEnforcer interface with enforcement logic
+- [x] IUsageTracker interface with thread-safe in-memory implementation
+- [x] Per-user resource limits (max memories, max storage bytes)
+- [x] Multi-tenant limit configuration (tenant-specific limits)
+- [x] OpenTelemetry metrics for resource usage telemetry
+- [x] ResourceManagementTools MCP (GetUsage, GetLimits, CanStore, CanStoreBatch, GetTenantUsage, GetGlobalSummary, RefreshUsage)
+- [x] Enforcement integration in MCP MemoryTools (pre-store checks)
+
+**Provider Architecture:**
+- [x] Removed built-in Ollama/OpenAI embedding implementations
+- [x] Removed built-in Ollama/OpenAI completion implementations
+- [x] LocalEmbeddingService uses LMSupply.Embedder (ONNX-based embeddings)
+- [x] LocalTextCompletionService uses LMSupply.Generator (ONNX-based text generation)
+- [x] MockTextCompletionService for development/testing
+- [x] Interface-based design: IEmbeddingService, ITextCompletionService for external implementations
+
+### v0.5.0 - Intelligence Integration
 
 Focus: Expose existing SDK intelligence features via MCP tools and production polish.
 
@@ -58,45 +89,6 @@ Initial release with basic memory primitives and vector storage.
 
 ---
 
-## In Progress
-
-### v0.6.0 - Production Readiness
-
-**Observability (Complete):**
-- [x] OpenTelemetry distributed tracing via Activity Source
-- [x] Instrumented services (InstrumentedMemoryPrimitives, InstrumentedVCM)
-- [x] Semantic conventions for all operation types
-
-**Backup/Restore (Complete):**
-- [x] IMemoryExporter interface with export/import operations
-- [x] JsonMemoryExporter implementation with checksum verification
-- [x] Conflict resolution strategies (Skip, Replace, KeepNewer, KeepHigherConfidence, Fail)
-- [x] BackupRestoreTools MCP (ExportMemories, ImportMemories, GetBackupStats)
-- [x] Incremental backup support via Since/Until filters
-
-**Resource Management (Complete):**
-- [x] IResourceLimitEnforcer interface with enforcement logic
-- [x] IUsageTracker interface with thread-safe in-memory implementation
-- [x] Per-user resource limits (max memories, max storage bytes)
-- [x] Multi-tenant limit configuration (tenant-specific limits)
-- [x] OpenTelemetry metrics for resource usage telemetry
-- [x] ResourceManagementTools MCP (GetUsage, GetLimits, CanStore, CanStoreBatch, GetTenantUsage, GetGlobalSummary, RefreshUsage)
-- [x] Enforcement integration in MCP MemoryTools (pre-store checks)
-
-**Provider Architecture (Complete):**
-- [x] Removed built-in Ollama/OpenAI embedding implementations
-- [x] Removed built-in Ollama/OpenAI completion implementations
-- [x] LocalEmbeddingService uses LMSupply.Embedder (ONNX-based embeddings)
-- [x] LocalTextCompletionService uses LMSupply.Generator (ONNX-based text generation)
-- [x] MockTextCompletionService for development/testing
-- [x] Interface-based design: IEmbeddingService, ITextCompletionService for external implementations
-
-**Remaining:**
-- [ ] Distributed Storage: Redis, PostgreSQL backends (→ v0.7.0)
-- [ ] Multi-tenancy: Full tenant isolation (→ v0.7.0)
-
----
-
 ## Planned
 
 ### v0.7.0 - Package Architecture & Enterprise Features
@@ -136,4 +128,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.6.0-preview.5)*
+*Last updated: 2026-01-09 (v0.6.0)*
