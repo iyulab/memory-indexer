@@ -42,10 +42,19 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Extracted version: $VERSION"
 
-    - name: Check if version changed
+    - name: Check if version exists on NuGet.org
       id: version_check
       run: |
-        git diff HEAD~1 HEAD -- Directory.Build.props | grep -q '<Version>' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+        VERSION=${{ steps.version.outputs.version }}
+        # Check if this version already exists on NuGet.org
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://api.nuget.org/v3-flatcontainer/memoryindexer/${VERSION}/memoryindexer.${VERSION}.nupkg")
+        if [ "$HTTP_STATUS" = "200" ]; then
+          echo "Version $VERSION already exists on NuGet.org"
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "Version $VERSION not found on NuGet.org (HTTP $HTTP_STATUS) - will publish"
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
 
     - name: Restore dependencies
       run: dotnet restore
