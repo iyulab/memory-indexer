@@ -83,20 +83,47 @@ Initial release with basic memory primitives and vector storage.
 - [x] ResourceManagementTools MCP (GetUsage, GetLimits, CanStore, CanStoreBatch, GetTenantUsage, GetGlobalSummary, RefreshUsage)
 - [x] Enforcement integration in MCP MemoryTools (pre-store checks)
 
+**Provider Architecture (Complete):**
+- [x] Removed built-in Ollama/OpenAI embedding implementations
+- [x] Removed built-in Ollama/OpenAI completion implementations
+- [x] LocalEmbeddingService now uses LMSupply as default
+- [x] MockTextCompletionService for development/testing
+- [x] Interface-based design: IEmbeddingService, ITextCompletionService for external implementations
+
 **Remaining:**
-- [ ] Distributed Storage: Redis, PostgreSQL backends
-- [ ] Multi-tenancy: Full tenant isolation (resource limits now available)
+- [ ] Distributed Storage: Redis, PostgreSQL backends (→ v0.7.0)
+- [ ] Multi-tenancy: Full tenant isolation (→ v0.7.0)
 
 ---
 
 ## Planned
 
-### v0.7.0 - Enterprise Features
+### v0.7.0 - Package Architecture & Enterprise Features
 
-- **Advanced Storage**: Redis cluster, PostgreSQL with pgvector
-- **Multi-tenancy**: Tenant isolation, resource quotas, usage metering
-- **Administration**: Memory analytics dashboard, usage reporting
-- **Compliance**: GDPR tools, data retention policies
+**Package Structure:**
+```
+MemoryIndexer              # Core interfaces and abstractions
+MemoryIndexer.Sdk          # InMemory, SQLite, LMSupply (default embedding)
+MemoryIndexer.Redis        # Redis storage backend
+MemoryIndexer.PostgreSQL   # PostgreSQL with pgvector
+MemoryIndexer.Qdrant       # Qdrant vector database
+MemoryIndexer.Stack        # Meta-package bundling all packages
+```
+
+**Distributed Storage:**
+- Redis cluster support with connection pooling
+- PostgreSQL with pgvector for enterprise deployments
+- Separate packages by external dependency
+
+**Multi-tenancy:**
+- Full tenant isolation
+- Resource quotas per tenant
+- Usage metering and reporting
+
+**Administration:**
+- Memory analytics dashboard
+- Usage reporting APIs
+- GDPR compliance tools, data retention policies
 
 ---
 
@@ -108,4 +135,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.6.0-preview.3)*
+*Last updated: 2026-01-09 (v0.6.0-preview.4)*

@@ -3,7 +3,6 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Services;
 using Microsoft.Extensions.Hosting;
 using MemoryIndexer.Sdk.Embedding.Providers;
-using MemoryIndexer.Sdk.Completion.Providers;
 using MemoryIndexer.Sdk.Intelligence.Classification;
 using MemoryIndexer.Sdk.Intelligence.Chunking;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
@@ -131,11 +130,13 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient();
 
         // Register embedding service based on configuration
+        // Note: Only Local (LMSupply) and Mock are built-in. For Ollama/OpenAI/Azure,
+        // register your own IEmbeddingService before calling AddMemoryIndexer() or use
+        // an external adapter package (e.g., MemoryIndexer.Ollama, MemoryIndexer.OpenAI).
         services.TryAddSingleton<IEmbeddingService>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>();
             var cache = sp.GetRequiredService<IMemoryCache>();
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 
             return options.Value.Embedding.Provider switch
             {
@@ -143,41 +144,29 @@ public static class ServiceCollectionExtensions
                     cache,
                     options,
                     sp.GetRequiredService<ILogger<LocalEmbeddingService>>()),
-                EmbeddingProvider.Ollama => new OllamaEmbeddingService(
-                    httpClientFactory.CreateClient("Ollama"),
-                    cache,
+                EmbeddingProvider.Mock => new MockEmbeddingService(
                     options,
-                    sp.GetRequiredService<ILogger<OllamaEmbeddingService>>()),
-                EmbeddingProvider.OpenAI or EmbeddingProvider.AzureOpenAI or EmbeddingProvider.Custom =>
-                    new OpenAIEmbeddingService(
-                        httpClientFactory.CreateClient("OpenAI"),
-                        cache,
-                        options,
-                        sp.GetRequiredService<ILogger<OpenAIEmbeddingService>>()),
-                _ => new MockEmbeddingService(
-                    options,
-                    sp.GetRequiredService<ILogger<MockEmbeddingService>>())
+                    sp.GetRequiredService<ILogger<MockEmbeddingService>>()),
+                _ => throw new NotSupportedException(
+                    $"Embedding provider '{options.Value.Embedding.Provider}' requires external implementation. " +
+                    "Register your own IEmbeddingService before calling AddMemoryIndexer(), or use EmbeddingProvider.Local (LMSupply).")
             };
         });
 
         // Register text completion service based on configuration (Phase 25)
+        // Note: Only Mock is built-in. For Ollama/OpenAI/Azure, register your own
+        // ITextCompletionService before calling AddMemoryIndexer() or use an external adapter package.
         services.TryAddSingleton<ITextCompletionService>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>();
-            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
 
             return options.Value.Completion.Provider switch
             {
-                CompletionProvider.Ollama => new OllamaCompletionService(
-                    httpClientFactory.CreateClient("Ollama"),
-                    options,
-                    sp.GetRequiredService<ILogger<OllamaCompletionService>>()),
-                CompletionProvider.OpenAI or CompletionProvider.AzureOpenAI or CompletionProvider.Custom =>
-                    new OpenAICompletionService(
-                        httpClientFactory.CreateClient("OpenAI"),
-                        options,
-                        sp.GetRequiredService<ILogger<OpenAICompletionService>>()),
-                _ => throw new NotSupportedException($"Completion provider {options.Value.Completion.Provider} is not yet supported")
+                CompletionProvider.Mock => new MockTextCompletionService(
+                    sp.GetRequiredService<ILogger<MockTextCompletionService>>()),
+                _ => throw new NotSupportedException(
+                    $"Completion provider '{options.Value.Completion.Provider}' requires external implementation. " +
+                    "Register your own ITextCompletionService before calling AddMemoryIndexer(), or use CompletionProvider.Mock.")
             };
         });
 

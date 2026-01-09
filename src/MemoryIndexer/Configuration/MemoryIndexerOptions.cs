@@ -1029,8 +1029,9 @@ public sealed class CompletionOptions
 {
     /// <summary>
     /// Completion provider type.
+    /// Default: Mock (no external LLM required). Change to Ollama/OpenAI/Custom for real LLM integration.
     /// </summary>
-    public CompletionProvider Provider { get; set; } = CompletionProvider.Ollama;
+    public CompletionProvider Provider { get; set; } = CompletionProvider.Mock;
 
     /// <summary>
     /// Model name/ID to use for completions.

@@ -2,6 +2,40 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.6.0-preview.4] - 2026-01-09
+
+### Provider Architecture Simplification
+
+This preview removes built-in Ollama/OpenAI implementations in favor of interface-based design. Memory Indexer now focuses on memory management while delegating LLM/embedding concerns to external implementations.
+
+#### Breaking Changes
+- **Removed**: `OllamaEmbeddingService`, `OpenAIEmbeddingService` - Use external implementations or `LocalEmbeddingService` (LMSupply)
+- **Removed**: `OllamaCompletionService`, `OpenAICompletionService` - Register your own `ITextCompletionService`
+- **Removed**: `GpuStackEmbeddingTests` - Integration tests for removed services
+- **Default Changed**: `CompletionOptions.Provider` now defaults to `Mock` instead of `Ollama`
+
+#### Built-in Providers
+- **Embedding**: `LocalEmbeddingService` (LMSupply), `MockEmbeddingService`
+- **Completion**: `MockTextCompletionService` (new)
+
+#### Interface-Based Design
+For production use with external LLMs, register your own implementation before calling `AddMemoryIndexer()`:
+```csharp
+services.AddSingleton<IEmbeddingService, YourEmbeddingService>();
+services.AddSingleton<ITextCompletionService, YourCompletionService>();
+services.AddMemoryIndexer();
+```
+
+#### Future Package Structure (v0.7.0)
+- `MemoryIndexer` - Core interfaces
+- `MemoryIndexer.Sdk` - InMemory, SQLite, LMSupply
+- `MemoryIndexer.Redis/PostgreSQL/Qdrant` - Storage backends
+- `MemoryIndexer.Stack` - Full bundle
+
+**Tests**: All 1150 tests passing (237 core + 913 SDK, -4 removed integration tests)
+
+---
+
 ## [v0.6.0-preview.3] - 2026-01-09
 
 ### Resource Management
