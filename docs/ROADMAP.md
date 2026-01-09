@@ -86,7 +86,8 @@ Initial release with basic memory primitives and vector storage.
 **Provider Architecture (Complete):**
 - [x] Removed built-in Ollama/OpenAI embedding implementations
 - [x] Removed built-in Ollama/OpenAI completion implementations
-- [x] LocalEmbeddingService now uses LMSupply as default
+- [x] LocalEmbeddingService uses LMSupply.Embedder (ONNX-based embeddings)
+- [x] LocalTextCompletionService uses LMSupply.Generator (ONNX-based text generation)
 - [x] MockTextCompletionService for development/testing
 - [x] Interface-based design: IEmbeddingService, ITextCompletionService for external implementations
 
@@ -135,4 +136,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.6.0-preview.4)*
+*Last updated: 2026-01-09 (v0.6.0-preview.5)*

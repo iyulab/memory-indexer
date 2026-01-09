@@ -49,6 +49,9 @@ v0.1.0:
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="LMSupply.Embedder" />
 
+    <!-- Text Generation -->
+    <PackageReference Include="LMSupply.Generator" />
+
     <!-- Intelligence -->
     <PackageReference Include="LMSupply.Reranker" />
 

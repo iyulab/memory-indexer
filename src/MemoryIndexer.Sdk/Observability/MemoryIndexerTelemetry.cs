@@ -64,6 +64,14 @@ public static class MemoryIndexerTelemetry
         description: "Total number of embedding cache hits");
 
     /// <summary>
+    /// Count of text completion operations.
+    /// </summary>
+    public static readonly Counter<long> CompletionOperations = Meter.CreateCounter<long>(
+        "memory_indexer.completions",
+        unit: "{completion}",
+        description: "Total number of text completion operations");
+
+    /// <summary>
     /// Count of query cache hits (Phase v0.5.0).
     /// </summary>
     public static readonly Counter<long> QueryCacheHits = Meter.CreateCounter<long>(
@@ -240,6 +248,14 @@ public static class MemoryIndexerTelemetry
         "memory_indexer.embedding_latency",
         unit: "ms",
         description: "Duration of embedding generation");
+
+    /// <summary>
+    /// Duration of text completion generation in milliseconds.
+    /// </summary>
+    public static readonly Histogram<double> CompletionLatency = Meter.CreateHistogram<double>(
+        "memory_indexer.completion_latency",
+        unit: "ms",
+        description: "Duration of text completion generation");
 
     /// <summary>
     /// Vector similarity scores for recall operations.
@@ -422,6 +438,16 @@ public static class MemoryIndexerTelemetry
         {
             EmbeddingCacheHits.Add(1);
         }
+    }
+
+    /// <summary>
+    /// Records a text completion operation.
+    /// </summary>
+    /// <param name="latencyMs">Duration in milliseconds.</param>
+    public static void RecordCompletionOperation(double latencyMs)
+    {
+        CompletionOperations.Add(1);
+        CompletionLatency.Record(latencyMs);
     }
 
     /// <summary>

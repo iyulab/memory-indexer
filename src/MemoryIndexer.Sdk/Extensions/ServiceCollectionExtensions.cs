@@ -2,6 +2,7 @@ using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Services;
 using Microsoft.Extensions.Hosting;
+using MemoryIndexer.Sdk.Completion.Providers;
 using MemoryIndexer.Sdk.Embedding.Providers;
 using MemoryIndexer.Sdk.Intelligence.Classification;
 using MemoryIndexer.Sdk.Intelligence.Chunking;
@@ -154,19 +155,23 @@ public static class ServiceCollectionExtensions
         });
 
         // Register text completion service based on configuration (Phase 25)
-        // Note: Only Mock is built-in. For Ollama/OpenAI/Azure, register your own
-        // ITextCompletionService before calling AddMemoryIndexer() or use an external adapter package.
+        // Note: Only Local (LMSupply) and Mock are built-in. For Ollama/OpenAI/Azure,
+        // register your own ITextCompletionService before calling AddMemoryIndexer() or use
+        // an external adapter package (e.g., MemoryIndexer.Ollama, MemoryIndexer.OpenAI).
         services.TryAddSingleton<ITextCompletionService>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>();
 
             return options.Value.Completion.Provider switch
             {
+                CompletionProvider.Local => new LocalTextCompletionService(
+                    options,
+                    sp.GetRequiredService<ILogger<LocalTextCompletionService>>()),
                 CompletionProvider.Mock => new MockTextCompletionService(
                     sp.GetRequiredService<ILogger<MockTextCompletionService>>()),
                 _ => throw new NotSupportedException(
                     $"Completion provider '{options.Value.Completion.Provider}' requires external implementation. " +
-                    "Register your own ITextCompletionService before calling AddMemoryIndexer(), or use CompletionProvider.Mock.")
+                    "Register your own ITextCompletionService before calling AddMemoryIndexer(), or use CompletionProvider.Local (LMSupply).")
             };
         });
 

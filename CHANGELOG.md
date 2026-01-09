@@ -2,6 +2,47 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.6.0-preview.5] - 2026-01-09
+
+### LocalTextCompletionService
+
+Adds local text generation support using LMSupply.Generator, enabling fully offline LLM inference without external API dependencies.
+
+#### New Features
+- **LocalTextCompletionService**: ONNX-based text generation using LMSupply.Generator
+  - Supports Phi-4, Phi-3.5, Llama 3.2, Qwen 2.5, Gemma 2 models
+  - Automatic model download and caching from HuggingFace
+  - GPU acceleration support (CUDA, DirectML, CoreML)
+  - Lazy model loading with thread-safe initialization
+- **CompletionProvider.Local**: New enum value for local completion
+- **Completion Telemetry**: `CompletionOperations` counter, `CompletionLatency` histogram
+
+#### Configuration
+```json
+{
+  "MemoryIndexer": {
+    "Completion": {
+      "Provider": "Local",
+      "Model": "microsoft/Phi-4-mini-instruct-onnx"
+    }
+  }
+}
+```
+
+#### Supported Models
+| Model | Parameters | Context | License |
+|-------|------------|---------|---------|
+| Phi-4-mini | 3.8B | 16K | MIT |
+| Phi-4 | 14B | 16K | MIT |
+| Phi-3.5-mini | 3.8B | 128K | MIT |
+| Llama-3.2-1B | 1B | 128K | Llama |
+| Llama-3.2-3B | 3B | 128K | Llama |
+| Qwen2.5-3B | 3B | 128K | Apache 2.0 |
+
+**Tests**: All 1148 tests passing (237 core + 911 SDK)
+
+---
+
 ## [v0.6.0-preview.4] - 2026-01-09
 
 ### Provider Architecture Simplification

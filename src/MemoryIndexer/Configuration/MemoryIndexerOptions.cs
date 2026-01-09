@@ -1075,6 +1075,12 @@ public enum CompletionProvider
     Mock,
 
     /// <summary>
+    /// Local ONNX-based inference using LMSupply.Generator.
+    /// Supports Phi-4, Llama 3.2, and other ONNX models.
+    /// </summary>
+    Local,
+
+    /// <summary>
     /// Ollama local inference.
     /// </summary>
     Ollama,
