@@ -188,6 +188,9 @@ public static class ServiceCollectionExtensions
 
         // Register latency profiler and caching (Phase 22.2)
         services.TryAddSingleton<ILatencyProfiler, InMemoryLatencyProfiler>();
+
+        // Register recall pattern analyzer (Phase v0.5.0)
+        services.TryAddSingleton<IRecallPatternAnalyzer, RecallPatternAnalyzer>();
         services.TryAddSingleton<OptimizedRecallService>();
 
         // Register re-ranking service (Phase 5.4)

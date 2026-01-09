@@ -64,6 +64,30 @@ public static class MemoryIndexerTelemetry
         description: "Total number of embedding cache hits");
 
     /// <summary>
+    /// Count of query cache hits (Phase v0.5.0).
+    /// </summary>
+    public static readonly Counter<long> QueryCacheHits = Meter.CreateCounter<long>(
+        "memory_indexer.query_cache_hits",
+        unit: "{hit}",
+        description: "Total number of query result cache hits");
+
+    /// <summary>
+    /// Count of duplicate recall queries detected (Phase v0.5.0).
+    /// </summary>
+    public static readonly Counter<long> DuplicateRecalls = Meter.CreateCounter<long>(
+        "memory_indexer.duplicate_recalls",
+        unit: "{recall}",
+        description: "Total number of duplicate recall queries detected");
+
+    /// <summary>
+    /// Count of rapid-fire recall patterns detected (Phase v0.5.0).
+    /// </summary>
+    public static readonly Counter<long> RapidFireRecalls = Meter.CreateCounter<long>(
+        "memory_indexer.rapid_fire_recalls",
+        unit: "{pattern}",
+        description: "Total number of rapid-fire recall patterns detected");
+
+    /// <summary>
     /// Count of PII detection operations.
     /// </summary>
     public static readonly Counter<long> PiiDetections = Meter.CreateCounter<long>(
@@ -262,6 +286,36 @@ public static class MemoryIndexerTelemetry
         InjectionDetections.Add(1,
             new KeyValuePair<string, object?>("detected", detected),
             new KeyValuePair<string, object?>("risk_level", riskLevel));
+    }
+
+    /// <summary>
+    /// Record a query cache hit (Phase v0.5.0).
+    /// </summary>
+    public static void RecordQueryCacheHit(string userId, string tier)
+    {
+        QueryCacheHits.Add(1,
+            new KeyValuePair<string, object?>("user_id", userId),
+            new KeyValuePair<string, object?>("tier", tier));
+    }
+
+    /// <summary>
+    /// Record a duplicate recall pattern (Phase v0.5.0).
+    /// </summary>
+    public static void RecordDuplicateRecall(string userId, int duplicateCount)
+    {
+        DuplicateRecalls.Add(1,
+            new KeyValuePair<string, object?>("user_id", userId),
+            new KeyValuePair<string, object?>("duplicate_count", duplicateCount));
+    }
+
+    /// <summary>
+    /// Record a rapid-fire recall pattern (Phase v0.5.0).
+    /// </summary>
+    public static void RecordRapidFireRecall(string userId, int recallsInWindow)
+    {
+        RapidFireRecalls.Add(1,
+            new KeyValuePair<string, object?>("user_id", userId),
+            new KeyValuePair<string, object?>("recalls_in_window", recallsInWindow));
     }
 
     /// <summary>

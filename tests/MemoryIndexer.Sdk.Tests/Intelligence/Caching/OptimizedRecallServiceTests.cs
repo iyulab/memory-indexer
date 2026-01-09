@@ -49,6 +49,7 @@ public class OptimizedRecallServiceTests
             _mockScoring,
             _memoryCache,
             _mockProfiler,
+            patternAnalyzer: null,
             NullLogger<OptimizedRecallService>.Instance,
             Options.Create(_options));
     }
@@ -156,6 +157,7 @@ public class OptimizedRecallServiceTests
             _mockScoring,
             _memoryCache,
             _mockProfiler,
+            patternAnalyzer: null,
             NullLogger<OptimizedRecallService>.Instance,
             Options.Create(options));
 
@@ -224,6 +226,7 @@ public class OptimizedRecallServiceTests
             _mockScoring,
             _memoryCache,
             _mockProfiler,
+            patternAnalyzer: null,
             NullLogger<OptimizedRecallService>.Instance,
             Options.Create(options));
 

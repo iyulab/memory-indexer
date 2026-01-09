@@ -13,7 +13,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Caching;
 /// <summary>
 /// Optimized recall service with query result caching, batch processing, early termination, and latency tracking.
 /// Phase 22.2: Recall Latency Optimization
-/// Phase v0.5.0: Session-level Recall Caching
+/// Phase v0.5.0: Session-level Recall Caching, Recall Pattern Telemetry
 /// </summary>
 public sealed class OptimizedRecallService
 {
@@ -22,6 +22,7 @@ public sealed class OptimizedRecallService
     private readonly IScoringService _scoringService;
     private readonly IMemoryCache _queryCache;
     private readonly ILatencyProfiler? _profiler;
+    private readonly IRecallPatternAnalyzer? _patternAnalyzer;
     private readonly ILogger<OptimizedRecallService> _logger;
     private readonly LatencyOptions _options;
     private readonly TimeSpan _queryCacheTtl;
@@ -37,6 +38,7 @@ public sealed class OptimizedRecallService
         IScoringService scoringService,
         IMemoryCache queryCache,
         ILatencyProfiler? profiler,
+        IRecallPatternAnalyzer? patternAnalyzer,
         ILogger<OptimizedRecallService> logger,
         IOptions<MemoryIndexerOptions> options)
     {
@@ -45,6 +47,7 @@ public sealed class OptimizedRecallService
         _scoringService = scoringService;
         _queryCache = queryCache;
         _profiler = profiler;
+        _patternAnalyzer = patternAnalyzer;
         _logger = logger;
         _options = options.Value.Latency;
         _queryCacheTtl = TimeSpan.FromMinutes(_options.QueryCacheTtlMinutes);
@@ -75,6 +78,9 @@ public sealed class OptimizedRecallService
     {
         var stopwatch = Stopwatch.StartNew();
         var componentLatencies = new Dictionary<string, double>();
+
+        // Phase v0.5.0: Record recall for pattern analysis
+        _patternAnalyzer?.RecordRecall(userId, query, tier, limit);
 
         // Phase v0.5.0: Check query result cache first
         if (_options.QueryCacheEnabled)
