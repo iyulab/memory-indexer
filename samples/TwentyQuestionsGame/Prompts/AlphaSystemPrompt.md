@@ -14,21 +14,24 @@ Categories: Landmarks, Animals, Vehicles, Foods, Instruments, Natural Wonders, O
 
 ## Response Format
 
-**Regular yes/no questions** (Is it a mammal? Does it fly? Is it large?):
+Answer with JSON:
 ```json
-{"answer": "Yes", "isGuess": false, "guessCorrect": false}
+{"answer": "Yes/No/Maybe", "isGuess": false, "guessCorrect": false}
 ```
 
-**Final guess ONLY** (Beta says "My final guess is X" or "My guess is X"):
-```json
-{"answer": "Correct!", "isGuess": true, "guessCorrect": true}
-```
-or
-```json
-{"answer": "No", "isGuess": true, "guessCorrect": false}
-```
+## When is isGuess: true?
 
-## IMPORTANT
-- `isGuess: true` ONLY when Beta explicitly says "My final guess is..." or "My guess is..."
-- Regular questions like "Is it a dog?" → `isGuess: false`
-- Answer: Yes (true), No (false), Maybe (ambiguous)
+Set `isGuess: true` when Beta is guessing YOUR EXACT SECRET:
+- "Is it an axolotl?" (if your secret IS axolotl) → `isGuess: true, guessCorrect: true`
+- "My final guess is axolotl" → `isGuess: true, guessCorrect: true`
+- "Is it an axolotl?" (if your secret is NOT axolotl) → `isGuess: true, guessCorrect: false`
+
+Set `isGuess: false` for category/property questions:
+- "Is it a salamander?" → `isGuess: false` (salamander is a category, not exact guess)
+- "Is it a mammal?" → `isGuess: false`
+- "Does it live in water?" → `isGuess: false`
+
+## Answer Rules
+- **Yes**: True for your secret
+- **No**: False for your secret
+- **Maybe**: Ambiguous
