@@ -152,7 +152,6 @@ MemoryIndexer.Stack        # Meta-package bundling all packages
 
 **Planned (Phase 18.3+):**
 - [ ] REST API wrapper with OpenAPI
-- [ ] LangChain/Semantic Kernel integration
 
 ### v0.9.0+ - Advanced Benchmarks (Future)
 
