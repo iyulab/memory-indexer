@@ -30,7 +30,7 @@ $runArgs = @(
     "--project", $benchmarkProject
     "--configuration", "Release"
     "--"
-    "--exporters", "md"
+    "--exporters", "markdown"
 )
 
 if ($Quick) {

@@ -90,7 +90,7 @@ public class TierPromotionBenchmark
     // ==================== Short-Term (T1) Operations ====================
 
     [Benchmark(Description = "T1 ShortTerm: Promote memory")]
-    public async Task<MemoryUnit> ShortTermPromote()
+    public async Task<MemoryUnit?> ShortTermPromote()
     {
         var memory = new MemoryUnit
         {

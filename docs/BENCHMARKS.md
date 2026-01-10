@@ -123,7 +123,7 @@ dotnet run -c Release -- --filter "*TierPromotionBenchmark*"
 dotnet run -c Release -- --filter "*ConcurrencyBenchmark*"
 
 # Full benchmark with all exporters
-dotnet run -c Release -- --filter "*" --exporters html,csv,json,md
+dotnet run -c Release -- --filter "*" --exporters html,csv,json,markdown
 ```
 
 Results are exported to `benchmarks/MemoryIndexer.Benchmarks/BenchmarkDotNet.Artifacts/`.
