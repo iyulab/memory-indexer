@@ -145,11 +145,35 @@ await memoryService.StoreAsync("user123", "User prefers dark mode", importance: 
 var results = await memoryService.RecallAsync("user123", "UI preferences", limit: 5);
 ```
 
+## Samples
+
+### [Twenty Questions Game](samples/TwentyQuestionsGame/)
+
+AI vs AI demo where two LLM agents play 20 Questions using **only memory recall**—no chat history injection.
+
+```
+Traditional: messages: [Q1, A1, Q2, A2, ... Q19, A19]  ← O(n) growing context
+This Demo:   user: "Alpha says: Yes"                   ← O(1) constant context
+```
+
+**What It Proves:**
+- Agents build coherent multi-turn strategy via `memory_recall()` only
+- O(1) context maintenance regardless of conversation length
+- Memory isolation between agents works correctly
+
+```bash
+cd samples/TwentyQuestionsGame
+dotnet run                    # Auto-detect LLM provider
+dotnet run -- --local         # Use local ONNX model (no API key)
+dotnet run -- --benchmark     # Run benchmarks
+```
+
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [Architecture](docs/ARCHITECTURE.md) | System design, 3-axis model, tier/type details |
+| [Evaluation](docs/EVALUATION.md) | KPIs, NIAH tests, cognitive scenarios |
 | [Roadmap](docs/ROADMAP.md) | Feature timeline and status |
 | [Benchmarks](docs/BENCHMARKS.md) | Performance measurements |
 | [Changelog](CHANGELOG.md) | Version history |

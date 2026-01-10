@@ -91,7 +91,26 @@ Initial release with basic memory primitives and vector storage.
 
 ## Planned
 
-### v0.7.0 - Package Architecture & Enterprise Features
+### v0.7.0 - Evaluation Framework & Package Architecture
+
+**Standardized Evaluation (MemoryBench):**
+
+*Core KPIs:*
+- [x] Context Compression Ratio (CCR): `recalled_tokens / full_history_tokens`
+- [x] Recall@K Efficiency: Precision of top-K retrieval
+- [x] Tier Promotion Latency: Buffer → Short → Long transition time
+- [x] Information Retention Score: Long-term recall accuracy
+
+*NIAH (Needle In A Haystack) Test:*
+- [x] Haystack generator (synthetic or external source)
+- [x] Needle insertion at configurable positions (25%, 50%, 75%)
+- [x] `store` → `recall` validation pipeline
+- [x] CCR verification (target: <1% of full context)
+- [x] Reference: [gkamradt/LLMTest_NeedleInAHaystack](https://github.com/gkamradt/LLMTest_NeedleInAHaystack)
+
+*Cognitive Scenarios:*
+- [x] False Memory Test: Conflicting info update detection
+- [x] Cross-Session Retention: Archive tier persistence validation
 
 **Package Structure:**
 ```
@@ -113,6 +132,14 @@ MemoryIndexer.Stack        # Meta-package bundling all packages
 - Resource quotas per tenant
 - Usage metering and reporting
 
+### v0.8.0+ - Advanced Benchmarks (Future)
+
+**Extended Evaluation:**
+- [ ] RULER integration (multi-needle retrieval, reasoning)
+- [ ] LongBench subset (QA, summarization tasks)
+- [ ] InfiniteBench (100K+ token extreme tests)
+- [ ] Automated scorecard generation
+
 **Administration:**
 - Memory analytics dashboard
 - Usage reporting APIs
@@ -128,4 +155,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-09 (v0.6.0)*
+*Last updated: 2026-01-10 (v0.7.0-preview)*
