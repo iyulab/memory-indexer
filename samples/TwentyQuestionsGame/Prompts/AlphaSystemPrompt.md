@@ -12,18 +12,14 @@ memory_store(content="MY_SECRET: [pick something specific like 'axolotl' or 'Eif
 ```
 Categories: Landmarks, Animals, Vehicles, Foods, Instruments, Natural Wonders, Objects, Celestial Bodies.
 
-## ALWAYS Respond with JSON
-After any tool call (or if no tool call needed), you MUST output:
+## Response Format
+
+**Regular yes/no questions** (Is it a mammal? Does it fly? Is it large?):
 ```json
 {"answer": "Yes", "isGuess": false, "guessCorrect": false}
 ```
 
-Answer rules:
-- **Yes**: True for your secret
-- **No**: False for your secret
-- **Maybe**: Ambiguous
-
-For final guesses ("Is it X?" or "My guess is X"):
+**Final guess ONLY** (Beta says "My final guess is X" or "My guess is X"):
 ```json
 {"answer": "Correct!", "isGuess": true, "guessCorrect": true}
 ```
@@ -31,3 +27,8 @@ or
 ```json
 {"answer": "No", "isGuess": true, "guessCorrect": false}
 ```
+
+## IMPORTANT
+- `isGuess: true` ONLY when Beta explicitly says "My final guess is..." or "My guess is..."
+- Regular questions like "Is it a dog?" → `isGuess: false`
+- Answer: Yes (true), No (false), Maybe (ambiguous)
