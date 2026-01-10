@@ -15,7 +15,8 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = (Get-Item $PSScriptRoot).Parent.FullName
 $benchmarkProject = "$PSScriptRoot\MemoryIndexer.Benchmarks"
-$artifactsDir = "$benchmarkProject\BenchmarkDotNet.Artifacts\results"
+# BenchmarkDotNet creates artifacts in the current working directory (repo root)
+$artifactsDir = "$repoRoot\BenchmarkDotNet.Artifacts\results"
 $docsFile = "$repoRoot\docs\BENCHMARKS.md"
 
 Write-Host "=============================================" -ForegroundColor Cyan

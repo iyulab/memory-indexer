@@ -272,9 +272,9 @@ public class ConcurrencyBenchmark
             memoryIds.Add(m.Id);
         }
 
-        // Parallel delete and store
+        // Parallel delete and store (use hardDelete to prevent GC pressure from soft-deleted entries)
         var deleteTasks = memoryIds.Take(ConcurrentOperations / 2)
-            .Select(id => _memoryService!.DeleteAsync(id));
+            .Select(id => _memoryService!.DeleteAsync(id, hardDelete: true));
         var storeTasks = Enumerable.Range(0, ConcurrentOperations / 2)
             .Select(i => _memoryService!.StoreAsync(
                 userId,
