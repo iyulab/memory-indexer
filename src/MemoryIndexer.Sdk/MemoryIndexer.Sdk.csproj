@@ -70,7 +70,7 @@ v0.1.0:
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
 
     <!-- Health Checks -->
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
   </ItemGroup>
 

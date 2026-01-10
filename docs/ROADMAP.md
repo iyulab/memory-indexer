@@ -132,7 +132,23 @@ MemoryIndexer.Stack        # Meta-package bundling all packages
 - Resource quotas per tenant
 - Usage metering and reporting
 
-### v0.8.0+ - Advanced Benchmarks (Future)
+### v0.8.0 - Production Readiness
+
+**Health & Observability (Phase 18.1):**
+- [x] ASP.NET Core Health Checks integration
+- [x] Memory tier health checks (Buffer, ShortTerm, LongTerm, Archive)
+- [x] Infrastructure health checks (VectorDb, Embedding)
+- [x] Kubernetes probe endpoints (/health/live, /health/ready, /health/startup)
+- [x] JSON response writer with detailed diagnostics
+- [x] Tag-based health check filtering
+- [x] Health check documentation (docs/HEALTH.md)
+
+**Planned (Phase 18.2+):**
+- [ ] BenchmarkDotNet performance suite
+- [ ] REST API wrapper with OpenAPI
+- [ ] LangChain/Semantic Kernel integration
+
+### v0.9.0+ - Advanced Benchmarks (Future)
 
 **Extended Evaluation:**
 - [ ] RULER integration (multi-needle retrieval, reasoning)
@@ -155,4 +171,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-10 (v0.7.0-preview)*
+*Last updated: 2026-01-10 (v0.8.0-preview)*
