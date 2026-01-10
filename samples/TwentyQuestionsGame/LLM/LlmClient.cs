@@ -53,11 +53,26 @@ public sealed class LlmClient
         }
     }
 
+    public static bool DebugPrompts { get; set; } = false;
+
     private async Task<LlmResponse> CallOpenAiAsync(
         string systemPrompt,
         string userMessage,
         CancellationToken ct)
     {
+        if (DebugPrompts)
+        {
+            Console.WriteLine("\n╔══════════════════════ LLM REQUEST ══════════════════════╗");
+            Console.WriteLine("║ SYSTEM PROMPT:");
+            Console.WriteLine("╠════════════════════════════════════════════════════════╣");
+            Console.WriteLine(systemPrompt);
+            Console.WriteLine("╠════════════════════════════════════════════════════════╣");
+            Console.WriteLine("║ USER MESSAGE:");
+            Console.WriteLine("╠════════════════════════════════════════════════════════╣");
+            Console.WriteLine(userMessage);
+            Console.WriteLine("╚════════════════════════════════════════════════════════╝\n");
+        }
+
         var messages = new List<OaiChatMessage>
         {
             new SystemChatMessage(systemPrompt),

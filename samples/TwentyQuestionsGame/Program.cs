@@ -25,6 +25,7 @@ using TwentyQuestionsGame.ToolCall;
 // Parse CLI arguments
 var benchmarkMode = args.Contains("--benchmark") || args.Contains("-b");
 var useLocalLlm = args.Contains("--local") || args.Contains("-l");
+var debugPrompts = args.Contains("--debug") || args.Contains("-d");
 var iterations = GetIntArg(args, "--iterations", "-n") ?? 1;
 var outputPath = GetStringArg(args, "--output", "-o");
 var localModelId = GetStringArg(args, "--model", "-m") ?? LocalGenerator.DefaultModel;
@@ -202,6 +203,9 @@ var memoryStore = serviceProvider.GetRequiredService<IMemoryStore>();
 var gameRunner = serviceProvider.GetRequiredService<GameRunner>();
 var gameState = serviceProvider.GetRequiredService<GameState>();
 
+// Enable debug prompts if requested
+LlmClient.DebugPrompts = debugPrompts;
+
 // Reset function for benchmark mode
 async Task ResetGameStateAsync()
 {
@@ -247,6 +251,7 @@ static void PrintHelp()
 
         Options:
           -b, --benchmark      Enable benchmark mode
+          -d, --debug          Show full LLM prompts (for debugging)
           -l, --local          Use LMSupply local model (no API key needed)
           -m, --model MODEL    Specify local model ID (default: microsoft/Phi-4-mini-instruct-onnx)
           -n, --iterations N   Number of games to run (default: 1)
