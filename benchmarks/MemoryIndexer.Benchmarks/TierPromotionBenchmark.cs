@@ -25,7 +25,7 @@ public class TierPromotionBenchmark
     private IBuffer? _buffer;
     private IShortTermMemory? _shortTermMemory;
     private IArchiveStore? _archiveStore;
-    private VirtualContextManager? _vcm;
+    private IVirtualContextManager? _vcm;
     private const string UserId = "benchmark-user";
     private const string SessionId = "benchmark-session";
 
@@ -46,7 +46,7 @@ public class TierPromotionBenchmark
         _buffer = _serviceProvider.GetRequiredService<IBuffer>();
         _shortTermMemory = _serviceProvider.GetRequiredService<IShortTermMemory>();
         _archiveStore = _serviceProvider.GetRequiredService<IArchiveStore>();
-        _vcm = _serviceProvider.GetRequiredService<VirtualContextManager>();
+        _vcm = _serviceProvider.GetRequiredService<IVirtualContextManager>();
     }
 
     [GlobalCleanup]
