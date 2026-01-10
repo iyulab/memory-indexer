@@ -64,8 +64,14 @@ public sealed class LlmClient
             new UserChatMessage(userMessage)
         };
 
+        var options = new ChatCompletionOptions
+        {
+            MaxOutputTokenCount = 300,
+            Temperature = 0.7f
+        };
+
         var sw = Stopwatch.StartNew();
-        var completion = await _chatClient!.CompleteChatAsync(messages, cancellationToken: ct);
+        var completion = await _chatClient!.CompleteChatAsync(messages, options, ct);
         sw.Stop();
 
         var content = completion.Value.Content.Count > 0

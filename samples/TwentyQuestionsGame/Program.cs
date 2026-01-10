@@ -80,7 +80,7 @@ else if (useGpuStack)
 else
 {
     llmProvider = "OpenAI";
-    llmModel = Environment.GetEnvironmentVariable("LLM_MODEL") ?? "gpt-4o";
+    llmModel = Environment.GetEnvironmentVariable("LLM_MODEL") ?? "gpt-4o-mini";
 }
 
 Console.WriteLine($"[CONFIG] LLM Provider: {llmProvider}");
