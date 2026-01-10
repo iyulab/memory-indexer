@@ -28,17 +28,31 @@ public sealed class GameRunner(
     {
         GameConsole.WriteSystem("\n🎮 Game starting! Alpha will think of a secret on Round 1...\n");
 
-        while (!state.IsGameOver && state.CurrentRound <= GameConfiguration.MaxRounds)
+        try
         {
-            await RunRoundAsync(ct);
-
-            if (!state.IsGameOver)
+            while (!state.IsGameOver && state.CurrentRound <= GameConfiguration.MaxRounds)
             {
-                state.NextRound();
-            }
-        }
+                await RunRoundAsync(ct);
 
-        PrintGameResult();
+                if (!state.IsGameOver)
+                {
+                    state.NextRound();
+                }
+            }
+
+            PrintGameResult();
+        }
+        catch (Exception ex)
+        {
+            GameConsole.WriteError($"\n❌ GAME ERROR: {ex.GetType().Name}");
+            GameConsole.WriteError($"   Message: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                GameConsole.WriteError($"   Inner: {ex.InnerException.Message}");
+            }
+            GameConsole.WriteError($"   Stack: {ex.StackTrace?.Split('\n').FirstOrDefault()}");
+            throw;
+        }
     }
 
     private async Task RunRoundAsync(CancellationToken ct)
@@ -49,11 +63,20 @@ public sealed class GameRunner(
         // Beta's turn: ask a question
         GameConsole.WriteBeta($"Thinking... (last response: \"{Truncate(state.LastAlphaResponse, 40)}\")");
 
-        var betaResult = await beta.GenerateQuestionAsync(
-            state.LastAlphaResponse,
-            state.CurrentRound,
-            state.QuestionHistory,
-            ct);
+        BetaQuestionResult betaResult;
+        try
+        {
+            betaResult = await beta.GenerateQuestionAsync(
+                state.LastAlphaResponse,
+                state.CurrentRound,
+                state.QuestionHistory,
+                ct);
+        }
+        catch (Exception ex)
+        {
+            GameConsole.WriteError($"   ❌ Beta failed: {ex.Message}");
+            throw;
+        }
 
         GameConsole.WriteBeta($">>> {betaResult.Question}");
         GameConsole.WriteStats("⏱️ LLM", $"{betaResult.LatencyMs}ms | 🔧 Tool calls: {betaResult.ToolCallIterations}");
