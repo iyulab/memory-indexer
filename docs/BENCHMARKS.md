@@ -93,53 +93,20 @@ Load testing with parameterized concurrent operations (10, 50, 100 concurrent op
 
 ## Running Benchmarks
 
-### CI/GitHub Actions
-
-Benchmarks run automatically via GitHub Actions:
-
-- **Schedule**: Weekly on Sunday at 4:00 AM UTC
-- **Pull Requests**: On changes to `benchmarks/**` or `src/**`
-- **Manual**: Via workflow dispatch with mode selection
-
-Available benchmark modes:
-- `quick` - MemoryOperationsBenchmark only (fastest)
-- `full` - All benchmark suites
-- `memory-operations` - Core memory operations
-- `tiered-memory` - Tiered workflow benchmarks
-- `tier-promotion` - Tier promotion pipeline
-- `concurrency` - Load and concurrency tests
-
-### CI Mode CLI
-
-```bash
-cd benchmarks/MemoryIndexer.Benchmarks
-
-# Quick CI run (exports JSON/Markdown)
-dotnet run -c Release -- --ci --quick --job short
-
-# Full CI run
-dotnet run -c Release -- --ci --full --job short
-
-# Specific benchmark in CI
-dotnet run -c Release -- --ci --filter "*TierPromotionBenchmark*" --job short
-```
-
-Results are exported to `BenchmarkDotNet.Artifacts/` in JSON and Markdown formats.
-
-### PowerShell Script
+### PowerShell Script (Recommended)
 
 ```powershell
-# Quick run (short iterations)
+# Quick run (short iterations, ~2-3 minutes)
 .\benchmarks\run_bench.ps1 -Quick
 
-# Full benchmark
+# Full benchmark (~10-15 minutes)
 .\benchmarks\run_bench.ps1
 
-# Specific filter
-.\benchmarks\run_bench.ps1 -Filter "Store"
+# Run and update this documentation
+.\benchmarks\run_bench.ps1 -Quick -UpdateDocs
 
-# Export JSON results
-.\benchmarks\run_bench.ps1 -ExportJson
+# Specific filter
+.\benchmarks\run_bench.ps1 -Filter "Store" -Quick
 ```
 
 ### Direct CLI
@@ -156,8 +123,10 @@ dotnet run -c Release -- --filter "*TierPromotionBenchmark*"
 dotnet run -c Release -- --filter "*ConcurrencyBenchmark*"
 
 # Full benchmark with all exporters
-dotnet run -c Release -- --filter "*" --exporters html,csv,json
+dotnet run -c Release -- --filter "*" --exporters html,csv,json,md
 ```
+
+Results are exported to `benchmarks/MemoryIndexer.Benchmarks/BenchmarkDotNet.Artifacts/`.
 
 ## Notes
 
@@ -189,7 +158,7 @@ dotnet run -c Release -- --filter "*" --exporters html,csv,json
 
 | Version | Store (μs) | Recall (μs) | Vector Search (ns) | Notes |
 |---------|------------|-------------|-------------------|-------|
-| v0.8.0 | 2.18 | 1.5 | 812 | Tier promotion & concurrency benchmarks, CI workflow |
+| v0.8.0 | 2.18 | 1.5 | 812 | Tier promotion & concurrency benchmarks |
 | v0.4.0 | 2.18 | 1.5 | 812 | 4-tier cognitive architecture |
 | v0.3.0 | 2.45 | 1.8 | 950 | Pre-cognitive architecture |
 

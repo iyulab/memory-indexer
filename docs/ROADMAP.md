@@ -147,7 +147,7 @@ MemoryIndexer.Stack        # Meta-package bundling all packages
 - [x] BenchmarkDotNet performance suite
 - [x] Tier promotion benchmarks (Buffer → Short → Long → Archive)
 - [x] Concurrency/load benchmarks (10, 50, 100 concurrent ops)
-- [x] CI benchmark workflow (GitHub Actions)
+- [x] Local benchmark script (benchmarks/run_bench.ps1)
 - [x] Benchmark documentation (docs/BENCHMARKS.md)
 
 **Planned (Phase 18.3+):**
