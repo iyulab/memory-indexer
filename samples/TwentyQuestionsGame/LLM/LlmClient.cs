@@ -66,8 +66,7 @@ public sealed class LlmClient
 
         var options = new ChatCompletionOptions
         {
-            MaxOutputTokenCount = 300,
-            Temperature = 0.7f
+            MaxOutputTokenCount = 300
         };
 
         var sw = Stopwatch.StartNew();
