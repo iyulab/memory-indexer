@@ -38,25 +38,15 @@ public sealed class BetaAgent(
         var systemPrompt = BuildSystemPrompt(currentRound, alphaLastResponse);
 
         // ==========================================================================
-        // Phase 48: Forced Recall + Retry Logic
-        // ==========================================================================
-        // Pre-inject previous Q&A to ensure LLM has context even if it doesn't recall
-        // Retry if LLM fails to produce a valid question
+        // Memory Indexer Validation: Beta must rely on memory_recall for Q&A history
+        // No direct injection - this tests semantic search functionality
         // ==========================================================================
 
         var userMessageBuilder = new System.Text.StringBuilder();
         userMessageBuilder.Append($"Alpha says: \"{alphaLastResponse}\"\n\n");
 
-        // Inject question history as context (in case LLM doesn't call memory_recall)
-        if (questionHistory != null && questionHistory.Count > 0)
-        {
-            userMessageBuilder.AppendLine("=== PREVIOUS Q&A (for reference - avoid duplicates!) ===");
-            foreach (var (q, a) in questionHistory.TakeLast(10)) // Last 10 for context
-            {
-                userMessageBuilder.AppendLine($"- Q: {q} → A: {a}");
-            }
-            userMessageBuilder.AppendLine();
-        }
+        // NOTE: Q&A history is NOT injected here - Beta must use memory_recall
+        // This validates Memory Indexer's recall functionality
 
         if (currentRound >= 19)
         {
@@ -64,7 +54,7 @@ public sealed class BetaAgent(
         }
         else
         {
-            userMessageBuilder.Append("Now follow the MANDATORY REASONING CHAIN. Output your ANALYSIS, QUESTION SELECTION, then your question.");
+            userMessageBuilder.Append("Use memory_recall to check previous Q&A, then ask your next question.");
         }
 
         var userMessage = userMessageBuilder.ToString();
