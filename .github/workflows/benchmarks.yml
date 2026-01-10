@@ -1,0 +1,157 @@
+name: Benchmarks
+
+on:
+  # Run weekly for regression detection
+  schedule:
+    - cron: '0 4 * * 0'  # Every Sunday at 4:00 AM UTC
+
+  # Manual trigger with options
+  workflow_dispatch:
+    inputs:
+      benchmark_mode:
+        description: 'Benchmark mode'
+        required: true
+        default: 'quick'
+        type: choice
+        options:
+          - quick
+          - full
+          - memory-operations
+          - tiered-memory
+          - tier-promotion
+          - concurrency
+      publish_results:
+        description: 'Publish results as artifact'
+        required: false
+        default: true
+        type: boolean
+
+  # Run on PRs that modify benchmark code
+  pull_request:
+    paths:
+      - 'benchmarks/**'
+      - 'src/**'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build in Release mode
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Determine benchmark mode
+      id: mode
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "mode=${{ github.event.inputs.benchmark_mode }}" >> $GITHUB_OUTPUT
+        elif [ "${{ github.event_name }}" == "schedule" ]; then
+          echo "mode=full" >> $GITHUB_OUTPUT
+        else
+          echo "mode=quick" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run benchmarks
+      working-directory: benchmarks/MemoryIndexer.Benchmarks
+      run: |
+        MODE="${{ steps.mode.outputs.mode }}"
+        echo "Running benchmarks in '$MODE' mode..."
+
+        case $MODE in
+          quick)
+            dotnet run -c Release -- --ci --quick --job short
+            ;;
+          full)
+            dotnet run -c Release -- --ci --full --job short
+            ;;
+          memory-operations)
+            dotnet run -c Release -- --ci --filter "*MemoryOperationsBenchmark*" --job short
+            ;;
+          tiered-memory)
+            dotnet run -c Release -- --ci --filter "*TieredMemoryBenchmark*" --job short
+            ;;
+          tier-promotion)
+            dotnet run -c Release -- --ci --filter "*TierPromotionBenchmark*" --job short
+            ;;
+          concurrency)
+            dotnet run -c Release -- --ci --filter "*ConcurrencyBenchmark*" --job short
+            ;;
+          *)
+            dotnet run -c Release -- --ci --quick --job short
+            ;;
+        esac
+
+    - name: Upload benchmark results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results-${{ github.run_id }}
+        path: |
+          benchmarks/MemoryIndexer.Benchmarks/BenchmarkDotNet.Artifacts/
+        retention-days: 30
+
+    - name: Generate summary
+      if: always()
+      working-directory: benchmarks/MemoryIndexer.Benchmarks
+      run: |
+        echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Mode:** ${{ steps.mode.outputs.mode }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Run ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Find and display markdown results
+        if [ -d "BenchmarkDotNet.Artifacts/results" ]; then
+          for file in BenchmarkDotNet.Artifacts/results/*.md; do
+            if [ -f "$file" ]; then
+              echo "### $(basename $file .md)" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              cat "$file" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+        else
+          echo "*No results found. Check the logs for errors.*" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # Compare with baseline (optional, for regression detection)
+  compare:
+    needs: benchmark
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download current results
+      uses: actions/download-artifact@v4
+      with:
+        name: benchmark-results-${{ github.run_id }}
+        path: current-results
+
+    - name: Compare with baseline
+      run: |
+        echo "## Performance Comparison" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Baseline comparison would be performed here." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "To enable automated regression detection:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Store baseline results in a known location (e.g., GitHub release)" >> $GITHUB_STEP_SUMMARY
+        echo "2. Use tools like `github-action-benchmark` for comparison" >> $GITHUB_STEP_SUMMARY
+        echo "3. Configure threshold alerts for significant regressions" >> $GITHUB_STEP_SUMMARY

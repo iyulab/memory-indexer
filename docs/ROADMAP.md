@@ -143,8 +143,14 @@ MemoryIndexer.Stack        # Meta-package bundling all packages
 - [x] Tag-based health check filtering
 - [x] Health check documentation (docs/HEALTH.md)
 
-**Planned (Phase 18.2+):**
-- [ ] BenchmarkDotNet performance suite
+**Performance & Benchmarks (Phase 18.2):**
+- [x] BenchmarkDotNet performance suite
+- [x] Tier promotion benchmarks (Buffer → Short → Long → Archive)
+- [x] Concurrency/load benchmarks (10, 50, 100 concurrent ops)
+- [x] CI benchmark workflow (GitHub Actions)
+- [x] Benchmark documentation (docs/BENCHMARKS.md)
+
+**Planned (Phase 18.3+):**
 - [ ] REST API wrapper with OpenAPI
 - [ ] LangChain/Semantic Kernel integration
 

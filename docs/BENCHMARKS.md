@@ -40,6 +40,48 @@ Embedding: Mock (768 dimensions)
 | Workflow: Store → Update → Recall | 16.02 μs | 0.40 μs | 10.87 KB |
 | Workflow: Mixed memory types | 20.42 μs | 1.50 μs | 16.48 KB |
 
+## Tier Promotion Benchmarks (TierPromotionBenchmark)
+
+Benchmarks for the 4-tier memory promotion pipeline (Buffer → Short → Long → Archive).
+
+| Operation | Category | Description |
+|-----------|----------|-------------|
+| T0 Buffer: Enqueue | Buffer (T0) | Raw message staging |
+| T0 Buffer: Enqueue + Drain | Buffer (T0) | Batch drain operation (5 items) |
+| T0 Buffer: Get stats | Buffer (T0) | Buffer statistics retrieval |
+| T1 ShortTerm: Promote | Short (T1) | Memory promotion to working memory |
+| T1 ShortTerm: Get all | Short (T1) | Retrieve all working memory contents |
+| T1 ShortTerm: Capacity check | Short (T1) | 7±2 capacity check |
+| T3 Archive: Set entry | Archive (T3) | Semantic knowledge storage |
+| T3 Archive: Get all | Archive (T3) | Retrieve all archived knowledge |
+| T3 Archive: Get stats | Archive (T3) | Archive statistics |
+| Pipeline: Store → Short → Recall | Pipeline | End-to-end flow |
+| Pipeline: Multi-store → Batch recall | Pipeline | Multi-memory batch operations |
+| Pipeline: Mixed types | Pipeline | Episodic/Semantic/Procedural/Fact storage |
+| Pipeline: High-importance path | Pipeline | Priority-based retrieval |
+| VCM: Initialize session | VCM | Virtual Context Manager setup |
+| VCM: Get context usage | VCM | Context usage statistics |
+| VCM: Consolidate | VCM | Memory consolidation and promotion |
+
+**Target**: Complete pipeline < 50ms async.
+
+## Concurrency Benchmarks (ConcurrencyBenchmark)
+
+Load testing with parameterized concurrent operations (10, 50, 100 concurrent ops).
+
+| Benchmark | Description |
+|-----------|-------------|
+| Parallel: Store N memories (same user) | Thread-safety for single user writes |
+| Parallel: Store N memories (N users) | Multi-tenant concurrent writes |
+| Parallel: Recall N queries (same user) | Concurrent read operations |
+| Parallel: Recall N queries (N users) | Multi-tenant concurrent reads |
+| Mixed: N parallel (70% read, 30% write) | Realistic mixed workload |
+| Parallel: Vector search N queries | Concurrent vector similarity search |
+| Throughput: Sequential baseline | Baseline sequential performance |
+| Throughput: Batched parallel | Batched parallel performance |
+| Contention: N updates to same memory | Lock contention testing |
+| Contention: N deletes + stores | Concurrent add/remove operations |
+
 ## Throughput Summary
 
 | Metric | Value |
@@ -50,6 +92,39 @@ Embedding: Mock (768 dimensions)
 | Store→Recall workflow/sec | ~77,000 |
 
 ## Running Benchmarks
+
+### CI/GitHub Actions
+
+Benchmarks run automatically via GitHub Actions:
+
+- **Schedule**: Weekly on Sunday at 4:00 AM UTC
+- **Pull Requests**: On changes to `benchmarks/**` or `src/**`
+- **Manual**: Via workflow dispatch with mode selection
+
+Available benchmark modes:
+- `quick` - MemoryOperationsBenchmark only (fastest)
+- `full` - All benchmark suites
+- `memory-operations` - Core memory operations
+- `tiered-memory` - Tiered workflow benchmarks
+- `tier-promotion` - Tier promotion pipeline
+- `concurrency` - Load and concurrency tests
+
+### CI Mode CLI
+
+```bash
+cd benchmarks/MemoryIndexer.Benchmarks
+
+# Quick CI run (exports JSON/Markdown)
+dotnet run -c Release -- --ci --quick --job short
+
+# Full CI run
+dotnet run -c Release -- --ci --full --job short
+
+# Specific benchmark in CI
+dotnet run -c Release -- --ci --filter "*TierPromotionBenchmark*" --job short
+```
+
+Results are exported to `BenchmarkDotNet.Artifacts/` in JSON and Markdown formats.
 
 ### PowerShell Script
 
@@ -77,6 +152,8 @@ dotnet run -c Release -- --filter "*" --job short
 
 # Run specific benchmark class
 dotnet run -c Release -- --filter "*MemoryOperationsBenchmark*"
+dotnet run -c Release -- --filter "*TierPromotionBenchmark*"
+dotnet run -c Release -- --filter "*ConcurrencyBenchmark*"
 
 # Full benchmark with all exporters
 dotnet run -c Release -- --filter "*" --exporters html,csv,json
@@ -112,10 +189,11 @@ dotnet run -c Release -- --filter "*" --exporters html,csv,json
 
 | Version | Store (μs) | Recall (μs) | Vector Search (ns) | Notes |
 |---------|------------|-------------|-------------------|-------|
+| v0.8.0 | 2.18 | 1.5 | 812 | Tier promotion & concurrency benchmarks, CI workflow |
 | v0.4.0 | 2.18 | 1.5 | 812 | 4-tier cognitive architecture |
 | v0.3.0 | 2.45 | 1.8 | 950 | Pre-cognitive architecture |
 
 ---
 
-*Last updated: 2026-01-09*
+*Last updated: 2026-01-10*
 *Run with: BenchmarkDotNet ShortRun on Windows 11*
