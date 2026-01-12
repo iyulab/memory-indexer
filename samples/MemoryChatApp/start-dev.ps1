@@ -49,16 +49,28 @@ Write-Host ""
 Write-Host "Press Ctrl+C in each window to stop." -ForegroundColor Gray
 Write-Host ""
 
-# Start Backend in new console window
-$backendCmd = "cd '$scriptPath'; dotnet watch run --no-hot-reload"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WorkingDirectory $scriptPath
+# Check if Windows Terminal is available
+$wtPath = Get-Command wt -ErrorAction SilentlyContinue
+if (-not $wtPath) {
+    Write-Host "[WARNING] Windows Terminal not found, falling back to separate PowerShell windows" -ForegroundColor Yellow
 
-# Wait a moment for backend to start
-Start-Sleep -Seconds 2
+    # Fallback: Start in separate PowerShell windows
+    $backendCmd = "cd '$scriptPath'; dotnet watch run --no-hot-reload"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCmd -WorkingDirectory $scriptPath
+    Start-Sleep -Seconds 2
+    $frontendCmd = "cd '$frontendPath'; npm run dev"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCmd -WorkingDirectory $frontendPath
+} else {
+    # Start Windows Terminal with Backend tab, then add Frontend tab
+    $backendCmd = "dotnet watch run --no-hot-reload"
+    $frontendCmd = "npm run dev"
 
-# Start Frontend in new console window
-$frontendCmd = "cd '$frontendPath'; npm run dev"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCmd -WorkingDirectory $frontendPath
+    # wt: new window with backend tab, then add frontend tab
+    # --title sets tab title, -d sets working directory
+    wt -w new `
+        --title "Backend (ASP.NET)" -d "$scriptPath" powershell -NoExit -Command $backendCmd `; `
+        new-tab --title "Frontend (Vite)" -d "$frontendPath" powershell -NoExit -Command $frontendCmd
+}
 
-Write-Host "[STARTED] Both services launched in separate windows" -ForegroundColor Green
+Write-Host "[STARTED] Both services launched in Windows Terminal tabs" -ForegroundColor Green
 Write-Host "[TIP] Open http://localhost:3000 in your browser" -ForegroundColor Cyan

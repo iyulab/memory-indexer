@@ -156,7 +156,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                     new ClassificationContext
                     {
                         UserId = request.UserId,
-                        SessionId = request.SessionId
+                        SessionId = request.SessionId,
+                        MessageRole = request.Role ?? "user"
                     },
                     cancellationToken);
 
@@ -196,6 +197,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             Type = memoryType,
             Scope = request.Scope,  // 3-axis: Scope dimension
             Tier = request.Tier,    // 3-axis: Tier dimension
+            Role = request.Role,    // Preserved for episodic (T0-T2), null for semantic (T3)
             ImportanceScore = importanceScore,
             ContentHash = ComputeContentHash(request.Content),
             Topics = topics,

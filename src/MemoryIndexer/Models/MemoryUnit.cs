@@ -35,6 +35,18 @@ public sealed class MemoryUnit
     public string? SessionId { get; set; }
 
     /// <summary>
+    /// Role of the original message sender (user, assistant, system).
+    /// Preserved in T0/T1/T2 tiers, typically null for T3 (semantic).
+    /// </summary>
+    /// <remarks>
+    /// Design: Hybrid role handling per cognitive science model.
+    /// - Episodic memory (T0-T2): Role preserved for source attribution
+    /// - Semantic memory (T3): Role abstracted away (facts only)
+    /// </remarks>
+    [VectorStoreData]
+    public string? Role { get; set; }
+
+    /// <summary>
     /// The actual content of the memory.
     /// </summary>
     [VectorStoreData]

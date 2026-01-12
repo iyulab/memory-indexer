@@ -112,3 +112,4 @@ nupkg/
 *.db-shm
 *.db-wal
 nul
+tmpclaude-*

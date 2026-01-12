@@ -367,6 +367,129 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
     }
 
     /// <inheritdoc />
+    public async Task<int> DeleteByUserAsync(string userId, bool hardDelete = false, CancellationToken cancellationToken = default)
+    {
+        await EnsureCollectionExistsAsync(cancellationToken);
+
+        try
+        {
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "user_id",
+                            Match = new Match { Keyword = userId }
+                        }
+                    }
+                }
+            };
+
+            if (hardDelete)
+            {
+                // Get count before deletion
+                var countBefore = await _client.CountAsync(_collectionName, filter: filter, cancellationToken: cancellationToken);
+
+                // Delete by filter
+                await _client.DeleteAsync(_collectionName, filter: filter, cancellationToken: cancellationToken);
+
+                _logger.LogDebug("Hard deleted {Count} memories for user {UserId} from Qdrant", countBefore, userId);
+                return (int)countBefore;
+            }
+            else
+            {
+                // Soft delete - get all and update
+                var memories = await GetAllAsync(userId, cancellationToken: cancellationToken);
+                var count = 0;
+                foreach (var memory in memories)
+                {
+                    memory.IsDeleted = true;
+                    await UpdateAsync(memory, cancellationToken);
+                    count++;
+                }
+
+                _logger.LogDebug("Soft deleted {Count} memories for user {UserId} in Qdrant", count, userId);
+                return count;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete memories for user {UserId} from Qdrant", userId);
+            return 0;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken cancellationToken = default)
+    {
+        await EnsureCollectionExistsAsync(cancellationToken);
+
+        try
+        {
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "user_id",
+                            Match = new Match { Keyword = userId }
+                        }
+                    },
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "session_id",
+                            Match = new Match { Keyword = sessionId }
+                        }
+                    }
+                }
+            };
+
+            if (hardDelete)
+            {
+                // Get count before deletion
+                var countBefore = await _client.CountAsync(_collectionName, filter: filter, cancellationToken: cancellationToken);
+
+                // Delete by filter
+                await _client.DeleteAsync(_collectionName, filter: filter, cancellationToken: cancellationToken);
+
+                _logger.LogDebug("Hard deleted {Count} memories for user {UserId} session {SessionId} from Qdrant",
+                    countBefore, userId, sessionId);
+                return (int)countBefore;
+            }
+            else
+            {
+                // Soft delete - get all and update
+                var memories = await GetAllAsync(userId, new MemoryFilterOptions { SessionId = sessionId }, cancellationToken);
+                var count = 0;
+                foreach (var memory in memories)
+                {
+                    memory.IsDeleted = true;
+                    await UpdateAsync(memory, cancellationToken);
+                    count++;
+                }
+
+                _logger.LogDebug("Soft deleted {Count} memories for user {UserId} session {SessionId} in Qdrant",
+                    count, userId, sessionId);
+                return count;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete memories for user {UserId} session {SessionId} from Qdrant",
+                userId, sessionId);
+            return 0;
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<long> GetCountAsync(string userId, CancellationToken cancellationToken = default)
     {
         await EnsureCollectionExistsAsync(cancellationToken);

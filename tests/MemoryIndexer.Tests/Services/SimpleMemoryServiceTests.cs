@@ -122,7 +122,7 @@ public class SimpleMemoryServiceTests
         const string content = "I like pizza";
 
         // Act
-        await _service.RememberAsync(userId, sessionId, content);
+        await _service.RememberAsync(userId, sessionId: sessionId, content: content);
 
         // Assert
         _primitives.EncodedMemories.Should().HaveCount(1);
@@ -137,7 +137,7 @@ public class SimpleMemoryServiceTests
         const string sessionId = "session-1";
 
         // Act
-        await _service.RememberAsync(userId, sessionId, "content");
+        await _service.RememberAsync(userId, sessionId: sessionId, content: "content");
 
         // Assert
         _scopeManager.IsInitialized.Should().BeTrue();
@@ -154,7 +154,7 @@ public class SimpleMemoryServiceTests
         const string content = "Test content";
 
         // Act
-        await _service.RememberAsync(userId, sessionId, content);
+        await _service.RememberAsync(userId, sessionId: sessionId, content: content);
 
         // Assert
         _scopeManager.RecordedTurns.Should().ContainSingle();
@@ -172,7 +172,7 @@ public class SimpleMemoryServiceTests
         _classifier.Importance = 0.9f; // High importance → User scope
 
         // Act
-        await _service.RememberAsync(userId, sessionId, content);
+        await _service.RememberAsync(userId, sessionId: sessionId, content: content);
 
         // Assert
         _primitives.EncodedMemories[0].Scope.Should().Be(Scope.User);
@@ -189,11 +189,44 @@ public class SimpleMemoryServiceTests
         _classifier.Topics = new List<string> { "programming", "interests" };
 
         // Act
-        await _service.RememberAsync(userId, sessionId, content);
+        await _service.RememberAsync(userId, sessionId: sessionId, content: content);
 
         // Assert
         _primitives.EncodedMemories[0].Topics.Should().Contain("programming");
         _primitives.EncodedMemories[0].Topics.Should().Contain("interests");
+    }
+
+    [Fact]
+    public async Task RememberAsync_WithRole_PassesRoleToEncoder()
+    {
+        // Arrange
+        const string userId = "user-1";
+        const string sessionId = "session-1";
+        const string content = "Test content";
+        const string role = "assistant";
+
+        // Act
+        await _service.RememberAsync(userId, sessionId: sessionId, content: content, role: role);
+
+        // Assert
+        _primitives.EncodedMemories.Should().HaveCount(1);
+        _primitives.EncodedMemories[0].Role.Should().Be(role);
+    }
+
+    [Fact]
+    public async Task RememberAsync_WithoutRole_DefaultsToUser()
+    {
+        // Arrange
+        const string userId = "user-1";
+        const string sessionId = "session-1";
+        const string content = "Test content";
+
+        // Act
+        await _service.RememberAsync(userId, sessionId: sessionId, content: content);
+
+        // Assert
+        _primitives.EncodedMemories.Should().HaveCount(1);
+        _primitives.EncodedMemories[0].Role.Should().Be("user");
     }
 
     #endregion
@@ -299,7 +332,7 @@ public class SimpleMemoryServiceTests
         const string userId = "user-1";
         const string sessionId = "session-1";
 
-        await _service.RememberAsync(userId, sessionId, "test");
+        await _service.RememberAsync(userId, sessionId: sessionId, content: "test");
 
         // Act
         await _service.EndSessionAsync(userId, sessionId);
@@ -391,6 +424,7 @@ public class SimpleMemoryServiceTests
                 Type = request.Type ?? MemoryType.Episodic,
                 Scope = request.Scope,
                 Tier = request.Tier,
+                Role = request.Role,
                 ImportanceScore = request.ImportanceScore ?? 0.5f,
                 Topics = request.Topics ?? new List<string>()
             };

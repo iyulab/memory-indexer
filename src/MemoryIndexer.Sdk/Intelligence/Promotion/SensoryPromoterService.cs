@@ -204,6 +204,20 @@ public sealed class SensoryPromoterService : ISensoryPromoter
             var embedding = await _embeddingService.GenerateEmbeddingAsync(
                 segment.Content, cancellationToken);
 
+            // Determine dominant role from segment messages (for source attribution)
+            var dominantRole = segment.Messages
+                .Where(m => !string.IsNullOrEmpty(m.Role))
+                .GroupBy(m => m.Role)
+                .OrderByDescending(g => g.Count())
+                .FirstOrDefault()?.Key;
+
+            // Collect all unique roles for metadata (multi-party conversations)
+            var uniqueRoles = segment.Messages
+                .Where(m => !string.IsNullOrEmpty(m.Role))
+                .Select(m => m.Role)
+                .Distinct()
+                .ToList();
+
             // Create MemoryUnit
             var memory = new MemoryUnit
             {
@@ -216,6 +230,7 @@ public sealed class SensoryPromoterService : ISensoryPromoter
                 Stability = MemoryStability.Volatile, // Initial stability
                 ImportanceScore = CalculateImportance(segment),
                 Topics = ExtractTopics(segment),
+                Role = dominantRole, // Preserve role for episodic memory (T0-T2)
                 Metadata = new Dictionary<string, string>
                 {
                     ["source"] = "buffer_promotion",
@@ -223,7 +238,8 @@ public sealed class SensoryPromoterService : ISensoryPromoter
                     ["topic_label"] = segment.TopicLabel ?? "auto",
                     ["message_count"] = segment.Messages.Count.ToString(),
                     ["start_index"] = segment.StartIndex.ToString(),
-                    ["end_index"] = segment.EndIndex.ToString()
+                    ["end_index"] = segment.EndIndex.ToString(),
+                    ["roles"] = string.Join(",", uniqueRoles) // All roles in segment
                 }
             };
 

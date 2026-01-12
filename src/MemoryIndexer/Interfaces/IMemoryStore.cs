@@ -62,6 +62,25 @@ public interface IMemoryStore
     Task<bool> DeleteAsync(Guid id, bool hardDelete = false, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes all memories for a user.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="hardDelete">If true, permanently removes; if false, soft delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Number of memories deleted.</returns>
+    Task<int> DeleteByUserAsync(string userId, bool hardDelete = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes all memories for a specific session.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="sessionId">The session ID.</param>
+    /// <param name="hardDelete">If true, permanently removes; if false, soft delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Number of memories deleted.</returns>
+    Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Searches memories using semantic similarity.
     /// </summary>
     /// <param name="queryEmbedding">The query embedding vector.</param>
@@ -148,6 +167,12 @@ public sealed class MemorySearchOptions
     public MemoryType[]? Types { get; set; }
 
     /// <summary>
+    /// Roles to include (null = all roles).
+    /// Supports multi-party conversations with custom roles.
+    /// </summary>
+    public string[]? Roles { get; set; }
+
+    /// <summary>
     /// Filter by creation time (start).
     /// </summary>
     public DateTime? CreatedAfter { get; set; }
@@ -183,6 +208,12 @@ public sealed class MemoryFilterOptions
     /// Memory types to include.
     /// </summary>
     public MemoryType[]? Types { get; set; }
+
+    /// <summary>
+    /// Roles to include (null = all roles).
+    /// Supports multi-party conversations with custom roles.
+    /// </summary>
+    public string[]? Roles { get; set; }
 
     /// <summary>
     /// Memory tiers to include (Phase 51: 3-axis model support).

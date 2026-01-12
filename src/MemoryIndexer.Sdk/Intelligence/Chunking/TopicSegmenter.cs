@@ -33,6 +33,17 @@ public sealed class TopicSegmenter
     /// </summary>
     public bool UseLocalMinima { get; init; } = true;
 
+    /// <summary>
+    /// Whether to include role prefix in segment content.
+    /// When true: "[User] Hello\n[Assistant] Hi there"
+    /// When false: "Hello\nHi there"
+    /// </summary>
+    /// <remarks>
+    /// Enable this for conversation memories where source attribution matters.
+    /// Disable for semantic/factual memories where role is abstracted.
+    /// </remarks>
+    public bool IncludeRoleInContent { get; init; } = false;
+
     public TopicSegmenter(
         IEmbeddingService embeddingService,
         ILogger<TopicSegmenter> logger)
@@ -99,9 +110,14 @@ public sealed class TopicSegmenter
 
         if (messages.Count <= MinSegmentLength)
         {
+            var content = IncludeRoleInContent
+                ? string.Join("\n", messages.Select(m =>
+                    !string.IsNullOrEmpty(m.Role) ? $"[{m.Role}] {m.Content}" : m.Content))
+                : string.Join("\n", messages.Select(m => m.Content));
+
             return [new TopicSegment
             {
-                Content = string.Join("\n", messages.Select(m => m.Content)),
+                Content = content,
                 StartIndex = 0,
                 EndIndex = messages.Count - 1,
                 Messages = messages.ToList()
@@ -126,7 +142,7 @@ public sealed class TopicSegmenter
         boundaries = EnforceMinSegmentLength(boundaries, messages.Count);
 
         // Create segments from messages
-        var segments = CreateConversationSegments(messages, boundaries);
+        var segments = CreateConversationSegments(messages, boundaries, IncludeRoleInContent);
 
         _logger.LogDebug("Created {Count} topic segments from conversation", segments.Count);
 
@@ -274,17 +290,25 @@ public sealed class TopicSegmenter
     /// </summary>
     private static List<TopicSegment> CreateConversationSegments(
         IReadOnlyList<ConversationMessage> messages,
-        List<int> boundaries)
+        List<int> boundaries,
+        bool includeRoleInContent = false)
     {
         var segments = new List<TopicSegment>();
         var startIndex = 0;
+
+        // Helper function to format message content
+        string FormatContent(IEnumerable<ConversationMessage> msgs) =>
+            string.Join("\n", msgs.Select(m =>
+                includeRoleInContent && !string.IsNullOrEmpty(m.Role)
+                    ? $"[{m.Role}] {m.Content}"
+                    : m.Content));
 
         foreach (var boundary in boundaries)
         {
             var segmentMessages = messages.Skip(startIndex).Take(boundary - startIndex).ToList();
             segments.Add(new TopicSegment
             {
-                Content = string.Join("\n", segmentMessages.Select(m => m.Content)),
+                Content = FormatContent(segmentMessages),
                 StartIndex = startIndex,
                 EndIndex = boundary - 1,
                 Messages = segmentMessages
@@ -298,7 +322,7 @@ public sealed class TopicSegmenter
             var segmentMessages = messages.Skip(startIndex).ToList();
             segments.Add(new TopicSegment
             {
-                Content = string.Join("\n", segmentMessages.Select(m => m.Content)),
+                Content = FormatContent(segmentMessages),
                 StartIndex = startIndex,
                 EndIndex = messages.Count - 1,
                 Messages = segmentMessages

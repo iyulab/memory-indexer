@@ -97,6 +97,60 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
     }
 
     /// <inheritdoc />
+    public Task<int> DeleteByUserAsync(string userId, bool hardDelete = false, CancellationToken cancellationToken = default)
+    {
+        var toDelete = _memories.Values.Where(m => m.UserId == userId).ToList();
+        var count = 0;
+
+        foreach (var memory in toDelete)
+        {
+            if (hardDelete)
+            {
+                if (_memories.TryRemove(memory.Id, out _))
+                    count++;
+            }
+            else
+            {
+                memory.IsDeleted = true;
+                memory.UpdatedAt = DateTime.UtcNow;
+                count++;
+            }
+        }
+
+        logger.LogDebug("{DeleteType} deleted {Count} memories for user {UserId}",
+            hardDelete ? "Hard" : "Soft", count, userId);
+        return Task.FromResult(count);
+    }
+
+    /// <inheritdoc />
+    public Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken cancellationToken = default)
+    {
+        var toDelete = _memories.Values
+            .Where(m => m.UserId == userId && m.SessionId == sessionId)
+            .ToList();
+        var count = 0;
+
+        foreach (var memory in toDelete)
+        {
+            if (hardDelete)
+            {
+                if (_memories.TryRemove(memory.Id, out _))
+                    count++;
+            }
+            else
+            {
+                memory.IsDeleted = true;
+                memory.UpdatedAt = DateTime.UtcNow;
+                count++;
+            }
+        }
+
+        logger.LogDebug("{DeleteType} deleted {Count} memories for user {UserId} session {SessionId}",
+            hardDelete ? "Hard" : "Soft", count, userId, sessionId);
+        return Task.FromResult(count);
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<MemorySearchResult>> SearchAsync(
         ReadOnlyMemory<float> queryEmbedding,
         MemorySearchOptions options,
@@ -113,6 +167,9 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
 
         if (options.Types is { Length: > 0 })
             query = query.Where(m => options.Types.Contains(m.Type));
+
+        if (options.Roles is { Length: > 0 })
+            query = query.Where(m => m.Role != null && options.Roles.Contains(m.Role));
 
         if (options.CreatedAfter.HasValue)
             query = query.Where(m => m.CreatedAt >= options.CreatedAfter.Value);
@@ -161,6 +218,9 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
 
             if (options.Types is { Length: > 0 })
                 query = query.Where(m => options.Types.Contains(m.Type));
+
+            if (options.Roles is { Length: > 0 })
+                query = query.Where(m => m.Role != null && options.Roles.Contains(m.Role));
 
             if (options.CreatedAfter.HasValue)
                 query = query.Where(m => m.CreatedAt >= options.CreatedAfter.Value);

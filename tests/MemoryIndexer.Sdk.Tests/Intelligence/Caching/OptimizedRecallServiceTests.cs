@@ -455,6 +455,12 @@ public class OptimizedRecallServiceTests
         public Task<bool> DeleteAsync(Guid id, bool hardDelete = false, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 
+        public Task<int> DeleteByUserAsync(string userId, bool hardDelete = false, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
+        public Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
         public Task<bool> UpdateAsync(MemoryUnit memory, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 

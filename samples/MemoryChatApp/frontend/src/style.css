@@ -240,6 +240,58 @@ header h1 {
   max-width: 100%;
 }
 
+/* Reasoning Section */
+.reasoning-section {
+  margin-bottom: 0.75rem;
+  border: 1px solid #4a4a6a;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.reasoning-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #2d2d44;
+  cursor: pointer;
+  user-select: none;
+}
+
+.reasoning-header:hover {
+  background: #3d3d54;
+}
+
+.reasoning-icon {
+  font-size: 0.9rem;
+}
+
+.reasoning-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9b59b6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reasoning-content {
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  color: #aaa;
+  background: #1a1a2e;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.reasoning-content.collapsed {
+  max-height: 0;
+  padding: 0 0.75rem;
+  overflow: hidden;
+}
+
 .message .meta {
   font-size: 0.75rem;
   color: #666;
@@ -248,6 +300,54 @@ header h1 {
 
 .message.user .meta {
   color: #1a1a2e99;
+}
+
+/* Streaming message styles */
+.message.streaming {
+  min-width: 200px;
+}
+
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.thinking-indicator .thinking-text {
+  font-size: 0.85rem;
+  color: #888;
+  margin-right: 8px;
+}
+
+.thinking-indicator .dot {
+  width: 6px;
+  height: 6px;
+  background: #4ecdc4;
+  border-radius: 50%;
+  animation: thinking-pulse 1.4s infinite ease-in-out both;
+}
+
+.thinking-indicator .dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.thinking-indicator .dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.thinking-indicator .dot:nth-child(4) {
+  animation-delay: 0.48s;
+}
+
+@keyframes thinking-pulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 #chat-form {
@@ -418,6 +518,210 @@ button.danger:hover {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #444;
+}
+
+/* Monitor Panel - 3-Axis Memory */
+.monitor-section {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #333;
+}
+
+.monitor-section:last-child {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 0.7rem;
+  color: #4ecdc4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+/* Tier Items */
+.tier-item {
+  padding: 0.4rem 0.5rem;
+  margin-bottom: 0.35rem;
+  border-radius: 4px;
+  background: #0f0f23;
+  border-left: 3px solid #333;
+}
+
+.tier-item.tier-buffer {
+  border-left-color: #e74c3c;
+}
+
+.tier-item.tier-short {
+  border-left-color: #f39c12;
+}
+
+.tier-item.tier-long {
+  border-left-color: #4ecdc4;
+}
+
+.tier-item.tier-archive {
+  border-left-color: #9b59b6;
+}
+
+.tier-item.tier-inactive {
+  opacity: 0.5;
+}
+
+.tier-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tier-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ccc;
+}
+
+.tier-value {
+  font-size: 0.75rem;
+  color: #4ecdc4;
+  font-weight: 600;
+}
+
+.tier-detail {
+  font-size: 0.65rem;
+  color: #666;
+  margin-top: 0.2rem;
+}
+
+/* Progress Bar for Short-term */
+.tier-progress {
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  margin-top: 0.3rem;
+  overflow: hidden;
+}
+
+.tier-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #f39c12, #e67e22);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Type Colors */
+.type-episodic { color: #4ecdc4; }
+.type-semantic { color: #f39c12; }
+.type-procedural { color: #9b59b6; }
+.type-fact { color: #3498db; }
+.type-reflection { color: #e74c3c; }
+
+/* Memory Badges */
+.memory-badges {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.3rem;
+}
+
+.badge {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-tier {
+  background: #4ecdc4;
+  color: #1a1a2e;
+}
+
+.badge-type {
+  background: #f39c12;
+  color: #1a1a2e;
+}
+
+.badge-scope {
+  background: #9b59b6;
+  color: #fff;
+}
+
+/* Memory Item Updates */
+.memory-item {
+  font-size: 0.75rem;
+  padding: 0.5rem;
+  background: #0f0f23;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid #333;
+}
+
+.memory-item.Episodic {
+  border-left-color: #4ecdc4;
+}
+
+.memory-item.Semantic {
+  border-left-color: #f39c12;
+}
+
+.memory-item.Procedural {
+  border-left-color: #9b59b6;
+}
+
+.memory-item.Fact {
+  border-left-color: #3498db;
+}
+
+.memory-item.Reflection {
+  border-left-color: #e74c3c;
+}
+
+/* KPI Section */
+.kpi-section {
+  background: #0f0f23;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.kpi-item {
+  text-align: center;
+  padding: 0.4rem;
+  background: #1a1a2e;
+  border-radius: 4px;
+}
+
+.kpi-value {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #4ecdc4;
+}
+
+.kpi-label {
+  display: block;
+  font-size: 0.6rem;
+  color: #666;
+  text-transform: uppercase;
+  margin-top: 0.15rem;
+}
+
+/* Turn metrics in message meta */
+.message .meta {
+  font-size: 0.7rem;
+  color: #666;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.message.user .meta {
+  color: #1a1a2e99;
 }
 
 /* Responsive */

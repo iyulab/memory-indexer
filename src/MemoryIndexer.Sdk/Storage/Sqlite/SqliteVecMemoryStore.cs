@@ -473,11 +473,25 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         var sql = BuildFilterQuery(userId, options);
         using var command = CreateCommand(sql);
-        command.Parameters.AddWithValue("@user_id", userId);
+
+        // Only bind @user_id if userId is provided (null = all users for background jobs)
+        if (!string.IsNullOrEmpty(userId))
+        {
+            command.Parameters.AddWithValue("@user_id", userId);
+        }
 
         if (!string.IsNullOrEmpty(options?.SessionId))
         {
             command.Parameters.AddWithValue("@session_id", options.SessionId);
+        }
+
+        // Role filter parameters for multi-party conversation support
+        if (options?.Roles?.Length > 0)
+        {
+            for (var idx = 0; idx < options.Roles.Length; idx++)
+            {
+                command.Parameters.AddWithValue($"@role_{idx}", options.Roles[idx]);
+            }
         }
 
         // Phase 28: Metadata filter parameters
@@ -586,6 +600,15 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             command.Parameters.AddWithValue("@session_id", options.SessionId);
         }
 
+        // Role filter parameters for multi-party conversation support
+        if (options.Roles?.Length > 0)
+        {
+            for (var idx = 0; idx < options.Roles.Length; idx++)
+            {
+                command.Parameters.AddWithValue($"@role_{idx}", options.Roles[idx]);
+            }
+        }
+
         if (options.CreatedAfter.HasValue)
         {
             command.Parameters.AddWithValue("@created_after", options.CreatedAfter.Value.ToString("O"));
@@ -680,6 +703,67 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         }
 
         return rowsAffected > 0;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> DeleteByUserAsync(string userId, bool hardDelete = false, CancellationToken cancellationToken = default)
+    {
+        await EnsureCollectionExistsAsync(cancellationToken);
+
+        string sql;
+        if (hardDelete)
+        {
+            sql = $"DELETE FROM {TableName} WHERE user_id = @user_id";
+        }
+        else
+        {
+            sql = $"UPDATE {TableName} SET is_deleted = 1, updated_at = @updated_at WHERE user_id = @user_id AND is_deleted = 0";
+        }
+
+        using var command = CreateCommand(sql);
+        command.Parameters.AddWithValue("@user_id", userId);
+        if (!hardDelete)
+        {
+            command.Parameters.AddWithValue("@updated_at", DateTime.UtcNow.ToString("O"));
+        }
+
+        var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+
+        _logger.LogDebug("{DeleteType} deleted {Count} memories for user {UserId}",
+            hardDelete ? "Hard" : "Soft", rowsAffected, userId);
+
+        return rowsAffected;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken cancellationToken = default)
+    {
+        await EnsureCollectionExistsAsync(cancellationToken);
+
+        string sql;
+        if (hardDelete)
+        {
+            sql = $"DELETE FROM {TableName} WHERE user_id = @user_id AND session_id = @session_id";
+        }
+        else
+        {
+            sql = $"UPDATE {TableName} SET is_deleted = 1, updated_at = @updated_at WHERE user_id = @user_id AND session_id = @session_id AND is_deleted = 0";
+        }
+
+        using var command = CreateCommand(sql);
+        command.Parameters.AddWithValue("@user_id", userId);
+        command.Parameters.AddWithValue("@session_id", sessionId);
+        if (!hardDelete)
+        {
+            command.Parameters.AddWithValue("@updated_at", DateTime.UtcNow.ToString("O"));
+        }
+
+        var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+
+        _logger.LogDebug("{DeleteType} deleted {Count} memories for user {UserId} session {SessionId}",
+            hardDelete ? "Hard" : "Soft", rowsAffected, userId, sessionId);
+
+        return rowsAffected;
     }
 
     /// <inheritdoc />
@@ -1011,9 +1095,15 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         return memory;
     }
 
-    private static string BuildFilterQuery(string userId, MemoryFilterOptions? options)
+    private static string BuildFilterQuery(string? userId, MemoryFilterOptions? options)
     {
-        var conditions = new List<string> { "user_id = @user_id" };
+        var conditions = new List<string>();
+
+        // Only add user_id filter if userId is provided (null = all users)
+        if (!string.IsNullOrEmpty(userId))
+        {
+            conditions.Add("user_id = @user_id");
+        }
 
         if (options?.IncludeDeleted != true)
         {
@@ -1029,6 +1119,13 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         {
             var typeConditions = string.Join(" OR ", options.Types.Select(t => $"type = {(int)t}"));
             conditions.Add($"({typeConditions})");
+        }
+
+        // Role filtering for multi-party conversation support
+        if (options?.Roles?.Length > 0)
+        {
+            var roleConditions = string.Join(" OR ", options.Roles.Select((_, idx) => $"role = @role_{idx}"));
+            conditions.Add($"({roleConditions})");
         }
 
         // Phase 51: Tier filtering (3-axis model support)
@@ -1055,8 +1152,11 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         var orderBy = "ORDER BY created_at DESC";
         var limit = options?.Limit > 0 ? $"LIMIT {options.Limit}" : "";
+        var whereClause = conditions.Count > 0
+            ? $"WHERE {string.Join(" AND ", conditions)}"
+            : "";
 
-        return $"SELECT * FROM {TableName} WHERE {string.Join(" AND ", conditions)} {orderBy} {limit}";
+        return $"SELECT * FROM {TableName} {whereClause} {orderBy} {limit}";
     }
 
     /// <summary>
@@ -1108,6 +1208,13 @@ WITH tenant_scope AS (
         {
             var typeConditions = string.Join(" OR ", options.Types.Select(t => $"type = {(int)t}"));
             additionalConditions.Add($"({typeConditions})");
+        }
+
+        // Role filtering for multi-party conversation support
+        if (options.Roles?.Length > 0)
+        {
+            var roleConditions = string.Join(" OR ", options.Roles.Select((_, idx) => $"role = @role_{idx}"));
+            additionalConditions.Add($"({roleConditions})");
         }
 
         if (options.CreatedAfter.HasValue)

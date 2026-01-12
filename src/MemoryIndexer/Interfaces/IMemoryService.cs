@@ -30,6 +30,7 @@ public interface IMemoryService
     /// </summary>
     /// <param name="userId">User identifier</param>
     /// <param name="content">Content to remember</param>
+    /// <param name="role">Role of the message sender (user, assistant, system). Preserved for episodic memories.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Task representing the async operation</returns>
     /// <remarks>
@@ -38,10 +39,12 @@ public interface IMemoryService
     /// - Scope: Session (default for non-session-aware calls)
     /// - Tier: Short (suitable for general use)
     /// - Creates implicit session ID if not provided
+    /// - Role preserved in T0-T2 tiers, abstracted in T3 (semantic)
     /// </remarks>
     Task RememberAsync(
         string userId,
         string content,
+        string? role = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -51,6 +54,7 @@ public interface IMemoryService
     /// <param name="userId">User identifier</param>
     /// <param name="sessionId">Session identifier</param>
     /// <param name="content">Content to remember</param>
+    /// <param name="role">Role of the message sender (user, assistant, system). Preserved for episodic memories.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Task representing the async operation</returns>
     /// <remarks>
@@ -59,11 +63,13 @@ public interface IMemoryService
     /// - Scope: Session (explicit session context)
     /// - Tier: Short (suitable for general use)
     /// - Enables session-scoped recall
+    /// - Role preserved in T0-T2 tiers, abstracted in T3 (semantic)
     /// </remarks>
     Task RememberAsync(
         string userId,
         string sessionId,
         string content,
+        string? role = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

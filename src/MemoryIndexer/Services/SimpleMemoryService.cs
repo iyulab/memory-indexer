@@ -42,6 +42,7 @@ public sealed class SimpleMemoryService : IMemoryService
     public async Task RememberAsync(
         string userId,
         string content,
+        string? role = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -50,7 +51,7 @@ public sealed class SimpleMemoryService : IMemoryService
         // Level 0: Zero-Config - create implicit session
         var sessionId = GetOrCreateImplicitSession(userId);
 
-        await RememberAsync(userId, sessionId, content, cancellationToken);
+        await RememberAsync(userId, sessionId, content, role, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -58,14 +59,17 @@ public sealed class SimpleMemoryService : IMemoryService
         string userId,
         string sessionId,
         string content,
+        string? role = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
 
-        _logger.LogDebug("RememberAsync: UserId={UserId}, SessionId={SessionId}, Content={Content}",
-            userId, sessionId, content.Substring(0, Math.Min(50, content.Length)));
+        var effectiveRole = role ?? "user";
+
+        _logger.LogDebug("RememberAsync: UserId={UserId}, SessionId={SessionId}, Role={Role}, Content={Content}",
+            userId, sessionId, effectiveRole, content.Substring(0, Math.Min(50, content.Length)));
 
         // Auto-classify using IMemoryClassifier
         var classification = await _classifier.ClassifyAsync(
@@ -74,7 +78,7 @@ public sealed class SimpleMemoryService : IMemoryService
             {
                 UserId = userId,
                 SessionId = sessionId,
-                MessageRole = "user"
+                MessageRole = effectiveRole
             },
             cancellationToken);
 
@@ -95,7 +99,7 @@ public sealed class SimpleMemoryService : IMemoryService
         }
 
         // Record turn for topic tracking
-        await _scopeManager.RecordTurnAsync(content, role: "user", cancellationToken);
+        await _scopeManager.RecordTurnAsync(content, role: effectiveRole, cancellationToken);
 
         // Resolve scope using importance and type
         var scope = await _scopeManager.ResolveScopeAsync(
@@ -111,6 +115,7 @@ public sealed class SimpleMemoryService : IMemoryService
         {
             UserId = userId,
             SessionId = sessionId,
+            Role = effectiveRole,  // Preserve role for episodic memories
             Content = content,
             Type = classification.Type,
             Scope = scope,

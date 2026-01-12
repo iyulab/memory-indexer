@@ -220,6 +220,75 @@ public class SensoryPromoterServiceTests
         result.CreatedMemories.Should().NotBeEmpty();
     }
 
+    [Fact]
+    public async Task PromoteItemsAsync_PreservesRoleInMemoryUnit()
+    {
+        // Arrange - all items have same role (dominantRole case)
+        var items = new List<SensoryMemory>
+        {
+            new SensoryMemory
+            {
+                Content = "User question 1",
+                UserId = "user-1",
+                Role = "user"
+            },
+            new SensoryMemory
+            {
+                Content = "User question 2",
+                UserId = "user-1",
+                Role = "user"
+            }
+        };
+
+        // Act
+        var result = await _promoter.PromoteItemsAsync(items);
+
+        // Assert - Role should be preserved in MemoryUnit
+        result.Success.Should().BeTrue();
+        result.CreatedMemories.Should().NotBeEmpty();
+        result.CreatedMemories[0].Role.Should().Be("user");
+    }
+
+    [Fact]
+    public async Task PromoteItemsAsync_MultipleRoles_StoresDominantRole()
+    {
+        // Arrange - mixed roles, "assistant" is dominant (2 vs 1)
+        var items = new List<SensoryMemory>
+        {
+            new SensoryMemory
+            {
+                Content = "User question",
+                UserId = "user-1",
+                Role = "user"
+            },
+            new SensoryMemory
+            {
+                Content = "Assistant response 1",
+                UserId = "user-1",
+                Role = "assistant"
+            },
+            new SensoryMemory
+            {
+                Content = "Assistant response 2",
+                UserId = "user-1",
+                Role = "assistant"
+            }
+        };
+
+        // Act
+        var result = await _promoter.PromoteItemsAsync(items);
+
+        // Assert - dominant role (assistant) should be stored
+        result.Success.Should().BeTrue();
+        result.CreatedMemories.Should().NotBeEmpty();
+        result.CreatedMemories[0].Role.Should().Be("assistant");
+        // Also verify roles metadata contains all unique roles
+        result.CreatedMemories[0].Metadata.Should().NotBeNull();
+        result.CreatedMemories[0].Metadata!.Should().ContainKey("roles");
+        result.CreatedMemories[0].Metadata!["roles"].Should().Contain("user");
+        result.CreatedMemories[0].Metadata!["roles"].Should().Contain("assistant");
+    }
+
     #endregion
 
     #region CheckPendingPromotionsAsync Tests

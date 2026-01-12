@@ -189,6 +189,12 @@ public sealed class EncodeRequest
     public string? SessionId { get; init; }
 
     /// <summary>
+    /// Role of the message sender (user, assistant, system).
+    /// Preserved for episodic memories (T0-T2), abstracted for semantic (T3).
+    /// </summary>
+    public string? Role { get; init; }
+
+    /// <summary>
     /// Memory content.
     /// </summary>
     public required string Content { get; init; }

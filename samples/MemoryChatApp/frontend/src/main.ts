@@ -23,12 +23,99 @@ interface ChatResponse {
   memories: Array<{ content: string; type: string; score: number }>
 }
 
+// Streaming event types
+interface StreamEvent {
+  type: 'thinking' | 'reasoning' | 'content' | 'error' | 'done'
+  data: ThinkingData | ReasoningData | ContentData | ErrorData | DoneData
+}
+
+interface ReasoningData {
+  delta: string
+}
+
+interface ThinkingData {
+  step: 'start' | 'buffer' | 'short_term' | 'long_term' | 'done'
+  count?: number
+}
+
+interface ContentData {
+  delta: string
+}
+
+interface ErrorData {
+  message: string
+}
+
+interface DoneData {
+  memoriesUsed: number
+  totalLength: number
+  metrics?: {
+    userTokens: number
+    aiTokens: number
+    contextTokens: number
+    totalTokens: number
+    recallMs: number
+    llmMs: number
+    ttftMs: number
+    totalMs: number
+  }
+}
+
+// KPI tracking
+interface KpiStats {
+  totalTurns: number
+  totalUserTokens: number
+  totalAiTokens: number
+  totalContextTokens: number
+  totalRecallMs: number
+  totalLlmMs: number
+  totalTtftMs: number
+}
+
+const kpiStats: KpiStats = {
+  totalTurns: 0,
+  totalUserTokens: 0,
+  totalAiTokens: 0,
+  totalContextTokens: 0,
+  totalRecallMs: 0,
+  totalLlmMs: 0,
+  totalTtftMs: 0
+}
+
 interface StatusResponse {
   user: string
   total: number
+  tiers: {
+    buffer: {
+      count: number
+      totalTokens: number
+      items: Array<{ content: string; ageSeconds: number }>
+    }
+    shortTerm: {
+      count: number
+      capacity: number
+      items: Array<{ content: string; type: string; ageMinutes: number }>
+    }
+    longTerm: {
+      count: number
+      sessionCount: number
+      userCount: number
+    }
+    archive: {
+      count: number
+      confirmed: number
+    }
+  }
   byType: Record<string, number>
-  bySession: Record<string, number>
-  recent: Array<{ content: string; type: string; createdAt: string; importance: number }>
+  byScope: { session: number; user: number }
+  recent: Array<{
+    content: string
+    type: string
+    tier: string
+    scope: string
+    createdAt: string
+    importance: number
+  }>
   config: { embedding: string; chatLlm: string }
 }
 
@@ -52,6 +139,7 @@ const chatContainerEl = document.getElementById('chat-container')!
 const messagesEl = document.getElementById('messages')!
 const chatForm = document.getElementById('chat-form')!
 const messageInput = document.getElementById('message-input') as HTMLInputElement
+const kpiStatsEl = document.getElementById('kpi-stats')!
 const memoryStatsEl = document.getElementById('memory-stats')!
 const recentMemoriesEl = document.getElementById('recent-memories')!
 const refreshStatusBtn = document.getElementById('refresh-status')!
@@ -103,6 +191,83 @@ const api = {
 
   async clearMemories(userId: string): Promise<void> {
     await fetch(`/api/users/${userId}/memories`, { method: 'DELETE' })
+  },
+
+  // Streaming chat with SSE
+  streamMessage(
+    sessionId: string,
+    message: string,
+    callbacks: {
+      onThinking?: (data: ThinkingData) => void
+      onReasoning?: (delta: string) => void
+      onContent?: (delta: string) => void
+      onError?: (message: string) => void
+      onDone?: (data: DoneData) => void
+    }
+  ): AbortController {
+    const controller = new AbortController()
+    const url = `/api/chat/stream?sessionId=${encodeURIComponent(sessionId)}&message=${encodeURIComponent(message)}`
+
+    fetch(url, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          callbacks.onError?.(`HTTP ${response.status}`)
+          return
+        }
+
+        const reader = response.body?.getReader()
+        if (!reader) {
+          callbacks.onError?.('No response body')
+          return
+        }
+
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const event = JSON.parse(line.slice(6)) as StreamEvent
+                console.log('[SSE] Received:', event.type, event.data)
+                switch (event.type) {
+                  case 'thinking':
+                    callbacks.onThinking?.(event.data as ThinkingData)
+                    break
+                  case 'reasoning':
+                    callbacks.onReasoning?.((event.data as ReasoningData).delta)
+                    break
+                  case 'content':
+                    callbacks.onContent?.((event.data as ContentData).delta)
+                    break
+                  case 'error':
+                    callbacks.onError?.((event.data as ErrorData).message)
+                    break
+                  case 'done':
+                    callbacks.onDone?.(event.data as DoneData)
+                    break
+                }
+              } catch {
+                // Ignore parse errors
+              }
+            }
+          }
+        }
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          callbacks.onError?.(err.message)
+        }
+      })
+
+    return controller
   }
 }
 
@@ -178,27 +343,136 @@ async function renderSessionList() {
   })
 }
 
+function renderKpi() {
+  if (kpiStats.totalTurns === 0) {
+    kpiStatsEl.innerHTML = ''
+    return
+  }
+
+  const avgUserTokens = Math.round(kpiStats.totalUserTokens / kpiStats.totalTurns)
+  const avgAiTokens = Math.round(kpiStats.totalAiTokens / kpiStats.totalTurns)
+  const avgTtft = Math.round(kpiStats.totalTtftMs / kpiStats.totalTurns)
+  const totalTokens = kpiStats.totalUserTokens + kpiStats.totalAiTokens + kpiStats.totalContextTokens
+  const avgSpeed = kpiStats.totalLlmMs > 0
+    ? ((kpiStats.totalAiTokens / kpiStats.totalLlmMs) * 1000).toFixed(1)
+    : '0'
+
+  kpiStatsEl.innerHTML = `
+    <div class="monitor-section kpi-section">
+      <h4 class="section-title">📊 Session KPI</h4>
+      <div class="kpi-grid">
+        <div class="kpi-item">
+          <span class="kpi-value">${kpiStats.totalTurns}</span>
+          <span class="kpi-label">Turns</span>
+        </div>
+        <div class="kpi-item">
+          <span class="kpi-value">${totalTokens.toLocaleString()}</span>
+          <span class="kpi-label">Total Tokens</span>
+        </div>
+        <div class="kpi-item">
+          <span class="kpi-value">${avgUserTokens}</span>
+          <span class="kpi-label">Avg User</span>
+        </div>
+        <div class="kpi-item">
+          <span class="kpi-value">${avgAiTokens}</span>
+          <span class="kpi-label">Avg AI</span>
+        </div>
+        <div class="kpi-item">
+          <span class="kpi-value">${avgSpeed}</span>
+          <span class="kpi-label">tok/s</span>
+        </div>
+        <div class="kpi-item">
+          <span class="kpi-value">${avgTtft}ms</span>
+          <span class="kpi-label">Avg TTFT</span>
+        </div>
+      </div>
+    </div>
+  `
+}
+
 function renderStatus(status: StatusResponse) {
   configEl.textContent = `LLM: ${status.config.chatLlm} | Embed: ${status.config.embedding}`
 
-  const typeStats = Object.entries(status.byType)
-    .map(([k, v]) => `<div class="stat-row"><span class="stat-label">${k}</span><span class="stat-value">${v}</span></div>`)
-    .join('')
+  const { tiers, byType, byScope } = status
 
-  memoryStatsEl.innerHTML = `
-    <div class="stat-row">
-      <span class="stat-label">Total</span>
-      <span class="stat-value">${status.total}</span>
+  // Tier section
+  const tierHtml = `
+    <div class="monitor-section">
+      <h4 class="section-title">Tiers</h4>
+      <div class="tier-item tier-buffer">
+        <div class="tier-header">
+          <span class="tier-label">T0 Buffer</span>
+          <span class="tier-value">${tiers.buffer.count} items</span>
+        </div>
+        <div class="tier-detail">${tiers.buffer.totalTokens} tokens (est.)</div>
+      </div>
+      <div class="tier-item tier-short">
+        <div class="tier-header">
+          <span class="tier-label">T1 Short-term</span>
+          <span class="tier-value">${tiers.shortTerm.count}/${tiers.shortTerm.capacity}</span>
+        </div>
+        <div class="tier-progress">
+          <div class="tier-progress-bar" style="width: ${(tiers.shortTerm.count / tiers.shortTerm.capacity) * 100}%"></div>
+        </div>
+      </div>
+      <div class="tier-item tier-long">
+        <div class="tier-header">
+          <span class="tier-label">T2 Long-term</span>
+          <span class="tier-value">${tiers.longTerm.count}</span>
+        </div>
+        <div class="tier-detail">Session: ${tiers.longTerm.sessionCount} | User: ${tiers.longTerm.userCount}</div>
+      </div>
+      <div class="tier-item tier-archive ${tiers.archive.count === 0 ? 'tier-inactive' : ''}">
+        <div class="tier-header">
+          <span class="tier-label">T3 Archive</span>
+          <span class="tier-value">${tiers.archive.count}</span>
+        </div>
+        <div class="tier-detail">${tiers.archive.confirmed} confirmed</div>
+      </div>
     </div>
-    ${typeStats}
   `
 
+  // Type section
+  const typeHtml = `
+    <div class="monitor-section">
+      <h4 class="section-title">By Type</h4>
+      ${Object.entries(byType).map(([k, v]) => `
+        <div class="stat-row">
+          <span class="stat-label type-${k.toLowerCase()}">${k}</span>
+          <span class="stat-value">${v}</span>
+        </div>
+      `).join('')}
+    </div>
+  `
+
+  // Scope section
+  const scopeHtml = `
+    <div class="monitor-section">
+      <h4 class="section-title">By Scope</h4>
+      <div class="stat-row">
+        <span class="stat-label">Session (S1)</span>
+        <span class="stat-value">${byScope.session}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">User (S0)</span>
+        <span class="stat-value">${byScope.user}</span>
+      </div>
+    </div>
+  `
+
+  memoryStatsEl.innerHTML = tierHtml + typeHtml + scopeHtml
+
+  // Recent memories
   if (status.recent.length === 0) {
     recentMemoriesEl.innerHTML = '<p style="color:#666;font-size:0.75rem">No memories yet</p>'
   } else {
     recentMemoriesEl.innerHTML = status.recent.map(m => `
       <div class="memory-item ${m.type}">
-        <span class="type">${m.type}</span>
+        <div class="memory-badges">
+          <span class="badge badge-tier">${m.tier}</span>
+          <span class="badge badge-type">${m.type}</span>
+          <span class="badge badge-scope">${m.scope}</span>
+        </div>
         <div class="content">${escapeHtml(m.content)}</div>
         <div class="time">${formatTime(m.createdAt)}</div>
       </div>
@@ -215,6 +489,102 @@ function addMessage(content: string, type: 'user' | 'assistant' | 'system', meta
   `
   messagesEl.appendChild(div)
   messagesEl.scrollTop = messagesEl.scrollHeight
+}
+
+// Streaming message element with thinking indicator and reasoning
+function createStreamingMessage(): {
+  element: HTMLDivElement
+  setThinking: (step: string, count?: number) => void
+  appendReasoning: (delta: string) => void
+  appendContent: (delta: string) => void
+  finish: (meta?: string) => void
+} {
+  const div = document.createElement('div')
+  div.className = 'message assistant streaming'
+
+  const thinkingEl = document.createElement('div')
+  thinkingEl.className = 'thinking-indicator'
+  thinkingEl.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>'
+
+  const reasoningEl = document.createElement('div')
+  reasoningEl.className = 'reasoning-section'
+  reasoningEl.style.display = 'none'
+
+  const reasoningHeader = document.createElement('div')
+  reasoningHeader.className = 'reasoning-header'
+  reasoningHeader.innerHTML = '<span class="reasoning-icon">💭</span><span class="reasoning-title">Reasoning</span>'
+  reasoningHeader.addEventListener('click', () => {
+    reasoningContent.classList.toggle('collapsed')
+  })
+
+  const reasoningContent = document.createElement('div')
+  reasoningContent.className = 'reasoning-content'
+
+  reasoningEl.appendChild(reasoningHeader)
+  reasoningEl.appendChild(reasoningContent)
+
+  const contentEl = document.createElement('div')
+  contentEl.className = 'content'
+  contentEl.style.display = 'none'
+
+  const metaEl = document.createElement('div')
+  metaEl.className = 'meta'
+  metaEl.style.display = 'none'
+
+  div.appendChild(thinkingEl)
+  div.appendChild(reasoningEl)
+  div.appendChild(contentEl)
+  div.appendChild(metaEl)
+  messagesEl.appendChild(div)
+  messagesEl.scrollTop = messagesEl.scrollHeight
+
+  const stepLabels: Record<string, string> = {
+    start: 'Thinking...',
+    buffer: 'Checking buffer',
+    short_term: 'Searching short-term memory',
+    long_term: 'Searching long-term memory',
+    done: 'Preparing response...'
+  }
+
+  return {
+    element: div,
+    setThinking(step: string, count?: number) {
+      console.log('[UI] setThinking:', step, count)
+      const label = stepLabels[step] || step
+      const countText = count !== undefined ? ` (${count} found)` : ''
+      thinkingEl.innerHTML = `<span class="thinking-text">${label}${countText}</span><span class="dot"></span><span class="dot"></span><span class="dot"></span>`
+      thinkingEl.style.display = 'flex'
+      messagesEl.scrollTop = messagesEl.scrollHeight
+    },
+    appendReasoning(delta: string) {
+      if (reasoningEl.style.display === 'none') {
+        thinkingEl.style.display = 'none'
+        reasoningEl.style.display = 'block'
+      }
+      reasoningContent.textContent += delta
+      messagesEl.scrollTop = messagesEl.scrollHeight
+    },
+    appendContent(delta: string) {
+      if (contentEl.style.display === 'none') {
+        thinkingEl.style.display = 'none'
+        // Collapse reasoning when content starts
+        if (reasoningEl.style.display === 'block') {
+          reasoningContent.classList.add('collapsed')
+        }
+        contentEl.style.display = 'block'
+      }
+      contentEl.textContent += delta
+      messagesEl.scrollTop = messagesEl.scrollHeight
+    },
+    finish(meta?: string) {
+      div.classList.remove('streaming')
+      thinkingEl.remove()
+      if (meta) {
+        metaEl.textContent = meta
+        metaEl.style.display = 'block'
+      }
+    }
+  }
 }
 
 // Actions
@@ -237,6 +607,16 @@ async function selectUser(user: User) {
 async function selectSession(session: Session) {
   currentSession = session
   messagesEl.innerHTML = ''
+
+  // Reset KPI for new session
+  kpiStats.totalTurns = 0
+  kpiStats.totalUserTokens = 0
+  kpiStats.totalAiTokens = 0
+  kpiStats.totalContextTokens = 0
+  kpiStats.totalRecallMs = 0
+  kpiStats.totalLlmMs = 0
+  kpiStats.totalTtftMs = 0
+  renderKpi()
 
   noSessionEl.classList.add('hidden')
   chatContainerEl.classList.remove('hidden')
@@ -307,19 +687,63 @@ chatForm.addEventListener('submit', async (e) => {
   addMessage(message, 'user')
 
   chatForm.classList.add('loading')
-  try {
-    const response = await api.sendMessage(currentSession.id, message)
-    const meta = response.memoriesUsed > 0 ? `Used ${response.memoriesUsed} memories` : undefined
-    addMessage(response.response, 'assistant', meta)
+  const streamingMsg = createStreamingMessage()
 
-    currentSession.messageCount++
-    await renderSessionList()
-    await refreshStatus()
-  } catch (err) {
-    addMessage(`Error: ${err}`, 'system')
-  } finally {
-    chatForm.classList.remove('loading')
-  }
+  api.streamMessage(currentSession.id, message, {
+    onThinking(data) {
+      streamingMsg.setThinking(data.step, data.count)
+    },
+    onReasoning(delta) {
+      streamingMsg.appendReasoning(delta)
+    },
+    onContent(delta) {
+      streamingMsg.appendContent(delta)
+    },
+    onError(errorMsg) {
+      streamingMsg.finish()
+      addMessage(`Error: ${errorMsg}`, 'system')
+      chatForm.classList.remove('loading')
+    },
+    onDone(data) {
+      // Build meta string with metrics
+      let metaParts: string[] = []
+      if (data.memoriesUsed > 0) {
+        metaParts.push(`📚 ${data.memoriesUsed} memories`)
+      }
+
+      if (data.metrics) {
+        const m = data.metrics
+        metaParts.push(`👤 ${m.userTokens} tok`)
+        metaParts.push(`🤖 ${m.aiTokens} tok`)
+        if (m.contextTokens > 0) {
+          metaParts.push(`📋 ${m.contextTokens} ctx`)
+        }
+        const llmSpeed = m.llmMs > 0 ? ((m.aiTokens / m.llmMs) * 1000).toFixed(1) : '0'
+        metaParts.push(`⚡ ${llmSpeed} tok/s`)
+        metaParts.push(`⏱️ ${m.totalMs}ms`)
+
+        // Update KPI
+        kpiStats.totalTurns++
+        kpiStats.totalUserTokens += m.userTokens
+        kpiStats.totalAiTokens += m.aiTokens
+        kpiStats.totalContextTokens += m.contextTokens
+        kpiStats.totalRecallMs += m.recallMs
+        kpiStats.totalLlmMs += m.llmMs
+        kpiStats.totalTtftMs += m.ttftMs
+        renderKpi()
+      }
+
+      streamingMsg.finish(metaParts.length > 0 ? metaParts.join(' | ') : undefined)
+      chatForm.classList.remove('loading')
+
+      // Auto-refresh Memory Monitor
+      if (currentSession) {
+        currentSession.messageCount++
+        renderSessionList()
+        refreshStatus() // Auto-refresh on response complete
+      }
+    }
+  })
 })
 
 refreshStatusBtn.addEventListener('click', async () => {
