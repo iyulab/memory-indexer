@@ -42,6 +42,17 @@ public static class McpServerExtensions
     }
 
     /// <summary>
+    /// Adds Fact Conflict Resolution MCP tools to the server builder.
+    /// Phase v0.9.2: Category-specific conflict detection and resolution.
+    /// </summary>
+    /// <param name="builder">The MCP server builder.</param>
+    /// <returns>The builder for chaining.</returns>
+    public static IMcpServerBuilder WithFactConflictTools(this IMcpServerBuilder builder)
+    {
+        return builder.WithTools<FactConflictTools>();
+    }
+
+    /// <summary>
     /// Adds all Memory Indexer MCP tools to the server builder.
     /// Includes: MemoryTools, ContextTools, and all advanced tools.
     /// </summary>
@@ -53,6 +64,7 @@ public static class McpServerExtensions
             .WithTools<MemoryTools>()
             .WithTools<ContextTools>()
             .WithTools<FactExtractionTools>()
+            .WithTools<FactConflictTools>()
             .WithTools<AdvancedMemoryTools>()
             .WithTools<AutonomousMemoryTools>()
             .WithTools<BackupRestoreTools>()

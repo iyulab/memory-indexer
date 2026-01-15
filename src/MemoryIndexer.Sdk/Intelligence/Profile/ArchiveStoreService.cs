@@ -304,6 +304,169 @@ public sealed class ArchiveStoreService : IArchiveStore
         return _profiles.TryGetValue(userId, out var profile) && !profile.IsEmpty;
     }
 
+    #region Temporal Query Methods (v0.9.2)
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<SemanticStoreEntry>> GetHistoryAsync(
+        string userId,
+        string key,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
+        if (!_profiles.TryGetValue(userId, out var userProfile))
+        {
+            return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>([]);
+        }
+
+        // Build the supersession chain
+        var history = new List<SemanticStoreEntry>();
+        var currentKey = key;
+
+        while (!string.IsNullOrEmpty(currentKey))
+        {
+            if (userProfile.TryGetValue(currentKey, out var entry))
+            {
+                history.Add(entry);
+                currentKey = entry.SupersedesKey;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Also find entries that supersede this one (newer versions)
+        var supersedingEntries = userProfile.Values
+            .Where(e => e.SupersedesKey == key && !history.Contains(e))
+            .OrderByDescending(e => e.Version)
+            .ToList();
+
+        // Return newest to oldest
+        var result = supersedingEntries.Concat(history)
+            .OrderByDescending(e => e.Version)
+            .ThenByDescending(e => e.CreatedAt)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>(result);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<SemanticStoreEntry>> GetValidAtAsync(
+        string userId,
+        DateTime asOfDate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        if (!_profiles.TryGetValue(userId, out var userProfile))
+        {
+            return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>([]);
+        }
+
+        var validEntries = userProfile.Values
+            .Where(e => e.WasValidAt(asOfDate))
+            .OrderByDescending(e => e.Confidence)
+            .ThenByDescending(e => e.ConfirmationCount)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>(validEntries);
+    }
+
+    /// <inheritdoc />
+    public async Task<SemanticStoreEntry?> ArchiveAndUpdateAsync(
+        string userId,
+        string key,
+        string newValue,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newValue);
+
+        if (!_profiles.TryGetValue(userId, out var userProfile))
+        {
+            return null;
+        }
+
+        if (!userProfile.TryGetValue(key, out var existingEntry))
+        {
+            return null;
+        }
+
+        // Create superseding version
+        var newEntry = existingEntry.CreateSupersedingVersion(newValue);
+
+        // Generate new key for archived entry (append version)
+        var archivedKey = $"{key}:v{existingEntry.Version}";
+        existingEntry.Key.GetType(); // Key is init-only, so we need to create a new entry for archive
+
+        // Archive old entry with versioned key
+        var archivedEntry = new SemanticStoreEntry
+        {
+            Key = archivedKey,
+            Value = existingEntry.Value,
+            Category = existingEntry.Category,
+            Confidence = existingEntry.Confidence,
+            ConfirmationCount = existingEntry.ConfirmationCount,
+            SourceSessions = existingEntry.SourceSessions.ToList(),
+            CreatedAt = existingEntry.CreatedAt,
+            UpdatedAt = existingEntry.UpdatedAt,
+            LastAccessedAt = existingEntry.LastAccessedAt,
+            Embedding = existingEntry.Embedding,
+            Metadata = new Dictionary<string, string>(existingEntry.Metadata),
+            ValidFrom = existingEntry.ValidFrom,
+            ValidTo = DateTime.UtcNow, // Mark as no longer valid
+            SupersedesKey = existingEntry.SupersedesKey,
+            Version = existingEntry.Version,
+            IsActive = false
+        };
+
+        // Store archived version
+        userProfile[archivedKey] = archivedEntry;
+
+        // Update the main entry with new value
+        userProfile[key] = new SemanticStoreEntry
+        {
+            Key = key,
+            Value = newValue,
+            Category = existingEntry.Category,
+            Confidence = existingEntry.Confidence,
+            ConfirmationCount = 1, // Reset for new version
+            SourceSessions = [],
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = null,
+            SupersedesKey = archivedKey,
+            Version = existingEntry.Version + 1,
+            IsActive = true,
+            Metadata = new Dictionary<string, string>(existingEntry.Metadata)
+        };
+
+        // Generate embedding for the updated entry
+        if (_options.EnableSemanticSearch)
+        {
+            try
+            {
+                var embedding = await _embeddingService.GenerateEmbeddingAsync(
+                    $"{key}: {newValue}", cancellationToken);
+                userProfile[key].Embedding = embedding;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to generate embedding for updated entry {Key}", key);
+            }
+        }
+
+        _logger.LogDebug(
+            "Archived entry {OldKey} (v{OldVersion}) and created new version {NewKey} (v{NewVersion})",
+            archivedKey, existingEntry.Version, key, existingEntry.Version + 1);
+
+        return userProfile[key];
+    }
+
+    #endregion
+
     /// <summary>
     /// Calculates cosine similarity between two embeddings.
     /// </summary>

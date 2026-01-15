@@ -218,6 +218,9 @@ public static class ServiceCollectionExtensions
         // Enables Buffer → Archive direct path for confidence ≥ 0.9
         services.TryAddSingleton<IFastTrackPromoter, FastTrackPromoterService>();
 
+        // Register fact validator for category-specific conflict resolution (Phase v0.9.2)
+        services.TryAddSingleton<IFactValidator, FactValidatorService>();
+
         // Register memory conflict resolver (Phase 26)
         services.TryAddSingleton<IMemoryConflictResolver, RecencyWeightedResolver>();
         services.TryAddSingleton<LlmConflictDetector>();

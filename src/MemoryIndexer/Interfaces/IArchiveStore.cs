@@ -128,6 +128,50 @@ public interface IArchiveStore
     /// <param name="userId">The user ID.</param>
     /// <returns>True if semantic store exists.</returns>
     bool HasProfile(string userId);
+
+    #region Temporal Query Methods (v0.9.2)
+
+    /// <summary>
+    /// Gets the version history of a semantic entry.
+    /// Returns all versions in the supersession chain.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="key">The current entry key.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>All versions from newest to oldest.</returns>
+    Task<IReadOnlyList<SemanticStoreEntry>> GetHistoryAsync(
+        string userId,
+        string key,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all entries that were valid at a specific point in time.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="asOfDate">The date to query validity at.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Entries valid at the specified time.</returns>
+    Task<IReadOnlyList<SemanticStoreEntry>> GetValidAtAsync(
+        string userId,
+        DateTime asOfDate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Archives an entry by marking it as superseded.
+    /// Creates a new version with updated value.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="key">The entry key to archive.</param>
+    /// <param name="newValue">The new value for the superseding entry.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The new superseding entry, or null if original not found.</returns>
+    Task<SemanticStoreEntry?> ArchiveAndUpdateAsync(
+        string userId,
+        string key,
+        string newValue,
+        CancellationToken cancellationToken = default);
+
+    #endregion
 }
 
 /// <summary>
@@ -190,10 +234,88 @@ public sealed class SemanticStoreEntry
     /// </summary>
     public Dictionary<string, string> Metadata { get; init; } = [];
 
+    #region Bi-Temporal Properties (v0.9.2)
+
+    /// <summary>
+    /// When this fact became true in reality (event time).
+    /// Null indicates the fact is timeless or valid since unknown time.
+    /// </summary>
+    public DateTime? ValidFrom { get; set; }
+
+    /// <summary>
+    /// When this fact stopped being true in reality (event time).
+    /// Null indicates the fact is currently valid.
+    /// </summary>
+    public DateTime? ValidTo { get; set; }
+
+    /// <summary>
+    /// Key of the entry this fact supersedes.
+    /// Forms a version chain for temporal fact evolution.
+    /// </summary>
+    public string? SupersedesKey { get; set; }
+
+    /// <summary>
+    /// Version number for this fact (increments on update).
+    /// </summary>
+    public int Version { get; set; } = 1;
+
+    /// <summary>
+    /// Whether this entry is currently active (not superseded).
+    /// </summary>
+    public bool IsActive { get; set; } = true;
+
+    #endregion
+
     /// <summary>
     /// Whether this entry is fully confirmed (meets AND logic requirements).
     /// </summary>
     public bool IsConfirmed => ConfirmationCount >= 3 && Confidence >= 0.8f;
+
+    /// <summary>
+    /// Whether this entry is currently valid (active and within valid time range).
+    /// </summary>
+    public bool IsCurrentlyValid => IsActive && (ValidTo == null || ValidTo > DateTime.UtcNow);
+
+    /// <summary>
+    /// Checks if this fact was valid at a specific point in time.
+    /// </summary>
+    /// <param name="asOfDate">The date to check validity at.</param>
+    /// <returns>True if the fact was valid at that time.</returns>
+    public bool WasValidAt(DateTime asOfDate)
+    {
+        var fromOk = ValidFrom == null || ValidFrom <= asOfDate;
+        var toOk = ValidTo == null || ValidTo > asOfDate;
+        return fromOk && toOk;
+    }
+
+    /// <summary>
+    /// Creates a new version that supersedes this entry.
+    /// </summary>
+    /// <param name="newValue">The new value.</param>
+    /// <param name="newKey">Optional new key (defaults to same key).</param>
+    /// <returns>A new entry that supersedes this one.</returns>
+    public SemanticStoreEntry CreateSupersedingVersion(string newValue, string? newKey = null)
+    {
+        // Mark this entry as no longer valid
+        ValidTo = DateTime.UtcNow;
+        IsActive = false;
+
+        return new SemanticStoreEntry
+        {
+            Key = newKey ?? Key,
+            Value = newValue,
+            Category = Category,
+            Confidence = Confidence,
+            ConfirmationCount = 1, // Reset confirmation for new version
+            SourceSessions = [],
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = null,
+            SupersedesKey = Key,
+            Version = Version + 1,
+            IsActive = true,
+            Metadata = new Dictionary<string, string>(Metadata)
+        };
+    }
 }
 
 /// <summary>
