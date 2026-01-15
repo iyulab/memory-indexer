@@ -334,6 +334,17 @@ When new facts conflict with existing ones, stricter resolution criteria are nee
 - [x] `calculate_decay` - Calculate decayed confidence for a fact
 - [x] `export_profile` - GDPR-compliant profile export
 
+*REST API (ProfileController):*
+- [x] GET /api/profile/stats - Profile statistics with confidence metrics
+- [x] POST /api/profile/snapshots - Create point-in-time profile snapshot
+- [x] GET /api/profile/snapshots/{snapshotId} - Get specific snapshot
+- [x] GET /api/profile/snapshots - List available snapshots with pagination
+- [x] POST /api/profile/snapshots/compare - Compare two snapshots
+- [x] GET /api/profile/stale-facts - Get facts needing re-confirmation
+- [x] DELETE /api/profile/snapshots/{snapshotId} - Delete snapshot
+- [x] CancellationToken support for all endpoints
+- [x] Unit tests (16 tests)
+
 ---
 
 ### v0.11.0 - Retention Policy & Evaluation (Complete)
