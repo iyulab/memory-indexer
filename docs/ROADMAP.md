@@ -153,18 +153,152 @@ MemoryIndexer.Stack        # Meta-package bundling all packages
 **Planned (Phase 18.3+):**
 - [ ] REST API wrapper with OpenAPI
 
-### v0.9.0+ - Advanced Benchmarks (Future)
+### v0.9.0 - Context Budget API (In Progress)
+
+**Token-Budget-Aware Context Building:**
+
+*Problem Statement:*
+Current recall is item-count based, not token-aware. Sequential conversations (games, multi-turn tasks) suffer from insufficient recent context while semantic recall works well for RAG/QA scenarios.
+
+*Core Features:*
+- [x] `IContextStrategy` interface for pluggable context building
+- [x] `ContextBudget` configuration (RecentTokens, SemanticTokens, EpisodicTokens, TotalBudget)
+- [x] Token counting utilities (ITokenCounter with ApproximateTokenCounter)
+
+*Flexible Recall APIs:*
+- [x] `GetRecentTurns(maxTokens)` - Sequential recent conversation up to N tokens
+- [x] `GetSemanticContext(query, maxTokens)` - Query-relevant memories within budget
+- [x] `GetSessionContext(sessionId, maxTokens)` - Session-scoped episodic recall
+- [x] `GetUserFactsAsync(userId, maxTokens)` - User-specific semantic facts
+
+*Built-in Strategies:*
+- [x] `BalancedStrategy` - 30% recent, 25% semantic, 25% episodic, 20% facts
+- [x] `RecentHeavyStrategy` - 45% recent, 10% semantic, 35% episodic, 10% facts (games, conversations)
+- [x] `SemanticHeavyStrategy` - 15% recent, 45% semantic, 15% episodic, 25% facts (RAG, QA)
+- [x] `CustomStrategy` - Consumer-defined allocation
+
+*Session Isolation:*
+- [x] Episodic memories isolated to session scope
+- [x] Semantic/Fact memories shared across sessions (user scope)
+- [x] Clear separation of session context vs user knowledge
+
+*MCP Tool Extensions:*
+- [ ] `context_build` - Token-budget-aware context building
+- [ ] `recent_conversation` - Get last N tokens of conversation
+- [ ] `session_summary` - Summarized session context
+
+---
+
+### v0.9.1 - Intelligent Fact Extraction (Planned)
+
+**AI-Based Fact Detection and Fast-Track Promotion:**
+
+*Problem Statement:*
+High-confidence user facts (e.g., "My name is John") should be immediately promoted to user-level storage, but quoted/fictional content (e.g., "In the novel, 'My name is Lincoln'") must be filtered out. This requires AI-based context detection.
+
+*Core Features:*
+- [x] `IFactExtractor` interface for context-aware fact extraction
+- [x] `LlmFactExtractor` with confidence scoring and context detection
+- [x] `MockFactExtractor` for testing
+- [x] `PromotionPath` enum (FastTrack, Standard, SessionOnly, Discard)
+
+*Context Detection:*
+- [x] Direct statements ("My name is John") → FastTrack
+- [x] Quoted text ("In the book, he says...") → SessionOnly
+- [x] Hypothetical ("If I were...") → SessionOnly
+- [x] Narrative/RolePlay → SessionOnly
+- [x] Questions → Discard
+
+*Fact Categories:*
+- [x] Identity (name, age, occupation)
+- [x] Preference (likes, favorites)
+- [x] Relationship (family, friends)
+- [x] Location (address, workplace)
+- [x] Professional (job, company)
+- [x] Health (allergies, conditions)
+
+*Fast-Track Promotion Pipeline:*
+- [ ] `IFastTrackPromoter` interface
+- [ ] Integration with `SensoryPromoterService`
+- [ ] Fact extraction during buffer drain
+- [ ] Direct Buffer → Archive path for confidence ≥ 0.9
+- [ ] MCP tools: `extract_facts`, `get_user_profile`
+
+---
+
+### v0.9.2 - Fact Conflict Resolution (Planned)
+
+**Stricter Criteria for Conflicting Facts:**
+
+*Problem Statement:*
+When new facts conflict with existing ones, stricter resolution criteria are needed. Simple recency-based resolution is insufficient for identity facts (e.g., name changes should require explicit confirmation).
+
+*Conflict Detection:*
+- [ ] Enhanced semantic similarity for fact comparison
+- [ ] Subject-Predicate-Object (SPO) triple matching
+- [ ] Confidence differential threshold (+0.2 for auto-resolution)
+- [ ] Category-specific resolution rules
+
+*Resolution Strategies:*
+- [ ] Identity facts: Require explicit confirmation for changes
+- [ ] Preference facts: Allow update with moderate confidence
+- [ ] Temporal facts: Archive old, add new with timestamps
+- [ ] Contradictions: Mark for review if confidence difference < 0.2
+
+*Bi-Temporal Model:*
+- [ ] `ValidFrom` timestamp (when fact became true)
+- [ ] `ValidUntil` timestamp (when fact stopped being true)
+- [ ] Temporal queries ("What was user's name in 2024?")
+- [ ] Fact history chain via `SupersedesId`
+
+*MCP Tools:*
+- [ ] `validate_fact` - Check for conflicts before storing
+- [ ] `resolve_conflict` - Apply resolution strategy
+- [ ] `get_fact_history` - Retrieve temporal fact chain
+
+---
+
+### v0.10.0 - User Profile Evolution (Future)
+
+**Long-Term User Knowledge Management:**
+
+*User Fact Graph:*
+- [ ] Entity-relationship model for user facts
+- [ ] Fact clustering by category
+- [ ] Cross-fact inference (e.g., "lives in Seoul" + "works at Samsung" → "commutes in Seoul")
+
+*Profile Evolution:*
+- [ ] Change detection and tracking
+- [ ] Confidence decay over time
+- [ ] Re-confirmation prompts for stale facts
+- [ ] Profile snapshot/versioning
+
+*Advanced Queries:*
+- [ ] Temporal range queries
+- [ ] Category-filtered retrieval
+- [ ] Confidence-weighted results
+- [ ] Profile diff (what changed since last session)
+
+*Privacy & Compliance:*
+- [ ] Fact deletion with cascade
+- [ ] Export user profile (GDPR)
+- [ ] Fact sensitivity classification
+- [ ] Retention policies by category
+
+### v1.0.0+ - Advanced Benchmarks & Administration (Future)
 
 **Extended Evaluation:**
 - [ ] RULER integration (multi-needle retrieval, reasoning)
 - [ ] LongBench subset (QA, summarization tasks)
 - [ ] InfiniteBench (100K+ token extreme tests)
 - [ ] Automated scorecard generation
+- [ ] Fact extraction accuracy benchmarks
 
 **Administration:**
-- Memory analytics dashboard
-- Usage reporting APIs
-- GDPR compliance tools, data retention policies
+- [ ] Memory analytics dashboard
+- [ ] Usage reporting APIs
+- [ ] GDPR compliance tools, data retention policies
+- [ ] User profile management UI
 
 ---
 
@@ -176,4 +310,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-10 (v0.8.0-preview)*
+*Last updated: 2026-01-15 (v0.9.1-preview)*

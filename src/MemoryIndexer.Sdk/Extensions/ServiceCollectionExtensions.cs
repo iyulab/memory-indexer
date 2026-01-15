@@ -1,6 +1,8 @@
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Services;
+using MemoryIndexer.Services.ContextBuilding;
+using MemoryIndexer.Services.TokenCounting;
 using Microsoft.Extensions.Hosting;
 using MemoryIndexer.Sdk.Completion.Providers;
 using MemoryIndexer.Sdk.Embedding.Providers;
@@ -95,6 +97,10 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IScopeManager, ScopeManager>();
         services.TryAddSingleton<ITierManager, TierManager>();
         services.TryAddSingleton<IVirtualContextManager, VirtualContextManager>();
+
+        // Register Context Budget API services (Phase v0.9.0)
+        services.TryAddSingleton<ITokenCounter, ApproximateTokenCounter>();
+        services.TryAddSingleton<IContextBuilder, ContextBuilder>();
 
         // Register Sensory buffer (Tier 0) - Phase 14 → Cognitive terminology (Phase 30)
         services.TryAddSingleton<IBuffer, BufferService>();
@@ -203,6 +209,10 @@ public static class ServiceCollectionExtensions
 
         // Register knowledge extractor (Phase 25)
         services.TryAddSingleton<IKnowledgeExtractor, LlmKnowledgeExtractor>();
+
+        // Register fact extractor with context awareness (Phase v0.9.1)
+        // Handles direct statements with promotion path determination
+        services.TryAddSingleton<IFactExtractor, LlmFactExtractor>();
 
         // Register memory conflict resolver (Phase 26)
         services.TryAddSingleton<IMemoryConflictResolver, RecencyWeightedResolver>();

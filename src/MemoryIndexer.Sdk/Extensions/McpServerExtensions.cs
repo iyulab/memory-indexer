@@ -18,4 +18,38 @@ public static class McpServerExtensions
     {
         return builder.WithTools<MemoryTools>();
     }
+
+    /// <summary>
+    /// Adds Context Budget API MCP tools to the server builder.
+    /// Phase v0.9.0: Token-aware context building tools.
+    /// </summary>
+    /// <param name="builder">The MCP server builder.</param>
+    /// <returns>The builder for chaining.</returns>
+    public static IMcpServerBuilder WithContextTools(this IMcpServerBuilder builder)
+    {
+        return builder.WithTools<ContextTools>();
+    }
+
+    /// <summary>
+    /// Adds all Memory Indexer MCP tools to the server builder.
+    /// Includes: MemoryTools, ContextTools, and all advanced tools.
+    /// </summary>
+    /// <param name="builder">The MCP server builder.</param>
+    /// <returns>The builder for chaining.</returns>
+    public static IMcpServerBuilder WithAllMemoryIndexerTools(this IMcpServerBuilder builder)
+    {
+        return builder
+            .WithTools<MemoryTools>()
+            .WithTools<ContextTools>()
+            .WithTools<AdvancedMemoryTools>()
+            .WithTools<AutonomousMemoryTools>()
+            .WithTools<BackupRestoreTools>()
+            .WithTools<ConflictResolutionTools>()
+            .WithTools<AdaptiveRetrievalTools>()
+            .WithTools<GraphTraversalTools>()
+            .WithTools<KnowledgeGraphTools>()
+            .WithTools<ResourceManagementTools>()
+            .WithTools<SecurityTools>()
+            .WithTools<SelfEditingMemoryTools>();
+    }
 }
