@@ -322,24 +322,33 @@ When new facts conflict with existing ones, stricter resolution criteria are nee
 
 ---
 
-### v0.11.0 - Retention Policy & Evaluation (Future)
+### v0.11.0 - Retention Policy & Evaluation (Complete)
 
 **Retention Policy Engine:**
-- [ ] `IRetentionPolicy` interface for category-specific retention rules
-- [ ] `DefaultRetentionPolicy` with sensible defaults per category
-- [ ] `IRetentionPolicyService` for automatic cleanup/archival
-- [ ] Category rules: Identity (∞), Preference (365d), Skill (180d), etc.
-- [ ] MCP tools: `apply_retention_policy`, `get_retention_rules`, `preview_cleanup`
+- [x] `IRetentionPolicy` interface for category-specific retention rules
+- [x] `DefaultRetentionPolicy` with GDPR-aligned sensible defaults per category
+- [x] `RetentionPolicyService` for preview and cleanup operations
+- [x] Category rules: Fact (∞), Preference (365d), Skill (730d), Goal (180d), etc.
+- [x] Confidence decay integration for retention decisions
+- [x] MCP tools: `preview_cleanup`, `apply_retention_policy`, `get_retention_rules`, `get_retention_rule`, `evaluate_retention`
 
 **Multi-Needle Evaluation (RULER-inspired):**
-- [ ] Extend NIAH tests to support multiple needles
-- [ ] `MultiNeedleTestConfig` with needle arrays
-- [ ] `MultiNeedleTestResult` with RecallCompleteness metric
-- [ ] MK-NIAH (multi-key), MV-NIAH (multi-value), MQ-NIAH (multi-query) variants
+- [x] `MultiNeedleTestConfig` with configurable needle arrays
+- [x] `NeedleInfo` with position and query customization
+- [x] `MultiNeedleTestResult` with RecoveryRate metric
+- [x] `NeedleRecoveryResult` for per-needle tracking
+- [x] Query strategies: CombinedQuery, SeparateQueries, SequentialQueries
+- [x] `RunMultiNeedleTestAsync` in NiahTestRunner
 
-**Metrics Dashboard:**
-- [ ] `InMemoryMetricsDashboard` implementing `IMetricsDashboard`
-- [ ] MCP tools: `get_health_summary`, `get_operation_stats`, `get_performance_metrics`, `get_storage_stats`
+**Operational Metrics Dashboard:**
+- [x] `InMemoryMetricsDashboard` implementing `IMetricsDashboard`
+- [x] Health summary with component status and active alerts
+- [x] Operation statistics (success rate, throughput, ops/second)
+- [x] Performance metrics (latency percentiles P50/P95/P99, cache hit rates)
+- [x] Storage statistics (memory counts, sizes, growth rates)
+- [x] Security metrics (PII detections, injection attempts, security score)
+- [x] Time-series data for trend visualization
+- [x] MCP tools: `get_health_summary`, `get_operation_stats`, `get_performance_metrics`, `get_storage_stats`, `get_security_metrics`, `get_metric_time_series`, `get_dashboard_overview`
 
 *Note: UI dashboards and LLM benchmarks (LongBench, InfiniteBench) are out of scope for the library. These belong in samples or separate packages.*
 
@@ -353,4 +362,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-15 (v0.10.0-complete)*
+*Last updated: 2026-01-15 (v0.11.0-complete)*
