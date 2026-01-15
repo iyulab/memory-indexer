@@ -214,6 +214,10 @@ public static class ServiceCollectionExtensions
         // Handles direct statements with promotion path determination
         services.TryAddSingleton<IFactExtractor, LlmFactExtractor>();
 
+        // Register fast-track promoter for high-confidence facts (Phase v0.9.1)
+        // Enables Buffer → Archive direct path for confidence ≥ 0.9
+        services.TryAddSingleton<IFastTrackPromoter, FastTrackPromoterService>();
+
         // Register memory conflict resolver (Phase 26)
         services.TryAddSingleton<IMemoryConflictResolver, RecencyWeightedResolver>();
         services.TryAddSingleton<LlmConflictDetector>();

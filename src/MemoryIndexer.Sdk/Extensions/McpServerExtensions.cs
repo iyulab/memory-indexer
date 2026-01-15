@@ -31,6 +31,17 @@ public static class McpServerExtensions
     }
 
     /// <summary>
+    /// Adds Fact Extraction MCP tools to the server builder.
+    /// Phase v0.9.1: AI-based fact extraction and user profile management.
+    /// </summary>
+    /// <param name="builder">The MCP server builder.</param>
+    /// <returns>The builder for chaining.</returns>
+    public static IMcpServerBuilder WithFactExtractionTools(this IMcpServerBuilder builder)
+    {
+        return builder.WithTools<FactExtractionTools>();
+    }
+
+    /// <summary>
     /// Adds all Memory Indexer MCP tools to the server builder.
     /// Includes: MemoryTools, ContextTools, and all advanced tools.
     /// </summary>
@@ -41,6 +52,7 @@ public static class McpServerExtensions
         return builder
             .WithTools<MemoryTools>()
             .WithTools<ContextTools>()
+            .WithTools<FactExtractionTools>()
             .WithTools<AdvancedMemoryTools>()
             .WithTools<AutonomousMemoryTools>()
             .WithTools<BackupRestoreTools>()
