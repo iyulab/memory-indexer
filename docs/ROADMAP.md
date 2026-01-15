@@ -153,7 +153,7 @@ MemoryIndexer.Stack        # Meta-package bundling all packages
 **Planned (Phase 18.3+):**
 - [ ] REST API wrapper with OpenAPI
 
-### v0.9.0 - Context Budget API (In Progress)
+### v0.9.0 - Context Budget API (Complete)
 
 **Token-Budget-Aware Context Building:**
 
@@ -183,9 +183,11 @@ Current recall is item-count based, not token-aware. Sequential conversations (g
 - [x] Clear separation of session context vs user knowledge
 
 *MCP Tool Extensions:*
-- [ ] `context_build` - Token-budget-aware context building
-- [ ] `recent_conversation` - Get last N tokens of conversation
-- [ ] `session_summary` - Summarized session context
+- [x] `context_build` - Token-budget-aware context building
+- [x] `get_recent_conversation` - Get last N tokens of conversation
+- [x] `get_session_context` - Session-scoped episodic recall
+- [x] `get_user_facts` - User-scoped persistent facts
+- [x] `get_context_strategies` - List available strategies
 
 ---
 
@@ -310,4 +312,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-15 (v0.9.1-preview)*
+*Last updated: 2026-01-15 (v0.9.0-complete)*
