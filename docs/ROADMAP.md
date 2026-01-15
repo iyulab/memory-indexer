@@ -2,6 +2,14 @@
 
 Development roadmap for Memory Indexer.
 
+## Versioning Policy
+
+> **Major version (v1.0) will only be released after community validation.**
+>
+> All planned features continue incrementally as v0.x (v0.11, v0.12, ...).
+> The v1.0 milestone is reserved for when the project achieves community adoption
+> and stability verification through real-world usage.
+
 ## Released
 
 ### v0.6.0 - Production Readiness (Current)
@@ -314,7 +322,7 @@ When new facts conflict with existing ones, stricter resolution criteria are nee
 
 ---
 
-### v1.0.0+ - Advanced Benchmarks & Administration (Future)
+### v0.11.0 - Advanced Benchmarks & Administration (Future)
 
 **Extended Evaluation:**
 - [ ] RULER integration (multi-needle retrieval, reasoning)
@@ -339,4 +347,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-15 (v0.9.2-complete)*
+*Last updated: 2026-01-15 (v0.10.0-complete)*
