@@ -322,20 +322,26 @@ When new facts conflict with existing ones, stricter resolution criteria are nee
 
 ---
 
-### v0.11.0 - Advanced Benchmarks & Administration (Future)
+### v0.11.0 - Retention Policy & Evaluation (Future)
 
-**Extended Evaluation:**
-- [ ] RULER integration (multi-needle retrieval, reasoning)
-- [ ] LongBench subset (QA, summarization tasks)
-- [ ] InfiniteBench (100K+ token extreme tests)
-- [ ] Automated scorecard generation
-- [ ] Fact extraction accuracy benchmarks
+**Retention Policy Engine:**
+- [ ] `IRetentionPolicy` interface for category-specific retention rules
+- [ ] `DefaultRetentionPolicy` with sensible defaults per category
+- [ ] `IRetentionPolicyService` for automatic cleanup/archival
+- [ ] Category rules: Identity (∞), Preference (365d), Skill (180d), etc.
+- [ ] MCP tools: `apply_retention_policy`, `get_retention_rules`, `preview_cleanup`
 
-**Administration:**
-- [ ] Memory analytics dashboard
-- [ ] Usage reporting APIs
-- [ ] GDPR compliance tools, data retention policies
-- [ ] User profile management UI
+**Multi-Needle Evaluation (RULER-inspired):**
+- [ ] Extend NIAH tests to support multiple needles
+- [ ] `MultiNeedleTestConfig` with needle arrays
+- [ ] `MultiNeedleTestResult` with RecallCompleteness metric
+- [ ] MK-NIAH (multi-key), MV-NIAH (multi-value), MQ-NIAH (multi-query) variants
+
+**Metrics Dashboard:**
+- [ ] `InMemoryMetricsDashboard` implementing `IMetricsDashboard`
+- [ ] MCP tools: `get_health_summary`, `get_operation_stats`, `get_performance_metrics`, `get_storage_stats`
+
+*Note: UI dashboards and LLM benchmarks (LongBench, InfiniteBench) are out of scope for the library. These belong in samples or separate packages.*
 
 ---
 
