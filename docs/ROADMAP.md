@@ -228,7 +228,7 @@ High-confidence user facts (e.g., "My name is John") should be immediately promo
 
 ---
 
-### v0.9.2 - Fact Conflict Resolution (Planned)
+### v0.9.2 - Fact Conflict Resolution (Complete)
 
 **Stricter Criteria for Conflicting Facts:**
 
@@ -236,27 +236,32 @@ High-confidence user facts (e.g., "My name is John") should be immediately promo
 When new facts conflict with existing ones, stricter resolution criteria are needed. Simple recency-based resolution is insufficient for identity facts (e.g., name changes should require explicit confirmation).
 
 *Conflict Detection:*
-- [ ] Enhanced semantic similarity for fact comparison
-- [ ] Subject-Predicate-Object (SPO) triple matching
-- [ ] Confidence differential threshold (+0.2 for auto-resolution)
-- [ ] Category-specific resolution rules
+- [x] Enhanced semantic similarity for fact comparison
+- [x] Subject-Predicate-Object (SPO) triple matching
+- [x] Confidence differential threshold (+0.2 for auto-resolution)
+- [x] Category-specific resolution rules (10 categories)
 
 *Resolution Strategies:*
-- [ ] Identity facts: Require explicit confirmation for changes
-- [ ] Preference facts: Allow update with moderate confidence
-- [ ] Temporal facts: Archive old, add new with timestamps
-- [ ] Contradictions: Mark for review if confidence difference < 0.2
+- [x] Identity facts: Require explicit confirmation for changes
+- [x] Preference facts: Allow update with moderate confidence
+- [x] Temporal facts: Archive old, add new with timestamps
+- [x] Contradictions: Mark for review if confidence difference < 0.2
+- [x] RecencyFirst, ConfidenceFirst, TemporalPartition, KeepBoth, RequireConfirmation
 
 *Bi-Temporal Model:*
-- [ ] `ValidFrom` timestamp (when fact became true)
-- [ ] `ValidUntil` timestamp (when fact stopped being true)
-- [ ] Temporal queries ("What was user's name in 2024?")
-- [ ] Fact history chain via `SupersedesId`
+- [x] `ValidFrom` timestamp (when fact became true)
+- [x] `ValidTo` timestamp (when fact stopped being true)
+- [x] Temporal queries (`GetValidAtAsync` for point-in-time queries)
+- [x] Fact history chain via `SupersedesKey`
+- [x] `WasValidAt()` and `CreateSupersedingVersion()` methods
 
 *MCP Tools:*
-- [ ] `validate_fact` - Check for conflicts before storing
-- [ ] `resolve_conflict` - Apply resolution strategy
-- [ ] `get_fact_history` - Retrieve temporal fact chain
+- [x] `validate_fact` - Check for conflicts before storing
+- [x] `archive_and_update_fact` - Update with version archival
+- [x] `get_fact_history` - Retrieve temporal fact chain
+- [x] `get_facts_valid_at` - Query facts valid at specific date
+- [x] `get_category_rule` - Get resolution rule for category
+- [x] `get_all_category_rules` - List all category rules
 
 ---
 
@@ -312,4 +317,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-15 (v0.9.1-complete)*
+*Last updated: 2026-01-15 (v0.9.2-complete)*
