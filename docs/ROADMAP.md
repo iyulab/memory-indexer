@@ -191,7 +191,7 @@ Current recall is item-count based, not token-aware. Sequential conversations (g
 
 ---
 
-### v0.9.1 - Intelligent Fact Extraction (Planned)
+### v0.9.1 - Intelligent Fact Extraction (Complete)
 
 **AI-Based Fact Detection and Fast-Track Promotion:**
 
@@ -220,11 +220,11 @@ High-confidence user facts (e.g., "My name is John") should be immediately promo
 - [x] Health (allergies, conditions)
 
 *Fast-Track Promotion Pipeline:*
-- [ ] `IFastTrackPromoter` interface
-- [ ] Integration with `SensoryPromoterService`
-- [ ] Fact extraction during buffer drain
-- [ ] Direct Buffer → Archive path for confidence ≥ 0.9
-- [ ] MCP tools: `extract_facts`, `get_user_profile`
+- [x] `IFastTrackPromoter` interface
+- [x] `FastTrackPromoterService` implementation
+- [x] Category mapping (FactCategory ↔ SemanticStoreCategory)
+- [x] Direct Buffer → Archive path for confidence ≥ 0.9
+- [x] MCP tools: `extract_facts`, `get_user_profile`, `get_fact_categories`, `get_promotion_paths`
 
 ---
 
@@ -312,4 +312,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-15 (v0.9.0-complete)*
+*Last updated: 2026-01-15 (v0.9.1-complete)*
