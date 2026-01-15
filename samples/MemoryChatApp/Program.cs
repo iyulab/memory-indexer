@@ -8,6 +8,10 @@ using MemoryIndexer.Sdk.Extensions;
 using SharedLib.Embedding;
 using CachingEmbeddingService = MemoryIndexer.Services.CachingEmbeddingService;
 
+// Context Budget API models
+using ContextBudget = MemoryIndexer.Models.ContextBudget;
+using ContextRequest = MemoryIndexer.Models.ContextRequest;
+
 // Load .env file
 var envPaths = new[] {
     Path.Combine(Directory.GetCurrentDirectory(), ".env"),
@@ -20,16 +24,50 @@ foreach (var path in envPaths.Where(File.Exists))
     break;
 }
 
-// Configuration
+// Configuration - GPUStack (priority) or OpenAI (fallback)
 var gpuStackUrl = Environment.GetEnvironmentVariable("GPUSTACK_URL");
 var gpuStackApiKey = Environment.GetEnvironmentVariable("GPUSTACK_APIKEY");
 var gpuStackModel = Environment.GetEnvironmentVariable("GPUSTACK_MODEL") ?? "gpt-oss-20b";
 var gpuStackEmbedModel = Environment.GetEnvironmentVariable("GPUSTACK_EMBED_MODEL");
-var useGpuStackChat = !string.IsNullOrWhiteSpace(gpuStackUrl) && !string.IsNullOrWhiteSpace(gpuStackApiKey);
-var useGpuStackEmbed = useGpuStackChat && !string.IsNullOrWhiteSpace(gpuStackEmbedModel);
 
-Console.WriteLine($"[CONFIG] Chat LLM: {(useGpuStackChat ? gpuStackModel : "Echo Mode")}");
-Console.WriteLine($"[CONFIG] Embedding: {(useGpuStackEmbed ? gpuStackEmbedModel : "LMSupply Local")}");
+var openaiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+var openaiModel = Environment.GetEnvironmentVariable("OPENAI_MODEL") ?? "gpt-4o-mini";
+var openaiEmbedModel = Environment.GetEnvironmentVariable("OPENAI_EMBED_MODEL") ?? "text-embedding-3-small";
+
+// Determine which provider to use
+var useGpuStack = !string.IsNullOrWhiteSpace(gpuStackUrl) && !string.IsNullOrWhiteSpace(gpuStackApiKey);
+var useOpenAI = !useGpuStack && !string.IsNullOrWhiteSpace(openaiApiKey);
+
+// Effective configuration
+var (llmEndpoint, llmApiKey, llmModel) = useGpuStack
+    ? (gpuStackUrl!.TrimEnd('/') + "/v1", gpuStackApiKey!, gpuStackModel)
+    : useOpenAI
+        ? ("https://api.openai.com/v1", openaiApiKey!, openaiModel)
+        : (null, null, null);
+
+var useExternalLlm = llmEndpoint != null;
+
+// Embedding configuration
+var useGpuStackEmbed = useGpuStack && !string.IsNullOrWhiteSpace(gpuStackEmbedModel);
+var useOpenAIEmbed = !useGpuStackEmbed && useOpenAI;
+var useExternalEmbed = useGpuStackEmbed || useOpenAIEmbed;
+
+var (embedEndpoint, embedApiKey, embedModel, embedDimensions) = useGpuStackEmbed
+    ? (gpuStackUrl!.TrimEnd('/') + "/v1", gpuStackApiKey!, gpuStackEmbedModel!, 1024)
+    : useOpenAIEmbed
+        ? ("https://api.openai.com/v1", openaiApiKey!, openaiEmbedModel, 1536)
+        : (null, null, null, 1024);
+
+// Context Budget API configuration
+var contextStrategy = Environment.GetEnvironmentVariable("CONTEXT_STRATEGY") ?? "RecentHeavy";
+var contextBudgetTokens = int.TryParse(Environment.GetEnvironmentVariable("CONTEXT_BUDGET_TOKENS"), out var tokens) ? tokens : 2000;
+
+// Log configuration
+var llmProvider = useGpuStack ? "GPUStack" : useOpenAI ? "OpenAI" : "Echo Mode";
+var embedProvider = useGpuStackEmbed ? "GPUStack" : useOpenAIEmbed ? "OpenAI" : "LMSupply Local";
+Console.WriteLine($"[CONFIG] Chat LLM: {llmProvider} ({llmModel ?? "N/A"})");
+Console.WriteLine($"[CONFIG] Embedding: {embedProvider} ({embedModel ?? "bge-large-en-v1.5"})");
+Console.WriteLine($"[CONFIG] Context Strategy: {contextStrategy} ({contextBudgetTokens} tokens)");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,15 +81,15 @@ builder.Services.AddCors(options =>
 });
 
 // Embedding service: register BEFORE AddMemoryIndexer (uses TryAddSingleton)
-if (useGpuStackEmbed)
+if (useExternalEmbed)
 {
-    // Use OpenAI-compatible GPUStack embedding via SharedLib, wrapped with caching
-    var gpuStackEmbed = new OpenAIEmbeddingService(
-        apiKey: gpuStackApiKey!,
-        model: gpuStackEmbedModel!,
-        dimensions: 1024,
-        endpoint: new Uri(gpuStackUrl!.TrimEnd('/') + "/v1"));
-    var cached = new CachingEmbeddingService(gpuStackEmbed, new EmbeddingCacheOptions
+    // Use OpenAI-compatible embedding via SharedLib (GPUStack or OpenAI), wrapped with caching
+    var externalEmbed = new OpenAIEmbeddingService(
+        apiKey: embedApiKey!,
+        model: embedModel!,
+        dimensions: embedDimensions,
+        endpoint: new Uri(embedEndpoint!));
+    var cached = new CachingEmbeddingService(externalEmbed, new EmbeddingCacheOptions
     {
         Ttl = TimeSpan.FromMinutes(30),
         MaxSize = 5000
@@ -64,10 +102,10 @@ builder.Services.AddMemoryIndexer(options =>
 {
     options.Storage.Type = StorageType.SqliteVec;
     options.Storage.ConnectionString = "chat_memories.db";
-    options.Embedding.Dimensions = 1024;
-    options.Storage.VectorDimensions = 1024;
+    options.Embedding.Dimensions = embedDimensions;
+    options.Storage.VectorDimensions = embedDimensions;
 
-    if (!useGpuStackEmbed)
+    if (!useExternalEmbed)
     {
         // Local embedding (LMSupply.Embedder)
         options.Embedding.Provider = EmbeddingProvider.Local;
@@ -75,18 +113,21 @@ builder.Services.AddMemoryIndexer(options =>
     }
 });
 
-// HTTP client for LLM
-if (useGpuStackChat)
+// HTTP client for LLM (OpenAI-compatible API)
+if (useExternalLlm)
 {
-    builder.Services.AddHttpClient("GpuStack", client =>
+    builder.Services.AddHttpClient("LlmClient", client =>
     {
-        client.BaseAddress = new Uri(gpuStackUrl!.TrimEnd('/') + "/");
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {gpuStackApiKey}");
+        client.BaseAddress = new Uri(llmEndpoint! + "/");
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {llmApiKey}");
     });
 }
 
 var app = builder.Build();
 app.UseCors();
+
+// Static files for SPA (production)
+app.UseStaticFiles();
 
 // Services
 var memoryService = app.Services.GetRequiredService<MemoryService>();
@@ -96,6 +137,10 @@ var httpClientFactory = app.Services.GetService<IHttpClientFactory>();
 // 3-Tier memory services (Buffer + Short + Long)
 var buffer = app.Services.GetRequiredService<IBuffer>();
 var shortTermMemory = app.Services.GetRequiredService<IShortTermMemory>();
+
+// Context Budget API (v0.9.0) - Token-aware context building
+var contextBuilder = app.Services.GetRequiredService<IContextBuilder>();
+var tokenCounter = app.Services.GetRequiredService<ITokenCounter>();
 
 // Simple in-memory storage for users and sessions
 var users = new Dictionary<string, UserInfo>();
@@ -219,16 +264,16 @@ app.MapPost("/api/chat", async (ChatRequest request) =>
     session.MessageCount++;
     user.LastActive = DateTime.UtcNow;
 
-    // Recall memories (3-Tier: Buffer + Short + Long)
-    var (contextParts, memories, context) = await RecallMemoriesAsync(userId, sessionId, request.Message);
+    // Recall memories using Context Budget API
+    var (contextBundle, context) = await RecallMemoriesAsync(userId, sessionId, request.Message);
 
     // Generate response
     string response;
-    if (useGpuStackChat && httpClientFactory != null)
+    if (useExternalLlm && httpClientFactory != null)
     {
         try
         {
-            var client = httpClientFactory.CreateClient("GpuStack");
+            var client = httpClientFactory.CreateClient("LlmClient");
             // NOTE: No conversation history - only recalled memories + current message
             // This demonstrates memory-indexer's purpose: replace full history with intelligent recall
             var systemPrompt = $"""
@@ -246,17 +291,22 @@ app.MapPost("/api/chat", async (ChatRequest request) =>
                 """;
             var chatReq = new
             {
-                model = gpuStackModel,
+                model = llmModel,
                 messages = new[]
                 {
                     new { role = "system", content = systemPrompt },
                     new { role = "user", content = request.Message }
                 },
-                max_tokens = 8192,  // Sufficient for reasoning + content
+                max_completion_tokens = 4096,
                 temperature = 0.7
             };
             var result = await client.PostAsJsonAsync("chat/completions", chatReq);
-            result.EnsureSuccessStatusCode();
+            if (!result.IsSuccessStatusCode)
+            {
+                var errorBody = await result.Content.ReadAsStringAsync();
+                Console.WriteLine($"[LLM] API Error {result.StatusCode}: {errorBody}");
+                throw new HttpRequestException($"LLM API failed: {result.StatusCode} - {errorBody[..Math.Min(200, errorBody.Length)]}");
+            }
             var chatResponse = await result.Content.ReadFromJsonAsync<ChatCompletionResponse>();
             response = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content ?? "No response";
             Console.WriteLine($"[LLM] Generated response: {response[..Math.Min(50, response.Length)]}...");
@@ -285,12 +335,22 @@ app.MapPost("/api/chat", async (ChatRequest request) =>
     return Results.Ok(new
     {
         response,
-        memoriesUsed = memories.Count,
-        memories = memories.Select(m => new
+        memoriesUsed = contextBundle.ItemCount,
+        contextTokens = contextBundle.TotalTokens,
+        breakdown = new
         {
-            content = m.Memory.Content,
-            type = m.Memory.Type.ToString(),
-            score = m.Score
+            recent = contextBundle.Breakdown.RecentTokens,
+            semantic = contextBundle.Breakdown.SemanticTokens,
+            episodic = contextBundle.Breakdown.EpisodicTokens,
+            fact = contextBundle.Breakdown.FactTokens
+        },
+        items = contextBundle.Items.Select(i => new
+        {
+            content = i.Content.Length > 100 ? i.Content[..100] + "..." : i.Content,
+            source = i.Source.ToString(),
+            tokens = i.Tokens,
+            score = i.Score,
+            role = i.Role
         })
     });
 });
@@ -342,104 +402,70 @@ app.MapGet("/api/chat/stream", async (HttpContext httpContext, string sessionId,
     var llmFirstTokenTime = DateTime.MinValue;
     var userTokens = message.Length / 4; // Rough estimate: 4 chars per token
 
-    // === THINKING PHASE ===
-    await SendEventAsync("thinking", new { step = "start" });
+    // === THINKING PHASE - Using Context Budget API ===
+    await SendEventAsync("thinking", new { step = "start", strategy = contextStrategy, budget = contextBudgetTokens });
     await Task.Delay(100); // Brief delay to allow UI to show thinking state
 
-    var contextParts = new List<string>();
-    var memories = new List<MemorySearchResult>();
+    ContextBundle? contextBundle = null;
+    var context = "";
 
-    // T0: Buffer
     try
     {
-        var bufferItems = await buffer.GetPendingAsync(userId);
-        var sessionBufferItems = bufferItems.Where(b => b.SessionId == sessionId).ToList();
-        if (sessionBufferItems.Count > 0)
-        {
-            var recentBuffer = sessionBufferItems
-                .TakeLast(5)
-                .Select(b => $"[Buffer, {(DateTime.UtcNow - b.Timestamp).TotalSeconds:F0}s ago] {b.Content}");
-            contextParts.AddRange(recentBuffer);
-        }
-        await SendEventAsync("thinking", new { step = "buffer", count = sessionBufferItems.Count });
-        await Task.Delay(150); // Brief delay to show buffer state
-        Console.WriteLine($"[MEMORY] Buffer (T0): {sessionBufferItems.Count} items");
-    }
-    catch (Exception ex)
-    {
-        await SendEventAsync("thinking", new { step = "buffer", error = ex.Message });
-    }
+        var request = new ContextRequest(
+            UserId: userId,
+            SessionId: sessionId,
+            Query: message,
+            Budget: new ContextBudget(TotalTokens: contextBudgetTokens)
+        );
 
-    // T1: Short term
-    try
-    {
-        var shortTermItems = await shortTermMemory.GetAllAsync();
-        if (shortTermItems.Count > 0)
-        {
-            var workingMemory = shortTermItems.Select(m =>
-            {
-                var age = DateTime.UtcNow - m.CreatedAt;
-                var ageStr = age.TotalMinutes < 60 ? $"{age.TotalMinutes:F0}m" :
-                             age.TotalHours < 24 ? $"{age.TotalHours:F0}h" : $"{age.TotalDays:F0}d";
-                return $"[WorkingMemory, {m.Type}, {ageStr} ago] {m.Content}";
-            });
-            contextParts.AddRange(workingMemory);
-        }
-        await SendEventAsync("thinking", new { step = "short_term", count = shortTermItems.Count });
-        await Task.Delay(150); // Brief delay to show short-term state
-        Console.WriteLine($"[MEMORY] Short term (T1): {shortTermItems.Count} items");
-    }
-    catch (Exception ex)
-    {
-        await SendEventAsync("thinking", new { step = "short_term", error = ex.Message });
-    }
+        await SendEventAsync("thinking", new { step = "building", strategy = contextStrategy });
+        await Task.Delay(150);
 
-    // T2: Long term
-    try
-    {
-        var sessionMemories = await memoryService.RecallAsync(userId, message, 3, sessionId);
-        var longTermMemories = await memoryService.RecallAsync(userId, message, 3);
-        memories.AddRange(sessionMemories);
-        foreach (var m in longTermMemories.Where(m => !memories.Any(x => x.Memory.Id == m.Memory.Id)))
-            memories.Add(m);
-        memories = memories.OrderByDescending(m => m.Score).Take(5).ToList();
-
-        contextParts.AddRange(memories.Select(m =>
-        {
-            var age = DateTime.UtcNow - m.Memory.CreatedAt;
-            var ageStr = age.TotalMinutes < 60 ? $"{age.TotalMinutes:F0}m" :
-                         age.TotalHours < 24 ? $"{age.TotalHours:F0}h" : $"{age.TotalDays:F0}d";
-            return $"[LongTerm, {m.Memory.Type}, {ageStr} ago, score:{m.Score:F2}] {m.Memory.Content}";
-        }));
+        contextBundle = await contextBuilder.BuildAsync(request, contextStrategy);
+        context = contextBundle.Content;
 
         await SendEventAsync("thinking", new
         {
-            step = "long_term",
-            count = memories.Count,
-            memories = memories.Select(m => new { content = m.Memory.Content[..Math.Min(50, m.Memory.Content.Length)], score = m.Score })
+            step = "done",
+            strategy = contextStrategy,
+            totalItems = contextBundle.ItemCount,
+            totalTokens = contextBundle.TotalTokens,
+            breakdown = new
+            {
+                recent = contextBundle.Breakdown.RecentTokens,
+                semantic = contextBundle.Breakdown.SemanticTokens,
+                episodic = contextBundle.Breakdown.EpisodicTokens,
+                fact = contextBundle.Breakdown.FactTokens
+            },
+            items = contextBundle.Items.Take(5).Select(i => new
+            {
+                content = i.Content.Length > 50 ? i.Content[..50] + "..." : i.Content,
+                source = i.Source.ToString(),
+                tokens = i.Tokens
+            })
         });
-        await Task.Delay(200); // Brief delay to show long-term state
-        Console.WriteLine($"[MEMORY] Long term (T2): {memories.Count} memories");
+
+        Console.WriteLine($"[MEMORY] Context built: {contextBundle.ItemCount} items, {contextBundle.TotalTokens} tokens " +
+            $"(R:{contextBundle.Breakdown.RecentTokens}/S:{contextBundle.Breakdown.SemanticTokens}/E:{contextBundle.Breakdown.EpisodicTokens}/F:{contextBundle.Breakdown.FactTokens})");
     }
     catch (Exception ex)
     {
-        await SendEventAsync("thinking", new { step = "long_term", error = ex.Message });
+        await SendEventAsync("thinking", new { step = "error", error = ex.Message });
+        Console.WriteLine($"[MEMORY] Context build error: {ex.Message}");
     }
 
-    var context = string.Join("\n", contextParts);
     var recallEndTime = DateTime.UtcNow;
     var recallDurationMs = (int)(recallEndTime - recallStartTime).TotalMilliseconds;
-    await SendEventAsync("thinking", new { step = "done", totalContext = contextParts.Count, recallMs = recallDurationMs });
 
     // === GENERATION PHASE ===
     llmStartTime = DateTime.UtcNow;
     var responseBuilder = new System.Text.StringBuilder();
 
-    if (useGpuStackChat && httpClientFactory != null)
+    if (useExternalLlm && httpClientFactory != null)
     {
         try
         {
-            var client = httpClientFactory.CreateClient("GpuStack");
+            var client = httpClientFactory.CreateClient("LlmClient");
             // NOTE: No conversation history - only recalled memories + current message
             // This demonstrates memory-indexer's purpose: replace full history with intelligent recall
             var systemPrompt = $"""
@@ -457,13 +483,13 @@ app.MapGet("/api/chat/stream", async (HttpContext httpContext, string sessionId,
                 """;
             var chatReq = new
             {
-                model = gpuStackModel,
+                model = llmModel,
                 messages = new[]
                 {
                     new { role = "system", content = systemPrompt },
                     new { role = "user", content = message }
                 },
-                max_tokens = 8192,  // Sufficient for reasoning + content
+                max_completion_tokens = 4096,
                 temperature = 0.7,
                 stream = true
             };
@@ -474,7 +500,12 @@ app.MapGet("/api/chat/stream", async (HttpContext httpContext, string sessionId,
             };
 
             var streamResponse = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
-            streamResponse.EnsureSuccessStatusCode();
+            if (!streamResponse.IsSuccessStatusCode)
+            {
+                var errorBody = await streamResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"[LLM] Stream API Error {streamResponse.StatusCode}: {errorBody}");
+                throw new HttpRequestException($"LLM API failed: {streamResponse.StatusCode} - {errorBody[..Math.Min(200, errorBody.Length)]}");
+            }
 
             await using var stream = await streamResponse.Content.ReadAsStreamAsync();
             using var reader = new StreamReader(stream);
@@ -560,7 +591,7 @@ app.MapGet("/api/chat/stream", async (HttpContext httpContext, string sessionId,
     // Calculate metrics
     var llmEndTime = DateTime.UtcNow;
     var aiTokens = response.Length / 4; // Rough estimate
-    var contextTokens = context.Length / 4;
+    var contextTokens = contextBundle?.TotalTokens ?? 0;
     var llmDurationMs = (int)(llmEndTime - llmStartTime).TotalMilliseconds;
     var ttftMs = llmFirstTokenTime != DateTime.MinValue
         ? (int)(llmFirstTokenTime - llmStartTime).TotalMilliseconds
@@ -570,8 +601,16 @@ app.MapGet("/api/chat/stream", async (HttpContext httpContext, string sessionId,
     // Send done event with metrics
     await SendEventAsync("done", new
     {
-        memoriesUsed = memories.Count,
+        memoriesUsed = contextBundle?.ItemCount ?? 0,
         totalLength = response.Length,
+        contextStrategy,
+        breakdown = contextBundle != null ? new
+        {
+            recent = contextBundle.Breakdown.RecentTokens,
+            semantic = contextBundle.Breakdown.SemanticTokens,
+            episodic = contextBundle.Breakdown.EpisodicTokens,
+            fact = contextBundle.Breakdown.FactTokens
+        } : null,
         metrics = new
         {
             userTokens,
@@ -586,79 +625,31 @@ app.MapGet("/api/chat/stream", async (HttpContext httpContext, string sessionId,
     });
 });
 
-// Helper: Recall memories from all tiers
-async Task<(List<string> contextParts, List<MemorySearchResult> memories, string context)> RecallMemoriesAsync(
+// Helper: Recall memories using Context Budget API (v0.9.0)
+async Task<(ContextBundle bundle, string context)> RecallMemoriesAsync(
     string userId, string sessionId, string query)
 {
-    var contextParts = new List<string>();
-    var memories = new List<MemorySearchResult>();
-
-    // T0: Buffer - use Role field for speaker identification
     try
     {
-        var bufferItems = await buffer.GetPendingAsync(userId);
-        if (bufferItems.Count > 0)
-        {
-            var recentBuffer = bufferItems
-                .Where(b => b.SessionId == sessionId)
-                .TakeLast(5)
-                .Select(b =>
-                {
-                    var role = b.Role ?? "unknown";
-                    var roleLabel = role == "user" ? "User" : role == "assistant" ? "Assistant" : role;
-                    var ageSeconds = (DateTime.UtcNow - b.Timestamp).TotalSeconds;
-                    return $"[{roleLabel}, {ageSeconds:F0}s ago] {b.Content}";
-                });
-            contextParts.AddRange(recentBuffer);
-            Console.WriteLine($"[MEMORY] Buffer (T0): {bufferItems.Count} items");
-        }
-    }
-    catch (Exception ex) { Console.WriteLine($"[MEMORY] Buffer error: {ex.Message}"); }
+        var request = new ContextRequest(
+            UserId: userId,
+            SessionId: sessionId,
+            Query: query,
+            Budget: new ContextBudget(TotalTokens: contextBudgetTokens)
+        );
 
-    // T1: Short term
-    try
+        var bundle = await contextBuilder.BuildAsync(request, contextStrategy);
+
+        Console.WriteLine($"[MEMORY] Context built: {bundle.ItemCount} items, {bundle.TotalTokens} tokens " +
+            $"(R:{bundle.Breakdown.RecentTokens}/S:{bundle.Breakdown.SemanticTokens}/E:{bundle.Breakdown.EpisodicTokens}/F:{bundle.Breakdown.FactTokens})");
+
+        return (bundle, bundle.Content);
+    }
+    catch (Exception ex)
     {
-        var shortTermItems = await shortTermMemory.GetAllAsync();
-        if (shortTermItems.Count > 0)
-        {
-            var workingMemory = shortTermItems.Select(m =>
-            {
-                var age = DateTime.UtcNow - m.CreatedAt;
-                var ageStr = age.TotalMinutes < 60 ? $"{age.TotalMinutes:F0}m" :
-                             age.TotalHours < 24 ? $"{age.TotalHours:F0}h" : $"{age.TotalDays:F0}d";
-                return $"[WorkingMemory, {m.Type}, {ageStr} ago] {m.Content}";
-            });
-            contextParts.AddRange(workingMemory);
-            Console.WriteLine($"[MEMORY] Short term (T1): {shortTermItems.Count} items");
-        }
+        Console.WriteLine($"[MEMORY] Context build error: {ex.Message}");
+        return (new ContextBundle("", 0, new ContextBreakdown(0, 0, 0, 0), []), "");
     }
-    catch (Exception ex) { Console.WriteLine($"[MEMORY] Short term error: {ex.Message}"); }
-
-    // T2: Long term
-    try
-    {
-        var sessionMemories = await memoryService.RecallAsync(userId, query, 3, sessionId);
-        var longTermMemories = await memoryService.RecallAsync(userId, query, 3);
-        memories.AddRange(sessionMemories);
-        foreach (var m in longTermMemories.Where(m => !memories.Any(x => x.Memory.Id == m.Memory.Id)))
-            memories.Add(m);
-        memories = memories.OrderByDescending(m => m.Score).Take(5).ToList();
-
-        contextParts.AddRange(memories.Select(m =>
-        {
-            var age = DateTime.UtcNow - m.Memory.CreatedAt;
-            var ageStr = age.TotalMinutes < 60 ? $"{age.TotalMinutes:F0}m" :
-                         age.TotalHours < 24 ? $"{age.TotalHours:F0}h" : $"{age.TotalDays:F0}d";
-            return $"[LongTerm, {m.Memory.Type}, {ageStr} ago, score:{m.Score:F2}] {m.Memory.Content}";
-        }));
-        Console.WriteLine($"[MEMORY] Long term (T2): {memories.Count} memories");
-    }
-    catch (Exception ex) { Console.WriteLine($"[MEMORY] Long term recall error: {ex.Message}"); }
-
-    var context = string.Join("\n", contextParts);
-    Console.WriteLine($"[MEMORY] Total context: {contextParts.Count} entries");
-
-    return (contextParts, memories, context);
 }
 
 // Helper: Store conversation (fire-and-forget)
@@ -784,8 +775,10 @@ app.MapGet("/api/users/{userId}/status", async (string userId, string? sessionId
         recent,
         config = new
         {
-            embedding = useGpuStackEmbed ? gpuStackEmbedModel : "LMSupply Local (bge-large-en-v1.5)",
-            chatLlm = useGpuStackChat ? gpuStackModel : "Echo Mode"
+            embedding = $"{embedProvider} ({embedModel ?? "bge-large-en-v1.5"})",
+            chatLlm = $"{llmProvider} ({llmModel ?? "N/A"})",
+            contextStrategy,
+            contextBudgetTokens
         }
     });
 });
@@ -801,6 +794,28 @@ app.MapDelete("/api/users/{userId}/memories", async (string userId) =>
     Console.WriteLine($"[MEMORY] Deleted {deleted} memories for user {userId}");
     return Results.Ok(new { deleted });
 });
+
+// SPA handling
+if (app.Environment.IsDevelopment())
+{
+    // Development: redirect only GET requests for non-API paths to Vite dev server
+    app.MapGet("{*path:nonfile}", (HttpContext context) =>
+    {
+        // Only redirect if not an API path
+        if (!context.Request.Path.StartsWithSegments("/api"))
+        {
+            var spaUrl = $"http://localhost:3000{context.Request.Path}{context.Request.QueryString}";
+            return Results.Redirect(spaUrl);
+        }
+        return Results.NotFound();
+    });
+    Console.WriteLine($"[SERVER] Development mode - SPA requests redirect to http://localhost:3000");
+}
+else
+{
+    // Production: serve static files from wwwroot/dist
+    app.MapFallbackToFile("index.html");
+}
 
 Console.WriteLine($"[SERVER] Starting on http://localhost:5000");
 app.Run("http://localhost:5000");

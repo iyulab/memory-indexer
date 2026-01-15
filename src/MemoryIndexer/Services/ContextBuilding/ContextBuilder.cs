@@ -92,11 +92,15 @@ public class ContextBuilder : IContextBuilder
             _logger.LogWarning(ex, "Failed to get buffer items for context");
         }
 
-        // Get from Short-Term Memory (T1)
+        // Get from Short-Term Memory (T1) - filter by sessionId for session isolation
         try
         {
             var shortTermItems = await _shortTermMemory.GetAllAsync();
-            foreach (var item in shortTermItems.OrderByDescending(m => m.CreatedAt))
+            var sessionShortTermItems = shortTermItems
+                .Where(m => m.SessionId == sessionId)
+                .OrderByDescending(m => m.CreatedAt);
+
+            foreach (var item in sessionShortTermItems)
             {
                 if (usedTokens >= maxTokens)
                     break;

@@ -491,6 +491,92 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime
         count.Should().Be(1);
     }
 
+    [Fact]
+    public async Task GetAllAsync_WithRoleFilter_ShouldReturnMatchingRoles()
+    {
+        // Arrange - Create memories with different roles
+        var userMemory = CreateTestMemory("user1");
+        userMemory.Role = "user";
+
+        var assistantMemory = CreateTestMemory("user1");
+        assistantMemory.Role = "assistant";
+
+        var systemMemory = CreateTestMemory("user1");
+        systemMemory.Role = "system";
+
+        await _store.StoreAsync(userMemory);
+        await _store.StoreAsync(assistantMemory);
+        await _store.StoreAsync(systemMemory);
+
+        // Act - Filter by user role only
+        var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
+        {
+            Roles = ["user"]
+        });
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].Role.Should().Be("user");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithMultipleRolesFilter_ShouldReturnMatchingRoles()
+    {
+        // Arrange - Create memories with different roles
+        var userMemory = CreateTestMemory("user1");
+        userMemory.Role = "user";
+
+        var assistantMemory = CreateTestMemory("user1");
+        assistantMemory.Role = "assistant";
+
+        var systemMemory = CreateTestMemory("user1");
+        systemMemory.Role = "system";
+
+        await _store.StoreAsync(userMemory);
+        await _store.StoreAsync(assistantMemory);
+        await _store.StoreAsync(systemMemory);
+
+        // Act - Filter by user and assistant roles
+        var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
+        {
+            Roles = ["user", "assistant"]
+        });
+
+        // Assert
+        results.Should().HaveCount(2);
+        results.Select(r => r.Role).Should().BeEquivalentTo(["user", "assistant"]);
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithRoleFilter_ShouldReturnMatchingRoles()
+    {
+        // Arrange - Create memories with different roles
+        var embedding = CreateTestEmbedding(768);
+
+        var userMemory = CreateTestMemory("user1");
+        userMemory.Role = "user";
+        userMemory.Embedding = embedding;
+
+        var assistantMemory = CreateTestMemory("user1");
+        assistantMemory.Role = "assistant";
+        assistantMemory.Embedding = embedding;
+
+        await _store.StoreAsync(userMemory);
+        await _store.StoreAsync(assistantMemory);
+
+        // Act - Search with user role filter
+        var results = await _store.SearchAsync(embedding, new MemorySearchOptions
+        {
+            UserId = "user1",
+            Limit = 10,
+            Roles = ["user"]
+        });
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].Memory.Role.Should().Be("user");
+    }
+
     #endregion
 
     #region Metadata and JSON Storage

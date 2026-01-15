@@ -463,6 +463,106 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
 - **PercentileScoreNormalizer**: Rank-based normalization forcing full 0-1 spread
 - **ZScoreNormalizer**: Mean/stddev based normalization (±3σ → 0-1 mapping)
 
+## Context Budget API (v0.9.0+)
+
+Token-budget-aware context building that replaces full conversation history with intelligent recall.
+
+### IContextBuilder
+
+```csharp
+var request = new ContextRequest(
+    UserId: "user123",
+    SessionId: "session456",
+    Query: "What's my preference?",
+    Budget: new ContextBudget(TotalTokens: 2000)
+);
+
+var bundle = await contextBuilder.BuildAsync(request, "RecentHeavy");
+// bundle.Content contains token-budget-aware context
+```
+
+### Built-in Strategies
+
+| Strategy | Recent | Semantic | Episodic | Facts | Best For |
+|----------|--------|----------|----------|-------|----------|
+| `Balanced` | 30% | 25% | 25% | 20% | General use |
+| `RecentHeavy` | 45% | 10% | 35% | 10% | Games, conversations |
+| `SemanticHeavy` | 15% | 45% | 15% | 25% | RAG, QA systems |
+
+### Session Isolation
+
+- **Recent turns**: Filtered by `sessionId` (Buffer + ShortTerm)
+- **Episodic**: Filtered by `sessionId` (session-scoped experiences)
+- **Semantic/Fact**: User-scoped (cross-session knowledge)
+
+## Fact Management (v0.9.1-v0.10.0)
+
+### Intelligent Fact Extraction
+
+AI-based detection distinguishes real user facts from quoted/fictional content:
+
+| Context | Example | Promotion Path |
+|---------|---------|----------------|
+| Direct statement | "My name is John" | FastTrack → Archive |
+| Quoted text | "In the book, he says..." | SessionOnly |
+| Hypothetical | "If I were..." | SessionOnly |
+| Question | "What is my name?" | Discard |
+
+### Fact Conflict Resolution
+
+Bi-temporal model for conflicting facts:
+
+```csharp
+// Temporal queries
+var currentFacts = await factStore.GetValidAtAsync(userId, DateTimeOffset.UtcNow);
+var historicalFacts = await factStore.GetValidAtAsync(userId, someDate);
+```
+
+| Resolution Strategy | When Applied |
+|--------------------|--------------|
+| `RequireConfirmation` | Identity facts (name, age) |
+| `RecencyFirst` | Preferences |
+| `TemporalPartition` | Temporal facts (archive old, add new) |
+| `ConfidenceFirst` | When confidence diff ≥ 0.2 |
+
+### User Profile Evolution
+
+- **Cross-fact inference**: Derive new facts from existing ones
+- **Confidence decay**: Time-based decay with category multipliers
+- **Profile snapshots**: Point-in-time versioning with diff comparison
+- **GDPR export**: Category filtering, redaction, checksums
+
+## Retention & Observability (v0.11.0)
+
+### Retention Policy
+
+Category-specific retention with GDPR-aligned defaults:
+
+| Category | Default Retention | Notes |
+|----------|-------------------|-------|
+| Fact | ∞ | Core identity |
+| Preference | 365 days | Subject to change |
+| Skill | 730 days | Stable over time |
+| Goal | 180 days | Time-sensitive |
+
+### Metrics Dashboard
+
+Real-time operational metrics via `IMetricsDashboard`:
+
+```csharp
+var health = await dashboard.GetHealthSummaryAsync();
+var ops = await dashboard.GetOperationStatisticsAsync(since, until);
+var perf = await dashboard.GetPerformanceMetricsAsync();
+```
+
+| Metric Category | Includes |
+|----------------|----------|
+| Health | Component status, alerts, uptime |
+| Operations | Success rate, throughput, ops/second |
+| Performance | Latency percentiles (P50/P95/P99), cache hit rate |
+| Storage | Memory counts, sizes, growth rates |
+| Security | PII detections, injection attempts, security score |
+
 ## 3-Axis Mental Model
 
 **Understanding the Orthogonality:**

@@ -681,6 +681,12 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
             AddTypeConditions(conditions, options.Types);
         }
 
+        // Role filtering for multi-party conversation support
+        if (options?.Roles?.Length > 0)
+        {
+            AddRoleConditions(conditions, options.Roles);
+        }
+
         return new Filter { Must = { conditions } };
     }
 
@@ -730,6 +736,12 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
             AddTypeConditions(conditions, options.Types);
         }
 
+        // Role filtering for multi-party conversation support
+        if (options.Roles?.Length > 0)
+        {
+            AddRoleConditions(conditions, options.Roles);
+        }
+
         if (conditions.Count == 0)
             return null;
 
@@ -765,6 +777,41 @@ public sealed class QdrantMemoryStore : IMemoryStore, IAsyncDisposable
                 });
             }
             conditions.Add(new Condition { Filter = typeFilter });
+        }
+    }
+
+    /// <summary>
+    /// Add role conditions for multi-party conversation support.
+    /// </summary>
+    private static void AddRoleConditions(List<Condition> conditions, string[] roles)
+    {
+        if (roles.Length == 1)
+        {
+            conditions.Add(new Condition
+            {
+                Field = new FieldCondition
+                {
+                    Key = "role",
+                    Match = new Match { Keyword = roles[0] }
+                }
+            });
+        }
+        else
+        {
+            // For multiple roles, add each as OR condition using nested filter
+            var roleFilter = new Filter();
+            foreach (var role in roles)
+            {
+                roleFilter.Should.Add(new Condition
+                {
+                    Field = new FieldCondition
+                    {
+                        Key = "role",
+                        Match = new Match { Keyword = role }
+                    }
+                });
+            }
+            conditions.Add(new Condition { Filter = roleFilter });
         }
     }
 

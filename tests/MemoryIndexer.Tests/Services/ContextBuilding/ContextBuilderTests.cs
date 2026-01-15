@@ -162,6 +162,49 @@ public class ContextBuilderTests
         result[0].Content.Should().Be("Same session");
     }
 
+    [Fact]
+    public async Task GetRecentTurnsAsync_ShortTermMemory_FiltersToCorrectSession()
+    {
+        // Arrange - This test verifies session isolation for ShortTermMemory (T1)
+        // BUG FIX: Previously, ShortTermMemory items from other sessions were included
+        _bufferMock.Setup(x => x.GetPendingAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<SensoryMemory>());
+
+        var shortTermItems = new List<MemoryUnit>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                UserId = UserId,
+                SessionId = SessionId,  // Same session
+                Content = "Game question from current session",
+                Type = MemoryType.Episodic,
+                Tier = Tier.Short,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-2)
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                UserId = UserId,
+                SessionId = "other-session",  // Different session - should be excluded!
+                Content = "Game question from previous session",
+                Type = MemoryType.Episodic,
+                Tier = Tier.Short,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+            }
+        };
+
+        _shortTermMemoryMock.Setup(x => x.GetAllAsync())
+            .ReturnsAsync(shortTermItems);
+
+        // Act
+        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000);
+
+        // Assert - Only items from current session should be included
+        result.Should().HaveCount(1);
+        result[0].Content.Should().Be("Game question from current session");
+    }
+
     #endregion
 
     #region GetSemanticContextAsync Tests

@@ -1,6 +1,8 @@
 # Advanced Intelligence Features
 
-Memory Indexer v0.5.0 exposes SDK intelligence capabilities through MCP tools, enabling LLMs to leverage semantic understanding, conflict resolution, adaptive retrieval, and graph analysis.
+Memory Indexer exposes SDK intelligence capabilities through MCP tools, enabling LLMs to leverage semantic understanding, conflict resolution, adaptive retrieval, and graph analysis.
+
+> **Note**: Intelligence features were introduced in v0.5.0 and continue to evolve. See [Roadmap](ROADMAP.md) for latest feature status.
 
 ---
 

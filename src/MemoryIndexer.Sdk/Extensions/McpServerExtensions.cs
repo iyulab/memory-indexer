@@ -64,6 +64,17 @@ public static class McpServerExtensions
     }
 
     /// <summary>
+    /// Adds Retention Policy MCP tools to the server builder.
+    /// Phase v0.11.0: Retention policy management and cleanup operations.
+    /// </summary>
+    /// <param name="builder">The MCP server builder.</param>
+    /// <returns>The builder for chaining.</returns>
+    public static IMcpServerBuilder WithRetentionPolicyTools(this IMcpServerBuilder builder)
+    {
+        return builder.WithTools<RetentionPolicyTools>();
+    }
+
+    /// <summary>
     /// Adds all Memory Indexer MCP tools to the server builder.
     /// Includes: MemoryTools, ContextTools, and all advanced tools.
     /// </summary>
@@ -77,6 +88,7 @@ public static class McpServerExtensions
             .WithTools<FactExtractionTools>()
             .WithTools<FactConflictTools>()
             .WithTools<ProfileEvolutionTools>()
+            .WithTools<RetentionPolicyTools>()
             .WithTools<AdvancedMemoryTools>()
             .WithTools<AutonomousMemoryTools>()
             .WithTools<BackupRestoreTools>()

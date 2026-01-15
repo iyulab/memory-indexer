@@ -2,6 +2,27 @@
 
 A simple chat application demonstrating Memory Indexer's short/mid/long-term memory capabilities.
 
+## Why Memory-Indexer?
+
+Traditional chat apps send **full conversation history** to the LLM on every request:
+
+```
+Traditional: messages = [msg1, msg2, msg3, ... msgN]  → Token cost: O(n)
+```
+
+Memory-Indexer replaces this with **intelligent recall**:
+
+```
+Memory-Indexer: recalled_context = recall(query, budget=2000)  → Token cost: O(1)
+```
+
+| Aspect | Traditional | Memory-Indexer |
+|--------|-------------|----------------|
+| Token Cost | Linear growth | Fixed budget |
+| Cross-session Knowledge | ❌ Lost | ✅ Semantic/Fact memories |
+| Relevance | Order-based (last N) | Similarity-based search |
+| Context Window | Truncate when exceeded | Smart allocation by tier |
+
 ## Architecture
 
 ```

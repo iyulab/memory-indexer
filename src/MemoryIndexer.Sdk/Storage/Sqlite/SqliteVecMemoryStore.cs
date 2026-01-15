@@ -145,6 +145,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
                 type INTEGER NOT NULL DEFAULT 0,
                 tier INTEGER NOT NULL DEFAULT 1,
                 scope INTEGER NOT NULL DEFAULT 2,
+                role TEXT,
                 importance_score REAL DEFAULT 0.5,
                 access_count INTEGER DEFAULT 0,
                 created_at TEXT NOT NULL,
@@ -211,6 +212,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         var hasTier = false;
         var hasScope = false;
 
+        var hasRole = false;
+
         using (var command = CreateCommand(checkSql))
         using (var reader = await command.ExecuteReaderAsync(cancellationToken))
         {
@@ -219,10 +222,18 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
                 var columnName = reader.GetString(1); // name column
                 if (columnName == "tier") hasTier = true;
                 if (columnName == "scope") hasScope = true;
+                if (columnName == "role") hasRole = true;
             }
         }
 
         // Add missing columns (ALTER TABLE ADD COLUMN is safe if column doesn't exist)
+        if (!hasRole)
+        {
+            var alterSql = $"ALTER TABLE {TableName} ADD COLUMN role TEXT";
+            await ExecuteNonQueryAsync(alterSql, cancellationToken);
+            _logger.LogInformation("Migrated database: added 'role' column to {Table}", TableName);
+        }
+
         if (!hasTier)
         {
             var alterSql = $"ALTER TABLE {TableName} ADD COLUMN tier INTEGER NOT NULL DEFAULT 1";
@@ -338,13 +349,14 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             }
 
             // Phase 49: Added tier and scope columns for 3-axis memory model
+            // Role column added for multi-party conversation support
             var sql = $@"
                 INSERT OR REPLACE INTO {TableName} (
-                    id, user_id, session_id, content, content_hash, type, tier, scope,
+                    id, user_id, session_id, content, content_hash, type, tier, scope, role,
                     importance_score, access_count, created_at, updated_at,
                     last_accessed_at, is_deleted, topics, entities, metadata, embedding
                 ) VALUES (
-                    @id, @user_id, @session_id, @content, @content_hash, @type, @tier, @scope,
+                    @id, @user_id, @session_id, @content, @content_hash, @type, @tier, @scope, @role,
                     @importance_score, @access_count, @created_at, @updated_at,
                     @last_accessed_at, @is_deleted, @topics, @entities, @metadata, @embedding
                 )
@@ -639,6 +651,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         memory.MarkUpdated();
 
         // Phase 49: Added tier and scope columns for 3-axis memory model
+        // Role column added for multi-party conversation support
         var sql = $@"
             UPDATE {TableName} SET
                 user_id = @user_id,
@@ -648,6 +661,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
                 type = @type,
                 tier = @tier,
                 scope = @scope,
+                role = @role,
                 importance_score = @importance_score,
                 access_count = @access_count,
                 updated_at = @updated_at,
@@ -1000,6 +1014,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         command.Parameters.AddWithValue("@type", (int)memory.Type);
         command.Parameters.AddWithValue("@tier", (int)memory.Tier);
         command.Parameters.AddWithValue("@scope", (int)memory.Scope);
+        command.Parameters.AddWithValue("@role", (object?)memory.Role ?? DBNull.Value);
         command.Parameters.AddWithValue("@importance_score", memory.ImportanceScore);
         command.Parameters.AddWithValue("@access_count", memory.AccessCount);
         command.Parameters.AddWithValue("@created_at", memory.CreatedAt.ToString("O"));
@@ -1041,6 +1056,9 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             Type = (MemoryType)reader.GetInt32(reader.GetOrdinal("type")),
             Tier = (Tier)reader.GetInt32(reader.GetOrdinal("tier")),
             Scope = (Scope)reader.GetInt32(reader.GetOrdinal("scope")),
+            Role = reader.IsDBNull(reader.GetOrdinal("role"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("role")),
             ImportanceScore = reader.GetFloat(reader.GetOrdinal("importance_score")),
             AccessCount = reader.GetInt32(reader.GetOrdinal("access_count")),
             CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("created_at"))),

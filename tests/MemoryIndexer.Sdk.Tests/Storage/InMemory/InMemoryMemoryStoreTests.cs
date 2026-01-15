@@ -159,4 +159,116 @@ public class InMemoryMemoryStoreTests
         // Assert
         count.Should().Be(2);
     }
+
+    [Fact]
+    public async Task GetAllAsync_WithRoleFilter_ShouldReturnMatchingRoles()
+    {
+        // Arrange - Create memories with different roles
+        var userMemory = TestHelpers.CreateTestMemory("user1");
+        userMemory.Role = "user";
+
+        var assistantMemory = TestHelpers.CreateTestMemory("user1");
+        assistantMemory.Role = "assistant";
+
+        var systemMemory = TestHelpers.CreateTestMemory("user1");
+        systemMemory.Role = "system";
+
+        await _store.StoreAsync(userMemory);
+        await _store.StoreAsync(assistantMemory);
+        await _store.StoreAsync(systemMemory);
+
+        // Act - Filter by user role only
+        var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
+        {
+            Roles = ["user"]
+        });
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].Role.Should().Be("user");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithMultipleRolesFilter_ShouldReturnMatchingRoles()
+    {
+        // Arrange - Create memories with different roles
+        var userMemory = TestHelpers.CreateTestMemory("user1");
+        userMemory.Role = "user";
+
+        var assistantMemory = TestHelpers.CreateTestMemory("user1");
+        assistantMemory.Role = "assistant";
+
+        var systemMemory = TestHelpers.CreateTestMemory("user1");
+        systemMemory.Role = "system";
+
+        await _store.StoreAsync(userMemory);
+        await _store.StoreAsync(assistantMemory);
+        await _store.StoreAsync(systemMemory);
+
+        // Act - Filter by user and assistant roles
+        var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
+        {
+            Roles = ["user", "assistant"]
+        });
+
+        // Assert
+        results.Should().HaveCount(2);
+        results.Select(r => r.Role).Should().BeEquivalentTo(["user", "assistant"]);
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithRoleFilter_ShouldReturnMatchingRoles()
+    {
+        // Arrange - Create memories with different roles
+        var embedding = TestHelpers.CreateTestEmbedding(768);
+
+        var userMemory = TestHelpers.CreateTestMemory("user1", embedding: embedding);
+        userMemory.Role = "user";
+
+        var assistantMemory = TestHelpers.CreateTestMemory("user1", embedding: embedding);
+        assistantMemory.Role = "assistant";
+
+        await _store.StoreAsync(userMemory);
+        await _store.StoreAsync(assistantMemory);
+
+        // Act - Search with user role filter
+        var results = await _store.SearchAsync(embedding, new MemorySearchOptions
+        {
+            UserId = "user1",
+            Limit = 10,
+            Roles = ["user"]
+        });
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].Memory.Role.Should().Be("user");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithCustomRoleFilter_ShouldSupportMultiParty()
+    {
+        // Arrange - Multi-party conversation with custom roles
+        var moderatorMemory = TestHelpers.CreateTestMemory("user1");
+        moderatorMemory.Role = "moderator";
+
+        var participant1Memory = TestHelpers.CreateTestMemory("user1");
+        participant1Memory.Role = "participant-1";
+
+        var participant2Memory = TestHelpers.CreateTestMemory("user1");
+        participant2Memory.Role = "participant-2";
+
+        await _store.StoreAsync(moderatorMemory);
+        await _store.StoreAsync(participant1Memory);
+        await _store.StoreAsync(participant2Memory);
+
+        // Act - Filter by moderator only
+        var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
+        {
+            Roles = ["moderator"]
+        });
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].Role.Should().Be("moderator");
+    }
 }

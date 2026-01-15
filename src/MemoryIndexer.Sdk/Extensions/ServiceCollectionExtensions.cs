@@ -30,6 +30,7 @@ using MemoryIndexer.Sdk.Intelligence.EntityResolution;
 using MemoryIndexer.Sdk.Intelligence.Profile;
 using MemoryIndexer.Sdk.Intelligence.Inference;
 using MemoryIndexer.Sdk.Intelligence.Promotion;
+using MemoryIndexer.Sdk.Intelligence.Retention;
 using MemoryIndexer.Sdk.Intelligence.Quality;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using MemoryIndexer.Sdk.Intelligence.Caching;
@@ -229,6 +230,12 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IProfileSnapshotService, ProfileSnapshotService>();
         services.TryAddSingleton<IProfileExporter, JsonProfileExporter>();
         services.TryAddSingleton<IFactInferenceEngine, FactInferenceService>();
+
+        // Register retention policy services (Phase v0.11.0)
+        services.AddOptions<RetentionPolicyOptions>()
+            .BindConfiguration("MemoryIndexer:RetentionPolicy");
+        services.TryAddSingleton<IRetentionPolicy, DefaultRetentionPolicy>();
+        services.TryAddSingleton<IRetentionPolicyService, RetentionPolicyService>();
 
         // Register memory conflict resolver (Phase 26)
         services.TryAddSingleton<IMemoryConflictResolver, RecencyWeightedResolver>();

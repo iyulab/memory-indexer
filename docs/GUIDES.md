@@ -166,7 +166,51 @@ public class SessionManager
 }
 ```
 
-### 5. Memory Reflection & Insights
+### 5. Context Budget API (Recommended)
+
+**Pattern**: Token-budget-aware context building for LLM calls
+
+```csharp
+public class ChatService
+{
+    private readonly IContextBuilder _contextBuilder;
+
+    public async Task<string> GenerateResponse(
+        string userId, string sessionId, string userMessage)
+    {
+        // Build context with token budget
+        var request = new ContextRequest(
+            UserId: userId,
+            SessionId: sessionId,
+            Query: userMessage,
+            Budget: new ContextBudget(TotalTokens: 2000)
+        );
+
+        // Use strategy based on use case:
+        // - "RecentHeavy": Games, multi-turn conversations
+        // - "Balanced": General chat
+        // - "SemanticHeavy": RAG, Q&A systems
+        var bundle = await _contextBuilder.BuildAsync(request, "RecentHeavy");
+
+        // Send to LLM - NO conversation history needed!
+        var response = await _llm.GenerateAsync(new
+        {
+            system = $"Context from memory:\n{bundle.Content}",
+            user = userMessage
+        });
+
+        return response;
+    }
+}
+```
+
+**Benefits:**
+- O(1) token cost regardless of conversation length
+- Session-isolated episodic memories
+- Cross-session user facts automatically included
+- Configurable allocation (recent vs semantic)
+
+### 6. Memory Reflection & Insights
 
 **Pattern**: Periodic reflection for pattern discovery
 

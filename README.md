@@ -3,7 +3,7 @@
 A cognitive memory system for LLMs implementing human-inspired 3-axis memory architecture.
 
 [![CI](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml/badge.svg)](https://github.com/iyulab/memory-indexer/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-1015-success?logo=testcafe)](tests/)
+[![Tests](https://img.shields.io/badge/tests-1549-success?logo=testcafe)](tests/)
 [![NuGet](https://img.shields.io/nuget/v/MemoryIndexer?logo=nuget)](https://www.nuget.org/packages/MemoryIndexer)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -147,6 +147,26 @@ var results = await memoryService.RecallAsync("user123", "UI preferences", limit
 
 ## Samples
 
+### [MemoryChatApp](samples/MemoryChatApp/)
+
+Web-based chat demonstrating **Context Budget API**—intelligent recall replaces full conversation history.
+
+```
+Traditional: messages = [msg1, msg2, ... msgN]  → Token cost: O(n)
+This Demo:   context = recall(query, budget=2000)  → Token cost: O(1)
+```
+
+**Features:**
+- Token-budget-aware context building (RecentHeavy, Balanced, SemanticHeavy strategies)
+- 4-tier memory visualization (Buffer → Short → Long → Archive)
+- Session isolation with cross-session user facts
+- Local embeddings (LMSupply) or remote LLM (GpuStack/OpenAI)
+
+```bash
+cd samples/MemoryChatApp
+.\start-dev.ps1               # Opens frontend + backend
+```
+
 ### [Twenty Questions Game](samples/TwentyQuestionsGame/)
 
 AI vs AI demo where two LLM agents play 20 Questions using **only memory recall**—no chat history injection.
@@ -165,7 +185,6 @@ This Demo:   user: "Alpha says: Yes"                   ← O(1) constant context
 cd samples/TwentyQuestionsGame
 dotnet run                    # Auto-detect LLM provider
 dotnet run -- --local         # Use local ONNX model (no API key)
-dotnet run -- --benchmark     # Run benchmarks
 ```
 
 ## Documentation
@@ -173,10 +192,12 @@ dotnet run -- --benchmark     # Run benchmarks
 | Document | Description |
 |----------|-------------|
 | [Architecture](docs/ARCHITECTURE.md) | System design, 3-axis model, tier/type details |
-| [Evaluation](docs/EVALUATION.md) | KPIs, NIAH tests, cognitive scenarios |
-| [Roadmap](docs/ROADMAP.md) | Feature timeline and status |
+| [Intelligence](docs/INTELLIGENCE.md) | Conflict resolution, adaptive retrieval, graph traversal |
+| [Evaluation](docs/EVALUATION.md) | KPIs, NIAH tests, multi-needle scenarios |
+| [Health](docs/HEALTH.md) | Health checks, Kubernetes probes |
 | [Benchmarks](docs/BENCHMARKS.md) | Performance measurements |
-| [Changelog](CHANGELOG.md) | Version history |
+| [Guides](docs/GUIDES.md) | Usage patterns and best practices |
+| [Roadmap](docs/ROADMAP.md) | Feature timeline and status |
 
 ## Research Foundation
 

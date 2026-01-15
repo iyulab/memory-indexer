@@ -102,6 +102,48 @@ Console.WriteLine($"Overall Success Rate: {suite.OverallSuccessRate:P1}");
 Console.WriteLine($"Average CCR: {suite.AverageCcr:P2}");
 ```
 
+## Multi-Needle Test (RULER-inspired)
+
+Tests memory system's ability to recall multiple pieces of information simultaneously.
+
+Reference: [RULER](https://arxiv.org/abs/2404.06654) - Multi-hop retrieval benchmark
+
+### Test Methodology
+
+1. **Haystack Generation**: Large context with multiple needles
+2. **Multiple Needle Insertion**: At configurable positions
+3. **Query Strategies**: Combined, Separate, or Sequential queries
+4. **Recovery Rate**: Measure percentage of needles found
+
+### Usage
+
+```csharp
+var runner = services.GetRequiredService<NiahTestRunner>();
+
+var result = await runner.RunMultiNeedleTestAsync(new MultiNeedleTestConfig
+{
+    Needles = new[]
+    {
+        new NeedleInfo { Content = "Secret code is ALPHA", Query = "secret code", Position = 0.25 },
+        new NeedleInfo { Content = "Meeting at 3pm", Query = "meeting time", Position = 0.50 },
+        new NeedleInfo { Content = "Password is XYZ123", Query = "password", Position = 0.75 }
+    },
+    TargetHaystackTokens = 100_000,
+    QueryStrategy = QueryStrategy.SeparateQueries
+});
+
+Console.WriteLine($"Recovery Rate: {result.RecoveryRate:P1}");
+Console.WriteLine($"Needles Found: {result.NeedlesFound}/{result.TotalNeedles}");
+```
+
+### Query Strategies
+
+| Strategy | Description | Use Case |
+|----------|-------------|----------|
+| `CombinedQuery` | Single query for all needles | Simple scenarios |
+| `SeparateQueries` | One query per needle | Independent facts |
+| `SequentialQueries` | Queries in position order | Chain of information |
+
 ## Cognitive Scenarios
 
 ### False Memory Test
@@ -221,20 +263,23 @@ foreach (var observation in report.Observations)
 }
 ```
 
-## Roadmap
+## Feature Status
 
-### v0.7.0 (Current)
+### Completed (v0.7.0 - v0.11.0)
 - [x] Core KPIs infrastructure
-- [x] NIAH test framework
-- [x] Cognitive scenario tests
-- [x] OpenTelemetry metrics
-- [ ] TwentyQuestionsGame KPI integration
+- [x] NIAH test framework (single-needle)
+- [x] Cognitive scenario tests (False Memory, Cross-Session Retention)
+- [x] OpenTelemetry metrics integration
+- [x] Multi-needle evaluation (RULER-inspired, v0.11.0)
+- [x] Query strategies: CombinedQuery, SeparateQueries, SequentialQueries
+- [x] Recovery rate metrics and per-needle tracking
 
-### v0.8.0+ (Future)
-- [ ] RULER integration (multi-needle retrieval)
+### Future Enhancements
 - [ ] LongBench subset (QA, summarization)
 - [ ] InfiniteBench (100K+ extreme tests)
 - [ ] Automated scorecard generation
+
+> See [Roadmap](ROADMAP.md) for full development timeline.
 
 ## References
 

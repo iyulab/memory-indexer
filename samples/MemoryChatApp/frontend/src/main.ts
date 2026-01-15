@@ -605,7 +605,9 @@ async function selectUser(user: User) {
 }
 
 async function selectSession(session: Session) {
+  console.log('[DEBUG] selectSession called with:', session)
   currentSession = session
+  console.log('[DEBUG] currentSession set to:', currentSession)
   messagesEl.innerHTML = ''
 
   // Reset KPI for new session
@@ -669,8 +671,13 @@ newSessionBtn.addEventListener('click', async () => {
 
   newSessionBtn.setAttribute('disabled', 'true')
   try {
+    console.log('[DEBUG] Creating session for user:', currentUser.id)
     const session = await api.createSession(currentUser.id)
+    console.log('[DEBUG] Session created:', session)
     await selectSession(session)
+  } catch (err) {
+    console.error('[DEBUG] Failed to create session:', err)
+    addMessage('Error: Failed to create session', 'system')
   } finally {
     newSessionBtn.removeAttribute('disabled')
   }
@@ -678,7 +685,20 @@ newSessionBtn.addEventListener('click', async () => {
 
 chatForm.addEventListener('submit', async (e) => {
   e.preventDefault()
-  if (!currentSession) return
+
+  console.log('[DEBUG] Form submit - currentSession:', currentSession)
+
+  if (!currentSession) {
+    console.error('[DEBUG] No session selected!')
+    addMessage('Error: No session selected. Please create a new session first.', 'system')
+    return
+  }
+
+  if (!currentSession.id) {
+    console.error('[DEBUG] Session has no ID!', currentSession)
+    addMessage('Error: Invalid session. Please create a new session.', 'system')
+    return
+  }
 
   const message = messageInput.value.trim()
   if (!message) return
@@ -689,6 +709,7 @@ chatForm.addEventListener('submit', async (e) => {
   chatForm.classList.add('loading')
   const streamingMsg = createStreamingMessage()
 
+  console.log('[DEBUG] Calling streamMessage with sessionId:', currentSession.id)
   api.streamMessage(currentSession.id, message, {
     onThinking(data) {
       streamingMsg.setThinking(data.step, data.count)
