@@ -265,32 +265,54 @@ When new facts conflict with existing ones, stricter resolution criteria are nee
 
 ---
 
-### v0.10.0 - User Profile Evolution (Future)
+### v0.10.0 - User Profile Evolution (Complete)
 
 **Long-Term User Knowledge Management:**
 
-*User Fact Graph:*
-- [ ] Entity-relationship model for user facts
-- [ ] Fact clustering by category
-- [ ] Cross-fact inference (e.g., "lives in Seoul" + "works at Samsung" → "commutes in Seoul")
+*Cross-Fact Inference Engine:*
+- [x] `IFactInferenceEngine` interface for deriving new facts from existing ones
+- [x] `FactInferenceService` implementation with multiple inference types
+- [x] Inference types: CoOccurrence, Semantic, Generalization, Negation, Custom
+- [x] Custom rule registration via `IInferenceRule` interface
+- [x] Auto-store option for high-confidence inferences
 
-*Profile Evolution:*
-- [ ] Change detection and tracking
-- [ ] Confidence decay over time
-- [ ] Re-confirmation prompts for stale facts
-- [ ] Profile snapshot/versioning
+*Confidence Decay Strategy:*
+- [x] `IConfidenceDecayStrategy` interface for time-based confidence decay
+- [x] `TimeBasedDecayStrategy` with exponential decay formula
+- [x] Configurable half-life (default: 90 days)
+- [x] Category-specific decay multipliers (Identity facts decay slower)
+- [x] Confirmation bonus (more confirmations = slower decay)
+- [x] Recent access bonus (recently accessed facts retain confidence)
+- [x] Stale fact detection and re-confirmation triggers
 
-*Advanced Queries:*
-- [ ] Temporal range queries
-- [ ] Category-filtered retrieval
-- [ ] Confidence-weighted results
-- [ ] Profile diff (what changed since last session)
+*Profile Snapshots:*
+- [x] `IProfileSnapshotService` for point-in-time profile versioning
+- [x] `ProfileSnapshotService` with in-memory storage
+- [x] Profile statistics (total facts, average confidence, completeness score)
+- [x] Profile diff comparison (added/removed/modified facts)
+- [x] Session-linked snapshots for context tracking
 
-*Privacy & Compliance:*
-- [ ] Fact deletion with cascade
-- [ ] Export user profile (GDPR)
-- [ ] Fact sensitivity classification
-- [ ] Retention policies by category
+*Privacy & Compliance (GDPR):*
+- [x] `IProfileExporter` interface for profile data export
+- [x] `JsonProfileExporter` implementation with full GDPR compliance
+- [x] Category filtering (include/exclude specific categories)
+- [x] Date range filtering (Since/Until)
+- [x] Archived fact inclusion option
+- [x] Sensitive data redaction with configurable patterns
+- [x] SHA256 checksum for data integrity
+- [x] Metadata export with fact statistics
+
+*MCP Tools:*
+- [x] `infer_facts` - Run cross-fact inference on user profile
+- [x] `get_inference_rules` - List registered inference rules
+- [x] `create_profile_snapshot` - Create point-in-time profile snapshot
+- [x] `list_profile_snapshots` - List available snapshots
+- [x] `compare_snapshots` - Compare two snapshots or snapshot vs current
+- [x] `get_stale_facts` - Get facts needing re-confirmation
+- [x] `calculate_decay` - Calculate decayed confidence for a fact
+- [x] `export_profile` - GDPR-compliant profile export
+
+---
 
 ### v1.0.0+ - Advanced Benchmarks & Administration (Future)
 

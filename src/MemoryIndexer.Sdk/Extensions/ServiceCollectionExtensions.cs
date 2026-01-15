@@ -28,6 +28,7 @@ using MemoryIndexer.Sdk.Intelligence.Security;
 using MemoryIndexer.Sdk.Intelligence.Security.MultiTenant;
 using MemoryIndexer.Sdk.Intelligence.EntityResolution;
 using MemoryIndexer.Sdk.Intelligence.Profile;
+using MemoryIndexer.Sdk.Intelligence.Inference;
 using MemoryIndexer.Sdk.Intelligence.Promotion;
 using MemoryIndexer.Sdk.Intelligence.Quality;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
@@ -220,6 +221,14 @@ public static class ServiceCollectionExtensions
 
         // Register fact validator for category-specific conflict resolution (Phase v0.9.2)
         services.TryAddSingleton<IFactValidator, FactValidatorService>();
+
+        // Register profile evolution services (Phase v0.10.0)
+        services.AddOptions<ConfidenceDecayOptions>()
+            .BindConfiguration("MemoryIndexer:ConfidenceDecay");
+        services.TryAddSingleton<IConfidenceDecayStrategy, TimeBasedDecayStrategy>();
+        services.TryAddSingleton<IProfileSnapshotService, ProfileSnapshotService>();
+        services.TryAddSingleton<IProfileExporter, JsonProfileExporter>();
+        services.TryAddSingleton<IFactInferenceEngine, FactInferenceService>();
 
         // Register memory conflict resolver (Phase 26)
         services.TryAddSingleton<IMemoryConflictResolver, RecencyWeightedResolver>();
