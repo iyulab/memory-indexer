@@ -158,8 +158,22 @@ MemoryIndexer.Stack        # Meta-package bundling all packages
 - [x] Local benchmark script (benchmarks/run_bench.ps1)
 - [x] Benchmark documentation (docs/BENCHMARKS.md)
 
-**Planned (Phase 18.3+):**
-- [ ] REST API wrapper with OpenAPI
+**REST API (Phase 18.3):**
+- [x] ConflictController - Fact conflict detection and resolution REST API
+  - POST /api/conflict/validate - Validate fact for conflicts
+  - GET /api/conflict/history - Get fact version history
+  - GET /api/conflict/temporal - Query facts valid at specific date
+  - POST /api/conflict/archive-and-update - Archive and update fact
+  - GET /api/conflict/rules/{category} - Get category resolution rule
+  - GET /api/conflict/rules - List all category rules
+- [x] MetricsController - Performance monitoring REST API
+  - GET /api/metrics/memory-pressure - System memory pressure info
+  - GET /api/metrics/latency - Latency metrics by tier
+  - GET /api/metrics/growth - Memory growth metrics
+  - GET /api/metrics/dashboard - Aggregated dashboard metrics
+  - POST /api/metrics/latency/reset - Reset latency metrics
+- [x] CancellationToken support for graceful request cancellation
+- [x] Unit tests for controllers (27 tests)
 
 ### v0.9.0 - Context Budget API (Complete)
 

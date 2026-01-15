@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MemoryIndexer.Sdk\MemoryIndexer.Sdk.csproj" />
+    <ProjectReference Include="..\..\tools\McpServer\McpServer.csproj" />
     <ProjectReference Include="..\MemoryIndexer.Tests\MemoryIndexer.Tests.csproj" />
   </ItemGroup>
 
