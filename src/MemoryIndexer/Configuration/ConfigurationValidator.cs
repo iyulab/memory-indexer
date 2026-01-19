@@ -62,10 +62,8 @@ public sealed class ConfigurationValidator : IConfigurationValidator
             });
         }
 
-        if (options.Type == StorageType.SqliteVec)
-        {
-            ValidateSqliteOptions(options.Sqlite, result);
-        }
+        // SQLite options are validated if configured (storage provider is determined by DI)
+        ValidateSqliteOptions(options.Sqlite, result);
     }
 
     private void ValidateSqliteOptions(SqliteOptions options, ConfigurationValidationResult result)
@@ -128,13 +126,12 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
 
         if (options.Provider != EmbeddingProvider.Mock &&
-            options.Provider != EmbeddingProvider.Local &&
             string.IsNullOrWhiteSpace(options.Endpoint))
         {
             result.Errors.Add(new ConfigurationError
             {
                 PropertyPath = "Embedding.Endpoint",
-                Message = "Endpoint is required for non-local embedding providers",
+                Message = "Endpoint is required for non-mock embedding providers",
                 CurrentValue = options.Endpoint,
                 ExpectedConstraint = "valid URL"
             });

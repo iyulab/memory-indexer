@@ -4,7 +4,7 @@ using MemoryIndexer.Interfaces;
 namespace MemoryIndexer.Sdk.Health;
 
 /// <summary>
-/// Health check for Vector Database (SQLite-vec / Qdrant).
+/// Health check for Vector Database (IMemoryStore implementations).
 /// Monitors storage connectivity and query performance.
 /// </summary>
 public class VectorDbHealthCheck : IHealthCheck

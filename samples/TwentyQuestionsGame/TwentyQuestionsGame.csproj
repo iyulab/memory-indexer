@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNetEnv" />
+    <PackageReference Include="LMSupply.Embedder" />
     <PackageReference Include="LMSupply.Generator" />
     <PackageReference Include="OpenAI" />
   </ItemGroup>

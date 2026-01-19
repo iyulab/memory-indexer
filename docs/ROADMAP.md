@@ -99,7 +99,7 @@ Initial release with basic memory primitives and vector storage.
 
 ## Planned
 
-### v0.7.0 - Evaluation Framework & Package Architecture
+### v0.7.0 - Evaluation Framework & Extensibility
 
 **Standardized Evaluation (MemoryBench):**
 
@@ -124,21 +124,13 @@ Initial release with basic memory primitives and vector storage.
 ```
 MemoryIndexer              # Core interfaces and abstractions
 MemoryIndexer.Sdk          # InMemory, SQLite, LMSupply (default embedding)
-MemoryIndexer.Redis        # Redis storage backend
-MemoryIndexer.PostgreSQL   # PostgreSQL with pgvector
-MemoryIndexer.Qdrant       # Qdrant vector database
-MemoryIndexer.Stack        # Meta-package bundling all packages
 ```
 
-**Distributed Storage:**
-- Redis cluster support with connection pooling
-- PostgreSQL with pgvector for enterprise deployments
-- Separate packages by external dependency
-
-**Multi-tenancy:**
-- Full tenant isolation
-- Resource quotas per tenant
-- Usage metering and reporting
+**Extensibility (Interface-based):**
+- [x] `IMemoryStore` interface for custom storage backends
+- [x] `IEmbeddingService` interface for custom embedding providers
+- [x] `ITextCompletionService` interface for custom LLM providers
+- [x] External implementations (Redis, PostgreSQL, Qdrant, etc.) can be added by consumers
 
 ### v0.8.0 - Production Readiness
 
@@ -387,4 +379,4 @@ We implement **forgetting as a feature** - memory decay, importance-based filter
 
 ---
 
-*Last updated: 2026-01-15 (v0.11.0-complete)*
+*Last updated: 2026-01-18 (v0.11.0-complete, removed external storage packages from scope)*

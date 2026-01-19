@@ -6,7 +6,7 @@ namespace MemoryIndexer.Sdk.Storage.Migration;
 
 /// <summary>
 /// Utility for migrating memories between different storage backends.
-/// Supports InMemory -> SQLite -> Qdrant migration paths.
+/// Supports any IMemoryStore implementation migration paths.
 /// </summary>
 public sealed class MemoryStoreMigrator
 {

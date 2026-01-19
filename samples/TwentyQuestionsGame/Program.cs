@@ -1,7 +1,8 @@
 using DotNetEnv;
+using LMSupply.Embedder;
 using LMSupply.Generator;
 using LMSupply.Generator.Abstractions;
-using MemoryIndexer.Configuration;
+using LMSupply.Generator.Models;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Extensions;
@@ -16,6 +17,8 @@ using TwentyQuestionsGame.Benchmark;
 using TwentyQuestionsGame.Game;
 using TwentyQuestionsGame.LLM;
 using TwentyQuestionsGame.ToolCall;
+using MemoryIndexer.Configuration;
+using CachingEmbeddingService = MemoryIndexer.Services.CachingEmbeddingService;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Twenty Questions Game - Memory Indexer Demo
@@ -28,7 +31,8 @@ var useLocalLlm = args.Contains("--local") || args.Contains("-l");
 var debugPrompts = args.Contains("--debug") || args.Contains("-d");
 var iterations = GetIntArg(args, "--iterations", "-n") ?? 1;
 var outputPath = GetStringArg(args, "--output", "-o");
-var localModelId = GetStringArg(args, "--model", "-m") ?? LocalGenerator.DefaultModel;
+// LMSupply presets: "default", "fast", "quality", "small" or full HuggingFace model ID
+var localModelId = GetStringArg(args, "--model", "-m") ?? "default";
 
 if (args.Contains("--help") || args.Contains("-h"))
 {
@@ -86,7 +90,7 @@ else
 
 Console.WriteLine($"[CONFIG] LLM Provider: {llmProvider}");
 Console.WriteLine($"[CONFIG] LLM Model: {llmModel}");
-Console.WriteLine($"[CONFIG] Embedding: {embeddingModel}");
+Console.WriteLine($"[CONFIG] Embedding: {(useLocalLlm ? "default (LMSupply Local)" : embeddingModel)}");
 if (benchmarkMode)
 {
     Console.WriteLine($"[CONFIG] Mode: BENCHMARK ({iterations} iteration(s))");
@@ -104,8 +108,9 @@ services.AddLogging(builder => builder
     .SetMinimumLevel(LogLevel.None));  // Disable all framework logging - game uses GameConsole
 
 // Embedding service: register BEFORE AddMemoryIndexer (uses TryAddSingleton)
+// --local flag forces local embedding regardless of OpenAI key
 int embeddingDimensions;
-if (!string.IsNullOrEmpty(openAiKey))
+if (!useLocalLlm && !string.IsNullOrEmpty(openAiKey))
 {
     // Use OpenAI embedding from SharedLib, wrapped with caching
     var openAi = new OpenAIEmbeddingService(
@@ -122,40 +127,46 @@ if (!string.IsNullOrEmpty(openAiKey))
 }
 else
 {
-    // Local embedding will be registered by AddMemoryIndexer
+    // Use LMSupply local embedding directly
     Console.WriteLine("[CONFIG] Using local embedding (bge-small-en-v1.5)");
-    embeddingDimensions = 384;
+    var localEmbedder = await LocalEmbedder.LoadAsync("default");  // bge-small-en-v1.5, 384 dims
+    embeddingDimensions = localEmbedder.Dimensions;
+    services.AddSingleton<IEmbeddingService>(new LMSupplyEmbeddingService(localEmbedder));
 }
 
-// Memory Indexer
+// Memory Indexer with SQLite persistent storage
 services.AddMemoryIndexer(options =>
 {
-    options.Storage.Type = StorageType.SqliteVec;
     options.Storage.ConnectionString = "Data Source=game_memory.db";
     options.Deduplication.Enabled = false;
     options.Search.EnableReranking = false;
 
-    // Embedding: set dimensions for vector store
-    if (string.IsNullOrEmpty(openAiKey))
-    {
-        // Local embedding (LMSupply.Embedder)
-        options.Embedding.Provider = EmbeddingProvider.Local;
-        options.Embedding.Model = "BAAI/bge-small-en-v1.5";
-        options.Embedding.Dimensions = 384;
-    }
-    else
-    {
-        // OpenAI service already registered above
-        options.Embedding.Dimensions = embeddingDimensions;
-    }
-});
+    // Embedding service is already registered above
+    options.Embedding.Dimensions = embeddingDimensions;
+}).WithSqliteVec();
 
 // LLM Provider Registration (LMSupply / GPUStack / OpenAI)
 IGeneratorModel? localModel = null;
 if (useLocalLlm)
 {
     Console.WriteLine($"[INIT] Loading local model: {localModelId}...");
-    localModel = await LocalGenerator.LoadAsync(localModelId);
+
+    // Use TextGeneratorBuilder for preset support
+    var builder = TextGeneratorBuilder.Create();
+
+    // Check if it's a preset alias or full model ID
+    if (Enum.TryParse<GeneratorModelPreset>(localModelId, ignoreCase: true, out var preset))
+    {
+        builder.WithModel(preset);
+        Console.WriteLine($"[INIT] Using LMSupply preset: {preset}");
+    }
+    else
+    {
+        builder.WithHuggingFaceModel(localModelId);
+        Console.WriteLine($"[INIT] Using HuggingFace model: {localModelId}");
+    }
+
+    localModel = await builder.BuildAsync();
     await localModel.WarmupAsync();
     Console.WriteLine($"[INIT] Local model loaded (max context: {localModel.MaxContextLength})");
     services.AddSingleton(localModel);
@@ -327,4 +338,43 @@ static async Task StoreInitialMemoriesAsync(IMemoryPrimitives memory)
         Scope = Scope.Session,
         Tier = Tier.Long
     });
+}
+
+/// <summary>
+/// Simple wrapper around LMSupply IEmbeddingModel to implement IEmbeddingService.
+/// </summary>
+sealed class LMSupplyEmbeddingService : IEmbeddingService
+{
+    private readonly IEmbeddingModel _model;
+
+    public LMSupplyEmbeddingService(IEmbeddingModel model)
+    {
+        _model = model;
+    }
+
+    public int Dimensions => _model.Dimensions;
+
+    public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
+        string text,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _model.EmbedAsync(text);
+        return result;
+    }
+
+    public async Task<IReadOnlyList<ReadOnlyMemory<float>>> GenerateBatchEmbeddingsAsync(
+        IEnumerable<string> texts,
+        CancellationToken cancellationToken = default)
+    {
+        var textList = texts.ToList();
+        var results = new List<ReadOnlyMemory<float>>(textList.Count);
+
+        foreach (var text in textList)
+        {
+            var embedding = await _model.EmbedAsync(text);
+            results.Add(embedding);
+        }
+
+        return results;
+    }
 }

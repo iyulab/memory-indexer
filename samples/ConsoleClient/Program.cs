@@ -11,14 +11,12 @@ Console.WriteLine();
 // Build the host with Memory Indexer services
 var builder = Host.CreateApplicationBuilder(args);
 
+// InMemory storage is the default - no need to specify
+// Use mock embedding for demo purposes
+// For real usage, register your own IEmbeddingService before AddMemoryIndexer()
 builder.Services.AddMemoryIndexer(options =>
 {
-    // Use InMemory storage for this sample
-    options.Storage.Type = StorageType.InMemory;
-
-    // Use local embedding model
-    options.Embedding.Provider = EmbeddingProvider.Local;
-    options.Embedding.Model = "all-MiniLM-L6-v2";
+    options.Embedding.Provider = EmbeddingProvider.Mock;
     options.Embedding.Dimensions = 384;
 });
 

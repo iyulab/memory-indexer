@@ -572,6 +572,16 @@ public static class MemoryIndexerTelemetry
     }
 
     /// <summary>
+    /// Record a reranking operation (simplified overload).
+    /// </summary>
+    public static void RecordRerankingOperation(double latencyMs, int candidateCount)
+    {
+        RerankingOperations.Add(1,
+            new KeyValuePair<string, object?>("candidate_count", candidateCount));
+        RerankingLatency.Record(latencyMs);
+    }
+
+    /// <summary>
     /// Record a tier promotion event.
     /// </summary>
     public static void RecordTierPromotion(string sourceTier, string targetTier, int memoryCount)

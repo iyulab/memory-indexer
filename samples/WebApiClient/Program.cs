@@ -5,10 +5,9 @@ using MemoryIndexer.Sdk.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Memory Indexer services
+// Add Memory Indexer services (InMemory storage is the default)
 builder.Services.AddMemoryIndexer(options =>
 {
-    options.Storage.Type = StorageType.InMemory;
     options.Embedding.Provider = EmbeddingProvider.Local;
     options.Embedding.Model = "all-MiniLM-L6-v2";
     options.Embedding.Dimensions = 384;

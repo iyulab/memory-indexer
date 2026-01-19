@@ -34,13 +34,15 @@ builder.AddOpenAIChatCompletion(
     modelId: "gpt-4",
     apiKey: Environment.GetEnvironmentVariable("OPENAI_API_KEY")!);
 
-// Add Memory Indexer
+// Register your embedding service (e.g., OpenAI, Azure, local ONNX)
+builder.Services.AddSingleton<IEmbeddingService>(myEmbeddingService);
+
+// Add Memory Indexer with SQLite storage
 builder.Services.AddMemoryIndexer(options =>
 {
-    options.Storage.Type = StorageType.SqliteVec;
-    options.Embedding.Provider = EmbeddingProvider.Ollama;
-    options.Embedding.Model = "bge-m3";
-});
+    options.Storage.ConnectionString = "memories.db";
+    options.Embedding.Dimensions = 1536;  // Match your embedding model
+}).WithSqliteVec();
 
 var kernel = builder.Build();
 ```

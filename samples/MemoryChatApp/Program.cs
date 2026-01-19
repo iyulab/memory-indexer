@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using LMSupply.Embedder;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -96,22 +97,21 @@ if (useExternalEmbed)
     });
     builder.Services.AddSingleton<IEmbeddingService>(cached);
 }
+else
+{
+    // Local embedding using LMSupply directly
+    var localEmbedModel = await LocalEmbedder.LoadAsync("bge-large-en-v1.5");
+    embedDimensions = localEmbedModel.Dimensions;
+    builder.Services.AddSingleton<IEmbeddingService>(new LMSupplyEmbeddingService(localEmbedModel));
+}
 
-// Memory Indexer services
+// Memory Indexer services with SQLite persistent storage
 builder.Services.AddMemoryIndexer(options =>
 {
-    options.Storage.Type = StorageType.SqliteVec;
     options.Storage.ConnectionString = "chat_memories.db";
     options.Embedding.Dimensions = embedDimensions;
     options.Storage.VectorDimensions = embedDimensions;
-
-    if (!useExternalEmbed)
-    {
-        // Local embedding (LMSupply.Embedder)
-        options.Embedding.Provider = EmbeddingProvider.Local;
-        options.Embedding.Model = "bge-large-en-v1.5";
-    }
-});
+}).WithSqliteVec();
 
 // HTTP client for LLM (OpenAI-compatible API)
 if (useExternalLlm)
@@ -887,4 +887,43 @@ class StreamDelta
 
     [JsonPropertyName("reasoning_content")]
     public string? ReasoningContent { get; set; }
+}
+
+/// <summary>
+/// Simple wrapper around LMSupply IEmbeddingModel to implement IEmbeddingService.
+/// </summary>
+sealed class LMSupplyEmbeddingService : IEmbeddingService
+{
+    private readonly IEmbeddingModel _model;
+
+    public LMSupplyEmbeddingService(IEmbeddingModel model)
+    {
+        _model = model;
+    }
+
+    public int Dimensions => _model.Dimensions;
+
+    public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
+        string text,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _model.EmbedAsync(text);
+        return result;
+    }
+
+    public async Task<IReadOnlyList<ReadOnlyMemory<float>>> GenerateBatchEmbeddingsAsync(
+        IEnumerable<string> texts,
+        CancellationToken cancellationToken = default)
+    {
+        var textList = texts.ToList();
+        var results = new List<ReadOnlyMemory<float>>(textList.Count);
+
+        foreach (var text in textList)
+        {
+            var embedding = await _model.EmbedAsync(text);
+            results.Add(embedding);
+        }
+
+        return results;
+    }
 }

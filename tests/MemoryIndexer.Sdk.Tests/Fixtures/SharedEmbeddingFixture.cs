@@ -7,7 +7,6 @@ using Xunit;
 
 #if !SKIP_ONNX_TESTS
 using LMSupply.Embedder;
-using MemoryIndexer.Sdk.Embedding.Providers;
 #endif
 
 namespace MemoryIndexer.Sdk.Tests.Integration.Fixtures;
@@ -90,25 +89,11 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
 #else
             try
             {
-                // Load the shared embedding model
+                // Load the shared embedding model using LMSupply directly
                 EmbeddingModel = await LocalEmbedder.LoadAsync(ModelId);
 
-                // Create shared embedding service
-                var options = new MemoryIndexerOptions
-                {
-                    Embedding = new EmbeddingOptions
-                    {
-                        Provider = EmbeddingProvider.Local,
-                        Model = ModelId,
-                        Dimensions = Dimensions,
-                        CacheTtlMinutes = 30 // Longer TTL for test reuse
-                    }
-                };
-
-                EmbeddingService = new LocalEmbeddingService(
-                    MemoryCache,
-                    Options.Create(options),
-                    NullLogger<LocalEmbeddingService>.Instance);
+                // Create shared embedding service using LMSupply wrapper
+                EmbeddingService = new LMSupplyEmbeddingServiceWrapper(EmbeddingModel);
 
                 IsAvailable = true;
                 _initialized = true;
@@ -158,11 +143,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
         {
             Embedding = new EmbeddingOptions
             {
-#if !SKIP_ONNX_TESTS
-                Provider = EmbeddingProvider.Local,
-#else
-                Provider = EmbeddingProvider.Mock,
-#endif
+                Provider = EmbeddingProvider.Mock,  // SDK no longer has Local provider
                 Model = ModelId,
                 Dimensions = Dimensions,
                 CacheTtlMinutes = 30
@@ -196,4 +177,45 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
         }
 #endif
     }
+
+#if !SKIP_ONNX_TESTS
+    /// <summary>
+    /// Simple wrapper around LMSupply IEmbeddingModel to implement IEmbeddingService for tests.
+    /// </summary>
+    private sealed class LMSupplyEmbeddingServiceWrapper : IEmbeddingService
+    {
+        private readonly IEmbeddingModel _model;
+
+        public LMSupplyEmbeddingServiceWrapper(IEmbeddingModel model)
+        {
+            _model = model;
+        }
+
+        public int Dimensions => _model.Dimensions;
+
+        public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
+            string text,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _model.EmbedAsync(text);
+            return result;
+        }
+
+        public async Task<IReadOnlyList<ReadOnlyMemory<float>>> GenerateBatchEmbeddingsAsync(
+            IEnumerable<string> texts,
+            CancellationToken cancellationToken = default)
+        {
+            var textList = texts.ToList();
+            var results = new List<ReadOnlyMemory<float>>(textList.Count);
+
+            foreach (var text in textList)
+            {
+                var embedding = await _model.EmbedAsync(text);
+                results.Add(embedding);
+            }
+
+            return results;
+        }
+    }
+#endif
 }

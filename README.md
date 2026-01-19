@@ -131,12 +131,21 @@ dotnet add package MemoryIndexer.Sdk
 ```
 
 ```csharp
+// Register your embedding service BEFORE AddMemoryIndexer()
+services.AddSingleton<IEmbeddingService>(myEmbeddingService);
+
+// InMemory storage (default)
 services.AddMemoryIndexer(options =>
 {
-    options.Storage.Type = StorageType.SqliteVec;
-    options.Embedding.Provider = EmbeddingProvider.Ollama;
-    options.Embedding.Model = "bge-m3";
+    options.Embedding.Dimensions = 1536;  // Match your embedding model
 });
+
+// Or with SQLite persistent storage
+services.AddMemoryIndexer(options =>
+{
+    options.Storage.ConnectionString = "memories.db";
+    options.Embedding.Dimensions = 1536;
+}).WithSqliteVec();
 
 // Store
 await memoryService.StoreAsync("user123", "User prefers dark mode", importance: 0.8f);
@@ -160,7 +169,7 @@ This Demo:   context = recall(query, budget=2000)  → Token cost: O(1)
 - Token-budget-aware context building (RecentHeavy, Balanced, SemanticHeavy strategies)
 - 4-tier memory visualization (Buffer → Short → Long → Archive)
 - Session isolation with cross-session user facts
-- Local embeddings (LMSupply) or remote LLM (GpuStack/OpenAI)
+- Flexible embeddings (inject your own IEmbeddingService) with LLM support (GpuStack/OpenAI)
 
 ```bash
 cd samples/MemoryChatApp

@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNetEnv" />
+    <PackageReference Include="LMSupply.Embedder" />
     <PackageReference Include="Microsoft.AspNetCore.SpaProxy" />
   </ItemGroup>
 

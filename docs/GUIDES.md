@@ -624,11 +624,10 @@ public async Task StoreAsync_ShouldStoreMemory()
 [Fact]
 public async Task EndToEnd_StoreAndRecall()
 {
-    // Use InMemory providers for fast tests
+    // Use InMemory providers for fast tests (InMemory is the default)
     var services = new ServiceCollection();
     services.AddMemoryIndexer(options =>
     {
-        options.Storage.Type = StorageType.InMemory;
         options.Embedding.Provider = EmbeddingProvider.Mock;
     });
 

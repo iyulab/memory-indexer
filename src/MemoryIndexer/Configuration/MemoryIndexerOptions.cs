@@ -251,14 +251,8 @@ public sealed class MultiTenantOptions
 public sealed class StorageOptions
 {
     /// <summary>
-    /// Storage provider type.
-    /// </summary>
-    public StorageType Type { get; set; } = StorageType.InMemory;
-
-    /// <summary>
     /// Connection string for the storage provider.
     /// For SQLite: file path (e.g., "memory.db")
-    /// For Qdrant: endpoint URL (e.g., "http://localhost:6334")
     /// </summary>
     public string ConnectionString { get; set; } = "memory.db";
 
@@ -271,11 +265,6 @@ public sealed class StorageOptions
     /// Vector dimensions for storage.
     /// </summary>
     public int VectorDimensions { get; set; } = 768;
-
-    /// <summary>
-    /// Qdrant-specific configuration options.
-    /// </summary>
-    public QdrantOptions Qdrant { get; set; } = new();
 
     /// <summary>
     /// SQLite-specific configuration options.
@@ -395,38 +384,6 @@ public enum SqliteAutoVacuumMode
 }
 
 /// <summary>
-/// Qdrant-specific configuration options.
-/// </summary>
-public sealed class QdrantOptions
-{
-    /// <summary>
-    /// API key for authentication (optional).
-    /// </summary>
-    public string? ApiKey { get; set; }
-}
-
-/// <summary>
-/// Storage provider types.
-/// </summary>
-public enum StorageType
-{
-    /// <summary>
-    /// In-memory storage (for testing).
-    /// </summary>
-    InMemory,
-
-    /// <summary>
-    /// SQLite with vector extension.
-    /// </summary>
-    SqliteVec,
-
-    /// <summary>
-    /// Qdrant vector database.
-    /// </summary>
-    Qdrant
-}
-
-/// <summary>
 /// Embedding service configuration options.
 /// </summary>
 public sealed class EmbeddingOptions
@@ -439,6 +396,15 @@ public sealed class EmbeddingOptions
     /// <summary>
     /// Model name/ID to use for embeddings.
     /// </summary>
+    /// <remarks>
+    /// The model ID format depends on the provider:
+    /// <list type="bullet">
+    /// <item><term>Ollama</term><description>Model name (e.g., "nomic-embed-text")</description></item>
+    /// <item><term>OpenAI</term><description>Model name (e.g., "text-embedding-3-small")</description></item>
+    /// <item><term>AzureOpenAI</term><description>Deployment name</description></item>
+    /// <item><term>Custom</term><description>Provider-specific model ID</description></item>
+    /// </list>
+    /// </remarks>
     public string Model { get; set; } = "nomic-embed-text";
 
     /// <summary>
@@ -500,12 +466,7 @@ public enum EmbeddingProvider
     /// <summary>
     /// Custom HTTP endpoint (OpenAI-compatible).
     /// </summary>
-    Custom,
-
-    /// <summary>
-    /// Local ONNX-based embedding using LocalAI.Embedder.
-    /// </summary>
-    Local
+    Custom
 }
 
 /// <summary>
@@ -1036,6 +997,15 @@ public sealed class CompletionOptions
     /// <summary>
     /// Model name/ID to use for completions.
     /// </summary>
+    /// <remarks>
+    /// The model ID format depends on the provider:
+    /// <list type="bullet">
+    /// <item><term>Ollama</term><description>Model name (e.g., "llama3.2:1b")</description></item>
+    /// <item><term>OpenAI</term><description>Model name (e.g., "gpt-4o-mini")</description></item>
+    /// <item><term>AzureOpenAI</term><description>Deployment name</description></item>
+    /// <item><term>Custom</term><description>Provider-specific model ID</description></item>
+    /// </list>
+    /// </remarks>
     public string Model { get; set; } = "llama3.2:1b";
 
     /// <summary>
@@ -1073,12 +1043,6 @@ public enum CompletionProvider
     /// Mock provider for testing (returns placeholder text).
     /// </summary>
     Mock,
-
-    /// <summary>
-    /// Local ONNX-based inference using LMSupply.Generator.
-    /// Supports Phi-4, Llama 3.2, and other ONNX models.
-    /// </summary>
-    Local,
 
     /// <summary>
     /// Ollama local inference.

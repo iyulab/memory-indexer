@@ -4,8 +4,7 @@ using MemoryIndexer.Services;
 using MemoryIndexer.Services.ContextBuilding;
 using MemoryIndexer.Services.TokenCounting;
 using Microsoft.Extensions.Hosting;
-using MemoryIndexer.Sdk.Completion.Providers;
-using MemoryIndexer.Sdk.Embedding.Providers;
+using MemoryIndexer.Mock;
 using MemoryIndexer.Sdk.Intelligence.Classification;
 using MemoryIndexer.Sdk.Intelligence.Chunking;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
@@ -18,7 +17,6 @@ using MemoryIndexer.Sdk.Intelligence.Deduplication;
 using MemoryIndexer.Sdk.Intelligence.Evaluation;
 using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
 using MemoryIndexer.Sdk.Intelligence.Operations;
-using MemoryIndexer.Sdk.Intelligence.Reranking;
 using MemoryIndexer.Sdk.Intelligence.Retrieval;
 using MemoryIndexer.Scoring;
 using MemoryIndexer.Sdk.Intelligence.Scoring;
@@ -39,8 +37,6 @@ using MemoryIndexer.Sdk.Services;
 using MemoryIndexer.Sdk.Services.Export;
 using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.InMemory;
-using MemoryIndexer.Mock;
-using MemoryIndexer.Sdk.Storage.Qdrant;
 using MemoryIndexer.Sdk.Storage.Sqlite;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,17 +47,43 @@ using Microsoft.Extensions.Options;
 namespace MemoryIndexer.Sdk.Extensions;
 
 /// <summary>
+/// Builder for configuring Memory Indexer services.
+/// </summary>
+public interface IMemoryIndexerBuilder
+{
+    /// <summary>
+    /// The service collection being configured.
+    /// </summary>
+    IServiceCollection Services { get; }
+}
+
+/// <summary>
+/// Default implementation of IMemoryIndexerBuilder.
+/// </summary>
+internal sealed class MemoryIndexerBuilder : IMemoryIndexerBuilder
+{
+    public IServiceCollection Services { get; }
+
+    public MemoryIndexerBuilder(IServiceCollection services)
+    {
+        Services = services;
+    }
+}
+
+/// <summary>
 /// Extension methods for registering Memory Indexer services.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Memory Indexer services to the service collection.
+    /// By default, uses InMemoryMemoryStore. Use WithSqliteVec() for persistent storage,
+    /// or register your own IMemoryStore before calling this method.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configure">Optional configuration action.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddMemoryIndexer(
+    /// <returns>Builder for additional configuration.</returns>
+    public static IMemoryIndexerBuilder AddMemoryIndexer(
         this IServiceCollection services,
         Action<MemoryIndexerOptions>? configure = null)
     {
@@ -107,23 +129,12 @@ public static class ServiceCollectionExtensions
         // Register Sensory buffer (Tier 0) - Phase 14 → Cognitive terminology (Phase 30)
         services.TryAddSingleton<IBuffer, BufferService>();
 
-        // Register storage based on configuration
+        // Register default storage (InMemory)
+        // Use WithSqliteVec() for persistent storage, or register your own IMemoryStore before calling AddMemoryIndexer()
         services.TryAddSingleton<IMemoryStore>(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
-            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<InMemoryMemoryStore>>();
-
-            return options.Storage.Type switch
-            {
-                StorageType.InMemory => new InMemoryMemoryStore(logger),
-                StorageType.SqliteVec => new SqliteVecMemoryStore(
-                    databasePath: options.Storage.ConnectionString ?? "memories.db",
-                    vectorDimensions: options.Storage.VectorDimensions > 0 ? options.Storage.VectorDimensions : options.Embedding.Dimensions,
-                    options: options.Storage.Sqlite,
-                    logger: sp.GetRequiredService<ILogger<SqliteVecMemoryStore>>()),
-                StorageType.Qdrant => CreateQdrantStore(options, sp.GetRequiredService<ILogger<QdrantMemoryStore>>()),
-                _ => new InMemoryMemoryStore(logger)
-            };
+            var logger = sp.GetRequiredService<ILogger<InMemoryMemoryStore>>();
+            return new InMemoryMemoryStore(logger);
         });
 
         services.TryAddSingleton<ILongTermStore>(sp =>
@@ -139,31 +150,26 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient();
 
         // Register embedding service based on configuration
-        // Note: Only Local (LMSupply) and Mock are built-in. For Ollama/OpenAI/Azure,
+        // Note: Only Mock is built-in. For Ollama/OpenAI/Azure/Local,
         // register your own IEmbeddingService before calling AddMemoryIndexer() or use
         // an external adapter package (e.g., MemoryIndexer.Ollama, MemoryIndexer.OpenAI).
         services.TryAddSingleton<IEmbeddingService>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>();
-            var cache = sp.GetRequiredService<IMemoryCache>();
 
             return options.Value.Embedding.Provider switch
             {
-                EmbeddingProvider.Local => new LocalEmbeddingService(
-                    cache,
-                    options,
-                    sp.GetRequiredService<ILogger<LocalEmbeddingService>>()),
                 EmbeddingProvider.Mock => new MockEmbeddingService(
                     options,
                     sp.GetRequiredService<ILogger<MockEmbeddingService>>()),
                 _ => throw new NotSupportedException(
                     $"Embedding provider '{options.Value.Embedding.Provider}' requires external implementation. " +
-                    "Register your own IEmbeddingService before calling AddMemoryIndexer(), or use EmbeddingProvider.Local (LMSupply).")
+                    "Register your own IEmbeddingService before calling AddMemoryIndexer().")
             };
         });
 
         // Register text completion service based on configuration (Phase 25)
-        // Note: Only Local (LMSupply) and Mock are built-in. For Ollama/OpenAI/Azure,
+        // Note: Only Mock is built-in. For Ollama/OpenAI/Azure/Local,
         // register your own ITextCompletionService before calling AddMemoryIndexer() or use
         // an external adapter package (e.g., MemoryIndexer.Ollama, MemoryIndexer.OpenAI).
         services.TryAddSingleton<ITextCompletionService>(sp =>
@@ -172,14 +178,11 @@ public static class ServiceCollectionExtensions
 
             return options.Value.Completion.Provider switch
             {
-                CompletionProvider.Local => new LocalTextCompletionService(
-                    options,
-                    sp.GetRequiredService<ILogger<LocalTextCompletionService>>()),
                 CompletionProvider.Mock => new MockTextCompletionService(
                     sp.GetRequiredService<ILogger<MockTextCompletionService>>()),
                 _ => throw new NotSupportedException(
                     $"Completion provider '{options.Value.Completion.Provider}' requires external implementation. " +
-                    "Register your own ITextCompletionService before calling AddMemoryIndexer(), or use CompletionProvider.Local (LMSupply).")
+                    "Register your own ITextCompletionService before calling AddMemoryIndexer().")
             };
         });
 
@@ -204,7 +207,9 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<OptimizedRecallService>();
 
         // Register re-ranking service (Phase 5.4)
-        services.TryAddSingleton<IRerankerService, LocalRerankerService>();
+        // Note: MockRerankerService is a passthrough. For real re-ranking,
+        // register your own IRerankerService before calling AddMemoryIndexer().
+        services.TryAddSingleton<IRerankerService, MockRerankerService>();
 
         // Register memory classifier (Phase 5.5)
         services.TryAddSingleton<IMemoryClassifier, LocalMemoryClassifier>();
@@ -358,7 +363,7 @@ public static class ServiceCollectionExtensions
             .BindConfiguration("MemoryIndexer:VCM:PromotionBackground");
         services.AddHostedService<MemoryPromotionBackgroundService>();
 
-        return services;
+        return new MemoryIndexerBuilder(services);
     }
 
     /// <summary>
@@ -366,8 +371,8 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="options">The configuration options.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddMemoryIndexer(
+    /// <returns>Builder for additional configuration.</returns>
+    public static IMemoryIndexerBuilder AddMemoryIndexer(
         this IServiceCollection services,
         MemoryIndexerOptions options)
     {
@@ -380,22 +385,38 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    private static QdrantMemoryStore CreateQdrantStore(
-        MemoryIndexerOptions options,
-        ILogger<QdrantMemoryStore> logger)
+    /// <summary>
+    /// Configures Memory Indexer to use SQLite with vector extension for persistent storage.
+    /// </summary>
+    /// <param name="builder">The Memory Indexer builder.</param>
+    /// <param name="databasePath">Optional database path. If not specified, uses Storage.ConnectionString from options or "memories.db".</param>
+    /// <returns>The builder for chaining.</returns>
+    public static IMemoryIndexerBuilder WithSqliteVec(
+        this IMemoryIndexerBuilder builder,
+        string? databasePath = null)
     {
-        // Parse connection string for host:port format
-        var connectionString = options.Storage.ConnectionString ?? "localhost:6334";
-        var parts = connectionString.Replace("http://", "").Replace("https://", "").Split(':');
-        var host = parts.Length > 0 ? parts[0] : "localhost";
-        var port = parts.Length > 1 && int.TryParse(parts[1], out var p) ? p : 6334;
+        // Remove default InMemory registration and replace with SqliteVec
+        var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(IMemoryStore));
+        if (descriptor != null)
+        {
+            builder.Services.Remove(descriptor);
+        }
 
-        return new QdrantMemoryStore(
-            host: host,
-            port: port,
-            apiKey: options.Storage.Qdrant.ApiKey,
-            collectionName: options.Storage.CollectionName ?? "memories",
-            vectorDimensions: options.Storage.VectorDimensions > 0 ? options.Storage.VectorDimensions : options.Embedding.Dimensions,
-            logger: logger);
+        builder.Services.AddSingleton<IMemoryStore>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
+            var resolvedPath = databasePath ?? options.Storage.ConnectionString ?? "memories.db";
+            var dimensions = options.Storage.VectorDimensions > 0
+                ? options.Storage.VectorDimensions
+                : options.Embedding.Dimensions;
+
+            return new SqliteVecMemoryStore(
+                databasePath: resolvedPath,
+                vectorDimensions: dimensions,
+                options: options.Storage.Sqlite,
+                logger: sp.GetRequiredService<ILogger<SqliteVecMemoryStore>>());
+        });
+
+        return builder;
     }
 }

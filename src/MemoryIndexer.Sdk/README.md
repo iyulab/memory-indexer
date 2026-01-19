@@ -5,8 +5,8 @@ Long-term memory management for LLM applications via MCP (Model Context Protocol
 ## Features
 
 - **Semantic Search**: Vector-based similarity search with hybrid BM25 + embedding retrieval
-- **Multiple Storage Backends**: InMemory, SQLite-vec, and Qdrant
-- **Embedding Providers**: Local (ONNX), Ollama, OpenAI, Azure OpenAI
+- **Storage Backends**: InMemory, SQLite-vec (extensible via IMemoryStore)
+- **Embedding Providers**: Inject your own via IEmbeddingService (OpenAI, Azure, local ONNX, etc.)
 - **Multi-Tenant Support**: Complete tenant isolation with CTE-based pre-filtering
 - **Security**: PII detection and prompt injection defense
 - **Observability**: Built-in OpenTelemetry tracing and metrics
@@ -21,12 +21,14 @@ using Microsoft.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Add Memory Indexer with default settings
+// Register your embedding service BEFORE AddMemoryIndexer()
+builder.Services.AddSingleton<IEmbeddingService>(myEmbeddingService);
+
+// Add Memory Indexer with SQLite-vec storage
 builder.Services.AddMemoryIndexer(options =>
 {
-    options.Storage.Type = StorageType.SqliteVec;
-    options.Embedding.Provider = EmbeddingProvider.Local;
-});
+    options.Embedding.Dimensions = 1536;  // Match your embedding model
+}).WithSqliteVec();
 
 // Optional: Add OpenTelemetry observability
 builder.Services.AddMemoryIndexerOtlpObservability("http://localhost:4317");
@@ -45,12 +47,10 @@ await host.RunAsync();
 {
   "MemoryIndexer": {
     "Storage": {
-      "Type": "SqliteVec",
       "ConnectionString": "memories.db"
     },
     "Embedding": {
-      "Provider": "Local",
-      "Dimensions": 1024,
+      "Dimensions": 1536,
       "CacheEnabled": true
     },
     "Search": {
@@ -60,6 +60,8 @@ await host.RunAsync();
   }
 }
 ```
+
+> **Note**: Embedding service must be registered externally via DI before calling `AddMemoryIndexer()`.
 
 ## MCP Tools
 

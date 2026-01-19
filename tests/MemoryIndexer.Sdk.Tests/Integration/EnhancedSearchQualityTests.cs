@@ -1,9 +1,9 @@
 #if !SKIP_ONNX_TESTS
 using FluentAssertions;
+using LMSupply.Embedder;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
-using MemoryIndexer.Sdk.Embedding.Providers;
 using MemoryIndexer.Scoring;
 using MemoryIndexer.Sdk.Intelligence.Search;
 using MemoryIndexer.InMemory;
@@ -37,6 +37,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
     private IQueryExpander _queryExpander = null!;
     private IHybridSearchService _hybridSearch = null!;
     private IScoringService _scoringService = null!;
+    private IEmbeddingModel? _embeddingModel;
 
     public EnhancedSearchQualityTests(ITestOutputHelper output)
     {
@@ -47,15 +48,18 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
     {
         _output.WriteLine("=== Initializing Enhanced Search Quality Tests ===");
 
+        // Load embedding model directly using LMSupply
+        _embeddingModel = await LocalEmbedder.LoadAsync("all-MiniLM-L6-v2");
+
         var services = new ServiceCollection();
 
         var indexerOptions = new MemoryIndexerOptions
         {
             Embedding = new EmbeddingOptions
             {
-                Provider = EmbeddingProvider.Local,
+                Provider = EmbeddingProvider.Mock,  // Provider enum is for SDK config only
                 Model = "all-MiniLM-L6-v2",
-                Dimensions = 384,
+                Dimensions = _embeddingModel.Dimensions,
                 CacheTtlMinutes = 5
             },
             Search = new SearchOptions
@@ -78,12 +82,8 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         services.AddSingleton<IMemoryCache>(new MemoryCache(new MemoryCacheOptions()));
         services.AddLogging();
 
-        // Register services
-        services.AddSingleton<IEmbeddingService>(sp =>
-            new LocalEmbeddingService(
-                sp.GetRequiredService<IMemoryCache>(),
-                sp.GetRequiredService<IOptions<MemoryIndexerOptions>>(),
-                NullLogger<LocalEmbeddingService>.Instance));
+        // Register embedding service using LMSupply directly
+        services.AddSingleton<IEmbeddingService>(new LMSupplyEmbeddingServiceWrapper(_embeddingModel));
 
         services.AddSingleton<IMemoryStore>(sp =>
             new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance));
@@ -115,6 +115,10 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        if (_embeddingModel != null)
+        {
+            await _embeddingModel.DisposeAsync();
+        }
         if (_serviceProvider is IAsyncDisposable asyncDisposable)
         {
             await asyncDisposable.DisposeAsync();
@@ -560,6 +564,45 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         }
 
         return (float)foundKeywords.Count / expectedKeywords.Length;
+    }
+
+    /// <summary>
+    /// Simple wrapper around LMSupply IEmbeddingModel to implement IEmbeddingService for tests.
+    /// </summary>
+    private sealed class LMSupplyEmbeddingServiceWrapper : IEmbeddingService
+    {
+        private readonly IEmbeddingModel _model;
+
+        public LMSupplyEmbeddingServiceWrapper(IEmbeddingModel model)
+        {
+            _model = model;
+        }
+
+        public int Dimensions => _model.Dimensions;
+
+        public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
+            string text,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _model.EmbedAsync(text);
+            return result;
+        }
+
+        public async Task<IReadOnlyList<ReadOnlyMemory<float>>> GenerateBatchEmbeddingsAsync(
+            IEnumerable<string> texts,
+            CancellationToken cancellationToken = default)
+        {
+            var textList = texts.ToList();
+            var results = new List<ReadOnlyMemory<float>>(textList.Count);
+
+            foreach (var text in textList)
+            {
+                var embedding = await _model.EmbedAsync(text);
+                results.Add(embedding);
+            }
+
+            return results;
+        }
     }
 }
 #endif

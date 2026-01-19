@@ -30,9 +30,9 @@ public class MemoryOperationsBenchmark
         var configuration = new ConfigurationBuilder().Build();
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
+        // InMemory storage is the default
         services.AddMemoryIndexer(options =>
         {
-            options.Storage.Type = StorageType.InMemory;
             options.Embedding.Provider = EmbeddingProvider.Mock;
         });
 

@@ -337,16 +337,21 @@ Tools registered via `[McpServerTool]` attribute:
 Registration via `AddMemoryIndexer()` extension:
 
 ```csharp
+// InMemory storage (default)
 services.AddMemoryIndexer(options => {
-    options.Storage.Type = StorageType.SqliteVec;
-    options.Embedding.Provider = EmbeddingProvider.Ollama;
-    options.Embedding.Dimensions = 1024;
+    options.Embedding.Provider = EmbeddingProvider.Local;
 });
+
+// Or with SQLite persistent storage
+services.AddMemoryIndexer(options => {
+    options.Storage.ConnectionString = "memories.db";
+    options.Embedding.Provider = EmbeddingProvider.Local;
+}).WithSqliteVec();
 ```
 
 Registers (core services):
 - `MemoryService` (orchestration)
-- `IMemoryStore` (based on Storage.Type)
+- `IMemoryStore` (InMemory by default, or SqliteVec via WithSqliteVec())
 - `IEmbeddingService` (based on Embedding.Provider)
 - `IScoringService`
 

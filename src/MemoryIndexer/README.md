@@ -40,8 +40,8 @@ services.AddMemoryIndexerCore(options =>
 ## For Full Features
 
 Use `MemoryIndexer.Sdk` for production features:
-- SQLite/Qdrant storage
-- BGE-M3/Ollama/OpenAI embeddings
+- InMemory/SQLite storage (extensible via IMemoryStore)
+- LMSupply embeddings (ONNX-based)
 - MCP protocol tools
 - OpenTelemetry observability
 

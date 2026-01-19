@@ -48,7 +48,7 @@ public class IntelligenceIntegrationTests : IDisposable
 
         services.AddMemoryIndexer(options =>
         {
-            options.Storage.Type = StorageType.InMemory;
+            // InMemory storage is the default
             options.Embedding.Provider = EmbeddingProvider.Mock;
             options.Embedding.Dimensions = 384;
             options.WorkingMemory.Capacity = 9;
@@ -74,7 +74,7 @@ public class IntelligenceIntegrationTests : IDisposable
         var validator = _serviceProvider.GetRequiredService<IConfigurationValidator>();
         var options = new MemoryIndexerOptions
         {
-            Storage = new StorageOptions { Type = StorageType.InMemory },
+            Storage = new StorageOptions(),
             Embedding = new EmbeddingOptions
             {
                 Provider = EmbeddingProvider.Mock,
@@ -99,7 +99,7 @@ public class IntelligenceIntegrationTests : IDisposable
         var validator = _serviceProvider.GetRequiredService<IConfigurationValidator>();
         var options = new MemoryIndexerOptions
         {
-            Storage = new StorageOptions { Type = StorageType.InMemory },
+            Storage = new StorageOptions(),
             Embedding = new EmbeddingOptions
             {
                 Provider = EmbeddingProvider.Mock,
@@ -123,7 +123,7 @@ public class IntelligenceIntegrationTests : IDisposable
         var validator = _serviceProvider.GetRequiredService<IConfigurationValidator>();
         var options = new MemoryIndexerOptions
         {
-            Storage = new StorageOptions { Type = StorageType.InMemory },
+            Storage = new StorageOptions(),
             Embedding = new EmbeddingOptions
             {
                 Provider = EmbeddingProvider.Mock,
@@ -485,7 +485,7 @@ public class IntelligenceIntegrationTests : IDisposable
         var validator = _serviceProvider.GetRequiredService<IConfigurationValidator>();
         var configResult = validator.Validate(new MemoryIndexerOptions
         {
-            Storage = new StorageOptions { Type = StorageType.InMemory },
+            Storage = new StorageOptions(),
             Embedding = new EmbeddingOptions { Provider = EmbeddingProvider.Mock, Dimensions = 384 }
         });
         configResult.IsValid.Should().BeTrue();
