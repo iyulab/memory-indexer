@@ -196,6 +196,35 @@ dotnet run                    # Auto-detect LLM provider
 dotnet run -- --local         # Use local ONNX model (no API key)
 ```
 
+## Custom Storage Backends
+
+Memory Indexer provides `IMemoryStore` interface for custom storage implementations. Use this to integrate with PostgreSQL, Qdrant, Redis, Pinecone, or any other storage system.
+
+```csharp
+using MemoryIndexer.Utilities;
+
+public class MyPostgresStore : IMemoryStore
+{
+    public async Task<MemoryUnit> StoreAsync(MemoryUnit memory, CancellationToken ct)
+    {
+        memory.PrepareForStore();   // Extension: sets Id, CreatedAt, UpdatedAt
+        memory.ValidateForStore();  // Extension: validates required fields
+
+        // Your storage logic here
+        await _db.Memories.AddAsync(MapToEntity(memory), ct);
+        await _db.SaveChangesAsync(ct);
+        return memory;
+    }
+    // ... implement other IMemoryStore methods
+}
+
+// Register your custom store
+services.AddSingleton<IMemoryStore, MyPostgresStore>();
+services.AddMemoryIndexer(options => options.Embedding.Dimensions = 1536);
+```
+
+See [Custom IMemoryStore Implementation Guide](docs/GUIDES.md#custom-imemorystore-implementation) for complete patterns including hybrid PostgreSQL+Qdrant setups.
+
 ## Documentation
 
 | Document | Description |
@@ -205,7 +234,7 @@ dotnet run -- --local         # Use local ONNX model (no API key)
 | [Evaluation](docs/EVALUATION.md) | KPIs, NIAH tests, multi-needle scenarios |
 | [Health](docs/HEALTH.md) | Health checks, Kubernetes probes |
 | [Benchmarks](docs/BENCHMARKS.md) | Performance measurements |
-| [Guides](docs/GUIDES.md) | Usage patterns and best practices |
+| [Guides](docs/GUIDES.md) | Configuration, custom storage, usage patterns |
 | [Roadmap](docs/ROADMAP.md) | Feature timeline and status |
 
 ## Research Foundation
