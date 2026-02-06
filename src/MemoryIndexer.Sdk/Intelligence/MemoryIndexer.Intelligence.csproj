@@ -14,8 +14,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="System.Numerics.Tensors" />
     <PackageReference Include="LMSupply.Reranker" />
-    <!-- LMSupply.Generator reserved for future LLM-based classification -->
-    <!-- <PackageReference Include="LMSupply.Generator" /> -->
   </ItemGroup>
 
 </Project>
