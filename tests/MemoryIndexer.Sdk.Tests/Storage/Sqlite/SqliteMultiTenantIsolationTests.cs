@@ -14,10 +14,16 @@ namespace MemoryIndexer.Sdk.Tests.Storage.Sqlite;
 /// data leakage is prevented.
 /// </summary>
 [Trait("Category", "MultiTenant")]
-public class SqliteMultiTenantIsolationTests : IAsyncLifetime
+public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
 {
     private readonly string _testDbPath;
     private SqliteVecMemoryStore _store = null!;
+
+    public void Dispose()
+    {
+        // Cleanup handled by IAsyncLifetime.DisposeAsync
+        GC.SuppressFinalize(this);
+    }
 
     // Test tenant IDs
     private const string Tenant1 = "tenant-1";
@@ -372,7 +378,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime
     {
         // Get Tenant 1's first memory
         var tenant1Memories = await _store.GetAllAsync(Tenant1);
-        var memoryToUpdate = tenant1Memories.First();
+        var memoryToUpdate = tenant1Memories[0];
 
         // Update it
         memoryToUpdate.Content = "Updated content for Tenant 1";

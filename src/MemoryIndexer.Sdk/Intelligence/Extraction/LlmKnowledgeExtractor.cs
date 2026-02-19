@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -19,7 +19,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Extraction;
 /// - Understand context and nuance in responses
 /// - Generate confidence scores based on semantic understanding
 /// </remarks>
-public sealed class LlmKnowledgeExtractor : IKnowledgeExtractor
+public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
 {
     private readonly ITextCompletionService _completionService;
     private readonly ILogger<LlmKnowledgeExtractor> _logger;
@@ -48,20 +48,19 @@ public sealed class LlmKnowledgeExtractor : IKnowledgeExtractor
                 StopSequences = new[] { "###" }
             };
 
-            _logger.LogDebug("Extracting knowledge from Q&A: {Question} -> {Answer}",
-                context.Question, context.Answer);
+            LogExtractingKnowledgeQuestionAnswer(_logger, context.Question, context.Answer);
 
             var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
 
             var facts = ParseExtractionResponse(response, context);
 
-            _logger.LogDebug("Extracted {Count} facts from Q&A", facts.Count);
+            LogExtractedCountFacts(_logger, facts.Count);
 
             return facts;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract knowledge from Q&A");
+            LogFailedExtractKnowledge(_logger, ex);
             return Array.Empty<ExtractedFact>();
         }
     }
@@ -119,7 +118,7 @@ public sealed class LlmKnowledgeExtractor : IKnowledgeExtractor
 
             if (jsonStart == -1 || jsonEnd == -1)
             {
-                _logger.LogWarning("No JSON found in extraction response");
+                LogJSONFoundExtractionResponse(_logger);
                 return Array.Empty<ExtractedFact>();
             }
 
@@ -135,11 +134,25 @@ public sealed class LlmKnowledgeExtractor : IKnowledgeExtractor
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex, "Failed to parse extraction response as JSON: {Response}",
-                response);
+            LogFailedParseExtractionResponseJSON(_logger, ex, response);
             return Array.Empty<ExtractedFact>();
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting knowledge from Q&A: {Question} -> {Answer}")]
+    private static partial void LogExtractingKnowledgeQuestionAnswer(ILogger logger, object question, object answer);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracted {Count} facts from Q&A")]
+    private static partial void LogExtractedCountFacts(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to extract knowledge from Q&A")]
+    private static partial void LogFailedExtractKnowledge(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No JSON found in extraction response")]
+    private static partial void LogJSONFoundExtractionResponse(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse extraction response as JSON: {Response}")]
+    private static partial void LogFailedParseExtractionResponseJSON(ILogger logger, Exception ex, object response);
 }
 
 #region JSON Models

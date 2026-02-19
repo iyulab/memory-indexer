@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
@@ -158,9 +158,7 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
         // Determine tier priority based on intent
         var tierPriority = GetTierPriority(primaryIntent);
 
-        _logger.LogDebug(
-            "Query '{Query}' classified as {Intent} with confidence {Confidence:F2}, specificity {Specificity:F2}",
-            query, primaryIntent, primaryConfidence, specificity);
+        LogQueryQueryClassifiedIntentConfidence(_logger, query, primaryIntent, primaryConfidence, specificity);
 
         var result = new QueryIntentResult
         {
@@ -283,8 +281,8 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
     /// <returns>Specificity score from 0.0 (generic) to 1.0 (highly specific).</returns>
     private static float CalculateQuerySpecificity(
         string query,
-        IReadOnlyList<string> keywords,
-        IReadOnlyList<string> entities)
+        List<string> keywords,
+        List<string> entities)
     {
         float specificity = 0f;
 
@@ -305,7 +303,7 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
         }
 
         // 4. Quoted strings: quotes indicate specific search terms
-        var quotedCount = Regex.Matches(query, @"""[^""]+""").Count;
+        var quotedCount = Regex.Count(query, @"""[^""]+""");
         if (quotedCount > 0)
         {
             specificity += Math.Clamp(quotedCount * 0.2f, 0f, 0.3f); // Max 0.3
@@ -319,7 +317,7 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
 
         // 6. Rare words (3+ syllable or uncommon patterns): indicate specificity
         var rareWordPattern = @"\b\w{8,}\b"; // 8+ character words are often rare/specific
-        var rareWordCount = Regex.Matches(query, rareWordPattern).Count;
+        var rareWordCount = Regex.Count(query, rareWordPattern);
         if (rareWordCount > 0)
         {
             specificity += Math.Clamp(rareWordCount * 0.1f, 0f, 0.2f); // Max 0.2
@@ -327,4 +325,7 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
 
         return Math.Clamp(specificity, 0f, 1f);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Query '{Query}' classified as {Intent} with confidence {Confidence:F2}, specificity {Specificity:F2}")]
+    private static partial void LogQueryQueryClassifiedIntentConfidence(ILogger logger, string query, QueryIntent intent, float confidence, float specificity);
 }

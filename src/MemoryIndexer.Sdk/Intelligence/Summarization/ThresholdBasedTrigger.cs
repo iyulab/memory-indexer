@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -7,7 +7,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Summarization;
 /// <summary>
 /// Threshold-based summarization trigger that monitors various context conditions.
 /// </summary>
-public sealed class ThresholdBasedTrigger : ISummarizationTrigger
+public sealed partial class ThresholdBasedTrigger : ISummarizationTrigger
 {
     private readonly TriggerOptions _options;
     private readonly ILogger<ThresholdBasedTrigger> _logger;
@@ -90,8 +90,7 @@ public sealed class ThresholdBasedTrigger : ISummarizationTrigger
         // Determine result
         if (conditions.Count == 0)
         {
-            _logger.LogDebug("No summarization trigger conditions met for session {SessionId}",
-                context.SessionId);
+            LogSummarizationTriggerConditionsMetSession(_logger, context.SessionId);
 
             return Task.FromResult(new TriggerEvaluation
             {
@@ -128,9 +127,7 @@ public sealed class ThresholdBasedTrigger : ISummarizationTrigger
 
         var explanation = string.Join("; ", conditions.Select(c => c.Reason));
 
-        _logger.LogInformation(
-            "Summarization triggered for session {SessionId}: {Priority} priority, {Condition} condition",
-            context.SessionId, priority, primaryCondition);
+        LogSummarizationTriggeredSessionSessionIdPriority(_logger, context.SessionId, priority, primaryCondition);
 
         return Task.FromResult(new TriggerEvaluation
         {
@@ -180,12 +177,10 @@ public sealed class ThresholdBasedTrigger : ISummarizationTrigger
             }
         }
 
-        _logger.LogDebug(
-            "Session {SessionId} event: {EventType}, messages: {Messages}, memories: {Memories}",
-            sessionId, eventType, state.MessageCount, state.MemoryCount);
+        LogSessionSessionIdEventEventTypeMessages(_logger, sessionId, eventType, state.MessageCount, state.MemoryCount);
     }
 
-    private SummarizationStrategy DetermineStrategy(
+    private static SummarizationStrategy DetermineStrategy(
         List<(TriggerCondition Condition, float Urgency, string Reason)> conditions,
         SummarizationContext context)
     {
@@ -242,6 +237,15 @@ public sealed class ThresholdBasedTrigger : ISummarizationTrigger
         public bool IsEnding { get; set; }
         public bool ManualTriggerRequested { get; set; }
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No summarization trigger conditions met for session {SessionId}")]
+    private static partial void LogSummarizationTriggerConditionsMetSession(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Summarization triggered for session {SessionId}: {Priority} priority, {Condition} condition")]
+    private static partial void LogSummarizationTriggeredSessionSessionIdPriority(ILogger logger, string sessionId, SummarizationPriority priority, TriggerCondition condition);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Session {SessionId} event: {EventType}, messages: {Messages}, memories: {Memories}")]
+    private static partial void LogSessionSessionIdEventEventTypeMessages(ILogger logger, string sessionId, SessionEventType eventType, int messages, int memories);
 }
 
 /// <summary>

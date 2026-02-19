@@ -8,9 +8,9 @@ public interface IAuditLogger
     /// <summary>
     /// Logs an audit event.
     /// </summary>
-    /// <param name="event">The audit event to log.</param>
+    /// <param name="auditEvent">The audit event to log.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task LogAsync(AuditEvent @event, CancellationToken cancellationToken = default);
+    Task LogAsync(AuditEvent auditEvent, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Logs an audit event with automatic context population.

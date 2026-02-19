@@ -1,6 +1,6 @@
 using MemoryIndexer.Sdk.Intelligence.Security;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Security;
@@ -11,8 +11,8 @@ public class PromptInjectionDetectorTests
 
     public PromptInjectionDetectorTests()
     {
-        var logger = new Mock<ILogger<PromptInjectionDetector>>();
-        _detector = new PromptInjectionDetector(logger.Object);
+        var logger = Substitute.For<ILogger<PromptInjectionDetector>>();
+        _detector = new PromptInjectionDetector(logger);
     }
 
     #region Jailbreak Detection

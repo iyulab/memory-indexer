@@ -3,7 +3,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Promotion;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Promotion;
@@ -14,24 +14,24 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Promotion;
 /// </summary>
 public class FastTrackPromoterServiceTests
 {
-    private readonly Mock<IFactExtractor> _mockExtractor;
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
-    private readonly Mock<IMemoryStore> _mockMemoryStore;
-    private readonly Mock<ILogger<FastTrackPromoterService>> _mockLogger;
+    private readonly IFactExtractor _mockExtractor;
+    private readonly IArchiveStore _mockArchiveStore;
+    private readonly IMemoryStore _mockMemoryStore;
+    private readonly ILogger<FastTrackPromoterService> _mockLogger;
     private readonly FastTrackPromoterService _service;
 
     public FastTrackPromoterServiceTests()
     {
-        _mockExtractor = new Mock<IFactExtractor>();
-        _mockArchiveStore = new Mock<IArchiveStore>();
-        _mockMemoryStore = new Mock<IMemoryStore>();
-        _mockLogger = new Mock<ILogger<FastTrackPromoterService>>();
+        _mockExtractor = Substitute.For<IFactExtractor>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
+        _mockMemoryStore = Substitute.For<IMemoryStore>();
+        _mockLogger = Substitute.For<ILogger<FastTrackPromoterService>>();
 
         _service = new FastTrackPromoterService(
-            _mockExtractor.Object,
-            _mockArchiveStore.Object,
-            _mockLogger.Object,
-            _mockMemoryStore.Object);
+            _mockExtractor,
+            _mockArchiveStore,
+            _mockLogger,
+            _mockMemoryStore);
     }
 
     #region ProcessAsync Tests
@@ -72,14 +72,14 @@ public class FastTrackPromoterServiceTests
             RecommendedAction = FactConflictAction.Add
         };
 
-        _mockExtractor.Setup(e => e.ExtractAsync(It.IsAny<FactExtractionContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(extractionResult);
+        _mockExtractor.ExtractAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
+            .Returns(extractionResult);
 
-        _mockExtractor.Setup(e => e.ValidateAsync(It.IsAny<UserFact>(), It.IsAny<IReadOnlyList<MemoryUnit>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(validationResult);
+        _mockExtractor.ValidateAsync(Arg.Any<UserFact>(), Arg.Any<IReadOnlyList<MemoryUnit>>(), Arg.Any<CancellationToken>())
+            .Returns(validationResult);
 
-        _mockMemoryStore.Setup(m => m.GetAllAsync(It.IsAny<string>(), It.IsAny<MemoryFilterOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit>());
+        _mockMemoryStore.GetAllAsync(Arg.Any<string>(), Arg.Any<MemoryFilterOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit>());
 
         // Act
         var result = await _service.ProcessAsync(context);
@@ -89,10 +89,10 @@ public class FastTrackPromoterServiceTests
         result.FastTrackedFacts.Should().HaveCount(1);
         result.ContextType.Should().Be(StatementContextType.Direct);
 
-        _mockArchiveStore.Verify(a => a.SetAsync(
+        await _mockArchiveStore.Received(1).SetAsync(
             "user1",
-            It.Is<SemanticStoreEntry>(e => e.Value == "User's name is John"),
-            It.IsAny<CancellationToken>()), Times.Once);
+            Arg.Is<SemanticStoreEntry>(e => e.Value == "User's name is John"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -131,14 +131,14 @@ public class FastTrackPromoterServiceTests
             RecommendedAction = FactConflictAction.Add
         };
 
-        _mockExtractor.Setup(e => e.ExtractAsync(It.IsAny<FactExtractionContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(extractionResult);
+        _mockExtractor.ExtractAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
+            .Returns(extractionResult);
 
-        _mockExtractor.Setup(e => e.ValidateAsync(It.IsAny<UserFact>(), It.IsAny<IReadOnlyList<MemoryUnit>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(validationResult);
+        _mockExtractor.ValidateAsync(Arg.Any<UserFact>(), Arg.Any<IReadOnlyList<MemoryUnit>>(), Arg.Any<CancellationToken>())
+            .Returns(validationResult);
 
-        _mockMemoryStore.Setup(m => m.GetAllAsync(It.IsAny<string>(), It.IsAny<MemoryFilterOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit>());
+        _mockMemoryStore.GetAllAsync(Arg.Any<string>(), Arg.Any<MemoryFilterOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit>());
 
         // Act
         var result = await _service.ProcessAsync(context);
@@ -148,10 +148,10 @@ public class FastTrackPromoterServiceTests
         result.FastTrackedFacts.Should().BeEmpty();
         result.StandardPathFacts.Should().HaveCount(1);
 
-        _mockArchiveStore.Verify(a => a.SetAsync(
-            It.IsAny<string>(),
-            It.IsAny<SemanticStoreEntry>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+        await _mockArchiveStore.DidNotReceive().SetAsync(
+            Arg.Any<string>(),
+            Arg.Any<SemanticStoreEntry>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -186,14 +186,14 @@ public class FastTrackPromoterServiceTests
             ConflictType = FactConflictType.None
         };
 
-        _mockExtractor.Setup(e => e.ExtractAsync(It.IsAny<FactExtractionContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(extractionResult);
+        _mockExtractor.ExtractAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
+            .Returns(extractionResult);
 
-        _mockExtractor.Setup(e => e.ValidateAsync(It.IsAny<UserFact>(), It.IsAny<IReadOnlyList<MemoryUnit>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(validationResult);
+        _mockExtractor.ValidateAsync(Arg.Any<UserFact>(), Arg.Any<IReadOnlyList<MemoryUnit>>(), Arg.Any<CancellationToken>())
+            .Returns(validationResult);
 
-        _mockMemoryStore.Setup(m => m.GetAllAsync(It.IsAny<string>(), It.IsAny<MemoryFilterOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit>());
+        _mockMemoryStore.GetAllAsync(Arg.Any<string>(), Arg.Any<MemoryFilterOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit>());
 
         // Act
         var result = await _service.ProcessAsync(context);
@@ -239,14 +239,14 @@ public class FastTrackPromoterServiceTests
             Reasoning = "Exact duplicate found"
         };
 
-        _mockExtractor.Setup(e => e.ExtractAsync(It.IsAny<FactExtractionContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(extractionResult);
+        _mockExtractor.ExtractAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
+            .Returns(extractionResult);
 
-        _mockExtractor.Setup(e => e.ValidateAsync(It.IsAny<UserFact>(), It.IsAny<IReadOnlyList<MemoryUnit>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(validationResult);
+        _mockExtractor.ValidateAsync(Arg.Any<UserFact>(), Arg.Any<IReadOnlyList<MemoryUnit>>(), Arg.Any<CancellationToken>())
+            .Returns(validationResult);
 
-        _mockMemoryStore.Setup(m => m.GetAllAsync(It.IsAny<string>(), It.IsAny<MemoryFilterOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit>
+        _mockMemoryStore.GetAllAsync(Arg.Any<string>(), Arg.Any<MemoryFilterOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit>
             {
                 new() { Content = "User's name is John", Type = MemoryType.Fact }
             });
@@ -278,8 +278,8 @@ public class FastTrackPromoterServiceTests
             ContextType = StatementContextType.Question
         };
 
-        _mockExtractor.Setup(e => e.ExtractAsync(It.IsAny<FactExtractionContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(extractionResult);
+        _mockExtractor.ExtractAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
+            .Returns(extractionResult);
 
         // Act
         var result = await _service.ProcessAsync(context);
@@ -326,14 +326,14 @@ public class FastTrackPromoterServiceTests
             ConflictType = FactConflictType.None
         };
 
-        _mockExtractor.Setup(e => e.ExtractAsync(It.IsAny<FactExtractionContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(extractionResult);
+        _mockExtractor.ExtractAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
+            .Returns(extractionResult);
 
-        _mockExtractor.Setup(e => e.ValidateAsync(It.IsAny<UserFact>(), It.IsAny<IReadOnlyList<MemoryUnit>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(validationResult);
+        _mockExtractor.ValidateAsync(Arg.Any<UserFact>(), Arg.Any<IReadOnlyList<MemoryUnit>>(), Arg.Any<CancellationToken>())
+            .Returns(validationResult);
 
-        _mockMemoryStore.Setup(m => m.GetAllAsync(It.IsAny<string>(), It.IsAny<MemoryFilterOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit>());
+        _mockMemoryStore.GetAllAsync(Arg.Any<string>(), Arg.Any<MemoryFilterOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit>());
 
         // Act
         var result = await _service.ProcessBatchAsync(items);
@@ -391,8 +391,8 @@ public class FastTrackPromoterServiceTests
             }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(entries);
 
         // Act
         var profile = await _service.GetUserProfileAsync("user1");
@@ -420,8 +420,8 @@ public class FastTrackPromoterServiceTests
             }
         };
 
-        _mockArchiveStore.Setup(a => a.GetByCategoryAsync("user1", SemanticStoreCategory.Preference, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
+        _mockArchiveStore.GetByCategoryAsync("user1", SemanticStoreCategory.Preference, Arg.Any<CancellationToken>())
+            .Returns(entries);
 
         // Act
         var profile = await _service.GetUserProfileAsync("user1", FactCategory.Preference);
@@ -435,8 +435,8 @@ public class FastTrackPromoterServiceTests
     public async Task GetUserProfileAsync_WithNoFacts_ShouldReturnEmptyProfile()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         // Act
         var profile = await _service.GetUserProfileAsync("user1");

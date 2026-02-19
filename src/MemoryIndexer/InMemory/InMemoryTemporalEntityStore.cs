@@ -9,7 +9,7 @@ namespace MemoryIndexer.InMemory;
 /// In-memory implementation of ITemporalEntityStore.
 /// Supports bitemporal queries and version chains.
 /// </summary>
-public sealed class InMemoryTemporalEntityStore(ILogger<InMemoryTemporalEntityStore> logger) : ITemporalEntityStore
+public sealed partial class InMemoryTemporalEntityStore(ILogger<InMemoryTemporalEntityStore> logger) : ITemporalEntityStore
 {
     private readonly ConcurrentDictionary<Guid, EntityTriple> _triples = new();
 
@@ -22,8 +22,7 @@ public sealed class InMemoryTemporalEntityStore(ILogger<InMemoryTemporalEntitySt
         triple.TransactionTime = DateTime.UtcNow;
 
         _triples[triple.Id] = triple;
-        logger.LogDebug("Stored entity triple {TripleId}: {Subject} - {Predicate} - {Object}",
-            triple.Id, triple.Subject, triple.Predicate, triple.ObjectValue);
+        LogStoredEntityTriple(logger, triple.Id, triple.Subject, triple.Predicate, triple.ObjectValue);
 
         return Task.FromResult(triple);
     }
@@ -143,9 +142,7 @@ public sealed class InMemoryTemporalEntityStore(ILogger<InMemoryTemporalEntitySt
         var newTriple = existing.CreateSupersedingVersion(newObjectValue, validFrom);
         await StoreAsync(newTriple, cancellationToken);
 
-        logger.LogInformation(
-            "Superseded triple {OldId} with {NewId}: {Subject}.{Predicate} changed from '{OldValue}' to '{NewValue}'",
-            existingTripleId, newTriple.Id, existing.Subject, existing.Predicate,
+        LogSupersededTriple(logger, existingTripleId, newTriple.Id, existing.Subject, existing.Predicate,
             existing.ObjectValue, newObjectValue);
 
         return newTriple;
@@ -257,4 +254,10 @@ public sealed class InMemoryTemporalEntityStore(ILogger<InMemoryTemporalEntitySt
     {
         return start1 < end2 && start2 < end1;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Stored entity triple {TripleId}: {Subject} - {Predicate} - {ObjectValue}")]
+    private static partial void LogStoredEntityTriple(ILogger logger, Guid tripleId, string subject, string predicate, string objectValue);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Superseded triple {OldId} with {NewId}: {Subject}.{Predicate} changed from '{OldValue}' to '{NewValue}'")]
+    private static partial void LogSupersededTriple(ILogger logger, Guid oldId, Guid newId, string subject, string predicate, string oldValue, string newValue);
 }

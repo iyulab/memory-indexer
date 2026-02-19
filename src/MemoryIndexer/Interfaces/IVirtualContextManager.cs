@@ -159,6 +159,11 @@ public sealed class VirtualContextState
     public int MaxTokenCapacity { get; set; }
 
     /// <summary>
+    /// When the current session was initialized.
+    /// </summary>
+    public DateTime? SessionStartedAt { get; set; }
+
+    /// <summary>
     /// Current saturation percentage (0-100).
     /// </summary>
     public float SaturationPercentage => MaxTokenCapacity > 0

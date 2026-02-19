@@ -1,7 +1,8 @@
 using FluentAssertions;
 using MemoryIndexer.Sdk.Mcp.Tools;
 using MemoryIndexer.Sdk.Observability;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
@@ -12,13 +13,13 @@ namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
 /// </summary>
 public class MetricsToolsTests
 {
-    private readonly Mock<IMetricsDashboard> _mockDashboard;
+    private readonly IMetricsDashboard _mockDashboard;
     private readonly MetricsTools _tools;
 
     public MetricsToolsTests()
     {
-        _mockDashboard = new Mock<IMetricsDashboard>();
-        _tools = new MetricsTools(_mockDashboard.Object);
+        _mockDashboard = Substitute.For<IMetricsDashboard>();
+        _tools = new MetricsTools(_mockDashboard);
     }
 
     #region GetHealthSummary Tests
@@ -27,8 +28,8 @@ public class MetricsToolsTests
     public async Task GetHealthSummary_ReturnsHealthyStatus()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetHealthSummaryAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HealthSummary
+        _mockDashboard.GetHealthSummaryAsync(Arg.Any<CancellationToken>())
+            .Returns(new HealthSummary
             {
                 Status = HealthStatus.Healthy,
                 HealthScore = 1.0f,
@@ -55,8 +56,8 @@ public class MetricsToolsTests
     public async Task GetHealthSummary_WithAlerts_IncludesAlertInfo()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetHealthSummaryAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HealthSummary
+        _mockDashboard.GetHealthSummaryAsync(Arg.Any<CancellationToken>())
+            .Returns(new HealthSummary
             {
                 Status = HealthStatus.Degraded,
                 HealthScore = 0.8f,
@@ -82,8 +83,8 @@ public class MetricsToolsTests
     public async Task GetHealthSummary_OnException_ReturnsFailure()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetHealthSummaryAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Dashboard unavailable"));
+        _mockDashboard.GetHealthSummaryAsync(Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Dashboard unavailable"));
 
         // Act
         var result = await _tools.GetHealthSummary();
@@ -101,11 +102,11 @@ public class MetricsToolsTests
     public async Task GetOperationStats_ReturnsCorrectStats()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetOperationStatisticsAsync(
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OperationStatistics
+        _mockDashboard.GetOperationStatisticsAsync(
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new OperationStatistics
             {
                 TotalOperations = 1000,
                 SuccessfulOperations = 950,
@@ -132,11 +133,11 @@ public class MetricsToolsTests
     public async Task GetOperationStats_WithCustomHours_UsesCorrectPeriod()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetOperationStatisticsAsync(
-                It.Is<DateTimeOffset>(t => t < DateTimeOffset.UtcNow.AddHours(-11)),
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OperationStatistics());
+        _mockDashboard.GetOperationStatisticsAsync(
+                Arg.Is<DateTimeOffset>(t => t < DateTimeOffset.UtcNow.AddHours(-11)),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new OperationStatistics());
 
         // Act
         var result = await _tools.GetOperationStats(hours: 12);
@@ -154,8 +155,8 @@ public class MetricsToolsTests
     public async Task GetPerformanceMetrics_ReturnsAllLatencies()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetPerformanceMetricsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PerformanceMetrics
+        _mockDashboard.GetPerformanceMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerformanceMetrics
             {
                 StoreLatencyP50Ms = 10,
                 StoreLatencyP95Ms = 50,
@@ -189,10 +190,10 @@ public class MetricsToolsTests
     public async Task GetStorageStats_ReturnsCorrectStats()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetStorageStatisticsAsync(
-                It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StorageStatistics
+        _mockDashboard.GetStorageStatisticsAsync(
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new StorageStatistics
             {
                 TotalMemories = 10000,
                 TotalSizeBytes = 1024 * 1024 * 50, // 50 MB
@@ -223,10 +224,10 @@ public class MetricsToolsTests
     public async Task GetStorageStats_WithTenantFilter_PassesFilter()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetStorageStatisticsAsync(
+        _mockDashboard.GetStorageStatisticsAsync(
                 "tenant123",
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StorageStatistics());
+                Arg.Any<CancellationToken>())
+            .Returns(new StorageStatistics());
 
         // Act
         var result = await _tools.GetStorageStats(tenantId: "tenant123");
@@ -244,11 +245,11 @@ public class MetricsToolsTests
     public async Task GetSecurityMetrics_ReturnsSecurityInfo()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetSecurityMetricsAsync(
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SecurityMetrics
+        _mockDashboard.GetSecurityMetricsAsync(
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new SecurityMetrics
             {
                 PiiDetections = 10,
                 PiiByType = new Dictionary<string, long> { ["Email"] = 5, ["Phone"] = 5 },
@@ -278,13 +279,13 @@ public class MetricsToolsTests
     {
         // Arrange
         var now = DateTimeOffset.UtcNow;
-        _mockDashboard.Setup(d => d.GetTimeSeriesAsync(
+        _mockDashboard.GetTimeSeriesAsync(
                 "operation.Store.latency",
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<TimeSpan>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TimeSeriesDataPoint>
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<TimeSpan>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new List<TimeSeriesDataPoint>
             {
                 new() { Timestamp = now.AddMinutes(-10), Value = 50 },
                 new() { Timestamp = now.AddMinutes(-5), Value = 55 },
@@ -311,13 +312,13 @@ public class MetricsToolsTests
     public async Task GetMetricTimeSeries_NoData_ReturnsEmptyWithMessage()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetTimeSeriesAsync(
-                It.IsAny<string>(),
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<TimeSpan>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TimeSeriesDataPoint>());
+        _mockDashboard.GetTimeSeriesAsync(
+                Arg.Any<string>(),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<TimeSpan>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new List<TimeSeriesDataPoint>());
 
         // Act
         var result = await _tools.GetMetricTimeSeries("unknown.metric", 1, 5);
@@ -337,8 +338,8 @@ public class MetricsToolsTests
     public async Task GetDashboardOverview_CombinesAllMetrics()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetHealthSummaryAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HealthSummary
+        _mockDashboard.GetHealthSummaryAsync(Arg.Any<CancellationToken>())
+            .Returns(new HealthSummary
             {
                 Status = HealthStatus.Healthy,
                 HealthScore = 0.95f,
@@ -347,40 +348,40 @@ public class MetricsToolsTests
                 Uptime = TimeSpan.FromHours(24)
             });
 
-        _mockDashboard.Setup(d => d.GetOperationStatisticsAsync(
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OperationStatistics
+        _mockDashboard.GetOperationStatisticsAsync(
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new OperationStatistics
             {
                 TotalOperations = 5000,
                 SuccessRate = 0.99f,
                 OperationsPerSecond = 1.4
             });
 
-        _mockDashboard.Setup(d => d.GetPerformanceMetricsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PerformanceMetrics
+        _mockDashboard.GetPerformanceMetricsAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerformanceMetrics
             {
                 RecallLatencyP95Ms = 100,
                 EmbeddingCacheHitRate = 0.80f,
                 AvgSimilarityScore = 0.85
             });
 
-        _mockDashboard.Setup(d => d.GetStorageStatisticsAsync(
-                It.IsAny<string?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StorageStatistics
+        _mockDashboard.GetStorageStatisticsAsync(
+                Arg.Any<string?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new StorageStatistics
             {
                 TotalMemories = 50000,
                 TotalSizeBytes = 1024 * 1024 * 100,
                 GrowthRateBytesPerDay = 1024 * 1024 * 5
             });
 
-        _mockDashboard.Setup(d => d.GetSecurityMetricsAsync(
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<DateTimeOffset>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SecurityMetrics
+        _mockDashboard.GetSecurityMetricsAsync(
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new SecurityMetrics
             {
                 SecurityScore = 0.95f,
                 PiiDetections = 5,
@@ -416,8 +417,8 @@ public class MetricsToolsTests
     public async Task GetDashboardOverview_OnException_ReturnsFailure()
     {
         // Arrange
-        _mockDashboard.Setup(d => d.GetHealthSummaryAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Service unavailable"));
+        _mockDashboard.GetHealthSummaryAsync(Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Service unavailable"));
 
         // Act
         var result = await _tools.GetDashboardOverview();

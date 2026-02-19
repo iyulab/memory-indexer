@@ -12,6 +12,7 @@ using CachingEmbeddingService = MemoryIndexer.Services.CachingEmbeddingService;
 // Context Budget API models
 using ContextBudget = MemoryIndexer.Models.ContextBudget;
 using ContextRequest = MemoryIndexer.Models.ContextRequest;
+using System.Globalization;
 
 // Load .env file
 var envPaths = new[] {
@@ -511,13 +512,13 @@ app.MapGet("/api/chat/stream", async (HttpContext httpContext, string sessionId,
             using var reader = new StreamReader(stream);
 
             var lineCount = 0;
-            while (!reader.EndOfStream)
+            string? line;
+            while ((line = await reader.ReadLineAsync()) is not null)
             {
-                var line = await reader.ReadLineAsync();
                 lineCount++;
 
                 if (string.IsNullOrWhiteSpace(line)) continue;
-                if (!line.StartsWith("data: ")) continue;
+                if (!line.StartsWith("data: ", StringComparison.Ordinal)) continue;
 
                 var data = line[6..];
                 if (data == "[DONE]") break;
@@ -560,7 +561,7 @@ app.MapGet("/api/chat/stream", async (HttpContext httpContext, string sessionId,
         {
             Console.WriteLine($"[LLM] Stream error: {ex.Message}");
             await SendEventAsync("error", new { message = ex.Message });
-            responseBuilder.Append($"[LLM Error: {ex.Message}]");
+            responseBuilder.Append(CultureInfo.InvariantCulture, $"[LLM Error: {ex.Message}]");
         }
     }
     else
@@ -670,8 +671,10 @@ void StoreConversationAsync(string userId, string sessionId, string userMsg, str
             Console.WriteLine($"[MEMORY] Stored conversation (T2)");
 
             // Extract semantic facts
-            var factPatterns = new[] { "my name is", "i am", "i work", "i like", "i love", "i have", "i live", "my favorite" };
-            if (factPatterns.Any(p => userMsg.ToLower().Contains(p)))
+#pragma warning disable CA1861 // top-level program cannot have static fields
+            string[] factPatterns = ["my name is", "i am", "i work", "i like", "i love", "i have", "i live", "my favorite"];
+#pragma warning restore CA1861
+            if (factPatterns.Any(p => userMsg.Contains(p, StringComparison.OrdinalIgnoreCase)))
             {
                 var factContent = $"[Fact about {userName}]: {userMsg}";
                 await memoryService.StoreAsync(userId, factContent, MemoryType.Semantic, null, 0.9f);
@@ -821,11 +824,11 @@ Console.WriteLine($"[SERVER] Starting on http://localhost:5000");
 app.Run("http://localhost:5000");
 
 // Models
-record CreateUserRequest(string Name);
-record CreateSessionRequest(string? Title);
-record ChatRequest(string SessionId, string Message);
+sealed record CreateUserRequest(string Name);
+sealed record CreateSessionRequest(string? Title);
+sealed record ChatRequest(string SessionId, string Message);
 
-class UserInfo
+sealed class UserInfo
 {
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
@@ -833,7 +836,7 @@ class UserInfo
     public DateTime LastActive { get; set; }
 }
 
-class ChatSession
+sealed class ChatSession
 {
     public string Id { get; set; } = "";
     public string UserId { get; set; } = "";
@@ -843,32 +846,32 @@ class ChatSession
     public int MessageCount { get; set; }
 }
 
-class ChatCompletionResponse
+sealed class ChatCompletionResponse
 {
     [JsonPropertyName("choices")]
     public List<ChatChoice>? Choices { get; set; }
 }
 
-class ChatChoice
+sealed class ChatChoice
 {
     [JsonPropertyName("message")]
     public ChatMessage? Message { get; set; }
 }
 
-class ChatMessage
+sealed class ChatMessage
 {
     [JsonPropertyName("content")]
     public string? Content { get; set; }
 }
 
 
-class StreamChunk
+sealed class StreamChunk
 {
     [JsonPropertyName("choices")]
     public List<StreamChoice>? Choices { get; set; }
 }
 
-class StreamChoice
+sealed class StreamChoice
 {
     [JsonPropertyName("delta")]
     public StreamDelta? Delta { get; set; }
@@ -877,7 +880,7 @@ class StreamChoice
     public StreamDelta? Message { get; set; }
 }
 
-class StreamDelta
+sealed class StreamDelta
 {
     [JsonPropertyName("content")]
     public string? Content { get; set; }
@@ -907,7 +910,7 @@ sealed class LMSupplyEmbeddingService : IEmbeddingService
         string text,
         CancellationToken cancellationToken = default)
     {
-        var result = await _model.EmbedAsync(text);
+        var result = await _model.EmbedAsync(text, cancellationToken);
         return result;
     }
 
@@ -920,7 +923,7 @@ sealed class LMSupplyEmbeddingService : IEmbeddingService
 
         foreach (var text in textList)
         {
-            var embedding = await _model.EmbedAsync(text);
+            var embedding = await _model.EmbedAsync(text, cancellationToken);
             results.Add(embedding);
         }
 

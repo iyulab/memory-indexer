@@ -169,7 +169,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder)
     /// </summary>
     [McpServerTool]
     [Description("List available context strategies and their token budget allocations.")]
-    public Task<StrategyListResult> GetContextStrategies()
+    public static Task<StrategyListResult> GetContextStrategies()
     {
         var strategies = new List<StrategyInfo>
         {

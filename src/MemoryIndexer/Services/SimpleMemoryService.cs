@@ -16,7 +16,7 @@ namespace MemoryIndexer.Services;
 /// For advanced use cases, use:
 /// - Level 2-3: IVirtualContextManager or IMemoryPrimitives directly
 /// </remarks>
-public sealed class SimpleMemoryService : IMemoryService
+public sealed partial class SimpleMemoryService : IMemoryService
 {
     private readonly IMemoryPrimitives _primitives;
     private readonly IMemoryClassifier _classifier;
@@ -68,8 +68,8 @@ public sealed class SimpleMemoryService : IMemoryService
 
         var effectiveRole = role ?? "user";
 
-        _logger.LogDebug("RememberAsync: UserId={UserId}, SessionId={SessionId}, Role={Role}, Content={Content}",
-            userId, sessionId, effectiveRole, content.Substring(0, Math.Min(50, content.Length)));
+        var contentPreview = content.Substring(0, Math.Min(50, content.Length));
+        LogRememberAsync(_logger, userId, sessionId, effectiveRole, contentPreview);
 
         // Auto-classify using IMemoryClassifier
         var classification = await _classifier.ClassifyAsync(
@@ -82,13 +82,12 @@ public sealed class SimpleMemoryService : IMemoryService
             },
             cancellationToken);
 
-        _logger.LogTrace("Classified: Type={Type}, Tier={Tier}, Importance={Importance}, ShouldPersist={ShouldPersist}",
-            classification.Type, classification.Tier, classification.Importance, classification.ShouldPersist);
+        LogClassified(_logger, classification.Type, classification.Tier, classification.Importance, classification.ShouldPersist);
 
         // Skip transient content (greetings, acknowledgments)
         if (!classification.ShouldPersist)
         {
-            _logger.LogTrace("Skipping transient content");
+            LogSkippingTransient(_logger);
             return;
         }
 
@@ -108,7 +107,7 @@ public sealed class SimpleMemoryService : IMemoryService
             classification.Importance,
             cancellationToken);
 
-        _logger.LogTrace("Resolved Scope={Scope}", scope);
+        LogResolvedScope(_logger, scope);
 
         // Encode memory using MemoryPrimitives
         var encodeRequest = new EncodeRequest
@@ -126,8 +125,7 @@ public sealed class SimpleMemoryService : IMemoryService
 
         var memory = await _primitives.EncodeAsync(encodeRequest, cancellationToken);
 
-        _logger.LogInformation("Remembered: MemoryId={MemoryId}, Type={Type}, Scope={Scope}, Tier={Tier}",
-            memory.Id, memory.Type, memory.Scope, memory.Tier);
+        LogRemembered(_logger, memory.Id, memory.Type, memory.Scope, memory.Tier);
     }
 
     /// <inheritdoc />
@@ -146,8 +144,7 @@ public sealed class SimpleMemoryService : IMemoryService
             throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be greater than 0");
         }
 
-        _logger.LogDebug("RecallAsync: UserId={UserId}, SessionId={SessionId}, Query={Query}, Limit={Limit}",
-            userId, sessionId, query, limit);
+        LogRecallAsync(_logger, userId, sessionId, query, limit);
 
         // Retrieve memories using MemoryPrimitives
         var retrieveRequest = new RetrieveRequest
@@ -161,7 +158,7 @@ public sealed class SimpleMemoryService : IMemoryService
 
         var results = await _primitives.RetrieveAsync(retrieveRequest, cancellationToken);
 
-        _logger.LogTrace("Retrieved {Count} memories", results.Count);
+        LogRetrievedMemories(_logger, results.Count);
 
         // Group memories by scope
         var memories = results.Select(r => r.Memory).ToList();
@@ -177,8 +174,7 @@ public sealed class SimpleMemoryService : IMemoryService
             TopicMemories = topicMemories
         };
 
-        _logger.LogInformation("Recalled: User={User}, Session={Session}, Topic={Topic}, Total={Total}",
-            userMemories.Count, sessionMemories.Count, topicMemories.Count, context.TotalCount);
+        LogRecalled(_logger, userMemories.Count, sessionMemories.Count, topicMemories.Count, context.TotalCount);
 
         return context;
     }
@@ -192,7 +188,7 @@ public sealed class SimpleMemoryService : IMemoryService
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        _logger.LogInformation("EndSessionAsync: UserId={UserId}, SessionId={SessionId}", userId, sessionId);
+        LogEndSessionAsync(_logger, userId, sessionId);
 
         // End session in ScopeManager
         await _scopeManager.EndSessionAsync(cancellationToken);
@@ -200,7 +196,7 @@ public sealed class SimpleMemoryService : IMemoryService
         // Remove implicit session if exists
         _implicitSessions.Remove(userId);
 
-        _logger.LogDebug("Session ended successfully");
+        LogSessionEndedSuccessfully(_logger);
     }
 
     /// <inheritdoc />
@@ -210,7 +206,7 @@ public sealed class SimpleMemoryService : IMemoryService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
-        _logger.LogWarning("ForgetUserAsync: UserId={UserId} (GDPR deletion)", userId);
+        LogForgetUserAsync(_logger, userId);
 
         // Retrieve all user memories
         var retrieveRequest = new RetrieveRequest
@@ -223,7 +219,7 @@ public sealed class SimpleMemoryService : IMemoryService
 
         var results = await _primitives.RetrieveAsync(retrieveRequest, cancellationToken);
 
-        _logger.LogInformation("Found {Count} memories for user {UserId}", results.Count, userId);
+        LogFoundMemoriesForUser(_logger, results.Count, userId);
 
         // Delete all memories
         foreach (var result in results)
@@ -240,7 +236,7 @@ public sealed class SimpleMemoryService : IMemoryService
         // Remove implicit session
         _implicitSessions.Remove(userId);
 
-        _logger.LogWarning("Deleted {Count} memories for user {UserId}", results.Count, userId);
+        LogDeletedMemoriesForUser(_logger, results.Count, userId);
     }
 
     /// <inheritdoc />
@@ -252,7 +248,7 @@ public sealed class SimpleMemoryService : IMemoryService
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        _logger.LogInformation("ForgetSessionAsync: UserId={UserId}, SessionId={SessionId}", userId, sessionId);
+        LogForgetSessionAsync(_logger, userId, sessionId);
 
         // Retrieve session-scoped memories
         var retrieveRequest = new RetrieveRequest
@@ -266,10 +262,10 @@ public sealed class SimpleMemoryService : IMemoryService
 
         var results = await _primitives.RetrieveAsync(retrieveRequest, cancellationToken);
 
-        _logger.LogDebug("Found {Count} session memories", results.Count);
+        LogFoundSessionMemories(_logger, results.Count);
 
         // Delete session-scoped memories only
-        var sessionMemories = results.Where(r => r.Memory.Scope == Scope.Session || r.Memory.Scope == Scope.Topic);
+        var sessionMemories = results.Where(r => r.Memory.Scope == Scope.Session || r.Memory.Scope == Scope.Topic).ToList();
 
         foreach (var result in sessionMemories)
         {
@@ -282,7 +278,7 @@ public sealed class SimpleMemoryService : IMemoryService
             await _primitives.DeleteAsync(deleteRequest, cancellationToken);
         }
 
-        _logger.LogInformation("Deleted {Count} session memories", sessionMemories.Count());
+        LogDeletedSessionMemories(_logger, sessionMemories.Count);
     }
 
     #region Helper Methods
@@ -298,11 +294,62 @@ public sealed class SimpleMemoryService : IMemoryService
             sessionId = $"implicit-{userId}-{Guid.NewGuid():N}";
             _implicitSessions[userId] = sessionId;
 
-            _logger.LogDebug("Created implicit session: {SessionId} for user {UserId}", sessionId, userId);
+            LogCreatedImplicitSession(_logger, sessionId, userId);
         }
 
         return sessionId;
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "RememberAsync: UserId={UserId}, SessionId={SessionId}, Role={Role}, Content={Content}")]
+    private static partial void LogRememberAsync(ILogger logger, string userId, string sessionId, string role, string content);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Classified: Type={Type}, Tier={Tier}, Importance={Importance}, ShouldPersist={ShouldPersist}")]
+    private static partial void LogClassified(ILogger logger, MemoryType type, Tier tier, float importance, bool shouldPersist);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Skipping transient content")]
+    private static partial void LogSkippingTransient(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Resolved Scope={Scope}")]
+    private static partial void LogResolvedScope(ILogger logger, Scope scope);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Remembered: MemoryId={MemoryId}, Type={Type}, Scope={Scope}, Tier={Tier}")]
+    private static partial void LogRemembered(ILogger logger, Guid memoryId, MemoryType type, Scope scope, Tier tier);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "RecallAsync: UserId={UserId}, SessionId={SessionId}, Query={Query}, Limit={Limit}")]
+    private static partial void LogRecallAsync(ILogger logger, string userId, string? sessionId, string query, int limit);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Retrieved {Count} memories")]
+    private static partial void LogRetrievedMemories(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Recalled: User={User}, Session={Session}, Topic={Topic}, Total={Total}")]
+    private static partial void LogRecalled(ILogger logger, int user, int session, int topic, int total);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "EndSessionAsync: UserId={UserId}, SessionId={SessionId}")]
+    private static partial void LogEndSessionAsync(ILogger logger, string userId, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Session ended successfully")]
+    private static partial void LogSessionEndedSuccessfully(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "ForgetUserAsync: UserId={UserId} (GDPR deletion)")]
+    private static partial void LogForgetUserAsync(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Found {Count} memories for user {UserId}")]
+    private static partial void LogFoundMemoriesForUser(ILogger logger, int count, string userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Deleted {Count} memories for user {UserId}")]
+    private static partial void LogDeletedMemoriesForUser(ILogger logger, int count, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "ForgetSessionAsync: UserId={UserId}, SessionId={SessionId}")]
+    private static partial void LogForgetSessionAsync(ILogger logger, string userId, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Found {Count} session memories")]
+    private static partial void LogFoundSessionMemories(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Deleted {Count} session memories")]
+    private static partial void LogDeletedSessionMemories(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created implicit session: {SessionId} for user {UserId}")]
+    private static partial void LogCreatedImplicitSession(ILogger logger, string sessionId, string userId);
 }

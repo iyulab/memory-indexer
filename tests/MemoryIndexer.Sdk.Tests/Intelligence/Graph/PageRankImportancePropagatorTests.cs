@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Graph;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Graph;
@@ -12,17 +12,17 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Graph;
 /// </summary>
 public class PageRankImportancePropagatorTests
 {
-    private readonly Mock<ITemporalEntityStore> _entityStoreMock;
-    private readonly Mock<IMemoryGraphService> _graphServiceMock;
+    private readonly ITemporalEntityStore _entityStoreMock;
+    private readonly IMemoryGraphService _graphServiceMock;
     private readonly PageRankImportancePropagator _propagator;
 
     public PageRankImportancePropagatorTests()
     {
-        _entityStoreMock = new Mock<ITemporalEntityStore>();
-        _graphServiceMock = new Mock<IMemoryGraphService>();
+        _entityStoreMock = Substitute.For<ITemporalEntityStore>();
+        _graphServiceMock = Substitute.For<IMemoryGraphService>();
         _propagator = new PageRankImportancePropagator(
-            _entityStoreMock.Object,
-            _graphServiceMock.Object,
+            _entityStoreMock,
+            _graphServiceMock,
             NullLogger<PageRankImportancePropagator>.Instance);
     }
 
@@ -30,8 +30,8 @@ public class PageRankImportancePropagatorTests
     public async Task ComputeImportanceAsync_EmptyGraph_ShouldReturnZeroEntities()
     {
         // Arrange
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
+        _entityStoreMock.GetAllActiveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
 
         // Act
         var result = await _propagator.ComputeImportanceAsync("user1");
@@ -76,13 +76,13 @@ public class PageRankImportancePropagatorTests
             }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
 
-        _entityStoreMock.Setup(x => x.GetBySubjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
-        _entityStoreMock.Setup(x => x.GetByObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
+        _entityStoreMock.GetBySubjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
+        _entityStoreMock.GetByObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
 
         // Act
         var result = await _propagator.ComputeImportanceAsync("user1");
@@ -108,12 +108,12 @@ public class PageRankImportancePropagatorTests
             new() { Id = Guid.NewGuid(), Subject = "Spoke4", Predicate = "connects", ObjectValue = "Hub", Confidence = 0.9f, UserId = "user1" }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
-        _entityStoreMock.Setup(x => x.GetBySubjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
-        _entityStoreMock.Setup(x => x.GetByObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
+        _entityStoreMock.GetBySubjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
+        _entityStoreMock.GetByObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
 
         // Act
         var result = await _propagator.ComputeImportanceAsync("user1");
@@ -141,12 +141,12 @@ public class PageRankImportancePropagatorTests
             }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
-        _entityStoreMock.Setup(x => x.GetBySubjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
-        _entityStoreMock.Setup(x => x.GetByObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
+        _entityStoreMock.GetBySubjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
+        _entityStoreMock.GetByObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
 
         await _propagator.ComputeImportanceAsync("user1");
 
@@ -169,12 +169,12 @@ public class PageRankImportancePropagatorTests
             new() { Id = Guid.NewGuid(), Subject = "C", Predicate = "to", ObjectValue = "Hub", Confidence = 1f, UserId = "user1" }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
-        _entityStoreMock.Setup(x => x.GetBySubjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
-        _entityStoreMock.Setup(x => x.GetByObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
+        _entityStoreMock.GetBySubjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
+        _entityStoreMock.GetByObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
 
         await _propagator.ComputeImportanceAsync("user1");
 
@@ -199,12 +199,12 @@ public class PageRankImportancePropagatorTests
             new() { Id = Guid.NewGuid(), Subject = "C", Predicate = "to", ObjectValue = "A", Confidence = 1f, UserId = "user1" }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
-        _entityStoreMock.Setup(x => x.GetBySubjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
-        _entityStoreMock.Setup(x => x.GetByObjectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
+        _entityStoreMock.GetBySubjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
+        _entityStoreMock.GetByObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
 
         // Act
         var result = await _propagator.ComputeImportanceAsync("user1", new ImportanceOptions

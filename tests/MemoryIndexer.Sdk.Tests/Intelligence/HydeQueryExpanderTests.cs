@@ -1,24 +1,24 @@
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Search;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence;
 
 public sealed class HydeQueryExpanderTests
 {
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
+    private readonly IEmbeddingService _mockEmbeddingService;
     private readonly HydeQueryExpander _expander;
 
     public HydeQueryExpanderTests()
     {
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockEmbeddingService
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string text, CancellationToken _) =>
+        _mockEmbeddingService = Substitute.For<IEmbeddingService>();
+        _mockEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
             {
-                // Return a mock embedding (normalized)
+                var text = callInfo.ArgAt<string>(0);
+    // Return a mock embedding (normalized)
                 var hash = text.GetHashCode();
                 var embedding = new float[384];
                 for (var i = 0; i < embedding.Length; i++)
@@ -37,11 +37,11 @@ public sealed class HydeQueryExpanderTests
                 return new ReadOnlyMemory<float>(embedding);
             });
 
-        _mockEmbeddingService
-            .Setup(x => x.GenerateBatchEmbeddingsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IEnumerable<string> texts, CancellationToken _) =>
+        _mockEmbeddingService.GenerateBatchEmbeddingsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
             {
-                var results = new List<ReadOnlyMemory<float>>();
+                var texts = callInfo.ArgAt<IEnumerable<string>>(0);
+    var results = new List<ReadOnlyMemory<float>>();
                 foreach (var text in texts)
                 {
                     var hash = text.GetHashCode();
@@ -64,7 +64,7 @@ public sealed class HydeQueryExpanderTests
             });
 
         _expander = new HydeQueryExpander(
-            _mockEmbeddingService.Object,
+            _mockEmbeddingService,
             NullLogger<HydeQueryExpander>.Instance);
     }
 
@@ -172,9 +172,7 @@ public sealed class HydeQueryExpanderTests
 
         // Assert
         Assert.Equal(384, embedding.Length);
-        _mockEmbeddingService.Verify(
-            x => x.GenerateEmbeddingAsync(It.Is<string>(s => s != query), It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockEmbeddingService.Received(1).GenerateEmbeddingAsync(Arg.Is<string>(s => s != query), Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -472,7 +472,7 @@ public sealed class LinkDiscoveryOptions
     /// <summary>
     /// Whether to find causal links.
     /// </summary>
-    public bool FindCausalLinks { get; init; } = false;
+    public bool FindCausalLinks { get; init; }
 
     /// <summary>
     /// Maximum links to discover.

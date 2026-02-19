@@ -8,7 +8,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Chunking;
 /// Neural TextTiling implementation for topic segmentation.
 /// Uses sliding window similarity analysis to detect topic boundaries.
 /// </summary>
-public sealed class TopicSegmenter
+public sealed partial class TopicSegmenter
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<TopicSegmenter> _logger;
@@ -42,7 +42,7 @@ public sealed class TopicSegmenter
     /// Enable this for conversation memories where source attribution matters.
     /// Disable for semantic/factual memories where role is abstracted.
     /// </remarks>
-    public bool IncludeRoleInContent { get; init; } = false;
+    public bool IncludeRoleInContent { get; init; }
 
     public TopicSegmenter(
         IEmbeddingService embeddingService,
@@ -72,7 +72,7 @@ public sealed class TopicSegmenter
             }];
         }
 
-        _logger.LogDebug("Segmenting {Count} sentences", sentences.Count);
+        LogSegmentingSentences(_logger, sentences.Count);
 
         // Generate embeddings for all sentences
         var embeddings = await _embeddingService.GenerateBatchEmbeddingsAsync(
@@ -92,8 +92,7 @@ public sealed class TopicSegmenter
         // Create segments
         var segments = CreateSegments(sentences, boundaries);
 
-        _logger.LogDebug("Created {Count} segments from {SentenceCount} sentences",
-            segments.Count, sentences.Count);
+        LogCreatedSegments(_logger, segments.Count, sentences.Count);
 
         return segments;
     }
@@ -124,7 +123,7 @@ public sealed class TopicSegmenter
             }];
         }
 
-        _logger.LogDebug("Segmenting conversation with {Count} messages", messages.Count);
+        LogSegmentingConversation(_logger, messages.Count);
 
         // Generate embeddings for each message
         var embeddings = await _embeddingService.GenerateBatchEmbeddingsAsync(
@@ -144,7 +143,7 @@ public sealed class TopicSegmenter
         // Create segments from messages
         var segments = CreateConversationSegments(messages, boundaries, IncludeRoleInContent);
 
-        _logger.LogDebug("Created {Count} topic segments from conversation", segments.Count);
+        LogCreatedTopicSegments(_logger, segments.Count);
 
         return segments;
     }
@@ -390,6 +389,18 @@ public sealed class TopicSegmenter
 
         return dotProduct / (normA * normB);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Segmenting {Count} sentences")]
+    private static partial void LogSegmentingSentences(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created {Count} segments from {SentenceCount} sentences")]
+    private static partial void LogCreatedSegments(ILogger logger, int count, int sentenceCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Segmenting conversation with {Count} messages")]
+    private static partial void LogSegmentingConversation(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created {Count} topic segments from conversation")]
+    private static partial void LogCreatedTopicSegments(ILogger logger, int count);
 }
 
 /// <summary>

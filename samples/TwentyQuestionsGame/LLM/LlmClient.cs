@@ -53,7 +53,7 @@ public sealed class LlmClient
         }
     }
 
-    public static bool DebugPrompts { get; set; } = false;
+    public static bool DebugPrompts { get; set; }
 
     private async Task<LlmResponse> CallOpenAiAsync(
         string systemPrompt,
@@ -194,8 +194,8 @@ public sealed partial class AlphaResponse
     public static string NormalizeAnswer(string response)
     {
         var lower = response.ToLowerInvariant().Trim();
-        if (lower.StartsWith("yes") || lower == "y") return "Yes";
-        if (lower.StartsWith("no") || lower == "n") return "No";
+        if (lower.StartsWith("yes", StringComparison.Ordinal) || lower == "y") return "Yes";
+        if (lower.StartsWith("no", StringComparison.Ordinal) || lower == "n") return "No";
         if (lower.Contains("maybe") || lower.Contains("perhaps")) return "Maybe";
         return response.Trim();
     }

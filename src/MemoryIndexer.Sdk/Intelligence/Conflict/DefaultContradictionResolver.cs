@@ -8,7 +8,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Conflict;
 /// Default implementation of contradiction resolution.
 /// Implements multiple resolution strategies based on research best practices.
 /// </summary>
-public sealed class DefaultContradictionResolver : IContradictionResolver
+public sealed partial class DefaultContradictionResolver : IContradictionResolver
 {
     private readonly ITemporalEntityStore? _temporalEntityStore;
     private readonly ILogger<DefaultContradictionResolver> _logger;
@@ -37,9 +37,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
             };
         }
 
-        _logger.LogInformation(
-            "Resolving {Type} memory contradiction using {Strategy} strategy",
-            analysis.Type, strategy);
+        LogResolvingMemoryContradiction(_logger, analysis.Type, strategy);
 
         return strategy switch
         {
@@ -69,9 +67,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
             };
         }
 
-        _logger.LogInformation(
-            "Resolving {Type} triple contradiction using {Strategy} strategy",
-            analysis.Type, strategy);
+        LogResolvingTripleContradiction(_logger, analysis.Type, strategy);
 
         return strategy switch
         {
@@ -144,7 +140,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
 
     #region Memory Resolution Methods
 
-    private ResolutionResult<MemoryUnit> ResolveMemoryByRecency(ContradictionAnalysis<MemoryUnit> analysis)
+    private static ResolutionResult<MemoryUnit> ResolveMemoryByRecency(ContradictionAnalysis<MemoryUnit> analysis)
     {
         var newItem = analysis.NewItem;
         var existing = analysis.ConflictingItem!;
@@ -163,7 +159,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         };
     }
 
-    private ResolutionResult<MemoryUnit> ResolveMemoryByConfidence(ContradictionAnalysis<MemoryUnit> analysis)
+    private static ResolutionResult<MemoryUnit> ResolveMemoryByConfidence(ContradictionAnalysis<MemoryUnit> analysis)
     {
         var newItem = analysis.NewItem;
         var existing = analysis.ConflictingItem!;
@@ -182,7 +178,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         };
     }
 
-    private ResolutionResult<MemoryUnit> ResolveMemoryBySourceAuthority(ContradictionAnalysis<MemoryUnit> analysis)
+    private static ResolutionResult<MemoryUnit> ResolveMemoryBySourceAuthority(ContradictionAnalysis<MemoryUnit> analysis)
     {
         var newItem = analysis.NewItem;
         var existing = analysis.ConflictingItem!;
@@ -224,7 +220,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         };
     }
 
-    private ResolutionResult<MemoryUnit> CreateMemoryUserIntervention(ContradictionAnalysis<MemoryUnit> analysis)
+    private static ResolutionResult<MemoryUnit> CreateMemoryUserIntervention(ContradictionAnalysis<MemoryUnit> analysis)
     {
         var question = $"Conflicting information detected:\n\n" +
                        $"1. Existing: [Memory] {TruncateText(analysis.ConflictingItem!.Content, 100)}\n" +
@@ -244,7 +240,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         };
     }
 
-    private ResolutionResult<MemoryUnit> KeepBothMemories(ContradictionAnalysis<MemoryUnit> analysis)
+    private static ResolutionResult<MemoryUnit> KeepBothMemories(ContradictionAnalysis<MemoryUnit> analysis)
     {
         return new ResolutionResult<MemoryUnit>
         {
@@ -280,13 +276,11 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
                 superseded.ValidTo = DateTime.UtcNow;
                 superseded.IsActive = false;
 
-                _logger.LogInformation(
-                    "Superseded triple {OldId} (v{OldVersion}) with {NewId} using recency",
-                    superseded.Id, superseded.Version, kept.Id);
+                LogSupersededTriple(_logger, superseded.Id, superseded.Version, kept.Id);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to update superseded triple in store");
+                LogFailedToUpdateSuperseded(_logger, ex);
             }
         }
 
@@ -300,7 +294,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         };
     }
 
-    private ResolutionResult<EntityTriple> ResolveTripleByConfidence(ContradictionAnalysis<EntityTriple> analysis)
+    private static ResolutionResult<EntityTriple> ResolveTripleByConfidence(ContradictionAnalysis<EntityTriple> analysis)
     {
         var newItem = analysis.NewItem;
         var existing = analysis.ConflictingItem!;
@@ -319,7 +313,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         };
     }
 
-    private ResolutionResult<EntityTriple> ResolveTripleBySourceAuthority(ContradictionAnalysis<EntityTriple> analysis)
+    private static ResolutionResult<EntityTriple> ResolveTripleBySourceAuthority(ContradictionAnalysis<EntityTriple> analysis)
     {
         var newItem = analysis.NewItem;
         var existing = analysis.ConflictingItem!;
@@ -361,7 +355,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         };
     }
 
-    private ResolutionResult<EntityTriple> CreateTripleUserIntervention(ContradictionAnalysis<EntityTriple> analysis)
+    private static ResolutionResult<EntityTriple> CreateTripleUserIntervention(ContradictionAnalysis<EntityTriple> analysis)
     {
         var existing = analysis.ConflictingItem!;
         var newItem = analysis.NewItem;
@@ -384,7 +378,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         };
     }
 
-    private ResolutionResult<EntityTriple> KeepBothTriples(ContradictionAnalysis<EntityTriple> analysis)
+    private static ResolutionResult<EntityTriple> KeepBothTriples(ContradictionAnalysis<EntityTriple> analysis)
     {
         return new ResolutionResult<EntityTriple>
         {
@@ -417,10 +411,7 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
         newTriple.SupersedesId = existingTriple.Id;
         newTriple.Version = existingTriple.Version + 1;
 
-        _logger.LogInformation(
-            "Temporal partition: {Subject}.{Predicate} = '{OldValue}' until {EndDate}, then '{NewValue}'",
-            existingTriple.Subject, existingTriple.Predicate, existingTriple.ObjectValue,
-            existingTriple.ValidTo, newTriple.ObjectValue);
+        LogTemporalPartition(_logger, existingTriple.Subject, existingTriple.Predicate, existingTriple.ObjectValue, existingTriple.ValidTo, newTriple.ObjectValue);
 
         return new ResolutionResult<EntityTriple>
         {
@@ -444,4 +435,19 @@ public sealed class DefaultContradictionResolver : IContradictionResolver
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Resolving {Type} memory contradiction using {Strategy} strategy")]
+    private static partial void LogResolvingMemoryContradiction(ILogger logger, ContradictionType type, ResolutionStrategy strategy);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Resolving {Type} triple contradiction using {Strategy} strategy")]
+    private static partial void LogResolvingTripleContradiction(ILogger logger, ContradictionType type, ResolutionStrategy strategy);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Superseded triple {OldId} (v{OldVersion}) with {NewId} using recency")]
+    private static partial void LogSupersededTriple(ILogger logger, Guid oldId, int oldVersion, Guid newId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to update superseded triple in store")]
+    private static partial void LogFailedToUpdateSuperseded(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Temporal partition: {Subject}.{Predicate} = '{OldValue}' until {EndDate}, then '{NewValue}'")]
+    private static partial void LogTemporalPartition(ILogger logger, string subject, string predicate, string oldValue, DateTime? endDate, string newValue);
 }

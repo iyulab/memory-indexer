@@ -291,7 +291,7 @@ public class MetricsTools(IMetricsDashboard dashboard)
                         Min = data.Min(p => p.Value),
                         Max = data.Max(p => p.Value),
                         Avg = data.Average(p => p.Value),
-                        Latest = data.Last().Value
+                        Latest = data[^1].Value
                     }
                     : null,
                 Message = data.Count > 0

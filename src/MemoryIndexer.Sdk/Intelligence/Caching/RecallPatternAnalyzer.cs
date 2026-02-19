@@ -7,7 +7,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Caching;
 /// Analyzes recall patterns to detect inefficient usage and provide recommendations.
 /// Phase v0.5.0: Recall Pattern Telemetry
 /// </summary>
-public sealed class RecallPatternAnalyzer : IRecallPatternAnalyzer
+public sealed partial class RecallPatternAnalyzer : IRecallPatternAnalyzer
 {
     private readonly ILogger<RecallPatternAnalyzer> _logger;
     private readonly RecallPatternOptions _options;
@@ -39,17 +39,14 @@ public sealed class RecallPatternAnalyzer : IRecallPatternAnalyzer
         if (analysis.IsDuplicate)
         {
             Interlocked.Increment(ref _duplicateRecalls);
-            _logger.LogDebug(
-                "Duplicate recall detected for user {UserId}: {Query} (count: {Count})",
-                userId, TruncateQuery(query), analysis.DuplicateCount);
+            var queryPreview = TruncateQuery(query);
+            LogDuplicateRecall(_logger, userId, queryPreview, analysis.DuplicateCount);
         }
 
         if (analysis.IsRapidFire)
         {
             Interlocked.Increment(ref _rapidFireCount);
-            _logger.LogWarning(
-                "Rapid-fire recall pattern detected for user {UserId}: {Count} recalls in {WindowMs}ms",
-                userId, analysis.RecallsInWindow, _options.RapidFireWindowMs);
+            LogRapidFireRecall(_logger, userId, analysis.RecallsInWindow, _options.RapidFireWindowMs);
         }
     }
 
@@ -74,7 +71,7 @@ public sealed class RecallPatternAnalyzer : IRecallPatternAnalyzer
                 ? (float)_duplicateRecalls / _totalRecalls
                 : 0f,
             UniqueUsers = _userPatterns.Count,
-            AverageRecallsPerUser = _userPatterns.Count > 0
+            AverageRecallsPerUser = !_userPatterns.IsEmpty
                 ? (float)_totalRecalls / _userPatterns.Count
                 : 0f
         };
@@ -129,6 +126,12 @@ public sealed class RecallPatternAnalyzer : IRecallPatternAnalyzer
             Interlocked.Exchange(ref _rapidFireCount, 0);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Duplicate recall detected for user {UserId}: {Query} (count: {Count})")]
+    private static partial void LogDuplicateRecall(ILogger logger, string userId, string query, int count);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Rapid-fire recall pattern detected for user {UserId}: {Count} recalls in {WindowMs}ms")]
+    private static partial void LogRapidFireRecall(ILogger logger, string userId, int count, int windowMs);
 
     private static string TruncateQuery(string query)
         => query.Length > 50 ? query[..50] + "..." : query;

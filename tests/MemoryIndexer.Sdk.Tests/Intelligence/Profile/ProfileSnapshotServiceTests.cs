@@ -2,7 +2,7 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Profile;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Profile;
@@ -13,24 +13,24 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Profile;
 /// </summary>
 public class ProfileSnapshotServiceTests
 {
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
-    private readonly Mock<IConfidenceDecayStrategy> _mockDecayStrategy;
-    private readonly Mock<ILogger<ProfileSnapshotService>> _mockLogger;
+    private readonly IArchiveStore _mockArchiveStore;
+    private readonly IConfidenceDecayStrategy _mockDecayStrategy;
+    private readonly ILogger<ProfileSnapshotService> _mockLogger;
     private readonly ProfileSnapshotService _service;
 
     public ProfileSnapshotServiceTests()
     {
-        _mockArchiveStore = new Mock<IArchiveStore>();
-        _mockDecayStrategy = new Mock<IConfidenceDecayStrategy>();
-        _mockLogger = new Mock<ILogger<ProfileSnapshotService>>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
+        _mockDecayStrategy = Substitute.For<IConfidenceDecayStrategy>();
+        _mockLogger = Substitute.For<ILogger<ProfileSnapshotService>>();
 
-        _mockDecayStrategy.Setup(d => d.NeedsReconfirmation(It.IsAny<SemanticStoreEntry>(), It.IsAny<float>()))
+        _mockDecayStrategy.NeedsReconfirmation(Arg.Any<SemanticStoreEntry>(), Arg.Any<float>())
             .Returns(false);
 
         _service = new ProfileSnapshotService(
-            _mockArchiveStore.Object,
-            _mockDecayStrategy.Object,
-            _mockLogger.Object);
+            _mockArchiveStore,
+            _mockDecayStrategy,
+            _mockLogger);
     }
 
     #region CreateSnapshotAsync Tests
@@ -45,8 +45,8 @@ public class ProfileSnapshotServiceTests
             new() { Key = "fact2", Value = "Value 2", IsActive = true, Confidence = 0.8f }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var snapshot = await _service.CreateSnapshotAsync("user1", "Test snapshot");
@@ -69,8 +69,8 @@ public class ProfileSnapshotServiceTests
             new() { Key = "fact2", Value = "Value 2", IsActive = true, Confidence = 0.8f, ConfirmationCount = 2, Category = SemanticStoreCategory.Skill }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var snapshot = await _service.CreateSnapshotAsync("user1");
@@ -91,8 +91,8 @@ public class ProfileSnapshotServiceTests
     public async Task GetSnapshotAsync_ExistingSnapshot_ShouldReturn()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         var created = await _service.CreateSnapshotAsync("user1");
 
@@ -122,8 +122,8 @@ public class ProfileSnapshotServiceTests
     public async Task ListSnapshotsAsync_ShouldListAllSnapshots()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         await _service.CreateSnapshotAsync("user1", "Snapshot 1");
         await _service.CreateSnapshotAsync("user1", "Snapshot 2");
@@ -139,8 +139,8 @@ public class ProfileSnapshotServiceTests
     public async Task ListSnapshotsAsync_ShouldRespectLimit()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         for (int i = 0; i < 5; i++)
         {
@@ -158,8 +158,8 @@ public class ProfileSnapshotServiceTests
     public async Task ListSnapshotsAsync_ShouldOrderByCreatedAtDesc()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         await _service.CreateSnapshotAsync("user1", "First");
         await Task.Delay(10);
@@ -193,14 +193,13 @@ public class ProfileSnapshotServiceTests
             new() { Key = "fact2", Value = "Value 2", IsActive = true }
         };
 
-        _mockArchiveStore.SetupSequence(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(olderFacts)
-            .ReturnsAsync(newerFacts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(olderFacts, newerFacts);
 
         var olderSnapshot = await _service.CreateSnapshotAsync("user1");
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(newerFacts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(newerFacts);
 
         // Act
         var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id);
@@ -227,14 +226,13 @@ public class ProfileSnapshotServiceTests
             new() { Key = "fact1", Value = "Value 1", IsActive = true }
         };
 
-        _mockArchiveStore.SetupSequence(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(olderFacts)
-            .ReturnsAsync(newerFacts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(olderFacts, newerFacts);
 
         var olderSnapshot = await _service.CreateSnapshotAsync("user1");
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(newerFacts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(newerFacts);
 
         // Act
         var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id);
@@ -260,14 +258,13 @@ public class ProfileSnapshotServiceTests
             new() { Key = "fact1", Value = "New value", Confidence = 0.9f, IsActive = true }
         };
 
-        _mockArchiveStore.SetupSequence(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(olderFacts)
-            .ReturnsAsync(newerFacts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(olderFacts, newerFacts);
 
         var olderSnapshot = await _service.CreateSnapshotAsync("user1");
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(newerFacts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(newerFacts);
 
         // Act
         var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id);
@@ -289,8 +286,8 @@ public class ProfileSnapshotServiceTests
             new() { Key = "fact1", Value = "Value 1", Confidence = 0.9f, IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var olderSnapshot = await _service.CreateSnapshotAsync("user1");
 
@@ -312,8 +309,8 @@ public class ProfileSnapshotServiceTests
     public async Task DeleteSnapshotAsync_ExistingSnapshot_ShouldDelete()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         var snapshot = await _service.CreateSnapshotAsync("user1");
 

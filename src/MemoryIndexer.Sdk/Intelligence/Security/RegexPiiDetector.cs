@@ -1,7 +1,8 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Security;
 
@@ -60,7 +61,7 @@ public sealed partial class RegexPiiDetector : IPiiDetector
         // Remove overlapping entities, keeping highest confidence
         var deduplicated = RemoveOverlaps(entities);
 
-        _logger.LogDebug("Detected {Count} PII entities in text", deduplicated.Count);
+        LogDetectedCountPIIEntitiesText(_logger, deduplicated.Count);
 
         return Task.FromResult<IReadOnlyList<PiiEntity>>(deduplicated);
     }
@@ -106,7 +107,7 @@ public sealed partial class RegexPiiDetector : IPiiDetector
         // Reverse to get chronological order
         result.Redactions.Reverse();
 
-        _logger.LogInformation("Redacted {Count} PII entities from text", result.RedactionCount);
+        LogRedactedCountPIIEntitiesText(_logger, result.RedactionCount);
 
         return result;
     }
@@ -214,7 +215,7 @@ public sealed partial class RegexPiiDetector : IPiiDetector
         return result;
     }
 
-    private List<PiiPattern> InitializePatterns()
+    private static List<PiiPattern> InitializePatterns()
     {
         return
         [
@@ -267,9 +268,9 @@ public sealed partial class RegexPiiDetector : IPiiDetector
         if (digits.Length != 9) return false;
 
         // Invalid SSNs
-        if (digits.StartsWith("000") || digits.StartsWith("666"))
+        if (digits.StartsWith("000", StringComparison.Ordinal) || digits.StartsWith("666", StringComparison.Ordinal))
             return false;
-        if (digits[..3] == "900" || int.Parse(digits[..3]) > 899)
+        if (digits[..3] == "900" || int.Parse(digits[..3], CultureInfo.InvariantCulture) > 899)
             return false;
         if (digits.Substring(3, 2) == "00")
             return false;
@@ -422,6 +423,12 @@ public sealed partial class RegexPiiDetector : IPiiDetector
     private static partial Regex PersonNameRegex();
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Detected {Count} PII entities in text")]
+    private static partial void LogDetectedCountPIIEntitiesText(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Redacted {Count} PII entities from text")]
+    private static partial void LogRedactedCountPIIEntitiesText(ILogger logger, int count);
 }
 
 /// <summary>

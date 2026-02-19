@@ -4,6 +4,7 @@ using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace MemoryIndexer.Services;
 
@@ -84,7 +85,7 @@ public class MemoryService(
                 {
                     ["Filtered"] = "true",
                     ["Reason"] = reason,
-                    ["MemoryPressure"] = pressureMonitor.GetMemoryInfo().UtilizationPercentage.ToString("F3")
+                    ["MemoryPressure"] = pressureMonitor.GetMemoryInfo().UtilizationPercentage.ToString("F3", CultureInfo.InvariantCulture)
                 }
             };
         }
@@ -176,7 +177,7 @@ public class MemoryService(
                     metadata ??= [];
                     metadata["RelatedMemoryId"] = existing.Id.ToString();
                     metadata["RelationshipType"] = "similar";
-                    metadata["SimilarityScore"] = duplicateCheck.SimilarityScore.ToString("F3");
+                    metadata["SimilarityScore"] = duplicateCheck.SimilarityScore.ToString("F3", CultureInfo.InvariantCulture);
                     break;
 
                 case DuplicateAction.Add:
@@ -313,7 +314,7 @@ public class MemoryService(
                         metadata["ConflictAction"] = "MarkConflict";
                         metadata["ConflictType"] = resolution.ConflictType.ToString();
                         metadata["ConflictReason"] = resolution.Reasoning ?? "Unresolved conflict";
-                        metadata["ConflictConfidence"] = resolution.Confidence.ToString("F2");
+                        metadata["ConflictConfidence"] = resolution.Confidence.ToString("F2", CultureInfo.InvariantCulture);
                         if (!string.IsNullOrEmpty(resolution.TargetMemoryId))
                         {
                             metadata["ConflictingMemoryId"] = resolution.TargetMemoryId;

@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.Scoring;
@@ -8,7 +8,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Scoring;
 /// Chooses the best normalization strategy based on score distribution characteristics.
 /// Phase 21.2: Score Distribution Normalization.
 /// </summary>
-public sealed class AdaptiveScoreNormalizer : IScoreNormalizer
+public sealed partial class AdaptiveScoreNormalizer : IScoreNormalizer
 {
     private readonly ILogger<AdaptiveScoreNormalizer> _logger;
     private readonly ILogger<MinMaxScoreNormalizer> _minMaxLogger;
@@ -62,26 +62,19 @@ public sealed class AdaptiveScoreNormalizer : IScoreNormalizer
             // Very narrow distribution: Use percentile to force separation
             // This handles the case where all scores are clustered (like 1.10-1.69)
             selectedNormalizer = new PercentileScoreNormalizer(_percentileLogger);
-            _logger.LogDebug(
-                "Adaptive: narrow spread ({Spread:F3} < 0.3) → Percentile",
-                spread);
+            LogAdaptiveNarrowSpreadSpreadPercentile(_logger, spread);
         }
         else if (coefficientOfVariation > 0.5f)
         {
             // High variance relative to mean: Use z-score to handle outliers
             selectedNormalizer = new ZScoreNormalizer(_zScoreLogger);
-            _logger.LogDebug(
-                "Adaptive: high variance (CV={CV:F3} > 0.5) → Z-score",
-                coefficientOfVariation);
+            LogAdaptiveHighVarianceCVCV(_logger, coefficientOfVariation);
         }
         else
         {
             // Normal distribution: Use min-max scaling
             selectedNormalizer = new MinMaxScoreNormalizer(_minMaxLogger);
-            _logger.LogDebug(
-                "Adaptive: normal distribution (spread={Spread:F3}, CV={CV:F3}) → MinMax",
-                spread,
-                coefficientOfVariation);
+            LogAdaptiveNormalDistributionSpreadSpread(_logger, spread, coefficientOfVariation);
         }
 
         var normalized = selectedNormalizer.Normalize(scoredMemories);
@@ -90,12 +83,7 @@ public sealed class AdaptiveScoreNormalizer : IScoreNormalizer
         var selectedStats = selectedNormalizer.GetStats();
         _stats.NormalizedSpread = selectedStats.NormalizedSpread;
 
-        _logger.LogInformation(
-            "Adaptive normalization: {Count} scores, spread {Original:F3} → {Normalized:F3}, strategy={Strategy}",
-            scoredMemories.Count,
-            _stats.OriginalSpread,
-            _stats.NormalizedSpread,
-            selectedStats.Strategy);
+        LogAdaptiveNormalizationCountScoresSpread(_logger, scoredMemories.Count, _stats.OriginalSpread, _stats.NormalizedSpread, selectedStats.Strategy);
 
         return normalized;
     }
@@ -109,4 +97,16 @@ public sealed class AdaptiveScoreNormalizer : IScoreNormalizer
         var variance = values.Average(v => MathF.Pow(v - mean, 2));
         return MathF.Sqrt(variance);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: narrow spread ({Spread:F3} < 0.3) → Percentile")]
+    private static partial void LogAdaptiveNarrowSpreadSpreadPercentile(ILogger logger, float spread);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: high variance (CV={CV:F3} > 0.5) → Z-score")]
+    private static partial void LogAdaptiveHighVarianceCVCV(ILogger logger, float cV);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: normal distribution (spread={Spread:F3}, CV={CV:F3}) → MinMax")]
+    private static partial void LogAdaptiveNormalDistributionSpreadSpread(ILogger logger, float spread, float cV);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Adaptive normalization: {Count} scores, spread {Original:F3} → {Normalized:F3}, strategy={Strategy}")]
+    private static partial void LogAdaptiveNormalizationCountScoresSpread(ILogger logger, int count, float original, float normalized, NormalizationStrategy strategy);
 }

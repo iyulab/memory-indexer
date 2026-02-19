@@ -4,7 +4,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Controllers;
@@ -14,24 +14,24 @@ namespace MemoryIndexer.Sdk.Tests.Controllers;
 /// </summary>
 public class MetricsControllerTests
 {
-    private readonly Mock<IMemoryPressureMonitor> _mockPressureMonitor;
-    private readonly Mock<ILatencyProfiler> _mockLatencyProfiler;
-    private readonly Mock<IMemoryGrowthMonitor> _mockGrowthMonitor;
-    private readonly Mock<ILogger<MetricsController>> _mockLogger;
+    private readonly IMemoryPressureMonitor _mockPressureMonitor;
+    private readonly ILatencyProfiler _mockLatencyProfiler;
+    private readonly IMemoryGrowthMonitor _mockGrowthMonitor;
+    private readonly ILogger<MetricsController> _mockLogger;
     private readonly MetricsController _controller;
 
     public MetricsControllerTests()
     {
-        _mockPressureMonitor = new Mock<IMemoryPressureMonitor>();
-        _mockLatencyProfiler = new Mock<ILatencyProfiler>();
-        _mockGrowthMonitor = new Mock<IMemoryGrowthMonitor>();
-        _mockLogger = new Mock<ILogger<MetricsController>>();
+        _mockPressureMonitor = Substitute.For<IMemoryPressureMonitor>();
+        _mockLatencyProfiler = Substitute.For<ILatencyProfiler>();
+        _mockGrowthMonitor = Substitute.For<IMemoryGrowthMonitor>();
+        _mockLogger = Substitute.For<ILogger<MetricsController>>();
 
         _controller = new MetricsController(
-            _mockPressureMonitor.Object,
-            _mockLatencyProfiler.Object,
-            _mockGrowthMonitor.Object,
-            _mockLogger.Object);
+            _mockPressureMonitor,
+            _mockLatencyProfiler,
+            _mockGrowthMonitor,
+            _mockLogger);
     }
 
     #region GetMemoryPressure Tests
@@ -52,8 +52,8 @@ public class MetricsControllerTests
             Gen2Collections = 1
         };
 
-        _mockPressureMonitor.Setup(m => m.GetMemoryInfo()).Returns(pressureInfo);
-        _mockPressureMonitor.Setup(m => m.IsUnderPressure()).Returns(false);
+        _mockPressureMonitor.GetMemoryInfo().Returns(pressureInfo);
+        _mockPressureMonitor.IsUnderPressure().Returns(false);
 
         // Act
         var result = _controller.GetMemoryPressure();
@@ -79,8 +79,8 @@ public class MetricsControllerTests
             UtilizationPercentage = 0.875f
         };
 
-        _mockPressureMonitor.Setup(m => m.GetMemoryInfo()).Returns(pressureInfo);
-        _mockPressureMonitor.Setup(m => m.IsUnderPressure()).Returns(true);
+        _mockPressureMonitor.GetMemoryInfo().Returns(pressureInfo);
+        _mockPressureMonitor.IsUnderPressure().Returns(true);
 
         // Act
         var result = _controller.GetMemoryPressure();
@@ -116,8 +116,8 @@ public class MetricsControllerTests
             }
         };
 
-        _mockLatencyProfiler.Setup(l => l.GetMetricsAsync("default", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(metrics);
+        _mockLatencyProfiler.GetMetricsAsync("default", null, Arg.Any<CancellationToken>())
+            .Returns(metrics);
 
         // Act
         var result = await _controller.GetLatencyMetrics(cancellationToken: CancellationToken.None);
@@ -140,8 +140,8 @@ public class MetricsControllerTests
             new() { UserId = "default", Tier = "Session", TotalQueries = 50 }
         };
 
-        _mockLatencyProfiler.Setup(l => l.GetMetricsAsync("default", "Session", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(metrics);
+        _mockLatencyProfiler.GetMetricsAsync("default", "Session", Arg.Any<CancellationToken>())
+            .Returns(metrics);
 
         // Act
         var result = await _controller.GetLatencyMetrics(tier: "Session", cancellationToken: CancellationToken.None);
@@ -173,8 +173,8 @@ public class MetricsControllerTests
             Timestamp = DateTime.UtcNow
         };
 
-        _mockGrowthMonitor.Setup(g => g.GetGrowthMetricsAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(growthMetrics);
+        _mockGrowthMonitor.GetGrowthMetricsAsync("default", Arg.Any<CancellationToken>())
+            .Returns(growthMetrics);
 
         // Act
         var result = await _controller.GetGrowthMetrics(cancellationToken: CancellationToken.None);
@@ -200,8 +200,8 @@ public class MetricsControllerTests
             Timestamp = DateTime.UtcNow
         };
 
-        _mockGrowthMonitor.Setup(g => g.GetGrowthMetricsAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(growthMetrics);
+        _mockGrowthMonitor.GetGrowthMetricsAsync("default", Arg.Any<CancellationToken>())
+            .Returns(growthMetrics);
 
         // Act
         var result = await _controller.GetGrowthMetrics(cancellationToken: CancellationToken.None);
@@ -242,12 +242,12 @@ public class MetricsControllerTests
             Timestamp = DateTime.UtcNow
         };
 
-        _mockPressureMonitor.Setup(m => m.GetMemoryInfo()).Returns(pressureInfo);
-        _mockPressureMonitor.Setup(m => m.IsUnderPressure()).Returns(false);
-        _mockLatencyProfiler.Setup(l => l.GetMetricsAsync("default", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(latencyMetrics);
-        _mockGrowthMonitor.Setup(g => g.GetGrowthMetricsAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(growthMetrics);
+        _mockPressureMonitor.GetMemoryInfo().Returns(pressureInfo);
+        _mockPressureMonitor.IsUnderPressure().Returns(false);
+        _mockLatencyProfiler.GetMetricsAsync("default", null, Arg.Any<CancellationToken>())
+            .Returns(latencyMetrics);
+        _mockGrowthMonitor.GetGrowthMetricsAsync("default", Arg.Any<CancellationToken>())
+            .Returns(growthMetrics);
 
         // Act
         var result = await _controller.GetDashboardMetrics(cancellationToken: CancellationToken.None);
@@ -293,12 +293,12 @@ public class MetricsControllerTests
             Timestamp = DateTime.UtcNow
         };
 
-        _mockPressureMonitor.Setup(m => m.GetMemoryInfo()).Returns(pressureInfo);
-        _mockPressureMonitor.Setup(m => m.IsUnderPressure()).Returns(false);
-        _mockLatencyProfiler.Setup(l => l.GetMetricsAsync("default", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(latencyMetrics);
-        _mockGrowthMonitor.Setup(g => g.GetGrowthMetricsAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(growthMetrics);
+        _mockPressureMonitor.GetMemoryInfo().Returns(pressureInfo);
+        _mockPressureMonitor.IsUnderPressure().Returns(false);
+        _mockLatencyProfiler.GetMetricsAsync("default", null, Arg.Any<CancellationToken>())
+            .Returns(latencyMetrics);
+        _mockGrowthMonitor.GetGrowthMetricsAsync("default", Arg.Any<CancellationToken>())
+            .Returns(growthMetrics);
 
         // Act
         var result = await _controller.GetDashboardMetrics(cancellationToken: CancellationToken.None);
@@ -330,12 +330,12 @@ public class MetricsControllerTests
             Timestamp = DateTime.UtcNow
         };
 
-        _mockPressureMonitor.Setup(m => m.GetMemoryInfo()).Returns(pressureInfo);
-        _mockPressureMonitor.Setup(m => m.IsUnderPressure()).Returns(true);
-        _mockLatencyProfiler.Setup(l => l.GetMetricsAsync("default", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(latencyMetrics);
-        _mockGrowthMonitor.Setup(g => g.GetGrowthMetricsAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(growthMetrics);
+        _mockPressureMonitor.GetMemoryInfo().Returns(pressureInfo);
+        _mockPressureMonitor.IsUnderPressure().Returns(true);
+        _mockLatencyProfiler.GetMetricsAsync("default", null, Arg.Any<CancellationToken>())
+            .Returns(latencyMetrics);
+        _mockGrowthMonitor.GetGrowthMetricsAsync("default", Arg.Any<CancellationToken>())
+            .Returns(growthMetrics);
 
         // Act
         var result = await _controller.GetDashboardMetrics(cancellationToken: CancellationToken.None);
@@ -354,7 +354,7 @@ public class MetricsControllerTests
     public async Task ResetLatencyMetrics_WithDefaultUser_ResetsSuccessfully()
     {
         // Arrange
-        _mockLatencyProfiler.Setup(l => l.ResetMetricsAsync("default", It.IsAny<CancellationToken>()))
+        _mockLatencyProfiler.ResetMetricsAsync("default", Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
         // Act
@@ -362,14 +362,14 @@ public class MetricsControllerTests
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
-        _mockLatencyProfiler.Verify(l => l.ResetMetricsAsync("default", It.IsAny<CancellationToken>()), Times.Once);
+        await _mockLatencyProfiler.Received(1).ResetMetricsAsync("default", Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ResetLatencyMetrics_WithCustomUser_ResetsForCorrectUser()
     {
         // Arrange
-        _mockLatencyProfiler.Setup(l => l.ResetMetricsAsync("custom-user", It.IsAny<CancellationToken>()))
+        _mockLatencyProfiler.ResetMetricsAsync("custom-user", Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
         // Act
@@ -377,7 +377,7 @@ public class MetricsControllerTests
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
-        _mockLatencyProfiler.Verify(l => l.ResetMetricsAsync("custom-user", It.IsAny<CancellationToken>()), Times.Once);
+        await _mockLatencyProfiler.Received(1).ResetMetricsAsync("custom-user", Arg.Any<CancellationToken>());
     }
 
     #endregion

@@ -7,9 +7,8 @@ namespace TwentyQuestionsGame.Agents;
 /// <summary>
 /// Base class for game agents with tool call processing loop.
 /// </summary>
-public abstract class AgentBase(
+public abstract partial class AgentBase(
     LlmClient llmClient,
-    ToolCallParser parser,
     ToolCallExecutor executor,
     ILogger logger)
 {
@@ -41,12 +40,12 @@ public abstract class AgentBase(
         var iteration = 0;
 
         // Tool call loop
-        while (parser.HasToolCalls(content) && iteration < MaxToolCallIterations)
+        while (ToolCallParser.HasToolCalls(content) && iteration < MaxToolCallIterations)
         {
             iteration++;
-            logger.LogDebug("Tool call iteration {Iteration}", iteration);
+            LogToolCallIteration(logger, iteration);
 
-            var toolCalls = parser.Parse(content);
+            var toolCalls = ToolCallParser.Parse(content);
             var results = await executor.ExecuteAllAsync(toolCalls, UserId, SessionId, ct);
 
             // Aggregate recall time from tool results
@@ -69,7 +68,7 @@ public abstract class AgentBase(
         }
 
         // Extract final output (remove any remaining tool call tags)
-        var finalOutput = parser.RemoveToolCalls(content).Trim();
+        var finalOutput = ToolCallParser.RemoveToolCalls(content).Trim();
 
         return new AgentResponse
         {
@@ -106,6 +105,9 @@ public abstract class AgentBase(
 
         return string.Join("\n", lines);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Tool call iteration {Iteration}")]
+    private static partial void LogToolCallIteration(ILogger logger, int iteration);
 }
 
 /// <summary>

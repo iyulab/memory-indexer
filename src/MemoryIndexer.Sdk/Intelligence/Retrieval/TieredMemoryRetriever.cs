@@ -1,8 +1,9 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Graph;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Retrieval;
 
@@ -17,7 +18,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Retrieval;
 /// - Temporal: Session → User → Working (prioritize timestamped data)
 /// - Relational: Graph traversal → Session → User (prioritize entity relationships)
 /// </remarks>
-public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
+public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
 {
     private readonly ITieredMemoryStore _store;
     private readonly IQueryIntentClassifier _intentClassifier;
@@ -106,9 +107,7 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
                 cancellationToken);
         classifyStopwatch.Stop();
 
-        _logger.LogDebug(
-            "Query '{Query}' classified as {Intent} (confidence: {Confidence:F2})",
-            request.Query, intent.Intent, intent.Confidence);
+        LogQueryQueryClassifiedIntentConfidence(_logger, request.Query, intent.Intent, intent.Confidence);
 
         // Step 2: Estimate budget allocation
         var budget = await EstimateBudgetAsync(
@@ -191,9 +190,7 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
             GraphRetrievalPerformed = graphPerformed
         };
 
-        _logger.LogInformation(
-            "Tiered retrieval completed: {ResultCount} results from {TierCount} tiers in {Duration}ms",
-            mergedResults.Count, tierResults.Count, totalStopwatch.ElapsedMilliseconds);
+        LogTieredRetrievalCompletedResultCountResults(_logger, mergedResults.Count, tierResults.Count, totalStopwatch.ElapsedMilliseconds);
 
         return new TieredRetrievalResult
         {
@@ -208,16 +205,16 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
     }
 
     /// <inheritdoc />
-    public Task<TierBudgetAllocation> EstimateBudgetAsync(
+    public async Task<TierBudgetAllocation> EstimateBudgetAsync(
         string query,
         int totalBudget,
         CancellationToken cancellationToken = default)
     {
         // Quick intent estimation for budget (or reuse if available)
-        var intent = _intentClassifier.ClassifyAsync(query, null, cancellationToken).GetAwaiter().GetResult();
+        var intent = await _intentClassifier.ClassifyAsync(query, null, cancellationToken);
         var weights = IntentWeights.GetValueOrDefault(intent.Intent, IntentWeights[QueryIntent.General]);
 
-        var allocation = new TierBudgetAllocation
+        return new TierBudgetAllocation
         {
             TotalBudget = totalBudget,
             WorkingBudget = (int)(totalBudget * weights.Working),
@@ -231,8 +228,6 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
                 [Tier.Archive] = weights.User
             }
         };
-
-        return Task.FromResult(allocation);
     }
 
     private async Task<IReadOnlyList<MemoryUnit>> RetrieveFromTierAsync(
@@ -351,12 +346,12 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Graph retrieval failed, continuing without graph context");
+            LogGraphRetrievalFailedContinuingWithout(_logger, ex);
             return null;
         }
     }
 
-    private ScoredMemory CreateScoredMemory(
+    private static ScoredMemory CreateScoredMemory(
         MemoryUnit memory,
         Tier tier,
         float tierBoost,
@@ -503,7 +498,7 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
             sb.AppendLine("### Related Facts:");
             foreach (var fact in factList)
             {
-                sb.AppendLine($"- {fact.Subject} {fact.Predicate} {fact.ObjectValue}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {fact.Subject} {fact.Predicate} {fact.ObjectValue}");
             }
             sb.AppendLine();
         }
@@ -514,7 +509,7 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
             sb.AppendLine("### Entity Relationships:");
             foreach (var path in pathList)
             {
-                sb.AppendLine($"- {string.Join(" → ", path)}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {string.Join(" → ", path)}");
             }
         }
 
@@ -522,4 +517,13 @@ public sealed class TieredMemoryRetriever : ITieredRetrievalStrategy
     }
 
     private sealed record TierWeights(float Working, float Session, float User, float Graph);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Query '{Query}' classified as {Intent} (confidence: {Confidence:F2})")]
+    private static partial void LogQueryQueryClassifiedIntentConfidence(ILogger logger, string query, QueryIntent intent, float confidence);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Tiered retrieval completed: {ResultCount} results from {TierCount} tiers in {Duration}ms")]
+    private static partial void LogTieredRetrievalCompletedResultCountResults(ILogger logger, int resultCount, int tierCount, long duration);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Graph retrieval failed, continuing without graph context")]
+    private static partial void LogGraphRetrievalFailedContinuingWithout(ILogger logger, Exception ex);
 }

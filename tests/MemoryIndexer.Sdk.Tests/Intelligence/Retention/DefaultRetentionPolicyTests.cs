@@ -2,7 +2,7 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Retention;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Retention;
@@ -14,12 +14,12 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Retention;
 public class DefaultRetentionPolicyTests
 {
     private readonly DefaultRetentionPolicy _policy;
-    private readonly Mock<IConfidenceDecayStrategy> _mockDecayStrategy;
+    private readonly IConfidenceDecayStrategy _mockDecayStrategy;
 
     public DefaultRetentionPolicyTests()
     {
-        _mockDecayStrategy = new Mock<IConfidenceDecayStrategy>();
-        _policy = new DefaultRetentionPolicy(decayStrategy: _mockDecayStrategy.Object);
+        _mockDecayStrategy = Substitute.For<IConfidenceDecayStrategy>();
+        _policy = new DefaultRetentionPolicy(decayStrategy: _mockDecayStrategy);
     }
 
     #region GetRule Tests
@@ -290,11 +290,10 @@ public class DefaultRetentionPolicyTests
         // Arrange
         var options = Options.Create(new RetentionPolicyOptions { UseConfidenceDecay = true });
 
-        _mockDecayStrategy
-            .Setup(d => d.CalculateDecayedConfidence(It.IsAny<SemanticStoreEntry>(), It.IsAny<DateTime>()))
+        _mockDecayStrategy.CalculateDecayedConfidence(Arg.Any<SemanticStoreEntry>(), Arg.Any<DateTime>())
             .Returns(0.1f); // Below threshold
 
-        var policy = new DefaultRetentionPolicy(options, _mockDecayStrategy.Object);
+        var policy = new DefaultRetentionPolicy(options, _mockDecayStrategy);
 
         var entry = new SemanticStoreEntry
         {

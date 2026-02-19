@@ -341,7 +341,7 @@ public sealed class AdvancedMemoryTools
         [Description("Style: extractive, abstractive, hybrid")] string style = "hybrid",
         CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<MemoryUnit> memories;
+        List<MemoryUnit> memories;
         var clampedLimit = Math.Clamp(limit, 1, 50);
 
         if (string.IsNullOrWhiteSpace(query))

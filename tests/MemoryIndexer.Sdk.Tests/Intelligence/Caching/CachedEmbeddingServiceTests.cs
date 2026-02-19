@@ -279,7 +279,7 @@ public class CachedEmbeddingServiceTests
     }
 
     // Mock embedding service for testing
-    private class MockEmbeddingService : IEmbeddingService
+    private sealed class MockEmbeddingService : IEmbeddingService
     {
         public int Dimensions { get; set; } = 1024;
         public int CallCount { get; set; }

@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Retrieval;
 
 public class AdaptiveContextAssemblerTests
 {
-    private readonly IAdaptiveContextAssembler _assembler;
+    private readonly AdaptiveContextAssembler _assembler;
 
     public AdaptiveContextAssemblerTests()
     {

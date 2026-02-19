@@ -1,9 +1,10 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Graph;
 
@@ -14,7 +15,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Graph;
 /// <remarks>
 /// Research basis: Mem0g graph memory architecture - memories as nodes in a directed labeled graph.
 /// </remarks>
-public sealed class MemoryGraphService : IMemoryGraphService
+public sealed partial class MemoryGraphService : IMemoryGraphService
 {
     private readonly ITemporalEntityStore _entityStore;
     private readonly IMemoryStore _memoryStore;
@@ -41,8 +42,7 @@ public sealed class MemoryGraphService : IMemoryGraphService
         IReadOnlyList<EntityTriple> entities,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Linking memory {MemoryId} to graph with {EntityCount} entities",
-            memory.Id, entities.Count);
+        LogLinkingMemoryMemoryIdGraphEntityCount(_logger, memory.Id, entities.Count);
 
         // Extract unique entity names from triples
         var connectedEntities = entities
@@ -76,8 +76,7 @@ public sealed class MemoryGraphService : IMemoryGraphService
             }
         }
 
-        _logger.LogInformation("Memory {MemoryId} linked to graph: {EntityCount} entities, importance={Importance:F2}",
-            memory.Id, connectedEntities.Count, node.ImportanceScore);
+        LogMemoryMemoryIdLinkedGraphEntityCount(_logger, memory.Id, connectedEntities.Count, node.ImportanceScore);
 
         return node;
     }
@@ -91,7 +90,7 @@ public sealed class MemoryGraphService : IMemoryGraphService
     {
         if (!_memoryNodes.TryGetValue(memoryId, out var sourceNode))
         {
-            _logger.LogDebug("Memory {MemoryId} not found in graph", memoryId);
+            LogMemoryMemoryIdFoundGraph(_logger, memoryId);
             return [];
         }
 
@@ -174,7 +173,7 @@ public sealed class MemoryGraphService : IMemoryGraphService
             });
         }
 
-        _logger.LogDebug("Found {Count} related memories for {MemoryId}", results.Count, memoryId);
+        LogFoundCountRelatedMemoriesMemoryId(_logger, results.Count, memoryId);
         return results;
     }
 
@@ -234,9 +233,8 @@ public sealed class MemoryGraphService : IMemoryGraphService
                 });
 
                 // Get triples for this entity
-                if (!visitedEntities.Contains(entity))
+                if (visitedEntities.Add(entity))
                 {
-                    visitedEntities.Add(entity);
                     var triples = await _entityStore.GetBySubjectAsync(entity, node.UserId, cancellationToken) ?? [];
                     var objTriples = await _entityStore.GetByObjectAsync(entity, node.UserId, cancellationToken) ?? [];
 
@@ -277,9 +275,7 @@ public sealed class MemoryGraphService : IMemoryGraphService
 
         var formattedContext = FormatSubgraphContext(subgraphNodes, subgraphTriples);
 
-        _logger.LogInformation(
-            "Subgraph extracted: {Memories} memories, {Entities} entities, {Triples} triples in {Duration}ms",
-            subgraphNodes.Count, subgraphEntities.Count, subgraphTriples.Count, stopwatch.ElapsedMilliseconds);
+        LogSubgraphExtractedMemoriesMemoriesEntities(_logger, subgraphNodes.Count, subgraphEntities.Count, subgraphTriples.Count, stopwatch.ElapsedMilliseconds);
 
         return new MemorySubgraph
         {
@@ -357,7 +353,7 @@ public sealed class MemoryGraphService : IMemoryGraphService
                 }
             }
 
-            _logger.LogDebug("Memory {MemoryId} unlinked from graph", memoryId);
+            LogMemoryMemoryIdUnlinkedGraph(_logger, memoryId);
         }
 
         return Task.CompletedTask;
@@ -418,8 +414,8 @@ public sealed class MemoryGraphService : IMemoryGraphService
     }
 
     private static string FormatSubgraphContext(
-        IReadOnlyList<MemoryGraphNode> nodes,
-        IReadOnlyList<EntityTriple> triples)
+        List<MemoryGraphNode> nodes,
+        List<EntityTriple> triples)
     {
         var sb = new StringBuilder();
 
@@ -427,7 +423,7 @@ public sealed class MemoryGraphService : IMemoryGraphService
         {
             sb.AppendLine("## Memory Graph Context");
             sb.AppendLine();
-            sb.AppendLine($"Connected memories: {nodes.Count}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Connected memories: {nodes.Count}");
 
             // Group by community if available
             var communities = nodes
@@ -436,7 +432,7 @@ public sealed class MemoryGraphService : IMemoryGraphService
 
             foreach (var community in communities)
             {
-                sb.AppendLine($"- Topic cluster {community.Key}: {community.Count()} memories");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- Topic cluster {community.Key}: {community.Count()} memories");
             }
             sb.AppendLine();
         }
@@ -446,12 +442,12 @@ public sealed class MemoryGraphService : IMemoryGraphService
             sb.AppendLine("## Knowledge Facts");
             foreach (var triple in triples.Take(15))
             {
-                sb.AppendLine($"- {triple.Subject} → {triple.Predicate} → {triple.ObjectValue}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {triple.Subject} → {triple.Predicate} → {triple.ObjectValue}");
             }
 
             if (triples.Count > 15)
             {
-                sb.AppendLine($"... and {triples.Count - 15} more facts");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"... and {triples.Count - 15} more facts");
             }
         }
 
@@ -459,4 +455,22 @@ public sealed class MemoryGraphService : IMemoryGraphService
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Linking memory {MemoryId} to graph with {EntityCount} entities")]
+    private static partial void LogLinkingMemoryMemoryIdGraphEntityCount(ILogger logger, Guid memoryId, int entityCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Memory {MemoryId} linked to graph: {EntityCount} entities, importance={Importance:F2}")]
+    private static partial void LogMemoryMemoryIdLinkedGraphEntityCount(ILogger logger, Guid memoryId, int entityCount, float importance);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Memory {MemoryId} not found in graph")]
+    private static partial void LogMemoryMemoryIdFoundGraph(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Found {Count} related memories for {MemoryId}")]
+    private static partial void LogFoundCountRelatedMemoriesMemoryId(ILogger logger, int count, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Subgraph extracted: {Memories} memories, {Entities} entities, {Triples} triples in {Duration}ms")]
+    private static partial void LogSubgraphExtractedMemoriesMemoriesEntities(ILogger logger, int memories, int entities, int triples, long duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Memory {MemoryId} unlinked from graph")]
+    private static partial void LogMemoryMemoryIdUnlinkedGraph(ILogger logger, Guid memoryId);
 }

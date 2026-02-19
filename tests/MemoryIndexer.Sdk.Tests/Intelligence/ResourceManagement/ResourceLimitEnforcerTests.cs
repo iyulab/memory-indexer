@@ -5,7 +5,7 @@ using MemoryIndexer.Sdk.Intelligence.ResourceManagement;
 using MemoryIndexer.Sdk.Intelligence.Security.MultiTenant;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.ResourceManagement;
@@ -15,15 +15,15 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.ResourceManagement;
 /// </summary>
 public class ResourceLimitEnforcerTests
 {
-    private readonly Mock<IUsageTracker> _mockUsageTracker;
-    private readonly Mock<ITenantContext> _mockTenantContext;
+    private readonly IUsageTracker _mockUsageTracker;
+    private readonly ITenantContext _mockTenantContext;
     private readonly MemoryIndexerOptions _options;
     private readonly ResourceLimitEnforcer _enforcer;
 
     public ResourceLimitEnforcerTests()
     {
-        _mockUsageTracker = new Mock<IUsageTracker>();
-        _mockTenantContext = new Mock<ITenantContext>();
+        _mockUsageTracker = Substitute.For<IUsageTracker>();
+        _mockTenantContext = Substitute.For<ITenantContext>();
         _options = new MemoryIndexerOptions
         {
             ResourceLimits = new ResourceLimitOptions
@@ -35,12 +35,12 @@ public class ResourceLimitEnforcerTests
             }
         };
 
-        _mockTenantContext.Setup(x => x.TenantId).Returns((string?)null);
-        _mockTenantContext.Setup(x => x.Configuration).Returns((TenantConfiguration?)null);
+        _mockTenantContext.TenantId.Returns((string?)null);
+        _mockTenantContext.Configuration.Returns((TenantConfiguration?)null);
 
         _enforcer = new ResourceLimitEnforcer(
-            _mockUsageTracker.Object,
-            _mockTenantContext.Object,
+            _mockUsageTracker,
+            _mockTenantContext,
             Options.Create(_options),
             NullLogger<ResourceLimitEnforcer>.Instance);
     }
@@ -51,7 +51,7 @@ public class ResourceLimitEnforcerTests
     public async Task CanStoreAsync_UnderLimit_ShouldAllow()
     {
         // Arrange
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",
@@ -72,7 +72,7 @@ public class ResourceLimitEnforcerTests
     public async Task CanStoreAsync_ExceedsMemoryCount_ShouldDeny()
     {
         // Arrange
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",
@@ -93,7 +93,7 @@ public class ResourceLimitEnforcerTests
     public async Task CanStoreAsync_ExceedsStorageSize_ShouldDeny()
     {
         // Arrange
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",
@@ -126,12 +126,12 @@ public class ResourceLimitEnforcerTests
         };
 
         var enforcer = new ResourceLimitEnforcer(
-            _mockUsageTracker.Object,
-            _mockTenantContext.Object,
+            _mockUsageTracker,
+            _mockTenantContext,
             Options.Create(options),
             NullLogger<ResourceLimitEnforcer>.Instance);
 
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",
@@ -154,7 +154,7 @@ public class ResourceLimitEnforcerTests
     public async Task CanStoreBatchAsync_UnderLimit_ShouldAllow()
     {
         // Arrange
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",
@@ -173,7 +173,7 @@ public class ResourceLimitEnforcerTests
     public async Task CanStoreBatchAsync_BatchExceedsMemoryCount_ShouldDeny()
     {
         // Arrange
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",
@@ -193,7 +193,7 @@ public class ResourceLimitEnforcerTests
     public async Task CanStoreBatchAsync_BatchExceedsStorageSize_ShouldDeny()
     {
         // Arrange
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",
@@ -236,8 +236,8 @@ public class ResourceLimitEnforcerTests
             MaxStorageBytes = 50_000_000L
         };
 
-        _mockTenantContext.Setup(x => x.Configuration).Returns(tenantConfig);
-        _mockTenantContext.Setup(x => x.TenantId).Returns("tenant1");
+        _mockTenantContext.Configuration.Returns(tenantConfig);
+        _mockTenantContext.TenantId.Returns("tenant1");
 
         // Act
         var limits = _enforcer.GetLimits("user1");
@@ -258,8 +258,8 @@ public class ResourceLimitEnforcerTests
         };
 
         var enforcer = new ResourceLimitEnforcer(
-            _mockUsageTracker.Object,
-            _mockTenantContext.Object,
+            _mockUsageTracker,
+            _mockTenantContext,
             Options.Create(optionsWithoutLimits),
             NullLogger<ResourceLimitEnforcer>.Instance);
 
@@ -279,7 +279,7 @@ public class ResourceLimitEnforcerTests
     public async Task GetUsageAsync_WithCachedData_ShouldReturnCached()
     {
         // Arrange
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",
@@ -299,17 +299,16 @@ public class ResourceLimitEnforcerTests
     public async Task GetUsageAsync_NoCachedData_ShouldRefreshFromStore()
     {
         // Arrange - first call returns empty, second returns refreshed data
-        _mockUsageTracker.SetupSequence(x => x.GetUsage("user1", It.IsAny<string?>()))
-            .Returns(new ResourceUsage { UserId = "user1", MemoryCount = 0, StorageSizeBytes = 0 })
-            .Returns(new ResourceUsage { UserId = "user1", MemoryCount = 25, StorageSizeBytes = 250_000 });
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
+            .Returns(
+                new ResourceUsage { UserId = "user1", MemoryCount = 0, StorageSizeBytes = 0 },
+                new ResourceUsage { UserId = "user1", MemoryCount = 25, StorageSizeBytes = 250_000 });
 
         // Act
         var usage = await _enforcer.GetUsageAsync("user1");
 
         // Assert
-        _mockUsageTracker.Verify(
-            x => x.RefreshFromStoreAsync("user1", It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockUsageTracker.Received(1).RefreshFromStoreAsync("user1", Arg.Any<CancellationToken>());
         Assert.Equal(25, usage.MemoryCount);
     }
 
@@ -321,7 +320,7 @@ public class ResourceLimitEnforcerTests
     public async Task CanStoreAsync_AtWarningThreshold_ShouldStillAllow()
     {
         // Arrange - 80% of 1000 = 800
-        _mockUsageTracker.Setup(x => x.GetUsage("user1", It.IsAny<string?>()))
+        _mockUsageTracker.GetUsage("user1", Arg.Any<string?>())
             .Returns(new ResourceUsage
             {
                 UserId = "user1",

@@ -9,13 +9,13 @@ using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Caching;
 
-public class OptimizedRecallServiceTests
+public class OptimizedRecallServiceTests : IDisposable
 {
     private readonly MockMemoryStore _mockStore;
     private readonly MockEmbeddingService _mockEmbedding;
     private readonly MockScoringService _mockScoring;
     private readonly MockLatencyProfiler _mockProfiler;
-    private readonly IMemoryCache _memoryCache;
+    private readonly MemoryCache _memoryCache;
     private readonly OptimizedRecallService _service;
     private readonly MemoryIndexerOptions _options;
 
@@ -52,6 +52,12 @@ public class OptimizedRecallServiceTests
             patternAnalyzer: null,
             NullLogger<OptimizedRecallService>.Instance,
             Options.Create(_options));
+    }
+
+    public void Dispose()
+    {
+        _memoryCache.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -421,7 +427,7 @@ public class OptimizedRecallServiceTests
     }
 
     // Mock classes
-    private class MockMemoryStore : IMemoryStore
+    private sealed class MockMemoryStore : IMemoryStore
     {
         private List<MemorySearchResult> _searchResults = new();
         public int SearchCallCount { get; private set; }
@@ -480,7 +486,7 @@ public class OptimizedRecallServiceTests
             => Task.CompletedTask;
     }
 
-    private class MockEmbeddingService : IEmbeddingService
+    private sealed class MockEmbeddingService : IEmbeddingService
     {
         public int Dimensions => 1024;
         public int CallCount { get; set; }
@@ -510,7 +516,7 @@ public class OptimizedRecallServiceTests
         }
     }
 
-    private class MockScoringService : IScoringService
+    private sealed class MockScoringService : IScoringService
     {
         public float CalculateScore(MemoryUnit memory, ReadOnlyMemory<float>? queryEmbedding = null)
             => 0.8f;
@@ -545,7 +551,7 @@ public class OptimizedRecallServiceTests
             }).ToList();
     }
 
-    private class MockLatencyProfiler : ILatencyProfiler
+    private sealed class MockLatencyProfiler : ILatencyProfiler
     {
         public int RecordLatencyCallCount { get; set; }
         public string? LastUserId { get; set; }

@@ -11,7 +11,7 @@ namespace McpServer.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class ProfileController : ControllerBase
+public partial class ProfileController : ControllerBase
 {
     private readonly IProfileSnapshotService _snapshotService;
     private readonly IConfidenceDecayStrategy _decayStrategy;
@@ -69,7 +69,7 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get profile stats for user {UserId}", userId);
+            LogFailedToGetProfileStats(_logger, ex, userId);
             return StatusCode(500, new { error = "Failed to get profile stats", details = ex.Message });
         }
     }
@@ -88,8 +88,7 @@ public class ProfileController : ControllerBase
             var uid = request.UserId ?? DefaultUserId;
             var snapshot = await _snapshotService.CreateSnapshotAsync(uid, request.Label, ct);
 
-            _logger.LogInformation("Created profile snapshot {SnapshotId} for user {UserId}",
-                snapshot.Id, uid);
+            LogCreatedProfileSnapshot(_logger, snapshot.Id, uid);
 
             return CreatedAtAction(
                 nameof(GetSnapshot),
@@ -115,7 +114,7 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create snapshot");
+            LogFailedToCreateSnapshot(_logger, ex);
             return StatusCode(500, new { error = "Failed to create snapshot", details = ex.Message });
         }
     }
@@ -161,7 +160,7 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get snapshot {SnapshotId}", snapshotId);
+            LogFailedToGetSnapshot(_logger, ex, snapshotId);
             return StatusCode(500, new { error = "Failed to get snapshot", details = ex.Message });
         }
     }
@@ -196,7 +195,7 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to list snapshots");
+            LogFailedToListSnapshots(_logger, ex);
             return StatusCode(500, new { error = "Failed to list snapshots", details = ex.Message });
         }
     }
@@ -246,7 +245,7 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to compare snapshots");
+            LogFailedToCompareSnapshots(_logger, ex);
             return StatusCode(500, new { error = "Failed to compare snapshots", details = ex.Message });
         }
     }
@@ -293,7 +292,7 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get stale facts");
+            LogFailedToGetStaleFacts(_logger, ex);
             return StatusCode(500, new { error = "Failed to get stale facts", details = ex.Message });
         }
     }
@@ -323,10 +322,34 @@ public class ProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete snapshot {SnapshotId}", snapshotId);
+            LogFailedToDeleteSnapshot(_logger, ex, snapshotId);
             return StatusCode(500, new { error = "Failed to delete snapshot", details = ex.Message });
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get profile stats for user {UserId}")]
+    private static partial void LogFailedToGetProfileStats(ILogger logger, Exception ex, string? userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Created profile snapshot {SnapshotId} for user {UserId}")]
+    private static partial void LogCreatedProfileSnapshot(ILogger logger, Guid snapshotId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to create snapshot")]
+    private static partial void LogFailedToCreateSnapshot(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get snapshot {SnapshotId}")]
+    private static partial void LogFailedToGetSnapshot(ILogger logger, Exception ex, Guid snapshotId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to list snapshots")]
+    private static partial void LogFailedToListSnapshots(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to compare snapshots")]
+    private static partial void LogFailedToCompareSnapshots(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get stale facts")]
+    private static partial void LogFailedToGetStaleFacts(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to delete snapshot {SnapshotId}")]
+    private static partial void LogFailedToDeleteSnapshot(ILogger logger, Exception ex, Guid snapshotId);
 
     private static float CalculateCompleteness(Dictionary<string, int> byCategory)
     {

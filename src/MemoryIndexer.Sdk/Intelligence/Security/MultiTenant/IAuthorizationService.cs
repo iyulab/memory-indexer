@@ -53,7 +53,9 @@ public interface IAuthorizationService
 /// Permissions for memory operations.
 /// </summary>
 [Flags]
+#pragma warning disable CA1711 // Permission — domain-specific naming for authorization
 public enum Permission
+#pragma warning restore CA1711
 {
     /// <summary>
     /// No permissions.

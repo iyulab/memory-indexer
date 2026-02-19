@@ -10,7 +10,7 @@ namespace MemoryIndexer.InMemory;
 /// Stores episodic memories (conversation sessions) in memory.
 /// Implements Tulving's Episodic Memory System.
 /// </summary>
-public sealed class InMemoryLongTermStore(ILogger<InMemoryLongTermStore> logger) : ILongTermStore
+public sealed partial class InMemoryLongTermStore(ILogger<InMemoryLongTermStore> logger) : ILongTermStore
 {
     private readonly ConcurrentDictionary<Guid, Session> _sessions = new();
 
@@ -21,7 +21,7 @@ public sealed class InMemoryLongTermStore(ILogger<InMemoryLongTermStore> logger)
         session.CreatedAt = DateTime.UtcNow;
 
         _sessions[session.Id] = session;
-        logger.LogDebug("Created session {SessionId} for user {UserId}", session.Id, session.UserId);
+        LogCreatedSession(logger, session.Id, session.UserId);
 
         return Task.FromResult(session);
     }
@@ -40,7 +40,7 @@ public sealed class InMemoryLongTermStore(ILogger<InMemoryLongTermStore> logger)
             return Task.FromResult(false);
 
         _sessions[session.Id] = session;
-        logger.LogDebug("Updated session {SessionId}", session.Id);
+        LogUpdatedSession(logger, session.Id);
 
         return Task.FromResult(true);
     }
@@ -50,7 +50,7 @@ public sealed class InMemoryLongTermStore(ILogger<InMemoryLongTermStore> logger)
     {
         var removed = _sessions.TryRemove(id, out _);
         if (removed)
-            logger.LogDebug("Deleted session {SessionId}", id);
+            LogDeletedSession(logger, id);
 
         return Task.FromResult(removed);
     }
@@ -76,7 +76,7 @@ public sealed class InMemoryLongTermStore(ILogger<InMemoryLongTermStore> logger)
         CancellationToken cancellationToken = default)
     {
         var sessions = await GetByUserAsync(userId, activeOnly: true, cancellationToken);
-        var activeSession = sessions.FirstOrDefault();
+        var activeSession = sessions.Count > 0 ? sessions[0] : null;
 
         if (activeSession is not null)
             return activeSession;
@@ -89,4 +89,13 @@ public sealed class InMemoryLongTermStore(ILogger<InMemoryLongTermStore> logger)
 
         return await CreateAsync(newSession, cancellationToken);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created session {SessionId} for user {UserId}")]
+    private static partial void LogCreatedSession(ILogger logger, Guid sessionId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated session {SessionId}")]
+    private static partial void LogUpdatedSession(ILogger logger, Guid sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Deleted session {SessionId}")]
+    private static partial void LogDeletedSession(ILogger logger, Guid sessionId);
 }

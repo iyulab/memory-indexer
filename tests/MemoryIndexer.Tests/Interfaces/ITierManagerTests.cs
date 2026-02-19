@@ -15,7 +15,7 @@ namespace MemoryIndexer.Tests.Interfaces;
 /// </summary>
 public class ITierManagerTests
 {
-    private static ITierManager CreateTierManager()
+    private static TierManager CreateTierManager()
     {
         var options = Options.Create(new MemoryIndexerOptions
         {
@@ -725,10 +725,10 @@ public class ITierManagerTests
 
         // Act
         await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention);
-        var stats = tierManager.GetTierStatistics(Tier.Short);
+        var sourceStats = tierManager.GetTierStatistics(Tier.Long); // Source tier tracks demotion (consistent with promotion tracking on source)
 
         // Assert
-        stats.TotalDemotions.Should().Be(1);
+        sourceStats.TotalDemotions.Should().Be(1);
     }
 
     [Fact]

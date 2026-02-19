@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Reflection;
@@ -10,55 +10,49 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Reflection;
 public class ReflectionEngineTests
 {
     private readonly ReflectionEngine _engine;
-    private readonly Mock<IMemoryStore> _memoryStoreMock;
-    private readonly Mock<ITemporalEntityStore> _entityStoreMock;
-    private readonly Mock<IScoringService> _scoringServiceMock;
+    private readonly IMemoryStore _memoryStoreMock;
+    private readonly ITemporalEntityStore _entityStoreMock;
+    private readonly IScoringService _scoringServiceMock;
 
     public ReflectionEngineTests()
     {
-        _memoryStoreMock = new Mock<IMemoryStore>();
-        _entityStoreMock = new Mock<ITemporalEntityStore>();
-        _scoringServiceMock = new Mock<IScoringService>();
+        _memoryStoreMock = Substitute.For<IMemoryStore>();
+        _entityStoreMock = Substitute.For<ITemporalEntityStore>();
+        _scoringServiceMock = Substitute.For<IScoringService>();
 
         SetupDefaultMocks();
 
         _engine = new ReflectionEngine(
-            _memoryStoreMock.Object,
-            _entityStoreMock.Object,
-            _scoringServiceMock.Object,
+            _memoryStoreMock,
+            _entityStoreMock,
+            _scoringServiceMock,
             NullLogger<ReflectionEngine>.Instance);
     }
 
     private void SetupDefaultMocks()
     {
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _memoryStoreMock
-            .Setup(x => x.StoreAsync(It.IsAny<MemoryUnit>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MemoryUnit m, CancellationToken _) => m);
+        _memoryStoreMock.StoreAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => callInfo.ArgAt<MemoryUnit>(0));
 
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _entityStoreMock
-            .Setup(x => x.GetBySubjectAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _entityStoreMock.GetBySubjectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _entityStoreMock
-            .Setup(x => x.GetAllActiveAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _entityStoreMock.GetAllActiveAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _scoringServiceMock
-            .Setup(x => x.CalculateScore(It.IsAny<MemoryUnit>(), It.IsAny<ReadOnlyMemory<float>?>()))
+        _scoringServiceMock.CalculateScore(Arg.Any<MemoryUnit>(), Arg.Any<ReadOnlyMemory<float>?>())
             .Returns(0.75f);
     }
 
@@ -89,15 +83,13 @@ public class ReflectionEngineTests
             })
             .ToList();
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
-        _scoringServiceMock
-            .Setup(x => x.CalculateScore(It.IsAny<MemoryUnit>(), It.IsAny<ReadOnlyMemory<float>?>()))
+        _scoringServiceMock.CalculateScore(Arg.Any<MemoryUnit>(), Arg.Any<ReadOnlyMemory<float>?>())
             .Returns(10f); // High importance score
 
         // Act
@@ -150,12 +142,11 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _engine.ReflectAsync("test_session");
@@ -227,12 +218,11 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _engine.SynthesizeQuestionsAsync("test_session", "API design");
@@ -247,9 +237,8 @@ public class ReflectionEngineTests
         // Arrange
         var memoryId = Guid.NewGuid();
 
-        _memoryStoreMock
-            .Setup(x => x.GetByIdAsync(memoryId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MemoryUnit
+        _memoryStoreMock.GetByIdAsync(memoryId, Arg.Any<CancellationToken>())
+            .Returns(new MemoryUnit
             {
                 Id = memoryId,
                 Content = "Test memory content"
@@ -284,16 +273,14 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetByIdAsync(targetId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(targetMemory);
+        _memoryStoreMock.GetByIdAsync(targetId, Arg.Any<CancellationToken>())
+            .Returns(targetMemory);
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(relatedMemories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(relatedMemories);
 
         // Act
         var result = await _engine.DiscoverLinksAsync(targetId);
@@ -337,12 +324,11 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _engine.SummarizeActivityAsync("test_session", TimeSpan.FromHours(1));
@@ -374,18 +360,19 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         var storeCallCount = 0;
-        _memoryStoreMock
-            .Setup(x => x.StoreAsync(It.IsAny<MemoryUnit>(), It.IsAny<CancellationToken>()))
-            .Callback<MemoryUnit, CancellationToken>((_, _) => storeCallCount++)
-            .ReturnsAsync((MemoryUnit m, CancellationToken _) => m);
+        _memoryStoreMock.StoreAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                storeCallCount++;
+                return callInfo.ArgAt<MemoryUnit>(0);
+            });
 
         // Act
         var result = await _engine.ReflectAsync("test_session");
@@ -409,12 +396,11 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act - first call
         var result1 = await _engine.ShouldReflectAsync("test_session");
@@ -491,16 +477,14 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetByIdAsync(targetId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(targetMemory);
+        _memoryStoreMock.GetByIdAsync(targetId, Arg.Any<CancellationToken>())
+            .Returns(targetMemory);
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(relatedMemories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(relatedMemories);
 
         // Act
         var result = await _engine.DiscoverLinksAsync(targetId);
@@ -538,12 +522,11 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _engine.SummarizeActivityAsync("test_session", TimeSpan.FromHours(1));

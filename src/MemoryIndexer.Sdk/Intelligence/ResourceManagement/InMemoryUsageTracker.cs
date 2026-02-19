@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,7 @@ namespace MemoryIndexer.Sdk.Intelligence.ResourceManagement;
 /// Phase v0.6.0-γ: Resource Management
 /// Thread-safe with concurrent dictionaries and interlocked operations.
 /// </remarks>
-public sealed class InMemoryUsageTracker : IUsageTracker
+public sealed partial class InMemoryUsageTracker : IUsageTracker
 {
     private readonly IMemoryStore _memoryStore;
     private readonly ILogger<InMemoryUsageTracker> _logger;
@@ -47,16 +47,14 @@ public sealed class InMemoryUsageTracker : IUsageTracker
             }
         }
 
-        _logger.LogTrace(
-            "Recorded store for user {UserId}: +1 memory, +{Bytes} bytes, tier={Tier}, type={Type}",
-            userId, sizeBytes, tier, type);
+        LogRecordedStoreUserUserIdMemory(_logger, userId, sizeBytes, tier, type);
     }
 
     public void RecordDelete(string userId, long sizeBytes, Tier tier, MemoryType type, string? tenantId = null)
     {
         if (!_userUsage.TryGetValue(userId, out var userData))
         {
-            _logger.LogWarning("RecordDelete called for unknown user {UserId}", userId);
+            LogRecordDeleteCalledUnknownUserUserId(_logger, userId);
             return;
         }
 
@@ -72,16 +70,14 @@ public sealed class InMemoryUsageTracker : IUsageTracker
         if (Interlocked.Read(ref userData.StorageSizeBytes) < 0)
             Interlocked.Exchange(ref userData.StorageSizeBytes, 0);
 
-        _logger.LogTrace(
-            "Recorded delete for user {UserId}: -1 memory, -{Bytes} bytes, tier={Tier}, type={Type}",
-            userId, sizeBytes, tier, type);
+        LogRecordedDeleteUserUserIdMemory(_logger, userId, sizeBytes, tier, type);
     }
 
     public void RecordTierPromotion(string userId, Tier fromTier, Tier toTier, string? tenantId = null)
     {
         if (!_userUsage.TryGetValue(userId, out var userData))
         {
-            _logger.LogWarning("RecordTierPromotion called for unknown user {UserId}", userId);
+            LogRecordTierPromotionCalledUnknownUserUserId(_logger, userId);
             return;
         }
 
@@ -89,9 +85,7 @@ public sealed class InMemoryUsageTracker : IUsageTracker
         userData.IncrementTier(toTier);
         userData.LastUpdated = DateTime.UtcNow;
 
-        _logger.LogTrace(
-            "Recorded tier promotion for user {UserId}: {FromTier} -> {ToTier}",
-            userId, fromTier, toTier);
+        LogRecordedTierPromotionUserUserId(_logger, userId, fromTier, toTier);
     }
 
     public ResourceUsage GetUsage(string userId, string? tenantId = null)
@@ -258,9 +252,7 @@ public sealed class InMemoryUsageTracker : IUsageTracker
         Interlocked.Exchange(ref userData.StorageSizeBytes, totalSize);
         userData.LastUpdated = DateTime.UtcNow;
 
-        _logger.LogInformation(
-            "Refreshed usage for user {UserId}: {Count} memories, {Bytes} bytes",
-            userId, memories.Count, totalSize);
+        LogRefreshedUsageUserUserIdCount(_logger, userId, memories.Count, totalSize);
     }
 
     public void ClearUser(string userId)
@@ -276,7 +268,7 @@ public sealed class InMemoryUsageTracker : IUsageTracker
             }
         }
 
-        _logger.LogInformation("Cleared usage tracking for user {UserId}", userId);
+        LogClearedUsageTrackingUserUserId(_logger, userId);
     }
 
     private static long EstimateSize(MemoryUnit memory)
@@ -326,4 +318,25 @@ public sealed class InMemoryUsageTracker : IUsageTracker
         public void ResetTiers() => _byTier.Clear();
         public void ResetTypes() => _byType.Clear();
     }
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Recorded store for user {UserId}: +1 memory, +{Bytes} bytes, tier={Tier}, type={Type}")]
+    private static partial void LogRecordedStoreUserUserIdMemory(ILogger logger, string userId, long bytes, Tier tier, MemoryType type);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "RecordDelete called for unknown user {UserId}")]
+    private static partial void LogRecordDeleteCalledUnknownUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Recorded delete for user {UserId}: -1 memory, -{Bytes} bytes, tier={Tier}, type={Type}")]
+    private static partial void LogRecordedDeleteUserUserIdMemory(ILogger logger, string userId, long bytes, Tier tier, MemoryType type);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "RecordTierPromotion called for unknown user {UserId}")]
+    private static partial void LogRecordTierPromotionCalledUnknownUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Recorded tier promotion for user {UserId}: {FromTier} -> {ToTier}")]
+    private static partial void LogRecordedTierPromotionUserUserId(ILogger logger, string userId, Tier fromTier, Tier toTier);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Refreshed usage for user {UserId}: {Count} memories, {Bytes} bytes")]
+    private static partial void LogRefreshedUsageUserUserIdCount(ILogger logger, string userId, int count, long bytes);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Cleared usage tracking for user {UserId}")]
+    private static partial void LogClearedUsageTrackingUserUserId(ILogger logger, string userId);
 }

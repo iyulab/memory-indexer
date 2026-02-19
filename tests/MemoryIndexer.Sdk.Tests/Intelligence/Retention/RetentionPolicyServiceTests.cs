@@ -1,7 +1,8 @@
 using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Retention;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Retention;
@@ -12,15 +13,15 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Retention;
 /// </summary>
 public class RetentionPolicyServiceTests
 {
-    private readonly Mock<IRetentionPolicy> _mockPolicy;
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
+    private readonly IRetentionPolicy _mockPolicy;
+    private readonly IArchiveStore _mockArchiveStore;
     private readonly RetentionPolicyService _service;
 
     public RetentionPolicyServiceTests()
     {
-        _mockPolicy = new Mock<IRetentionPolicy>();
-        _mockArchiveStore = new Mock<IArchiveStore>();
-        _service = new RetentionPolicyService(_mockPolicy.Object, _mockArchiveStore.Object);
+        _mockPolicy = Substitute.For<IRetentionPolicy>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
+        _service = new RetentionPolicyService(_mockPolicy, _mockArchiveStore);
     }
 
     #region PreviewCleanupAsync Tests
@@ -43,12 +44,10 @@ public class RetentionPolicyServiceTests
             new() { Entry = entries[2], ShouldRetain = false, Action = RetentionAction.Archive, Reason = RetentionReason.LowConfidence }
         };
 
-        _mockArchiveStore
-            .Setup(s => s.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(entries);
 
-        _mockPolicy
-            .Setup(p => p.EvaluateAll(entries, null))
+        _mockPolicy.EvaluateAll(entries, null)
             .Returns(decisions);
 
         // Act
@@ -69,12 +68,10 @@ public class RetentionPolicyServiceTests
     public async Task PreviewCleanupAsync_WithEmptyStore_ShouldReturnEmptyPreview()
     {
         // Arrange
-        _mockArchiveStore
-            .Setup(s => s.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
-        _mockPolicy
-            .Setup(p => p.EvaluateAll(It.IsAny<IEnumerable<SemanticStoreEntry>>(), null))
+        _mockPolicy.EvaluateAll(Arg.Any<IEnumerable<SemanticStoreEntry>>(), null)
             .Returns(new List<RetentionDecision>());
 
         // Act
@@ -114,12 +111,10 @@ public class RetentionPolicyServiceTests
             new() { Entry = entries[0], ShouldRetain = false, Action = RetentionAction.Archive, Reason = RetentionReason.LowConfidence }
         };
 
-        _mockArchiveStore
-            .Setup(s => s.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(entries);
 
-        _mockPolicy
-            .Setup(p => p.EvaluateAll(entries, null))
+        _mockPolicy.EvaluateAll(entries, null)
             .Returns(decisions);
 
         // Act
@@ -128,8 +123,8 @@ public class RetentionPolicyServiceTests
         // Assert
         result.Success.Should().BeTrue();
         result.ArchivedCount.Should().Be(1);
-        _mockArchiveStore.Verify(s => s.SetAsync(It.IsAny<string>(), It.IsAny<SemanticStoreEntry>(), It.IsAny<CancellationToken>()), Times.Never);
-        _mockArchiveStore.Verify(s => s.RemoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        await _mockArchiveStore.DidNotReceive().SetAsync(Arg.Any<string>(), Arg.Any<SemanticStoreEntry>(), Arg.Any<CancellationToken>());
+        await _mockArchiveStore.DidNotReceive().RemoveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -146,17 +141,14 @@ public class RetentionPolicyServiceTests
             new() { Entry = entries[0], ShouldRetain = false, Action = RetentionAction.Archive, Reason = RetentionReason.LowConfidence }
         };
 
-        _mockArchiveStore
-            .Setup(s => s.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(entries);
 
-        _mockPolicy
-            .Setup(p => p.EvaluateAll(entries, null))
+        _mockPolicy.EvaluateAll(entries, null)
             .Returns(decisions);
 
-        _mockArchiveStore
-            .Setup(s => s.SetAsync("user1", It.IsAny<SemanticStoreEntry>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _mockArchiveStore.SetAsync("user1", Arg.Any<SemanticStoreEntry>(), Arg.Any<CancellationToken>())
+            .Returns(true);
 
         // Act
         var result = await _service.ApplyAsync("user1", dryRun: false);
@@ -164,9 +156,7 @@ public class RetentionPolicyServiceTests
         // Assert
         result.Success.Should().BeTrue();
         result.ArchivedCount.Should().Be(1);
-        _mockArchiveStore.Verify(
-            s => s.SetAsync("user1", It.Is<SemanticStoreEntry>(e => e.Key == "archive" && !e.IsActive), It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockArchiveStore.Received(1).SetAsync("user1", Arg.Is<SemanticStoreEntry>(e => e.Key == "archive" && !e.IsActive), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -183,17 +173,14 @@ public class RetentionPolicyServiceTests
             new() { Entry = entries[0], ShouldRetain = false, Action = RetentionAction.Delete, Reason = RetentionReason.AgeExceeded }
         };
 
-        _mockArchiveStore
-            .Setup(s => s.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(entries);
 
-        _mockPolicy
-            .Setup(p => p.EvaluateAll(entries, null))
+        _mockPolicy.EvaluateAll(entries, null)
             .Returns(decisions);
 
-        _mockArchiveStore
-            .Setup(s => s.RemoveAsync("user1", "delete", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _mockArchiveStore.RemoveAsync("user1", "delete", Arg.Any<CancellationToken>())
+            .Returns(true);
 
         // Act
         var result = await _service.ApplyAsync("user1", dryRun: false);
@@ -201,7 +188,7 @@ public class RetentionPolicyServiceTests
         // Assert
         result.Success.Should().BeTrue();
         result.DeletedCount.Should().Be(1);
-        _mockArchiveStore.Verify(s => s.RemoveAsync("user1", "delete", It.IsAny<CancellationToken>()), Times.Once);
+        await _mockArchiveStore.Received(1).RemoveAsync("user1", "delete", Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -218,12 +205,10 @@ public class RetentionPolicyServiceTests
             new() { Entry = entries[0], ShouldRetain = true, Action = RetentionAction.Keep, Reason = RetentionReason.WithinPolicy }
         };
 
-        _mockArchiveStore
-            .Setup(s => s.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(entries);
 
-        _mockPolicy
-            .Setup(p => p.EvaluateAll(entries, null))
+        _mockPolicy.EvaluateAll(entries, null)
             .Returns(decisions);
 
         // Act
@@ -234,7 +219,7 @@ public class RetentionPolicyServiceTests
         result.RetainedCount.Should().Be(1);
         result.ArchivedCount.Should().Be(0);
         result.DeletedCount.Should().Be(0);
-        _mockArchiveStore.Verify(s => s.SetAsync(It.IsAny<string>(), It.IsAny<SemanticStoreEntry>(), It.IsAny<CancellationToken>()), Times.Never);
+        await _mockArchiveStore.DidNotReceive().SetAsync(Arg.Any<string>(), Arg.Any<SemanticStoreEntry>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -255,21 +240,17 @@ public class RetentionPolicyServiceTests
             new() { Entry = entries[2], ShouldRetain = false, Action = RetentionAction.Delete, Reason = RetentionReason.AgeExceeded }
         };
 
-        _mockArchiveStore
-            .Setup(s => s.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(entries);
 
-        _mockPolicy
-            .Setup(p => p.EvaluateAll(entries, null))
+        _mockPolicy.EvaluateAll(entries, null)
             .Returns(decisions);
 
-        _mockArchiveStore
-            .Setup(s => s.SetAsync("user1", It.IsAny<SemanticStoreEntry>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _mockArchiveStore.SetAsync("user1", Arg.Any<SemanticStoreEntry>(), Arg.Any<CancellationToken>())
+            .Returns(true);
 
-        _mockArchiveStore
-            .Setup(s => s.RemoveAsync("user1", "delete", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _mockArchiveStore.RemoveAsync("user1", "delete", Arg.Any<CancellationToken>())
+            .Returns(true);
 
         // Act
         var result = await _service.ApplyAsync("user1", dryRun: false);
@@ -287,9 +268,8 @@ public class RetentionPolicyServiceTests
     public async Task ApplyAsync_OnException_ShouldReturnError()
     {
         // Arrange
-        _mockArchiveStore
-            .Setup(s => s.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Database error"));
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Database error"));
 
         // Act
         var result = await _service.ApplyAsync("user1");
@@ -319,7 +299,7 @@ public class RetentionPolicyServiceTests
     public void Policy_ShouldReturnInjectedPolicy()
     {
         // Assert
-        _service.Policy.Should().BeSameAs(_mockPolicy.Object);
+        _service.Policy.Should().BeSameAs(_mockPolicy);
     }
 
     #endregion
@@ -330,14 +310,14 @@ public class RetentionPolicyServiceTests
     public void Constructor_WithNullPolicy_ShouldThrow()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new RetentionPolicyService(null!, _mockArchiveStore.Object));
+        Assert.Throws<ArgumentNullException>(() => new RetentionPolicyService(null!, _mockArchiveStore));
     }
 
     [Fact]
     public void Constructor_WithNullArchiveStore_ShouldThrow()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new RetentionPolicyService(_mockPolicy.Object, null!));
+        Assert.Throws<ArgumentNullException>(() => new RetentionPolicyService(_mockPolicy, null!));
     }
 
     #endregion

@@ -1,8 +1,9 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Utilities;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Consolidation;
 
@@ -17,7 +18,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Consolidation;
 /// 3. Consolidation: Merge similar memories
 /// 4. Decay: Apply forgetting curve to strengthen/weaken memories
 /// </remarks>
-public sealed class SleepBasedConsolidator : IMemoryConsolidator
+public sealed partial class SleepBasedConsolidator : IMemoryConsolidator
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -41,7 +42,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
         options ??= new ConsolidationOptions();
         var stopwatch = Stopwatch.StartNew();
 
-        _logger.LogInformation("Starting memory consolidation cycle (Sleep)");
+        LogStartingMemoryConsolidationCycleSleep(_logger);
 
         try
         {
@@ -52,7 +53,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
 
             if (memories.Count == 0)
             {
-                _logger.LogInformation("No memories found for consolidation");
+                LogMemoriesFoundConsolidation(_logger);
                 return new ConsolidationResult
                 {
                     Success = true,
@@ -61,7 +62,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
                 };
             }
 
-            _logger.LogDebug("Retrieved {Count} memories for consolidation", memories.Count);
+            LogRetrievedCountMemoriesConsolidation(_logger, memories.Count);
 
             // Phase 2: Apply forgetting curve decay
             var decayResults = new List<MemoryDecayResult>();
@@ -85,8 +86,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
                     }
                 }
 
-                _logger.LogDebug("Applied forgetting curve: {Decayed} decayed, {Archived} below archive threshold",
-                    memoriesDecayed, memoriesArchived);
+                LogAppliedForgettingCurveDecayedDecayed(_logger, memoriesDecayed, memoriesArchived);
             }
 
             // Phase 3: Identify and merge similar memories
@@ -107,7 +107,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
                     await _memoryStore.StoreAsync(reflection, cancellationToken);
                 }
 
-                _logger.LogDebug("Generated {Count} reflections", reflections.Count);
+                LogGeneratedCountReflections(_logger, reflections.Count);
             }
 
             // Phase 5: Apply time-series compression (Phase 29)
@@ -121,14 +121,12 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
                     memoriesCompressed += compressedMemories.Count(m =>
                         m.Metadata?.ContainsKey(key) == true);
                 }
-                _logger.LogDebug("Compressed time-series metadata in {Count} memories", memoriesCompressed);
+                LogCompressedTimeSeriesMetadataCount(_logger, memoriesCompressed);
             }
 
             stopwatch.Stop();
 
-            _logger.LogInformation(
-                "Consolidation complete: {Processed} processed, {Reflections} reflections, {Merged} merged, {Decayed} decayed, {Compressed} time-series compressed",
-                memories.Count, reflections.Count, memoriesMerged, memoriesDecayed, memoriesCompressed);
+            LogConsolidationCompleteProcessedProcessedReflections(_logger, memories.Count, reflections.Count, memoriesMerged, memoriesDecayed, memoriesCompressed);
 
             return new ConsolidationResult
             {
@@ -144,7 +142,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Memory consolidation failed");
+            LogMemoryConsolidationFailed(_logger, ex);
             return new ConsolidationResult
             {
                 Success = false,
@@ -341,7 +339,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
         // UserId is required for multi-tenant isolation
         if (string.IsNullOrEmpty(userId))
         {
-            _logger.LogWarning("UserId is required for consolidation - skipping");
+            LogUserIdRequiredConsolidationSkipping(_logger);
             return [];
         }
 
@@ -402,7 +400,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
             Metadata = new Dictionary<string, string>
             {
                 ["source_type"] = "reflection",
-                ["source_count"] = memories.Count.ToString(),
+                ["source_count"] = memories.Count.ToString(CultureInfo.InvariantCulture),
                 ["source_topic"] = topic,
                 ["source_ids"] = string.Join(",", memories.Select(m => m.Id))
             }
@@ -447,7 +445,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
             Metadata = new Dictionary<string, string>
             {
                 ["source_type"] = "cross_topic_reflection",
-                ["source_count"] = importantMemories.Count.ToString(),
+                ["source_count"] = importantMemories.Count.ToString(CultureInfo.InvariantCulture),
                 ["source_ids"] = string.Join(",", importantMemories.Select(m => m.Id))
             }
         };
@@ -502,8 +500,7 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
             result.Add(memory);
         }
 
-        _logger.LogDebug("Compressed time-series metadata '{Key}' in {Count}/{Total} memories",
-            metadataKey, compressed, memories.Count);
+        LogCompressedTimeSeriesMetadataKey(_logger, metadataKey, compressed, memories.Count);
 
         return result;
     }
@@ -579,4 +576,34 @@ public sealed class SleepBasedConsolidator : IMemoryConsolidator
         var olderCompressed = CompressRange(string.Join(", ", older));
         return $"{olderCompressed}, {string.Join(", ", recent)}";
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting memory consolidation cycle (Sleep)")]
+    private static partial void LogStartingMemoryConsolidationCycleSleep(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "No memories found for consolidation")]
+    private static partial void LogMemoriesFoundConsolidation(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved {Count} memories for consolidation")]
+    private static partial void LogRetrievedCountMemoriesConsolidation(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Applied forgetting curve: {Decayed} decayed, {Archived} below archive threshold")]
+    private static partial void LogAppliedForgettingCurveDecayedDecayed(ILogger logger, int decayed, int archived);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Generated {Count} reflections")]
+    private static partial void LogGeneratedCountReflections(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Compressed time-series metadata in {Count} memories")]
+    private static partial void LogCompressedTimeSeriesMetadataCount(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Consolidation complete: {Processed} processed, {Reflections} reflections, {Merged} merged, {Decayed} decayed, {Compressed} time-series compressed")]
+    private static partial void LogConsolidationCompleteProcessedProcessedReflections(ILogger logger, int processed, int reflections, int merged, int decayed, int compressed);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Memory consolidation failed")]
+    private static partial void LogMemoryConsolidationFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "UserId is required for consolidation - skipping")]
+    private static partial void LogUserIdRequiredConsolidationSkipping(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Compressed time-series metadata '{Key}' in {Count}/{Total} memories")]
+    private static partial void LogCompressedTimeSeriesMetadataKey(ILogger logger, string key, int count, int total);
 }

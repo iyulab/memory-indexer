@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Consolidation;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Consolidation;
@@ -12,20 +12,20 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Consolidation;
 /// </summary>
 public sealed class SleepBasedConsolidatorTests
 {
-    private readonly Mock<IMemoryStore> _memoryStore;
-    private readonly Mock<IEmbeddingService> _embeddingService;
-    private readonly Mock<ILogger<SleepBasedConsolidator>> _logger;
+    private readonly IMemoryStore _memoryStore;
+    private readonly IEmbeddingService _embeddingService;
+    private readonly ILogger<SleepBasedConsolidator> _logger;
     private readonly SleepBasedConsolidator _sut;
 
     public SleepBasedConsolidatorTests()
     {
-        _memoryStore = new Mock<IMemoryStore>();
-        _embeddingService = new Mock<IEmbeddingService>();
-        _logger = new Mock<ILogger<SleepBasedConsolidator>>();
+        _memoryStore = Substitute.For<IMemoryStore>();
+        _embeddingService = Substitute.For<IEmbeddingService>();
+        _logger = Substitute.For<ILogger<SleepBasedConsolidator>>();
         _sut = new SleepBasedConsolidator(
-            _memoryStore.Object,
-            _embeddingService.Object,
-            _logger.Object);
+            _memoryStore,
+            _embeddingService,
+            _logger);
     }
 
     #region ConsolidateAsync Tests
@@ -49,8 +49,8 @@ public sealed class SleepBasedConsolidatorTests
     {
         // Arrange
         var options = new ConsolidationOptions { UserId = "user1" };
-        _memoryStore.Setup(x => x.GetAllAsync("user1", It.IsAny<MemoryFilterOptions?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _memoryStore.GetAllAsync("user1", Arg.Any<MemoryFilterOptions?>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
         // Act
         var result = await _sut.ConsolidateAsync(options);
@@ -72,11 +72,11 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         var memories = CreateTestMemories(10);
-        _memoryStore.Setup(x => x.GetAllAsync("user1", It.IsAny<MemoryFilterOptions?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStore.GetAllAsync("user1", Arg.Any<MemoryFilterOptions?>(), Arg.Any<CancellationToken>())
+            .Returns(memories);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new float[1024]);
+        _embeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[1024]);
 
         // Act
         var result = await _sut.ConsolidateAsync(options);
@@ -109,8 +109,8 @@ public sealed class SleepBasedConsolidatorTests
             AccessCount = 2
         };
 
-        _memoryStore.Setup(x => x.GetAllAsync("user1", It.IsAny<MemoryFilterOptions?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([oldMemory]);
+        _memoryStore.GetAllAsync("user1", Arg.Any<MemoryFilterOptions?>(), Arg.Any<CancellationToken>())
+            .Returns([oldMemory]);
 
         // Act
         var result = await _sut.ConsolidateAsync(options);
@@ -118,7 +118,7 @@ public sealed class SleepBasedConsolidatorTests
         // Assert
         Assert.True(result.Success);
         Assert.True(result.MemoriesDecayed > 0);
-        _memoryStore.Verify(x => x.UpdateAsync(It.IsAny<MemoryUnit>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        await _memoryStore.Received().UpdateAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -149,8 +149,8 @@ public sealed class SleepBasedConsolidatorTests
             new() { Id = Guid.NewGuid(), Content = "Auth memory 3", Topics = ["authentication"], UserId = "u1", ImportanceScore = 0.6f }
         };
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new float[1024]);
+        _embeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[1024]);
 
         // Act
         var result = await _sut.GenerateReflectionsAsync(memories);
@@ -171,8 +171,8 @@ public sealed class SleepBasedConsolidatorTests
             new() { Id = Guid.NewGuid(), Content = "Important 3", Topics = ["access"], UserId = "u1", ImportanceScore = 0.8f }
         };
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new float[1024]);
+        _embeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[1024]);
 
         // Act
         var result = await _sut.GenerateReflectionsAsync(memories);
@@ -333,7 +333,7 @@ public sealed class SleepBasedConsolidatorTests
 
         // Assert
         Assert.NotEmpty(result);
-        var mergeOp = result.First();
+        var mergeOp = result[0];
         Assert.NotNull(mergeOp.PrimaryMemory);
         Assert.NotEmpty(mergeOp.MemoriesToMerge);
     }
@@ -377,7 +377,7 @@ public sealed class SleepBasedConsolidatorTests
 
         // Assert
         Assert.NotEmpty(result);
-        var mergeOp = result.First();
+        var mergeOp = result[0];
         Assert.NotNull(mergeOp.SuggestedMergedContent);
         Assert.Contains("Primary content", mergeOp.SuggestedMergedContent);
         Assert.Contains("Consolidated from", mergeOp.SuggestedMergedContent);

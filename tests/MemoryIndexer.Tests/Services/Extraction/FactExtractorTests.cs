@@ -11,7 +11,7 @@ namespace MemoryIndexer.Tests.Services.Extraction;
 /// </summary>
 public class FactExtractorTests
 {
-    private readonly IFactExtractor _extractor = new MockFactExtractor();
+    private readonly MockFactExtractor _extractor = new MockFactExtractor();
 
     #region Context Detection Tests
 

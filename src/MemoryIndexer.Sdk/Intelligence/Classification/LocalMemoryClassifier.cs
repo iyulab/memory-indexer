@@ -167,7 +167,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         _logger = logger;
         _options = options.Value.Intelligence;
 
-        _logger.LogInformation("LocalMemoryClassifier initialized (Phase 23.1 multi-score mode)");
+        LogInitialized(_logger);
     }
 
     /// <inheritdoc />
@@ -183,12 +183,8 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
         var classification = ClassifyHeuristic(content, context);
 
-        _logger.LogDebug(
-            "Classified: Tier={Tier}, Primary={Type}, Secondary=[{Secondary}], Importance={Importance:F2}",
-            classification.Tier,
-            classification.Type,
-            string.Join(",", classification.SecondaryTypes),
-            classification.Importance);
+        var secondaryTypesStr = string.Join(",", classification.SecondaryTypes);
+        LogClassified(_logger, classification.Tier, classification.Type, secondaryTypesStr, classification.Importance);
 
         return Task.FromResult(classification);
     }
@@ -210,7 +206,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return results;
     }
 
-    private MemoryClassification ClassifyHeuristic(string content, ClassificationContext? context)
+    private static MemoryClassification ClassifyHeuristic(string content, ClassificationContext? context)
     {
         var lower = content.ToLowerInvariant();
         var wordCount = content.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
@@ -264,7 +260,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
     #region Phase 23.1: Multi-Score Classification
 
-    private Dictionary<MemoryType, float> CalculateTypeScores(string lower, int wordCount)
+    private static Dictionary<MemoryType, float> CalculateTypeScores(string lower, int wordCount)
     {
         return new Dictionary<MemoryType, float>
         {
@@ -275,7 +271,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         };
     }
 
-    private float CalculateEpisodicScore(string lower, int wordCount)
+    private static float CalculateEpisodicScore(string lower, int wordCount)
     {
         float score = 0.2f; // Base score
 
@@ -293,7 +289,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return Math.Clamp(score, 0f, 1f);
     }
 
-    private float CalculateSemanticScore(string lower, int wordCount)
+    private static float CalculateSemanticScore(string lower, int wordCount)
     {
         float score = 0.1f;
 
@@ -310,7 +306,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return Math.Clamp(score, 0f, 1f);
     }
 
-    private float CalculateProceduralScore(string lower, int wordCount)
+    private static float CalculateProceduralScore(string lower, int wordCount)
     {
         float score = 0.1f;
 
@@ -327,7 +323,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return Math.Clamp(score, 0f, 1f);
     }
 
-    private float CalculateFactScore(string lower, int wordCount)
+    private static float CalculateFactScore(string lower, int wordCount)
     {
         // Fact indicators (+0.2 each)
         int count = FactIndicators.Count(i => lower.Contains(i));
@@ -361,7 +357,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         {
             foreach (var pattern in TransientPatterns)
             {
-                if (lower.StartsWith(pattern) || lower == pattern || lower.EndsWith(pattern))
+                if (lower.StartsWith(pattern, StringComparison.Ordinal) || lower == pattern || lower.EndsWith(pattern, StringComparison.Ordinal))
                 {
                     return true;
                 }
@@ -485,6 +481,12 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
     [GeneratedRegex(@"\b[A-Z][a-z]+\b")]
     private static partial Regex CapitalizedWordRegex();
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "LocalMemoryClassifier initialized (Phase 23.1 multi-score mode)")]
+    private static partial void LogInitialized(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Classified: Tier={Tier}, Primary={Type}, Secondary=[{Secondary}], Importance={Importance:F2}")]
+    private static partial void LogClassified(ILogger logger, Tier tier, MemoryType type, string secondary, float importance);
 
     #endregion
 }

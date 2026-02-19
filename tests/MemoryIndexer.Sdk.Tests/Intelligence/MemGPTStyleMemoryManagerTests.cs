@@ -6,7 +6,7 @@ using MemoryIndexer.Sdk.Intelligence.SelfEditing;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence;
@@ -14,26 +14,25 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence;
 public class MemGPTStyleMemoryManagerTests
 {
     private readonly MemGPTStyleMemoryManager _manager;
-    private readonly Mock<MemoryService> _memoryServiceMock;
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly Mock<ISummarizationService> _summarizationServiceMock;
+    private readonly MemoryService _memoryServiceMock;
+    private readonly IEmbeddingService _embeddingServiceMock;
+    private readonly ISummarizationService _summarizationServiceMock;
 
     public MemGPTStyleMemoryManagerTests()
     {
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string text, CancellationToken _) => GenerateMockEmbedding(text));
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => GenerateMockEmbedding(callInfo.ArgAt<string>(0)));
 
-        _summarizationServiceMock = new Mock<ISummarizationService>();
-        _summarizationServiceMock
-            .Setup(x => x.SummarizeAsync(
-                It.IsAny<IEnumerable<MemoryUnit>>(),
-                It.IsAny<SummarizationOptions?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IEnumerable<MemoryUnit> memories, SummarizationOptions? _, CancellationToken __) =>
+        _summarizationServiceMock = Substitute.For<ISummarizationService>();
+        _summarizationServiceMock.SummarizeAsync(
+                Arg.Any<IEnumerable<MemoryUnit>>(),
+                Arg.Any<SummarizationOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
             {
-                var content = string.Join(" ", memories.Select(m => m.Content));
+                var memories = callInfo.ArgAt<IEnumerable<MemoryUnit>>(0);
+    var content = string.Join(" ", memories.Select(m => m.Content));
                 return new MemorySummary
                 {
                     Content = $"Summary of: {content[..Math.Min(100, content.Length)]}...",
@@ -41,35 +40,31 @@ public class MemGPTStyleMemoryManagerTests
                 };
             });
 
-        var memoryStoreMock = new Mock<IMemoryStore>();
-        memoryStoreMock
-            .Setup(x => x.StoreAsync(It.IsAny<MemoryUnit>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MemoryUnit m, CancellationToken _) => m);
-        memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-        memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        var memoryStoreMock = Substitute.For<IMemoryStore>();
+        memoryStoreMock.StoreAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => callInfo.ArgAt<MemoryUnit>(0));
+        memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
+        memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        var scoringServiceMock = new Mock<IScoringService>();
+        var scoringServiceMock = Substitute.For<IScoringService>();
 
-        var deduplicationServiceMock = new Mock<IDeduplicationService>();
-        deduplicationServiceMock
-            .Setup(x => x.CheckForDuplicateAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<float?>(),
-                It.IsAny<string?>(),
-                It.IsAny<int?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new DuplicateCheckResult
+        var deduplicationServiceMock = Substitute.For<IDeduplicationService>();
+        deduplicationServiceMock.CheckForDuplicateAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<float?>(),
+                Arg.Any<string?>(),
+                Arg.Any<int?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new DuplicateCheckResult
             {
                 IsDuplicate = false,
                 DuplicateType = DuplicateType.None,
@@ -77,9 +72,8 @@ public class MemGPTStyleMemoryManagerTests
                 SimilarityScore = 0f
             });
 
-        var pressureMonitorMock = new Mock<IMemoryPressureMonitor>();
-        pressureMonitorMock
-            .Setup(x => x.GetMemoryInfo())
+        var pressureMonitorMock = Substitute.For<IMemoryPressureMonitor>();
+        pressureMonitorMock.GetMemoryInfo()
             .Returns(new MemoryPressureInfo
             {
                 Level = MemoryPressureLevel.Low,
@@ -92,33 +86,32 @@ public class MemGPTStyleMemoryManagerTests
                 Gen2Collections = 0
             });
 
-        var growthMonitorMock = new Mock<IMemoryGrowthMonitor>();
-        growthMonitorMock
-            .Setup(x => x.RecordMemoryStorageAsync(
-                It.IsAny<string>(),
-                It.IsAny<bool>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+        var growthMonitorMock = Substitute.For<IMemoryGrowthMonitor>();
+        growthMonitorMock.RecordMemoryStorageAsync(
+                Arg.Any<string>(),
+                Arg.Any<bool>(),
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
         var optionsMock = Options.Create(new MemoryIndexerOptions
         {
             MemoryGrowth = new MemoryGrowthOptions()
         });
 
-        _memoryServiceMock = new Mock<MemoryService>(
-            memoryStoreMock.Object,
-            _embeddingServiceMock.Object,
-            scoringServiceMock.Object,
-            deduplicationServiceMock.Object,
-            pressureMonitorMock.Object,
-            growthMonitorMock.Object,
+        _memoryServiceMock = new MemoryService(
+            memoryStoreMock,
+            _embeddingServiceMock,
+            scoringServiceMock,
+            deduplicationServiceMock,
+            pressureMonitorMock,
+            growthMonitorMock,
             null!, // IMemoryConflictResolver (optional, null is valid)
-            optionsMock) { CallBase = true };
+            optionsMock);
 
         _manager = new MemGPTStyleMemoryManager(
-            _memoryServiceMock.Object,
-            _embeddingServiceMock.Object,
-            _summarizationServiceMock.Object,
+            _memoryServiceMock,
+            _embeddingServiceMock,
+            _summarizationServiceMock,
             NullLogger<MemGPTStyleMemoryManager>.Instance);
     }
 

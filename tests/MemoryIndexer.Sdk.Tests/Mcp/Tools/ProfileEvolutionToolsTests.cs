@@ -4,7 +4,7 @@ using MemoryIndexer.Sdk.Intelligence.Inference;
 using MemoryIndexer.Sdk.Intelligence.Profile;
 using MemoryIndexer.Sdk.Mcp.Tools;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
@@ -15,29 +15,29 @@ namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
 /// </summary>
 public class ProfileEvolutionToolsTests
 {
-    private readonly Mock<IFactInferenceEngine> _mockInferenceEngine;
-    private readonly Mock<IProfileSnapshotService> _mockSnapshotService;
-    private readonly Mock<IConfidenceDecayStrategy> _mockDecayStrategy;
-    private readonly Mock<IProfileExporter> _mockProfileExporter;
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
+    private readonly IFactInferenceEngine _mockInferenceEngine;
+    private readonly IProfileSnapshotService _mockSnapshotService;
+    private readonly IConfidenceDecayStrategy _mockDecayStrategy;
+    private readonly IProfileExporter _mockProfileExporter;
+    private readonly IArchiveStore _mockArchiveStore;
     private readonly ProfileEvolutionTools _tools;
 
     public ProfileEvolutionToolsTests()
     {
-        _mockInferenceEngine = new Mock<IFactInferenceEngine>();
-        _mockSnapshotService = new Mock<IProfileSnapshotService>();
-        _mockDecayStrategy = new Mock<IConfidenceDecayStrategy>();
-        _mockProfileExporter = new Mock<IProfileExporter>();
-        _mockArchiveStore = new Mock<IArchiveStore>();
+        _mockInferenceEngine = Substitute.For<IFactInferenceEngine>();
+        _mockSnapshotService = Substitute.For<IProfileSnapshotService>();
+        _mockDecayStrategy = Substitute.For<IConfidenceDecayStrategy>();
+        _mockProfileExporter = Substitute.For<IProfileExporter>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
 
-        _mockProfileExporter.Setup(e => e.Format).Returns("json");
+        _mockProfileExporter.Format.Returns("json");
 
         _tools = new ProfileEvolutionTools(
-            _mockInferenceEngine.Object,
-            _mockSnapshotService.Object,
-            _mockDecayStrategy.Object,
-            _mockProfileExporter.Object,
-            _mockArchiveStore.Object);
+            _mockInferenceEngine,
+            _mockSnapshotService,
+            _mockDecayStrategy,
+            _mockProfileExporter,
+            _mockArchiveStore);
     }
 
     #region InferFacts Tests
@@ -65,9 +65,8 @@ public class ProfileEvolutionToolsTests
             ProcessingTimeMs = 100
         };
 
-        _mockInferenceEngine
-            .Setup(e => e.InferForUserAsync("user1", It.IsAny<InferenceOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(inferenceResult);
+        _mockInferenceEngine.InferForUserAsync("user1", Arg.Any<InferenceOptions>(), Arg.Any<CancellationToken>())
+            .Returns(inferenceResult);
 
         // Act
         var result = await _tools.InferFacts("user1");
@@ -85,21 +84,18 @@ public class ProfileEvolutionToolsTests
     public async Task InferFacts_WithOptions_ShouldPassOptions()
     {
         // Arrange
-        _mockInferenceEngine
-            .Setup(e => e.InferForUserAsync(
+        _mockInferenceEngine.InferForUserAsync(
                 "user1",
-                It.Is<InferenceOptions>(o => o.MinSourceConfidence == 0.8f && o.MaxResults == 10),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new InferenceResult { UserId = "user1", InferredFacts = [] });
+                Arg.Is<InferenceOptions>(o => o.MinSourceConfidence == 0.8f && o.MaxResults == 10),
+                Arg.Any<CancellationToken>())
+            .Returns(new InferenceResult { UserId = "user1", InferredFacts = [] });
 
         // Act
         var result = await _tools.InferFacts("user1", minConfidence: 0.8f, maxResults: 10);
 
         // Assert
         result.Success.Should().BeTrue();
-        _mockInferenceEngine.Verify(
-            e => e.InferForUserAsync("user1", It.Is<InferenceOptions>(o => o.MinSourceConfidence == 0.8f), It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockInferenceEngine.Received(1).InferForUserAsync("user1", Arg.Is<InferenceOptions>(o => o.MinSourceConfidence == 0.8f), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -110,13 +106,13 @@ public class ProfileEvolutionToolsTests
     public async Task GetInferenceRules_ShouldReturnRegisteredRules()
     {
         // Arrange
-        var mockRule = new Mock<IInferenceRule>();
-        mockRule.Setup(r => r.Name).Returns("TestRule");
-        mockRule.Setup(r => r.Description).Returns("Test description");
-        mockRule.Setup(r => r.Type).Returns(InferenceType.Custom);
+        var mockRule = Substitute.For<IInferenceRule>();
+        mockRule.Name.Returns("TestRule");
+        mockRule.Description.Returns("Test description");
+        mockRule.Type.Returns(InferenceType.Custom);
 
-        _mockInferenceEngine.Setup(e => e.GetRegisteredRules())
-            .Returns(new List<IInferenceRule> { mockRule.Object });
+        _mockInferenceEngine.GetRegisteredRules()
+            .Returns(new List<IInferenceRule> { mockRule });
 
         // Act
         var result = await _tools.GetInferenceRules();
@@ -154,9 +150,8 @@ public class ProfileEvolutionToolsTests
             }
         };
 
-        _mockSnapshotService
-            .Setup(s => s.CreateSnapshotAsync("user1", "Test snapshot", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(snapshot);
+        _mockSnapshotService.CreateSnapshotAsync("user1", "Test snapshot", Arg.Any<CancellationToken>())
+            .Returns(snapshot);
 
         // Act
         var result = await _tools.CreateProfileSnapshot("user1", "Test snapshot");
@@ -184,9 +179,8 @@ public class ProfileEvolutionToolsTests
             new() { Id = Guid.NewGuid(), UserId = "user1", Label = "Snapshot 2", CreatedAt = DateTime.UtcNow, FactCount = 15 }
         };
 
-        _mockSnapshotService
-            .Setup(s => s.ListSnapshotsAsync("user1", 10, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(snapshots);
+        _mockSnapshotService.ListSnapshotsAsync("user1", 10, Arg.Any<CancellationToken>())
+            .Returns(snapshots);
 
         // Act
         var result = await _tools.ListProfileSnapshots("user1", 10);
@@ -217,9 +211,8 @@ public class ProfileEvolutionToolsTests
             Summary = new DiffSummary { AddedCount = 1, RemovedCount = 0, ModifiedCount = 1 }
         };
 
-        _mockSnapshotService
-            .Setup(s => s.CompareSnapshotsAsync("user1", olderId, null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(diff);
+        _mockSnapshotService.CompareSnapshotsAsync("user1", olderId, null, Arg.Any<CancellationToken>())
+            .Returns(diff);
 
         // Act
         var result = await _tools.CompareSnapshots(olderId.ToString(), "user1");
@@ -256,19 +249,19 @@ public class ProfileEvolutionToolsTests
             new() { Key = "stale", Value = "Stale fact", Confidence = 0.6f, UpdatedAt = DateTime.UtcNow.AddDays(-200), IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Use real TimeBasedDecayStrategy for this test
         var options = Options.Create(new ConfidenceDecayOptions { HalfLifeDays = 90 });
         var realDecayStrategy = new TimeBasedDecayStrategy(options);
 
         var toolsWithRealDecay = new ProfileEvolutionTools(
-            _mockInferenceEngine.Object,
-            _mockSnapshotService.Object,
+            _mockInferenceEngine,
+            _mockSnapshotService,
             realDecayStrategy,
-            _mockProfileExporter.Object,
-            _mockArchiveStore.Object);
+            _mockProfileExporter,
+            _mockArchiveStore);
 
         // Act
         var result = await toolsWithRealDecay.GetStaleFacts("user1", 0.5f);
@@ -287,8 +280,8 @@ public class ProfileEvolutionToolsTests
             new() { Key = "test", Value = "Test", IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _tools.GetStaleFacts("user1");
@@ -314,12 +307,12 @@ public class ProfileEvolutionToolsTests
             UpdatedAt = DateTime.UtcNow.AddDays(-30)
         };
 
-        _mockArchiveStore.Setup(a => a.GetAsync("user1", "test", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(fact);
+        _mockArchiveStore.GetAsync("user1", "test", Arg.Any<CancellationToken>())
+            .Returns(fact);
 
-        _mockDecayStrategy.Setup(d => d.CalculateDecayedConfidence(fact, It.IsAny<DateTime>()))
+        _mockDecayStrategy.CalculateDecayedConfidence(fact, Arg.Any<DateTime>())
             .Returns(0.8f);
-        _mockDecayStrategy.Setup(d => d.NeedsReconfirmation(fact, It.IsAny<float>()))
+        _mockDecayStrategy.NeedsReconfirmation(fact, Arg.Any<float>())
             .Returns(false);
 
         // Act
@@ -337,8 +330,8 @@ public class ProfileEvolutionToolsTests
     public async Task CalculateDecay_NonExistentFact_ShouldReturnError()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAsync("user1", "nonexistent", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SemanticStoreEntry?)null);
+        _mockArchiveStore.GetAsync("user1", "nonexistent", Arg.Any<CancellationToken>())
+            .Returns((SemanticStoreEntry?)null);
 
         // Act
         var result = await _tools.CalculateDecay("nonexistent", "user1");
@@ -372,9 +365,8 @@ public class ProfileEvolutionToolsTests
             }
         };
 
-        _mockProfileExporter
-            .Setup(e => e.ExportAsync("user1", It.IsAny<ProfileExportOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(exportResult);
+        _mockProfileExporter.ExportAsync("user1", Arg.Any<ProfileExportOptions>(), Arg.Any<CancellationToken>())
+            .Returns(exportResult);
 
         // Act
         var result = await _tools.ExportProfile("user1");
@@ -395,12 +387,11 @@ public class ProfileEvolutionToolsTests
     public async Task ExportProfile_WithOptions_ShouldPassOptions()
     {
         // Arrange
-        _mockProfileExporter
-            .Setup(e => e.ExportAsync(
+        _mockProfileExporter.ExportAsync(
                 "user1",
-                It.Is<ProfileExportOptions>(o => o.IncludeArchived && o.IncludeHistory),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ProfileExportResult
+                Arg.Is<ProfileExportOptions>(o => o.IncludeArchived && o.IncludeHistory),
+                Arg.Any<CancellationToken>())
+            .Returns(new ProfileExportResult
             {
                 Success = true,
                 Data = "{}",
@@ -412,18 +403,15 @@ public class ProfileEvolutionToolsTests
 
         // Assert
         result.Success.Should().BeTrue();
-        _mockProfileExporter.Verify(
-            e => e.ExportAsync("user1", It.Is<ProfileExportOptions>(o => o.IncludeArchived && o.IncludeHistory), It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _mockProfileExporter.Received(1).ExportAsync("user1", Arg.Is<ProfileExportOptions>(o => o.IncludeArchived && o.IncludeHistory), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ExportProfile_OnFailure_ShouldReturnError()
     {
         // Arrange
-        _mockProfileExporter
-            .Setup(e => e.ExportAsync("user1", It.IsAny<ProfileExportOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ProfileExportResult
+        _mockProfileExporter.ExportAsync("user1", Arg.Any<ProfileExportOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new ProfileExportResult
             {
                 Success = false,
                 ErrorMessage = "Export failed"

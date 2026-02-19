@@ -228,12 +228,12 @@ public sealed class PiiRedactionOptions
     /// <summary>
     /// Number of characters to show at start when partially masking.
     /// </summary>
-    public int PartialMaskShowStart { get; set; } = 0;
+    public int PartialMaskShowStart { get; set; }
 
     /// <summary>
     /// Number of characters to show at end when partially masking.
     /// </summary>
-    public int PartialMaskShowEnd { get; set; } = 0;
+    public int PartialMaskShowEnd { get; set; }
 }
 
 /// <summary>

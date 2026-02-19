@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.SelfCorrection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.SelfCorrection;
@@ -10,65 +10,58 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.SelfCorrection;
 public class MemorySelfCorrectorTests
 {
     private readonly MemorySelfCorrector _corrector;
-    private readonly Mock<IMemoryStore> _memoryStoreMock;
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly Mock<ITemporalEntityStore> _entityStoreMock;
+    private readonly IMemoryStore _memoryStoreMock;
+    private readonly IEmbeddingService _embeddingServiceMock;
+    private readonly ITemporalEntityStore _entityStoreMock;
 
     public MemorySelfCorrectorTests()
     {
-        _memoryStoreMock = new Mock<IMemoryStore>();
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _entityStoreMock = new Mock<ITemporalEntityStore>();
+        _memoryStoreMock = Substitute.For<IMemoryStore>();
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
+        _entityStoreMock = Substitute.For<ITemporalEntityStore>();
 
         SetupDefaultMocks();
 
         _corrector = new MemorySelfCorrector(
-            _memoryStoreMock.Object,
-            _embeddingServiceMock.Object,
-            _entityStoreMock.Object,
+            _memoryStoreMock,
+            _embeddingServiceMock,
+            _entityStoreMock,
             NullLogger<MemorySelfCorrector>.Instance);
     }
 
     private void SetupDefaultMocks()
     {
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _memoryStoreMock
-            .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Guid id, CancellationToken _) => new MemoryUnit
+        _memoryStoreMock.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => new MemoryUnit
             {
-                Id = id,
+                Id = callInfo.ArgAt<Guid>(0),
                 Content = "Test memory content",
                 CreatedAt = DateTime.UtcNow.AddDays(-1)
             });
 
-        _memoryStoreMock
-            .Setup(x => x.UpdateAsync(It.IsAny<MemoryUnit>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _memoryStoreMock.UpdateAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>())
+            .Returns(true);
 
-        _memoryStoreMock
-            .Setup(x => x.DeleteAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _memoryStoreMock.DeleteAsync(Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(true);
 
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new float[1024]);
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[1024]);
 
-        _entityStoreMock
-            .Setup(x => x.GetBySubjectAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _entityStoreMock.GetBySubjectAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns([]);
     }
 
     [Fact]
@@ -107,12 +100,11 @@ public class MemorySelfCorrectorTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _corrector.AnalyzeMemoriesAsync("test_user");
@@ -193,12 +185,11 @@ public class MemorySelfCorrectorTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _corrector.IdentifyOutdatedMemoriesAsync("test_user");
@@ -229,12 +220,11 @@ public class MemorySelfCorrectorTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _corrector.IdentifyOutdatedMemoriesAsync("test_user");
@@ -257,12 +247,11 @@ public class MemorySelfCorrectorTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _corrector.TrackEvidenceGapsAsync("test_user", "authentication details");
@@ -362,12 +351,11 @@ public class MemorySelfCorrectorTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         var options = new ConfidenceUpdateOptions
         {
@@ -407,12 +395,11 @@ public class MemorySelfCorrectorTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         var options = new MemoryAnalysisOptions
         {

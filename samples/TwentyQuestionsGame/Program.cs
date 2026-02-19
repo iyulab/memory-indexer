@@ -187,7 +187,6 @@ else
 }
 
 // Game components
-services.AddSingleton<ToolCallParser>();
 services.AddSingleton<ToolCallExecutor>();
 services.AddSingleton<AlphaAgent>();
 services.AddSingleton<BetaAgent>();
@@ -237,7 +236,7 @@ if (benchmarkMode)
     // Benchmark mode: run multiple games
     var benchmarkRunner = new BenchmarkRunner(gameRunner, ResetGameStateAsync);
     var result = await benchmarkRunner.RunAsync(iterations);
-    await benchmarkRunner.OutputResultsAsync(result, outputPath);
+    await BenchmarkRunner.OutputResultsAsync(result, outputPath);
 }
 else
 {
@@ -358,7 +357,7 @@ sealed class LMSupplyEmbeddingService : IEmbeddingService
         string text,
         CancellationToken cancellationToken = default)
     {
-        var result = await _model.EmbedAsync(text);
+        var result = await _model.EmbedAsync(text, cancellationToken);
         return result;
     }
 
@@ -371,7 +370,7 @@ sealed class LMSupplyEmbeddingService : IEmbeddingService
 
         foreach (var text in textList)
         {
-            var embedding = await _model.EmbedAsync(text);
+            var embedding = await _model.EmbedAsync(text, cancellationToken);
             results.Add(embedding);
         }
 

@@ -11,7 +11,7 @@ namespace McpServer.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class MemoryController : ControllerBase
+public partial class MemoryController : ControllerBase
 {
     private readonly MemoryService _memoryService;
     private readonly IMemoryStore _memoryStore;
@@ -56,8 +56,7 @@ public class MemoryController : ControllerBase
                 importance: request.Importance ?? 0.5f,
                 metadata: metadata.ToDictionary(k => k.Key, v => v.Value.ToString() ?? string.Empty));
 
-            _logger.LogInformation("Stored memory {MemoryId} for user {UserId}",
-                memory.Id, userId);
+            LogStoredMemory(_logger, memory.Id, userId);
 
             return CreatedAtAction(
                 nameof(GetMemory),
@@ -70,7 +69,7 @@ public class MemoryController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to store memory");
+            LogFailedToStoreMemory(_logger, ex);
             return StatusCode(500, new { error = "Failed to store memory", details = ex.Message });
         }
     }
@@ -102,8 +101,7 @@ public class MemoryController : ControllerBase
                 sessionId: request.SessionId,
                 types: types);
 
-            _logger.LogInformation("Searched memories for user {UserId}, found {Count} results",
-                userId, results.Count);
+            LogSearchedMemories(_logger, userId, results.Count);
 
             return Ok(new MemorySearchResponse
             {
@@ -123,7 +121,7 @@ public class MemoryController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to search memories");
+            LogFailedToSearchMemories(_logger, ex);
             return StatusCode(500, new { error = "Failed to search memories", details = ex.Message });
         }
     }
@@ -177,7 +175,7 @@ public class MemoryController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get memories");
+            LogFailedToGetMemories(_logger, ex);
             return StatusCode(500, new { error = "Failed to get memories", details = ex.Message });
         }
     }
@@ -213,7 +211,7 @@ public class MemoryController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get memory {MemoryId}", id);
+            LogFailedToGetMemory(_logger, ex, id);
             return StatusCode(500, new { error = "Failed to get memory", details = ex.Message });
         }
     }
@@ -248,12 +246,12 @@ public class MemoryController : ControllerBase
                 return NotFound(new { error = "Memory not found or no changes made", id });
             }
 
-            _logger.LogInformation("Updated memory {MemoryId}", id);
+            LogUpdatedMemory(_logger, id);
             return Ok(new { message = "Memory updated successfully", id });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update memory {MemoryId}", id);
+            LogFailedToUpdateMemory(_logger, ex, id);
             return StatusCode(500, new { error = "Failed to update memory", details = ex.Message });
         }
     }
@@ -276,15 +274,44 @@ public class MemoryController : ControllerBase
                 return NotFound(new { error = "Memory not found", id });
             }
 
-            _logger.LogInformation("Deleted memory {MemoryId}", id);
+            LogDeletedMemory(_logger, id);
             return NoContent();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete memory {MemoryId}", id);
+            LogFailedToDeleteMemory(_logger, ex, id);
             return StatusCode(500, new { error = "Failed to delete memory", details = ex.Message });
         }
     }
+    [LoggerMessage(Level = LogLevel.Information, Message = "Stored memory {MemoryId} for user {UserId}")]
+    private static partial void LogStoredMemory(ILogger logger, Guid memoryId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to store memory")]
+    private static partial void LogFailedToStoreMemory(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Searched memories for user {UserId}, found {Count} results")]
+    private static partial void LogSearchedMemories(ILogger logger, string userId, int count);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to search memories")]
+    private static partial void LogFailedToSearchMemories(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get memories")]
+    private static partial void LogFailedToGetMemories(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get memory {MemoryId}")]
+    private static partial void LogFailedToGetMemory(ILogger logger, Exception ex, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Updated memory {MemoryId}")]
+    private static partial void LogUpdatedMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to update memory {MemoryId}")]
+    private static partial void LogFailedToUpdateMemory(ILogger logger, Exception ex, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Deleted memory {MemoryId}")]
+    private static partial void LogDeletedMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to delete memory {MemoryId}")]
+    private static partial void LogFailedToDeleteMemory(ILogger logger, Exception ex, Guid memoryId);
 }
 
 #region Request/Response Models

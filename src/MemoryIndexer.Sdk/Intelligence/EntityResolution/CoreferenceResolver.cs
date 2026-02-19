@@ -1,3 +1,4 @@
+﻿using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using MemoryIndexer.Models;
@@ -27,7 +28,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
 
         // Possessive pronouns
         ["his"] = (GrammaticalGender.Masculine, GrammaticalNumber.Singular),
-        ["her"] = (GrammaticalGender.Feminine, GrammaticalNumber.Singular),
+        // "her" is already defined above as personal pronoun (same gender/number)
         ["hers"] = (GrammaticalGender.Feminine, GrammaticalNumber.Singular),
         ["its"] = (GrammaticalGender.Neuter, GrammaticalNumber.Singular),
         ["their"] = (GrammaticalGender.Animate, GrammaticalNumber.Plural),
@@ -140,9 +141,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
 
         result.Chains.AddRange(chains.Values.Where(c => c.Mentions.Count > 0));
 
-        _logger.LogDebug(
-            "Resolved {ResolvedCount} coreferences, {UnresolvedCount} unresolved for {EntityCount} entities",
-            result.ResolvedCount, result.UnresolvedCount, entityList.Count);
+        LogResolvedResolvedCountCoreferencesUnresolvedCountUnresolved(_logger, result.ResolvedCount, result.UnresolvedCount, entityList.Count);
 
         return Task.FromResult(result);
     }
@@ -171,9 +170,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
 
         var result = await ResolveAsync(combinedText.ToString(), entities, cancellationToken);
 
-        _logger.LogDebug(
-            "Resolved coreferences across {SegmentCount} segments: {ResolvedCount} resolved",
-            segmentList.Count, result.ResolvedCount);
+        LogResolvedCoreferencesAcrossSegmentCountSegments(_logger, segmentList.Count, result.ResolvedCount);
 
         return result;
     }
@@ -199,6 +196,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         foreach (var coref in sortedCoreferences)
         {
             var replacement = string.Format(
+                CultureInfo.InvariantCulture,
                 options.ReplacementFormat,
                 coref.ReferentEntity.Name,
                 coref.Mention.Text);
@@ -235,7 +233,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         return result.OrderBy(m => m.StartPosition).ToList();
     }
 
-    private List<string> SplitSentences(string text)
+    private static List<string> SplitSentences(string text)
     {
         // Simple sentence splitter - production would use a proper NLP tokenizer
         return SentenceSplitRegex().Split(text)
@@ -244,7 +242,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
             .ToList();
     }
 
-    private List<EntityMention> FindEntityMentions(
+    private static List<EntityMention> FindEntityMentions(
         string text,
         List<Entity> entities,
         List<string> sentences)
@@ -282,7 +280,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         return mentions.OrderBy(m => m.StartPosition).ToList();
     }
 
-    private List<EntityMention> FindPronounMentions(string text, List<string> sentences)
+    private static List<EntityMention> FindPronounMentions(string text, List<string> sentences)
     {
         var mentions = new List<EntityMention>();
 
@@ -310,7 +308,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         return mentions.OrderBy(m => m.StartPosition).ToList();
     }
 
-    private (Entity? Entity, float Confidence, CoreferenceType Type) ResolvePronoun(
+    private static (Entity? Entity, float Confidence, CoreferenceType Type) ResolvePronoun(
         EntityMention pronounMention,
         List<EntityMention> entityMentions,
         List<Entity> entities,
@@ -354,7 +352,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         return (best.Entity, best.Score, GetCoreferenceType(pronounMention.Text));
     }
 
-    private float CalculateCandidateScore(
+    private static float CalculateCandidateScore(
         EntityMention pronounMention,
         EntityMention candidateMention,
         Entity candidateEntity,
@@ -421,7 +419,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         return Math.Min(1.0f, Math.Max(0, score));
     }
 
-    private GrammaticalGender InferGender(Entity entity)
+    private static GrammaticalGender InferGender(Entity entity)
     {
         if (entity.Type == EntityType.Person)
         {
@@ -442,7 +440,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
             : GrammaticalGender.Unknown;
     }
 
-    private bool IsGenderCompatible(GrammaticalGender pronounGender, GrammaticalGender entityGender)
+    private static bool IsGenderCompatible(GrammaticalGender pronounGender, GrammaticalGender entityGender)
     {
         if (pronounGender == GrammaticalGender.Unknown || entityGender == GrammaticalGender.Unknown)
         {
@@ -457,14 +455,14 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         return pronounGender == entityGender;
     }
 
-    private GrammaticalNumber GetEntityNumber(Entity entity)
+    private static GrammaticalNumber GetEntityNumber(Entity entity)
     {
         // Most entities are singular
         // Could be extended to check for plural forms
         return GrammaticalNumber.Singular;
     }
 
-    private int GetSentenceIndex(int position, string text, List<string> sentences)
+    private static int GetSentenceIndex(int position, string text, List<string> sentences)
     {
         var currentPos = 0;
         for (int i = 0; i < sentences.Count; i++)
@@ -511,7 +509,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         return CoreferenceType.PersonalPronoun;
     }
 
-    private int CalculateDistance(EntityMention mention, List<EntityMention> entityMentions, Entity entity)
+    private static int CalculateDistance(EntityMention mention, List<EntityMention> entityMentions, Entity entity)
     {
         var precedingMention = entityMentions
             .Where(m => m.StartPosition < mention.StartPosition &&
@@ -527,7 +525,7 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
         return mention.SentenceIndex - precedingMention.SentenceIndex;
     }
 
-    private List<Entity> GetCandidateEntities(EntityMention mention, List<Entity> entities)
+    private static List<Entity> GetCandidateEntities(EntityMention mention, List<Entity> entities)
     {
         // Return entities that could potentially match based on gender/number
         return entities
@@ -541,4 +539,10 @@ public sealed partial class CoreferenceResolver : ICoreferenceResolver
 
     [GeneratedRegex(@"\b(he|him|his|she|her|hers|it|its|they|them|their|theirs|himself|herself|itself|themselves)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex PronounRegex();
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Resolved {ResolvedCount} coreferences, {UnresolvedCount} unresolved for {EntityCount} entities")]
+    private static partial void LogResolvedResolvedCountCoreferencesUnresolvedCountUnresolved(ILogger logger, int resolvedCount, int unresolvedCount, int entityCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Resolved coreferences across {SegmentCount} segments: {ResolvedCount} resolved")]
+    private static partial void LogResolvedCoreferencesAcrossSegmentCountSegments(ILogger logger, int segmentCount, int resolvedCount);
 }

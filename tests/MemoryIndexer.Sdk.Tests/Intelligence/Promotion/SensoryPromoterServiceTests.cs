@@ -8,31 +8,31 @@ using MemoryIndexer.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Promotion;
 
 public class SensoryPromoterServiceTests
 {
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly IBuffer _recentlyBuffer;
-    private readonly IShortTermMemory _workingMemory;
+    private readonly IEmbeddingService _embeddingServiceMock;
+    private readonly BufferService _recentlyBuffer;
+    private readonly ShortTermMemoryService _workingMemory;
     private readonly TopicSegmenter _topicSegmenter;
-    private readonly ISensoryPromoter _promoter;
+    private readonly SensoryPromoterService _promoter;
 
     public SensoryPromoterServiceTests()
     {
         // Setup mocks
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new float[768].AsMemory());
-        _embeddingServiceMock
-            .Setup(x => x.GenerateBatchEmbeddingsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .Returns((IEnumerable<string> texts, CancellationToken _) =>
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[768].AsMemory());
+        _embeddingServiceMock.GenerateBatchEmbeddingsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
             {
-                var embeddings = texts.Select(_ => (ReadOnlyMemory<float>)new float[768].AsMemory()).ToList();
+                var texts = callInfo.ArgAt<IEnumerable<string>>(0);
+    var embeddings = texts.Select(_ => (ReadOnlyMemory<float>)new float[768].AsMemory()).ToList();
                 return Task.FromResult<IReadOnlyList<ReadOnlyMemory<float>>>(embeddings);
             });
 
@@ -58,14 +58,14 @@ public class SensoryPromoterServiceTests
 
         // Setup topic segmenter
         _topicSegmenter = new TopicSegmenter(
-            _embeddingServiceMock.Object,
+            _embeddingServiceMock,
             NullLogger<TopicSegmenter>.Instance);
 
         // Create service under test
         _promoter = new SensoryPromoterService(
             _recentlyBuffer,
             _workingMemory,
-            _embeddingServiceMock.Object,
+            _embeddingServiceMock,
             _topicSegmenter,
             NullLogger<SensoryPromoterService>.Instance);
     }
@@ -370,7 +370,7 @@ public class SensoryPromoterServiceTests
         var promoter = new SensoryPromoterService(
             _recentlyBuffer,
             smallWorkingMemory,
-            _embeddingServiceMock.Object,
+            _embeddingServiceMock,
             _topicSegmenter,
             NullLogger<SensoryPromoterService>.Instance);
 
@@ -406,22 +406,20 @@ public class SensoryPromoterServiceTests
     public async Task PromoteAsync_EmbeddingFailure_ReturnsFailure()
     {
         // Arrange
-        var failingEmbeddingService = new Mock<IEmbeddingService>();
-        failingEmbeddingService
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Embedding failed"));
-        failingEmbeddingService
-            .Setup(x => x.GenerateBatchEmbeddingsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Batch embedding failed"));
+        var failingEmbeddingService = Substitute.For<IEmbeddingService>();
+        failingEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Embedding failed"));
+        failingEmbeddingService.GenerateBatchEmbeddingsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Batch embedding failed"));
 
         var segmenter = new TopicSegmenter(
-            failingEmbeddingService.Object,
+            failingEmbeddingService,
             NullLogger<TopicSegmenter>.Instance);
 
         var promoter = new SensoryPromoterService(
             _recentlyBuffer,
             _workingMemory,
-            failingEmbeddingService.Object,
+            failingEmbeddingService,
             segmenter,
             NullLogger<SensoryPromoterService>.Instance);
 

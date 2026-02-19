@@ -1,4 +1,4 @@
-using MemoryIndexer.Configuration;
+﻿using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
@@ -11,7 +11,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Deduplication;
 /// Implements semantic deduplication with tiered similarity thresholds.
 /// Phase 21.1: Deduplication Target Fix.
 /// </summary>
-public sealed class DeduplicationService : IDeduplicationService
+public sealed partial class DeduplicationService : IDeduplicationService
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -56,16 +56,14 @@ public sealed class DeduplicationService : IDeduplicationService
         var threshold = similarityThreshold ?? _options.DefaultSimilarityThreshold;
         var window = lookbackWindow ?? _options.LookbackWindow;
 
-        _logger.LogDebug(
-            "Checking for duplicates: userId={UserId}, threshold={Threshold}, window={Window}",
-            userId, threshold, window);
+        LogCheckingDuplicatesUserIdUserIdThreshold(_logger, userId, threshold, window);
 
         // Step 1: Get recent memories for comparison (lookback window)
         var recentMemories = await GetRecentMemoriesAsync(userId, window, cancellationToken);
 
         if (recentMemories.Count == 0)
         {
-            _logger.LogDebug("No existing memories found, adding as new");
+            LogExistingMemoriesFoundAddingNew(_logger);
             return new DuplicateCheckResult
             {
                 IsDuplicate = false,
@@ -117,9 +115,7 @@ public sealed class DeduplicationService : IDeduplicationService
 
                 if (action.HasValue)
                 {
-                    _logger.LogDebug(
-                        "ContentType-aware rule applied: {NewType} + {ExistingType} = {Action}",
-                        contentType, existingContentType, action.Value);
+                    LogContentTypeAwareRuleAppliedNewType(_logger, contentType, existingContentType, action.Value);
 
                     return new DuplicateCheckResult
                     {
@@ -155,33 +151,25 @@ public sealed class DeduplicationService : IDeduplicationService
             // Exact duplicate (>= 0.95): Skip
             duplicateType = DuplicateType.Exact;
             recommendedAction = DuplicateAction.Skip;
-            _logger.LogInformation(
-                "Exact duplicate found: similarity={Similarity:F3}, skipping",
-                highestSimilarity);
+            LogExactDuplicateFoundSimilaritySimilarity(_logger, highestSimilarity);
         }
         else if (highestSimilarity >= _options.HighSimilarityThreshold)
         {
             // High similarity (0.85-0.94): Merge
             recommendedAction = DuplicateAction.Merge;
-            _logger.LogInformation(
-                "High similarity duplicate found: similarity={Similarity:F3}, merging",
-                highestSimilarity);
+            LogHighSimilarityDuplicateFoundSimilarity(_logger, highestSimilarity);
         }
         else if (highestSimilarity >= _options.MediumSimilarityThreshold)
         {
             // Medium similarity (0.75-0.84): Update
             recommendedAction = DuplicateAction.Update;
-            _logger.LogDebug(
-                "Medium similarity found: similarity={Similarity:F3}, updating",
-                highestSimilarity);
+            LogMediumSimilarityFoundSimilaritySimilarity(_logger, highestSimilarity);
         }
         else
         {
             // Low similarity (0.65-0.74): AddWithRelation
             recommendedAction = DuplicateAction.AddWithRelation;
-            _logger.LogDebug(
-                "Low similarity found: similarity={Similarity:F3}, adding with relation",
-                highestSimilarity);
+            LogLowSimilarityFoundSimilaritySimilarity(_logger, highestSimilarity);
         }
 
         return new DuplicateCheckResult
@@ -249,4 +237,25 @@ public sealed class DeduplicationService : IDeduplicationService
 
         return null;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Checking for duplicates: userId={UserId}, threshold={Threshold}, window={Window}")]
+    private static partial void LogCheckingDuplicatesUserIdUserIdThreshold(ILogger logger, string userId, float threshold, int window);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No existing memories found, adding as new")]
+    private static partial void LogExistingMemoriesFoundAddingNew(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "ContentType-aware rule applied: {NewType} + {ExistingType} = {Action}")]
+    private static partial void LogContentTypeAwareRuleAppliedNewType(ILogger logger, string newType, string existingType, DuplicateAction action);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Exact duplicate found: similarity={Similarity:F3}, skipping")]
+    private static partial void LogExactDuplicateFoundSimilaritySimilarity(ILogger logger, float similarity);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "High similarity duplicate found: similarity={Similarity:F3}, merging")]
+    private static partial void LogHighSimilarityDuplicateFoundSimilarity(ILogger logger, float similarity);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Medium similarity found: similarity={Similarity:F3}, updating")]
+    private static partial void LogMediumSimilarityFoundSimilaritySimilarity(ILogger logger, float similarity);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Low similarity found: similarity={Similarity:F3}, adding with relation")]
+    private static partial void LogLowSimilarityFoundSimilaritySimilarity(ILogger logger, float similarity);
 }

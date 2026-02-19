@@ -19,7 +19,7 @@ public sealed class MemoryServicePhase221Tests
 {
     private readonly MemoryService _memoryService;
     private readonly InMemoryGrowthMonitor _growthMonitor;
-    private readonly IMemoryStore _memoryStore;
+    private readonly InMemoryMemoryStore _memoryStore;
     private readonly MemoryIndexerOptions _options;
 
     public MemoryServicePhase221Tests()

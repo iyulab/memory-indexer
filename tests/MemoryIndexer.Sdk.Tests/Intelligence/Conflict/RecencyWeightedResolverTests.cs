@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Conflict;
@@ -13,15 +13,15 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Conflict;
 /// </summary>
 public sealed class RecencyWeightedResolverTests
 {
-    private readonly Mock<ITextCompletionService> _mockCompletion;
+    private readonly ITextCompletionService _mockCompletion;
     private readonly LlmConflictDetector _detector;
     private readonly RecencyWeightedResolver _resolver;
 
     public RecencyWeightedResolverTests()
     {
-        _mockCompletion = new Mock<ITextCompletionService>();
+        _mockCompletion = Substitute.For<ITextCompletionService>();
         _detector = new LlmConflictDetector(
-            _mockCompletion.Object,
+            _mockCompletion,
             NullLogger<LlmConflictDetector>.Instance);
 
         _resolver = new RecencyWeightedResolver(
@@ -62,12 +62,11 @@ public sealed class RecencyWeightedResolverTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
@@ -95,12 +94,11 @@ public sealed class RecencyWeightedResolverTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
@@ -127,12 +125,11 @@ public sealed class RecencyWeightedResolverTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
@@ -163,12 +160,11 @@ public sealed class RecencyWeightedResolverTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
@@ -202,12 +198,11 @@ public sealed class RecencyWeightedResolverTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
@@ -238,12 +233,11 @@ public sealed class RecencyWeightedResolverTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
@@ -273,12 +267,11 @@ public sealed class RecencyWeightedResolverTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });

@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 
@@ -8,7 +8,7 @@ namespace MemoryIndexer.Sdk.Storage.Migration;
 /// Utility for migrating memories between different storage backends.
 /// Supports any IMemoryStore implementation migration paths.
 /// </summary>
-public sealed class MemoryStoreMigrator
+public sealed partial class MemoryStoreMigrator
 {
     private readonly ILogger<MemoryStoreMigrator> _logger;
 
@@ -38,8 +38,9 @@ public sealed class MemoryStoreMigrator
         var result = new MigrationResult();
         var startTime = DateTime.UtcNow;
 
-        _logger.LogInformation("Starting migration from {Source} to {Destination}",
-            source.GetType().Name, destination.GetType().Name);
+        var sourceValue = source.GetType().Name;
+        var destinationValue = destination.GetType().Name;
+        LogStartingMigrationSourceDestination(_logger, sourceValue, destinationValue);
 
         try
         {
@@ -50,7 +51,7 @@ public sealed class MemoryStoreMigrator
             var users = userIds?.ToList();
             if (users == null || users.Count == 0)
             {
-                _logger.LogWarning("No user IDs provided. Migration will be skipped.");
+                LogUserIDsProvidedMigrationWill(_logger);
                 result.Status = MigrationStatus.Skipped;
                 result.Message = "No user IDs provided for migration.";
                 return result;
@@ -60,16 +61,26 @@ public sealed class MemoryStoreMigrator
             long totalFailed = 0;
             long totalSkipped = 0;
 
+            // Pre-compute total count for progress reporting (avoid sync-over-async in loop)
+            long totalCount = 0;
+            if (progress != null)
+            {
+                foreach (var userId in users)
+                {
+                    totalCount += await source.GetCountAsync(userId, cancellationToken);
+                }
+            }
+
             foreach (var userId in users)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                _logger.LogDebug("Migrating memories for user {UserId}", userId);
+                LogMigratingMemoriesUserUserId(_logger, userId);
 
                 var userMemories = await source.GetAllAsync(userId, cancellationToken: cancellationToken);
                 var memoryList = userMemories.ToList();
 
-                _logger.LogDebug("Found {Count} memories for user {UserId}", memoryList.Count, userId);
+                LogFoundCountMemoriesUserUserId(_logger, memoryList.Count, userId);
 
                 // Process in batches
                 for (var i = 0; i < memoryList.Count; i += batchSize)
@@ -87,8 +98,7 @@ public sealed class MemoryStoreMigrator
                             if (existing != null)
                             {
                                 totalSkipped++;
-                                _logger.LogDebug("Memory {MemoryId} already exists in destination, skipping",
-                                    memory.Id);
+                                LogMemoryMemoryIdAlreadyExistsDestination(_logger, memory.Id);
                                 continue;
                             }
 
@@ -99,14 +109,13 @@ public sealed class MemoryStoreMigrator
                         catch (Exception ex)
                         {
                             totalFailed++;
-                            _logger.LogWarning(ex, "Failed to migrate memory {MemoryId}", memory.Id);
+                            LogFailedMigrateMemoryMemoryId(_logger, ex, memory.Id);
                             result.FailedMemoryIds.Add(memory.Id);
                         }
                     }
 
                     // Report progress
-                    progress?.Invoke(totalMigrated + totalFailed + totalSkipped,
-                        users.Sum(u => source.GetCountAsync(u).GetAwaiter().GetResult()));
+                    progress?.Invoke(totalMigrated + totalFailed + totalSkipped, totalCount);
                 }
 
                 result.UsersMigrated.Add(userId);
@@ -119,23 +128,21 @@ public sealed class MemoryStoreMigrator
             result.Status = totalFailed == 0 ? MigrationStatus.Success : MigrationStatus.PartialSuccess;
             result.Message = $"Migrated {totalMigrated} memories, {totalSkipped} skipped, {totalFailed} failed.";
 
-            _logger.LogInformation(
-                "Migration completed: {Migrated} migrated, {Skipped} skipped, {Failed} failed in {Duration}",
-                totalMigrated, totalSkipped, totalFailed, result.Duration);
+            LogMigrationCompletedMigratedMigratedSkipped(_logger, totalMigrated, totalSkipped, totalFailed, result.Duration);
         }
         catch (OperationCanceledException)
         {
             result.Status = MigrationStatus.Cancelled;
             result.Message = "Migration was cancelled.";
             result.Duration = DateTime.UtcNow - startTime;
-            _logger.LogWarning("Migration was cancelled");
+            LogMigrationCancelled(_logger);
         }
         catch (Exception ex)
         {
             result.Status = MigrationStatus.Failed;
             result.Message = $"Migration failed: {ex.Message}";
             result.Duration = DateTime.UtcNow - startTime;
-            _logger.LogError(ex, "Migration failed");
+            LogMigrationFailed(_logger, ex);
         }
 
         return result;
@@ -173,15 +180,43 @@ public sealed class MemoryStoreMigrator
 
             if (sourceCount != destCount)
             {
-                _logger.LogWarning(
-                    "Count mismatch for user {UserId}: source={Source}, destination={Dest}",
-                    userId, sourceCount, destCount);
+                LogCountMismatchUserUserIdSource(_logger, userId, sourceCount, destCount);
             }
         }
 
         result.IsValid = result.UserCounts.Values.All(c => c.Match);
         return result;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting migration from {Source} to {Destination}")]
+    private static partial void LogStartingMigrationSourceDestination(ILogger logger, string source, string destination);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No user IDs provided. Migration will be skipped.")]
+    private static partial void LogUserIDsProvidedMigrationWill(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Migrating memories for user {UserId}")]
+    private static partial void LogMigratingMemoriesUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Found {Count} memories for user {UserId}")]
+    private static partial void LogFoundCountMemoriesUserUserId(ILogger logger, long count, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Memory {MemoryId} already exists in destination, skipping")]
+    private static partial void LogMemoryMemoryIdAlreadyExistsDestination(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to migrate memory {MemoryId}")]
+    private static partial void LogFailedMigrateMemoryMemoryId(ILogger logger, Exception ex, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Migration completed: {Migrated} migrated, {Skipped} skipped, {Failed} failed in {Duration}")]
+    private static partial void LogMigrationCompletedMigratedMigratedSkipped(ILogger logger, long migrated, long skipped, long failed, TimeSpan duration);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Migration was cancelled")]
+    private static partial void LogMigrationCancelled(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Migration failed")]
+    private static partial void LogMigrationFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Count mismatch for user {UserId}: source={Source}, destination={Dest}")]
+    private static partial void LogCountMismatchUserUserIdSource(ILogger logger, string userId, long source, long dest);
 }
 
 /// <summary>

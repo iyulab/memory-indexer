@@ -9,7 +9,7 @@ namespace McpServer.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class ConflictController : ControllerBase
+public partial class ConflictController : ControllerBase
 {
     private readonly IFactValidator _factValidator;
     private readonly IArchiveStore _archiveStore;
@@ -72,8 +72,7 @@ public class ConflictController : ControllerBase
             // Validate
             var analysis = await _factValidator.ValidateAsync(newFact, existingFacts, cancellationToken: cancellationToken);
 
-            _logger.LogInformation("Validated fact for user {UserId}: {Action}, {ConflictCount} conflicts",
-                userId, analysis.RecommendedAction, analysis.Conflicts.Count);
+            LogValidatedFact(_logger, userId, analysis.RecommendedAction, analysis.Conflicts.Count);
 
             return Ok(new ValidateFactResponse
             {
@@ -98,7 +97,7 @@ public class ConflictController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to validate fact");
+            LogFailedToValidateFact(_logger, ex);
             return StatusCode(500, new { error = "Failed to validate fact", details = ex.Message });
         }
     }
@@ -129,8 +128,7 @@ public class ConflictController : ControllerBase
             userId ??= DefaultUserId;
             var history = await _archiveStore.GetHistoryAsync(userId, key, cancellationToken);
 
-            _logger.LogDebug("Retrieved {Count} versions for fact {Key}, user {UserId}",
-                history.Count, key, userId);
+            LogRetrievedFactHistory(_logger, history.Count, key, userId);
 
             return Ok(new FactHistoryResponse
             {
@@ -155,7 +153,7 @@ public class ConflictController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get fact history for key {Key}", key);
+            LogFailedToGetFactHistory(_logger, ex, key);
             return StatusCode(500, new { error = "Failed to get fact history", details = ex.Message });
         }
     }
@@ -190,8 +188,7 @@ public class ConflictController : ControllerBase
             userId ??= DefaultUserId;
             var facts = await _archiveStore.GetValidAtAsync(userId, date, cancellationToken);
 
-            _logger.LogDebug("Retrieved {Count} facts valid at {Date} for user {UserId}",
-                facts.Count, date, userId);
+            LogRetrievedTemporalFacts(_logger, facts.Count, date, userId);
 
             return Ok(new TemporalFactsResponse
             {
@@ -212,7 +209,7 @@ public class ConflictController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get temporal facts for date {Date}", asOfDate);
+            LogFailedToGetTemporalFacts(_logger, ex, asOfDate);
             return StatusCode(500, new { error = "Failed to get temporal facts", details = ex.Message });
         }
     }
@@ -252,8 +249,7 @@ public class ConflictController : ControllerBase
                 return NotFound(new { error = $"Fact with key '{request.Key}' not found" });
             }
 
-            _logger.LogInformation("Archived and updated fact {Key} for user {UserId}: v{OldVersion} -> v{NewVersion}",
-                request.Key, userId, updatedEntry.Version - 1, updatedEntry.Version);
+            LogArchivedAndUpdatedFact(_logger, request.Key, userId, updatedEntry.Version - 1, updatedEntry.Version);
 
             return Ok(new ArchiveAndUpdateResponse
             {
@@ -267,7 +263,7 @@ public class ConflictController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to archive and update fact {Key}", request.Key);
+            LogFailedToArchiveAndUpdate(_logger, ex, request.Key);
             return StatusCode(500, new { error = "Failed to archive and update fact", details = ex.Message });
         }
     }
@@ -326,6 +322,29 @@ public class ConflictController : ControllerBase
             Rules = rules
         });
     }
+    [LoggerMessage(Level = LogLevel.Information, Message = "Validated fact for user {UserId}: {Action}, {ConflictCount} conflicts")]
+    private static partial void LogValidatedFact(ILogger logger, string userId, FactConflictAction action, int conflictCount);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to validate fact")]
+    private static partial void LogFailedToValidateFact(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved {Count} versions for fact {Key}, user {UserId}")]
+    private static partial void LogRetrievedFactHistory(ILogger logger, int count, string key, string userId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get fact history for key {Key}")]
+    private static partial void LogFailedToGetFactHistory(ILogger logger, Exception ex, string key);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved {Count} facts valid at {Date} for user {UserId}")]
+    private static partial void LogRetrievedTemporalFacts(ILogger logger, int count, DateTime date, string userId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get temporal facts for date {Date}")]
+    private static partial void LogFailedToGetTemporalFacts(ILogger logger, Exception ex, string date);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Archived and updated fact {Key} for user {UserId}: v{OldVersion} -> v{NewVersion}")]
+    private static partial void LogArchivedAndUpdatedFact(ILogger logger, string key, string userId, int oldVersion, int newVersion);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to archive and update fact {Key}")]
+    private static partial void LogFailedToArchiveAndUpdate(ILogger logger, Exception ex, string key);
 }
 
 #region Request/Response Models

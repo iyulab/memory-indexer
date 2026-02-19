@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Inference;
 /// Service for deriving new facts from existing facts through inference.
 /// Phase v0.10.0: User Profile Evolution.
 /// </summary>
-public class FactInferenceService : IFactInferenceEngine
+public partial class FactInferenceService : IFactInferenceEngine
 {
     private readonly IArchiveStore _archiveStore;
     private readonly IEmbeddingService _embeddingService;
@@ -55,7 +55,7 @@ public class FactInferenceService : IFactInferenceEngine
 
         if (qualifiedFacts.Count < 2)
         {
-            _logger.LogDebug("Not enough qualified facts for inference: {Count}", qualifiedFacts.Count);
+            LogEnoughQualifiedFactsInferenceCount(_logger, qualifiedFacts.Count);
             return inferredFacts;
         }
 
@@ -141,7 +141,7 @@ public class FactInferenceService : IFactInferenceEngine
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to store inferred fact: {Content}", fact.Content);
+                    LogFailedStoreInferredFactContent(_logger, ex, fact.Content);
                 }
             }
         }
@@ -174,11 +174,11 @@ public class FactInferenceService : IFactInferenceEngine
     {
         if (_rules.TryAdd(rule.Name, rule))
         {
-            _logger.LogDebug("Registered inference rule: {Name}", rule.Name);
+            LogRegisteredInferenceRuleName(_logger, rule.Name);
         }
         else
         {
-            _logger.LogWarning("Inference rule already registered: {Name}", rule.Name);
+            LogInferenceRuleAlreadyRegisteredName(_logger, rule.Name);
         }
     }
 
@@ -190,7 +190,7 @@ public class FactInferenceService : IFactInferenceEngine
 
     #region Inference Methods
 
-    private async Task<IReadOnlyList<InferredFact>> InferCoOccurrenceAsync(
+    private static async Task<IReadOnlyList<InferredFact>> InferCoOccurrenceAsync(
         IReadOnlyList<SemanticStoreEntry> facts,
         InferenceOptions options,
         CancellationToken cancellationToken)
@@ -267,7 +267,7 @@ public class FactInferenceService : IFactInferenceEngine
         return inferred;
     }
 
-    private async Task<IReadOnlyList<InferredFact>> InferSemanticAsync(
+    private static async Task<IReadOnlyList<InferredFact>> InferSemanticAsync(
         IReadOnlyList<SemanticStoreEntry> facts,
         InferenceOptions options,
         CancellationToken cancellationToken)
@@ -306,7 +306,7 @@ public class FactInferenceService : IFactInferenceEngine
         return inferred;
     }
 
-    private Task<IReadOnlyList<InferredFact>> InferGeneralizationAsync(
+    private static Task<IReadOnlyList<InferredFact>> InferGeneralizationAsync(
         IReadOnlyList<SemanticStoreEntry> facts,
         InferenceOptions options,
         CancellationToken cancellationToken)
@@ -355,7 +355,7 @@ public class FactInferenceService : IFactInferenceEngine
         return Task.FromResult<IReadOnlyList<InferredFact>>(inferred);
     }
 
-    private IReadOnlyList<InferredFact> InferNegation(
+    private static List<InferredFact> InferNegation(
         IReadOnlyList<SemanticStoreEntry> facts,
         InferenceOptions options)
     {
@@ -407,7 +407,7 @@ public class FactInferenceService : IFactInferenceEngine
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Custom rule {Name} failed", rule.Name);
+                LogCustomRuleNameFailed(_logger, ex, rule.Name);
             }
         }
 
@@ -418,7 +418,7 @@ public class FactInferenceService : IFactInferenceEngine
 
     #region Helper Methods
 
-    private void RegisterBuiltInRules()
+    private static void RegisterBuiltInRules()
     {
         // Built-in rules can be added here
         // Example: RegisterRule(new AgeInferenceRule());
@@ -578,4 +578,19 @@ public class FactInferenceService : IFactInferenceEngine
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Not enough qualified facts for inference: {Count}")]
+    private static partial void LogEnoughQualifiedFactsInferenceCount(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to store inferred fact: {Content}")]
+    private static partial void LogFailedStoreInferredFactContent(ILogger logger, Exception ex, string content);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Registered inference rule: {Name}")]
+    private static partial void LogRegisteredInferenceRuleName(ILogger logger, string name);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Inference rule already registered: {Name}")]
+    private static partial void LogInferenceRuleAlreadyRegisteredName(ILogger logger, string name);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Custom rule {Name} failed")]
+    private static partial void LogCustomRuleNameFailed(ILogger logger, Exception ex, string name);
 }

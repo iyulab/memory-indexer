@@ -2,7 +2,8 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Profile;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using System.Text.Json;
 using Xunit;
 
@@ -14,18 +15,18 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Profile;
 /// </summary>
 public class JsonProfileExporterTests
 {
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
-    private readonly Mock<ILogger<JsonProfileExporter>> _mockLogger;
+    private readonly IArchiveStore _mockArchiveStore;
+    private readonly ILogger<JsonProfileExporter> _mockLogger;
     private readonly JsonProfileExporter _exporter;
 
     public JsonProfileExporterTests()
     {
-        _mockArchiveStore = new Mock<IArchiveStore>();
-        _mockLogger = new Mock<ILogger<JsonProfileExporter>>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
+        _mockLogger = Substitute.For<ILogger<JsonProfileExporter>>();
 
         _exporter = new JsonProfileExporter(
-            _mockArchiveStore.Object,
-            _mockLogger.Object);
+            _mockArchiveStore,
+            _mockLogger);
     }
 
     #region ExportAsync Tests
@@ -58,8 +59,8 @@ public class JsonProfileExporterTests
             }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _exporter.ExportAsync("user1");
@@ -82,8 +83,8 @@ public class JsonProfileExporterTests
             new() { Key = "test", Value = "Test value", IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _exporter.ExportAsync("user1");
@@ -104,8 +105,8 @@ public class JsonProfileExporterTests
             new() { Key = "skill1", Value = "Skill value", Category = SemanticStoreCategory.Skill, IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var options = new ProfileExportOptions
         {
@@ -131,8 +132,8 @@ public class JsonProfileExporterTests
             new() { Key = "skill1", Value = "Skill value", Category = SemanticStoreCategory.Skill, IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var options = new ProfileExportOptions
         {
@@ -159,8 +160,8 @@ public class JsonProfileExporterTests
             new() { Key = "new", Value = "New fact", UpdatedAt = now, IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var options = new ProfileExportOptions
         {
@@ -186,8 +187,8 @@ public class JsonProfileExporterTests
             new() { Key = "archived", Value = "Archived fact", IsActive = false }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var options = new ProfileExportOptions { IncludeArchived = true };
 
@@ -211,8 +212,8 @@ public class JsonProfileExporterTests
             new() { Key = "archived", Value = "Archived fact", IsActive = false }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var options = new ProfileExportOptions { IncludeArchived = false };
 
@@ -235,8 +236,8 @@ public class JsonProfileExporterTests
             new() { Key = "phone", Value = "Phone number: 123-456-7890", IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var options = new ProfileExportOptions
         {
@@ -263,8 +264,8 @@ public class JsonProfileExporterTests
             new() { Key = "test", Value = "Test value", IsActive = true, Confidence = 0.9f }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _exporter.ExportAsync("user1");
@@ -292,8 +293,8 @@ public class JsonProfileExporterTests
             }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var options = new ProfileExportOptions { IncludeMetadata = true };
 
@@ -324,8 +325,8 @@ public class JsonProfileExporterTests
             }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _exporter.ExportAsync("user1");
@@ -350,8 +351,8 @@ public class JsonProfileExporterTests
             new() { Key = "test", Value = "Test value", IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         using var stream = new MemoryStream();
 
@@ -374,8 +375,8 @@ public class JsonProfileExporterTests
     public async Task ExportToStreamAsync_WithEmptyProfile_ShouldThrow()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("User not found"));
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("User not found"));
 
         using var stream = new MemoryStream();
 
@@ -411,8 +412,8 @@ public class JsonProfileExporterTests
             new() { Key = "skill1", Category = SemanticStoreCategory.Skill, Value = "V4", IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _exporter.ExportAsync("user1");

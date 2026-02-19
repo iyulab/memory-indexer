@@ -13,6 +13,12 @@ namespace MemoryIndexer.Sdk.Tests.Services.Export;
 /// </summary>
 public class JsonMemoryExporterTests : IAsyncLifetime
 {
+    private static readonly System.Text.Json.JsonSerializerOptions s_camelCaseJsonOptions = new()
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
+
     private InMemoryMemoryStore _memoryStore = null!;
     private JsonMemoryExporter _exporter = null!;
 
@@ -114,7 +120,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
 
         // Assert
         Assert.Single(package.Memories);
-        Assert.True(!package.Memories[0].Embedding.HasValue || package.Memories[0].Embedding.Value.Length == 0);
+        Assert.True(package.Memories[0].Embedding is null or { Length: 0 });
     }
 
     [Fact]
@@ -277,12 +283,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         };
 
         using var stream = new MemoryStream();
-        var jsonOptions = new System.Text.Json.JsonSerializerOptions
-        {
-            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-            Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
-        };
-        await System.Text.Json.JsonSerializer.SerializeAsync(stream, package, jsonOptions);
+        await System.Text.Json.JsonSerializer.SerializeAsync(stream, package, s_camelCaseJsonOptions);
         stream.Position = 0;
 
         var options = new ImportOptions { PreserveIds = false };

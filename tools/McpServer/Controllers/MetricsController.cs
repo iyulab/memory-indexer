@@ -10,7 +10,7 @@ namespace McpServer.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-public class MetricsController : ControllerBase
+public partial class MetricsController : ControllerBase
 {
     private readonly IMemoryPressureMonitor _pressureMonitor;
     private readonly ILatencyProfiler _latencyProfiler;
@@ -74,7 +74,7 @@ public class MetricsController : ControllerBase
             userId ??= DefaultUserId;
             var metrics = await _latencyProfiler.GetMetricsAsync(userId, tier, cancellationToken);
 
-            _logger.LogDebug("Retrieved {Count} latency metrics for user {UserId}", metrics.Count, userId);
+            LogRetrievedLatencyMetrics(_logger, metrics.Count, userId);
 
             return Ok(new LatencyMetricsResponse
             {
@@ -106,7 +106,7 @@ public class MetricsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get latency metrics");
+            LogFailedToGetLatencyMetrics(_logger, ex);
             return StatusCode(500, new { error = "Failed to get latency metrics", details = ex.Message });
         }
     }
@@ -128,8 +128,7 @@ public class MetricsController : ControllerBase
             userId ??= DefaultUserId;
             var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId, cancellationToken);
 
-            _logger.LogDebug("Retrieved growth metrics for user {UserId}: round {Round}, growth rate {Rate}",
-                userId, metrics.CurrentRound, metrics.CurrentGrowthRate);
+            LogRetrievedGrowthMetrics(_logger, userId, metrics.CurrentRound, metrics.CurrentGrowthRate);
 
             return Ok(new MemoryGrowthResponse
             {
@@ -147,7 +146,7 @@ public class MetricsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get growth metrics");
+            LogFailedToGetGrowthMetrics(_logger, ex);
             return StatusCode(500, new { error = "Failed to get growth metrics", details = ex.Message });
         }
     }
@@ -230,7 +229,7 @@ public class MetricsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get dashboard metrics");
+            LogFailedToGetDashboardMetrics(_logger, ex);
             return StatusCode(500, new { error = "Failed to get dashboard metrics", details = ex.Message });
         }
     }
@@ -252,16 +251,37 @@ public class MetricsController : ControllerBase
             userId ??= DefaultUserId;
             await _latencyProfiler.ResetMetricsAsync(userId, cancellationToken);
 
-            _logger.LogInformation("Reset latency metrics for user {UserId}", userId);
+            LogResetLatencyMetrics(_logger, userId);
 
             return Ok(new { message = "Latency metrics reset successfully", userId });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to reset latency metrics");
+            LogFailedToResetLatencyMetrics(_logger, ex);
             return StatusCode(500, new { error = "Failed to reset latency metrics", details = ex.Message });
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved {Count} latency metrics for user {UserId}")]
+    private static partial void LogRetrievedLatencyMetrics(ILogger logger, int count, string userId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get latency metrics")]
+    private static partial void LogFailedToGetLatencyMetrics(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved growth metrics for user {UserId}: round {Round}, growth rate {Rate}")]
+    private static partial void LogRetrievedGrowthMetrics(ILogger logger, string userId, int round, float rate);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get growth metrics")]
+    private static partial void LogFailedToGetGrowthMetrics(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get dashboard metrics")]
+    private static partial void LogFailedToGetDashboardMetrics(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Reset latency metrics for user {UserId}")]
+    private static partial void LogResetLatencyMetrics(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to reset latency metrics")]
+    private static partial void LogFailedToResetLatencyMetrics(ILogger logger, Exception ex);
 
     private static string DetermineOverallHealth(
         MemoryPressureInfo pressure,

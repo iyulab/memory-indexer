@@ -1,7 +1,7 @@
 using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Mcp.Tools;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
@@ -12,13 +12,13 @@ namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
 /// </summary>
 public class FactExtractionToolsTests
 {
-    private readonly Mock<IFastTrackPromoter> _mockPromoter;
+    private readonly IFastTrackPromoter _mockPromoter;
     private readonly FactExtractionTools _tools;
 
     public FactExtractionToolsTests()
     {
-        _mockPromoter = new Mock<IFastTrackPromoter>();
-        _tools = new FactExtractionTools(_mockPromoter.Object);
+        _mockPromoter = Substitute.For<IFastTrackPromoter>();
+        _tools = new FactExtractionTools(_mockPromoter);
     }
 
     #region ExtractFacts Tests
@@ -53,10 +53,10 @@ public class FactExtractionToolsTests
             SkippedFacts = []
         };
 
-        _mockPromoter.Setup(p => p.ProcessAsync(
-            It.Is<FactExtractionContext>(c => c.Content == "My name is John"),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(processResult);
+        _mockPromoter.ProcessAsync(
+            Arg.Is<FactExtractionContext>(c => c.Content == "My name is John"),
+            Arg.Any<CancellationToken>())
+            .Returns(processResult);
 
         // Act
         var result = await _tools.ExtractFacts("My name is John", "user1");
@@ -105,8 +105,8 @@ public class FactExtractionToolsTests
             ]
         };
 
-        _mockPromoter.Setup(p => p.ProcessAsync(It.IsAny<FactExtractionContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(processResult);
+        _mockPromoter.ProcessAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
+            .Returns(processResult);
 
         // Act
         var result = await _tools.ExtractFacts("In the novel, 'My name is Lincoln'");
@@ -134,8 +134,8 @@ public class FactExtractionToolsTests
             SkippedFacts = []
         };
 
-        _mockPromoter.Setup(p => p.ProcessAsync(It.IsAny<FactExtractionContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(processResult);
+        _mockPromoter.ProcessAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
+            .Returns(processResult);
 
         // Act
         var result = await _tools.ExtractFacts("How are you?");
@@ -152,13 +152,13 @@ public class FactExtractionToolsTests
         // Arrange
         var processResult = FastTrackResult.Empty;
 
-        _mockPromoter.Setup(p => p.ProcessAsync(
-            It.Is<FactExtractionContext>(c =>
+        _mockPromoter.ProcessAsync(
+            Arg.Is<FactExtractionContext>(c =>
                 c.UserId == "custom-user" &&
                 c.SessionId == "session-123" &&
                 c.Role == "user"),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(processResult);
+            Arg.Any<CancellationToken>())
+            .Returns(processResult);
 
         // Act
         await _tools.ExtractFacts(
@@ -168,12 +168,12 @@ public class FactExtractionToolsTests
             role: "user");
 
         // Assert
-        _mockPromoter.Verify(p => p.ProcessAsync(
-            It.Is<FactExtractionContext>(c =>
+        await _mockPromoter.Received(1).ProcessAsync(
+            Arg.Is<FactExtractionContext>(c =>
                 c.UserId == "custom-user" &&
                 c.SessionId == "session-123" &&
                 c.Role == "user"),
-            It.IsAny<CancellationToken>()), Times.Once);
+            Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -220,8 +220,8 @@ public class FactExtractionToolsTests
             LastUpdatedAt = DateTime.UtcNow
         };
 
-        _mockPromoter.Setup(p => p.GetUserProfileAsync("user1", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(profile);
+        _mockPromoter.GetUserProfileAsync("user1", null, Arg.Any<CancellationToken>())
+            .Returns(profile);
 
         // Act
         var result = await _tools.GetUserProfile("user1");
@@ -258,8 +258,8 @@ public class FactExtractionToolsTests
             }
         };
 
-        _mockPromoter.Setup(p => p.GetUserProfileAsync("user1", FactCategory.Preference, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(profile);
+        _mockPromoter.GetUserProfileAsync("user1", FactCategory.Preference, Arg.Any<CancellationToken>())
+            .Returns(profile);
 
         // Act
         var result = await _tools.GetUserProfile("user1", "Preference");
@@ -276,8 +276,8 @@ public class FactExtractionToolsTests
         // Arrange
         var profile = UserProfile.Empty("user1");
 
-        _mockPromoter.Setup(p => p.GetUserProfileAsync("user1", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(profile);
+        _mockPromoter.GetUserProfileAsync("user1", null, Arg.Any<CancellationToken>())
+            .Returns(profile);
 
         // Act
         var result = await _tools.GetUserProfile("user1");
@@ -295,14 +295,14 @@ public class FactExtractionToolsTests
         // Arrange
         var profile = UserProfile.Empty("default");
 
-        _mockPromoter.Setup(p => p.GetUserProfileAsync("default", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(profile);
+        _mockPromoter.GetUserProfileAsync("default", null, Arg.Any<CancellationToken>())
+            .Returns(profile);
 
         // Act
         await _tools.GetUserProfile();
 
         // Assert
-        _mockPromoter.Verify(p => p.GetUserProfileAsync("default", null, It.IsAny<CancellationToken>()), Times.Once);
+        await _mockPromoter.Received(1).GetUserProfileAsync("default", null, Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -313,7 +313,7 @@ public class FactExtractionToolsTests
     public async Task GetFactCategories_ShouldReturnAllCategories()
     {
         // Act
-        var result = await _tools.GetFactCategories();
+        var result = await FactExtractionTools.GetFactCategories();
 
         // Assert
         result.Success.Should().BeTrue();
@@ -333,7 +333,7 @@ public class FactExtractionToolsTests
     public async Task GetPromotionPaths_ShouldReturnAllPaths()
     {
         // Act
-        var result = await _tools.GetPromotionPaths();
+        var result = await FactExtractionTools.GetPromotionPaths();
 
         // Assert
         result.Success.Should().BeTrue();

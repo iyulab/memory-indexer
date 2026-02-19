@@ -77,7 +77,7 @@ public class EvaluationServiceTests
     /// <summary>
     /// Testable version that doesn't require IMemoryService dependency for basic calculations.
     /// </summary>
-    private class TestableEvaluationService : EvaluationService
+    private sealed class TestableEvaluationService : EvaluationService
     {
         public TestableEvaluationService() : base(null!)
         {

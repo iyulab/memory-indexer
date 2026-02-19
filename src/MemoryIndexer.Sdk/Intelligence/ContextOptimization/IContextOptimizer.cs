@@ -103,12 +103,12 @@ public sealed class ContextOptimizationOptions
     /// <summary>
     /// Whether to use HyDE for query enhancement.
     /// </summary>
-    public bool EnableHyDE { get; set; } = false;
+    public bool EnableHyDE { get; set; }
 
     /// <summary>
     /// Whether to expand chunk context.
     /// </summary>
-    public bool EnableChunkExpansion { get; set; } = false;
+    public bool EnableChunkExpansion { get; set; }
 
     /// <summary>
     /// Query for relevance-based optimization.

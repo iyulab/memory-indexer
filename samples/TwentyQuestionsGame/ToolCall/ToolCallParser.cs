@@ -13,7 +13,7 @@ public sealed partial class ToolCallParser
     [GeneratedRegex(@"(\w+)\s*=\s*(?:""([^""]*)""|(\d+\.?\d*))", RegexOptions.None)]
     private static partial Regex ArgumentRegex();
 
-    public IReadOnlyList<ParsedToolCall> Parse(string llmResponse)
+    public static IReadOnlyList<ParsedToolCall> Parse(string llmResponse)
     {
         var results = new List<ParsedToolCall>();
 
@@ -29,12 +29,12 @@ public sealed partial class ToolCallParser
         return results;
     }
 
-    public bool HasToolCalls(string llmResponse)
+    public static bool HasToolCalls(string llmResponse)
     {
         return ToolCallRegex().IsMatch(llmResponse);
     }
 
-    public string RemoveToolCalls(string llmResponse)
+    public static string RemoveToolCalls(string llmResponse)
     {
         return ToolCallRegex().Replace(llmResponse, "").Trim();
     }

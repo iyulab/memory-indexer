@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Utilities;
@@ -19,7 +19,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Evaluation;
 /// 4. Cross-Session: Retrieval across conversation sessions
 /// 5. Factual: Specific fact retrieval
 /// </remarks>
-public sealed class LoCoMoEvaluator : ILoCoMoEvaluator
+public sealed partial class LoCoMoEvaluator : ILoCoMoEvaluator
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<LoCoMoEvaluator> _logger;
@@ -42,7 +42,7 @@ public sealed class LoCoMoEvaluator : ILoCoMoEvaluator
         var stopwatch = Stopwatch.StartNew();
         var queryResults = new List<LoCoMoQueryResult>();
 
-        _logger.LogInformation("Starting LoCoMo evaluation with {Count} test queries", testSuite.TestQueries.Count);
+        LogStartingLoCoMoEvaluationCountTest(_logger, testSuite.TestQueries.Count);
 
         // First, store the conversation memories if not already present
         if (testSuite.ConversationMemories.Count > 0)
@@ -62,17 +62,11 @@ public sealed class LoCoMoEvaluator : ILoCoMoEvaluator
                     cancellationToken);
                 queryResults.Add(result);
 
-                _logger.LogDebug(
-                    "Query '{QueryId}' ({Type}): Success={Success}, Recall={Recall:F2}, MRR={MRR:F2}",
-                    testQuery.Id,
-                    testQuery.QueryType,
-                    result.Success,
-                    result.Recall,
-                    result.MeanReciprocalRank);
+                LogQueryQueryIdTypeSuccessSuccess(_logger, testQuery.Id, testQuery.QueryType, result.Success, result.Recall, result.MeanReciprocalRank);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to evaluate query {QueryId}", testQuery.Id);
+                LogFailedEvaluateQueryQueryId(_logger, ex, testQuery.Id);
                 queryResults.Add(new LoCoMoQueryResult
                 {
                     QueryId = testQuery.Id,
@@ -248,7 +242,7 @@ public sealed class LoCoMoEvaluator : ILoCoMoEvaluator
         string userId,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Seeding {Count} conversation memories for evaluation", memories.Count);
+        LogSeedingCountConversationMemoriesEvaluation(_logger, memories.Count);
 
         var memoryUnits = new List<MemoryUnit>();
 
@@ -271,7 +265,7 @@ public sealed class LoCoMoEvaluator : ILoCoMoEvaluator
         }
 
         await memoryStore.StoreBatchAsync(memoryUnits, cancellationToken);
-        _logger.LogInformation("Seeded {Count} memories successfully", memoryUnits.Count);
+        LogSeededCountMemoriesSuccessfully(_logger, memoryUnits.Count);
     }
 
     private static float CalculateMRR(IReadOnlyList<MemorySearchResult> results, HashSet<string> relevantIds)
@@ -308,7 +302,7 @@ public sealed class LoCoMoEvaluator : ILoCoMoEvaluator
 
     private async Task<float> CalculateAnswerCoverageAsync(
         string? expectedAnswer,
-        IReadOnlyList<string> retrievedContexts,
+        List<string> retrievedContexts,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(expectedAnswer) || retrievedContexts.Count == 0)
@@ -327,7 +321,7 @@ public sealed class LoCoMoEvaluator : ILoCoMoEvaluator
         return maxSimilarity;
     }
 
-    private static LoCoMoAggregateMetrics CalculateAggregateMetrics(IReadOnlyList<LoCoMoQueryResult> results)
+    private static LoCoMoAggregateMetrics CalculateAggregateMetrics(List<LoCoMoQueryResult> results)
     {
         var successful = results.Where(r => r.Success).ToList();
         if (successful.Count == 0)
@@ -569,4 +563,19 @@ public sealed class LoCoMoEvaluator : ILoCoMoEvaluator
             })
             .ToList();
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting LoCoMo evaluation with {Count} test queries")]
+    private static partial void LogStartingLoCoMoEvaluationCountTest(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Query '{QueryId}' ({Type}): Success={Success}, Recall={Recall:F2}, MRR={MRR:F2}")]
+    private static partial void LogQueryQueryIdTypeSuccessSuccess(ILogger logger, string queryId, LoCoMoQueryType type, bool success, float recall, float mRR);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to evaluate query {QueryId}")]
+    private static partial void LogFailedEvaluateQueryQueryId(ILogger logger, Exception ex, string queryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Seeding {Count} conversation memories for evaluation")]
+    private static partial void LogSeedingCountConversationMemoriesEvaluation(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Seeded {Count} memories successfully")]
+    private static partial void LogSeededCountMemoriesSuccessfully(ILogger logger, int count);
 }

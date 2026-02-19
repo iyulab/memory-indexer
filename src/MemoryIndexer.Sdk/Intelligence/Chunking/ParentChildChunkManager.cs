@@ -20,7 +20,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Chunking;
 /// - Better context: Parent chunks provide surrounding information
 /// - Reduced hallucination: More context = better grounded responses
 /// </remarks>
-public sealed class ParentChildChunkManager : IParentChildChunkManager
+public sealed partial class ParentChildChunkManager : IParentChildChunkManager
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<ParentChildChunkManager> _logger;
@@ -93,13 +93,12 @@ public sealed class ParentChildChunkManager : IParentChildChunkManager
         // Create child chunks first
         var childChunks = CreateChildChunks(content, sourceId);
 
-        _logger.LogDebug("Created {ChildCount} child chunks from content of length {Length}",
-            childChunks.Count, content.Length);
+        LogCreatedChildChunks(_logger, childChunks.Count, content.Length);
 
         // Group children into parents
         var parentChunks = CreateParentChunks(content, childChunks, sourceId);
 
-        _logger.LogDebug("Created {ParentCount} parent chunks", parentChunks.Count);
+        LogCreatedParentChunks(_logger, parentChunks.Count);
 
         // Generate embeddings for all chunks
         var allChunks = childChunks.Concat(parentChunks).ToList();
@@ -152,7 +151,7 @@ public sealed class ParentChildChunkManager : IParentChildChunkManager
             .Take(topK * 2) // Over-fetch to deduplicate parents
             .ToList();
 
-        _logger.LogDebug("Found {Count} matching child chunks", childResults.Count);
+        LogMatchingChildChunks(_logger, childResults.Count);
 
         if (!returnParents)
         {
@@ -397,6 +396,15 @@ public sealed class ParentChildChunkManager : IParentChildChunkManager
 
         return dotProduct / (normA * normB);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created {ChildCount} child chunks from content of length {Length}")]
+    private static partial void LogCreatedChildChunks(ILogger logger, int childCount, int length);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created {ParentCount} parent chunks")]
+    private static partial void LogCreatedParentChunks(ILogger logger, int parentCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Found {Count} matching child chunks")]
+    private static partial void LogMatchingChildChunks(ILogger logger, int count);
 }
 
 /// <summary>

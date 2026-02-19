@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.Scoring;
@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Scoring;
 /// Best for narrow distributions where separation is needed.
 /// Phase 21.2: Score Distribution Normalization.
 /// </summary>
-public sealed class PercentileScoreNormalizer : IScoreNormalizer
+public sealed partial class PercentileScoreNormalizer : IScoreNormalizer
 {
     private readonly ILogger<PercentileScoreNormalizer> _logger;
     private NormalizationStats _stats = new() { Strategy = NormalizationStrategy.Percentile };
@@ -55,11 +55,7 @@ public sealed class PercentileScoreNormalizer : IScoreNormalizer
 
         _stats.NormalizedSpread = 1.0f; // Always 0-1 after percentile
 
-        _logger.LogDebug(
-            "Percentile normalized {Count} scores: original spread {Original:F3}, forced to {Normalized:F3}",
-            scoredMemories.Count,
-            _stats.OriginalSpread,
-            _stats.NormalizedSpread);
+        LogPercentileNormalizedCountScoresOriginal(_logger, scoredMemories.Count, _stats.OriginalSpread, _stats.NormalizedSpread);
 
         // Return sorted by normalized score (descending)
         return sorted.OrderByDescending(m => m.NormalizedScore).ToList();
@@ -74,4 +70,7 @@ public sealed class PercentileScoreNormalizer : IScoreNormalizer
         var variance = values.Average(v => MathF.Pow(v - mean, 2));
         return MathF.Sqrt(variance);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Percentile normalized {Count} scores: original spread {Original:F3}, forced to {Normalized:F3}")]
+    private static partial void LogPercentileNormalizedCountScoresOriginal(ILogger logger, int count, float original, float normalized);
 }

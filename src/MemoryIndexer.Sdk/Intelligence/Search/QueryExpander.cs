@@ -8,7 +8,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Search;
 /// </summary>
 public sealed class QueryExpander : IQueryExpander
 {
-    private static readonly IReadOnlyDictionary<string, string[]> SynonymMap = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string[]> SynonymMap = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
     {
         // Question words -> semantic equivalents
         ["what"] = ["which", "describe", "explain", "tell"],
@@ -152,7 +152,7 @@ public sealed class QueryExpander : IQueryExpander
             : [];
     }
 
-    private static IReadOnlyList<string> ExtractWords(string text)
+    private static List<string> ExtractWords(string text)
     {
         // Extract words, ignoring punctuation
         return Regex.Matches(text, @"\b[a-zA-Z]+\b")

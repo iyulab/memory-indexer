@@ -5,6 +5,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace MemoryIndexer.Services;
 
@@ -23,7 +24,7 @@ namespace MemoryIndexer.Services;
 /// - Tier: Promote, Demote
 /// - Validation: Confirm (Phase 53)
 /// </remarks>
-public sealed class MemoryPrimitivesService : IMemoryPrimitives
+public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -32,6 +33,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
     private readonly IRerankerService? _rerankerService;
     private readonly IDeduplicationService? _deduplicationService;
     private readonly IMemoryClassifier? _memoryClassifier;
+    private readonly ITextCompletionService? _completionService;
     private readonly IShortTermMemoryOrchestrator _orchestrator;
     private readonly SearchOptions _searchOptions;
     private readonly Configuration.WorkingMemoryOptions _workingMemoryOptions;
@@ -47,7 +49,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         IShortTermMemoryOrchestrator orchestrator,
         IRerankerService? rerankerService = null,
         IDeduplicationService? deduplicationService = null,
-        IMemoryClassifier? memoryClassifier = null)
+        IMemoryClassifier? memoryClassifier = null,
+        ITextCompletionService? completionService = null)
     {
         _memoryStore = memoryStore;
         _embeddingService = embeddingService;
@@ -56,6 +59,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         _rerankerService = rerankerService;
         _deduplicationService = deduplicationService;
         _memoryClassifier = memoryClassifier;
+        _completionService = completionService;
         _orchestrator = orchestrator;
         _searchOptions = options.Value.Search;
         _workingMemoryOptions = options.Value.WorkingMemory;
@@ -71,7 +75,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         ArgumentException.ThrowIfNullOrWhiteSpace(request.UserId);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Content);
 
-        _logger.LogDebug("Encoding new memory for user {UserId}", request.UserId);
+        LogEncodingMemory(_logger, request.UserId);
 
         // Phase 20.1: Check for duplicates before expensive embedding generation
         if (_deduplicationService != null)
@@ -88,21 +92,18 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
             if (dupCheck.IsDuplicate)
             {
-                _logger.LogDebug("Duplicate detected: {Type}, Action: {Action}",
-                    dupCheck.DuplicateType, dupCheck.RecommendedAction);
+                LogDuplicateDetected(_logger, dupCheck.DuplicateType, dupCheck.RecommendedAction);
 
                 switch (dupCheck.RecommendedAction)
                 {
                     case DuplicateAction.Skip:
-                        _logger.LogInformation("Skipping duplicate memory (similarity: {Score:F3})",
-                            dupCheck.SimilarityScore);
+                        LogSkippingDuplicate(_logger, dupCheck.SimilarityScore);
                         // Phase 55: Implicit confirmation - duplicate = repeated mention
                         await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         return dupCheck.ExistingMemory!;
 
                     case DuplicateAction.Update:
-                        _logger.LogInformation("Updating existing memory {Id} with new content",
-                            dupCheck.ExistingMemory!.Id);
+                        LogUpdatingExistingMemory(_logger, dupCheck.ExistingMemory!.Id);
                         // Phase 55: Implicit confirmation before update
                         await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         return await UpdateAsync(new UpdateRequest
@@ -113,8 +114,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                         }, cancellationToken) ?? dupCheck.ExistingMemory;
 
                     case DuplicateAction.Merge:
-                        _logger.LogInformation("Merging with existing memory {Id}",
-                            dupCheck.ExistingMemory!.Id);
+                        LogMergingWithExisting(_logger, dupCheck.ExistingMemory!.Id);
                         // Phase 55: Implicit confirmation before merge
                         await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         // Boost importance and update access count
@@ -127,8 +127,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                     case DuplicateAction.AddWithRelation:
                         // Continue to store but add relation metadata
                         // Note: Metadata is added during memory creation (lines below)
-                        _logger.LogDebug("Adding memory with relation to {Id} (similarity: {Score:F3})",
-                            dupCheck.ExistingMemory!.Id, dupCheck.SimilarityScore);
+                        LogAddingWithRelation(_logger, dupCheck.ExistingMemory!.Id, dupCheck.SimilarityScore);
                         break;
 
                     case DuplicateAction.Add:
@@ -164,15 +163,13 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                 if (request.Type == null)
                 {
                     memoryType = classification.Type;
-                    _logger.LogDebug("Auto-classified Type as {Type} with confidence {Confidence:F2}",
-                        memoryType, classification.Confidence);
+                    LogAutoClassifiedType(_logger, memoryType, classification.Confidence);
                 }
 
                 if (request.ImportanceScore == null)
                 {
                     importanceScore = classification.Importance;
-                    _logger.LogDebug("Auto-classified ImportanceScore as {Score:F2}",
-                        importanceScore);
+                    LogAutoClassifiedImportance(_logger, importanceScore);
                 }
 
                 // Use classified topics if none provided
@@ -183,7 +180,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Auto-classification failed, using defaults");
+                LogAutoClassificationFailed(_logger, ex);
             }
         }
 
@@ -210,7 +207,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         var stored = await _memoryStore.StoreAsync(memory, cancellationToken);
 
-        _logger.LogInformation("Encoded memory {MemoryId} at tier {Tier}", stored.Id, stored.Tier);
+        LogEncodedMemory(_logger, stored.Id, stored.Tier);
 
         // Phase 48: Auto-trigger consolidation for Working Memory (Tier.Short)
         // This enables automatic promotion without requiring buffer routing
@@ -230,7 +227,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
         if (memory == null)
         {
-            _logger.LogWarning("Memory {MemoryId} not found for update", request.MemoryId);
+            LogMemoryNotFoundForUpdate(_logger, request.MemoryId);
             return null;
         }
 
@@ -278,7 +275,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         await _memoryStore.UpdateAsync(memory, cancellationToken);
 
-        _logger.LogDebug("Updated memory {MemoryId}", request.MemoryId);
+        LogUpdatedMemory(_logger, request.MemoryId);
 
         return memory;
     }
@@ -291,7 +288,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
         if (memory == null)
         {
-            _logger.LogWarning("Memory {MemoryId} not found for split", request.MemoryId);
+            LogMemoryNotFoundForSplit(_logger, request.MemoryId);
             return [];
         }
 
@@ -300,7 +297,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         if (chunks.Count <= 1)
         {
-            _logger.LogDebug("Memory {MemoryId} not split - content too small", request.MemoryId);
+            LogMemoryNotSplit(_logger, request.MemoryId);
             return [memory];
         }
 
@@ -326,8 +323,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                 Metadata = new Dictionary<string, string>(memory.Metadata ?? [])
                 {
                     ["split_source"] = memory.Id.ToString(),
-                    ["split_index"] = i.ToString(),
-                    ["split_total"] = chunks.Count.ToString()
+                    ["split_index"] = i.ToString(CultureInfo.InvariantCulture),
+                    ["split_total"] = chunks.Count.ToString(CultureInfo.InvariantCulture)
                 },
                 Stability = memory.Stability,
                 RetentionScore = memory.RetentionScore
@@ -343,7 +340,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             await _memoryStore.DeleteAsync(memory.Id, hardDelete: false, cancellationToken);
         }
 
-        _logger.LogInformation("Split memory {MemoryId} into {Count} chunks", request.MemoryId, results.Count);
+        LogSplitMemory(_logger, request.MemoryId, results.Count);
 
         return results;
     }
@@ -369,7 +366,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         var mergedContent = request.Strategy switch
         {
             MemoryMergeStrategy.Concatenate => string.Join("\n\n---\n\n", memories.Select(m => m.Content)),
-            MemoryMergeStrategy.Summarize => string.Join("\n\n", memories.Select(m => m.Content)), // TODO: LLM summarization
+            MemoryMergeStrategy.Summarize => await SummarizeForMergeAsync(memories, cancellationToken),
             MemoryMergeStrategy.ExtractKeyPoints => string.Join("\n", memories.Select(m => $"• {m.Content}")),
             _ => string.Join("\n\n", memories.Select(m => m.Content))
         };
@@ -423,7 +420,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             }
         }
 
-        _logger.LogInformation("Merged {Count} memories into {MemoryId}", memories.Count, stored.Id);
+        LogMergedMemories(_logger, memories.Count, stored.Id);
 
         return stored;
     }
@@ -446,7 +443,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         // Check lock
         if (memory.IsLocked && !request.ForceLocked)
         {
-            _logger.LogWarning("Cannot delete locked memory {MemoryId}", request.MemoryId);
+            LogCannotDeleteLocked(_logger, request.MemoryId);
             return false;
         }
 
@@ -458,7 +455,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         var deleted = await _memoryStore.DeleteAsync(request.MemoryId, request.HardDelete, cancellationToken);
 
-        _logger.LogInformation("Deleted memory {MemoryId} (hard: {HardDelete})", request.MemoryId, request.HardDelete);
+        LogDeletedMemory(_logger, request.MemoryId, request.HardDelete);
 
         return deleted;
     }
@@ -487,7 +484,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         memory.MarkUpdated();
         await _memoryStore.UpdateAsync(memory, cancellationToken);
 
-        _logger.LogDebug("Set expiration for memory {MemoryId} to {ExpiresAt}", request.MemoryId, memory.ExpiresAt);
+        LogSetExpiration(_logger, request.MemoryId, memory.ExpiresAt);
 
         return memory;
     }
@@ -522,7 +519,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         memory.MarkUpdated();
         await _memoryStore.UpdateAsync(memory, cancellationToken);
 
-        _logger.LogInformation("{Action} memory {MemoryId}", request.IsLocked ? "Locked" : "Unlocked", request.MemoryId);
+        LogLockedOrUnlocked(_logger, request.IsLocked ? "Locked" : "Unlocked", request.MemoryId);
 
         return memory;
     }
@@ -576,7 +573,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         memory.MarkUpdated();
         await _memoryStore.UpdateAsync(memory, cancellationToken);
 
-        _logger.LogDebug("Labeled memory {MemoryId} with type {Type}", request.MemoryId, memory.Type);
+        LogLabeledMemory(_logger, request.MemoryId, memory.Type);
 
         return memory;
     }
@@ -592,7 +589,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         ArgumentException.ThrowIfNullOrWhiteSpace(request.UserId);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Query);
 
-        _logger.LogDebug("Retrieving memories for user {UserId} with query: {Query}", request.UserId, request.Query);
+        LogRetrievingMemories(_logger, request.UserId, request.Query);
 
         // Generate query embedding
         var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(request.Query, cancellationToken);
@@ -622,11 +619,11 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             .ToList();
 
         // Apply cross-encoder re-ranking if enabled and available
-        IReadOnlyList<(MemorySearchResult Result, float RerankScore)>? rerankedResults = null;
+        List<(MemorySearchResult Result, float RerankScore)>? rerankedResults = null;
 
         if (_searchOptions.EnableReranking && _rerankerService != null && filtered.Count > 0)
         {
-            _logger.LogDebug("Re-ranking {Count} candidates with cross-encoder", filtered.Count);
+            LogReranking(_logger, filtered.Count);
 
             var candidates = filtered.Select(r => new RerankCandidate<MemorySearchResult>
             {
@@ -646,12 +643,14 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                 .Select(rr => (rr.Metadata!, rr.Score))
                 .ToList();
 
-            _logger.LogDebug("Re-ranking complete. Top score: {TopScore:F4}",
-                rerankedResults.FirstOrDefault().RerankScore);
+            LogRerankingComplete(_logger, rerankedResults.Count > 0 ? rerankedResults[0].RerankScore : 0);
         }
 
         // Calculate weights (DAT or manual)
         var weights = request.Weights ?? GetDefaultWeights();
+
+        // Pre-tokenize query for keyword scoring
+        var queryTokens = TokenizeForKeywordMatch(request.Query);
 
         // Build final results with combined scoring
         var resultsSource = rerankedResults != null
@@ -667,16 +666,19 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
                 // Calculate individual scores
                 var semanticScore = rerankScore ?? vectorScore; // Use rerank score if available
+                var keywordScore = CalculateKeywordScore(memory.Content, queryTokens);
                 var recencyScore = CalculateRecencyScore(memory);
                 var importanceScore = memory.ImportanceScore;
                 var retentionScore = memory.CalculateRetention();
 
-                // Combined score
-                var combinedScore = (
-                    semanticScore * weights.Semantic +
-                    recencyScore * weights.Recency +
-                    importanceScore * weights.Importance
-                ) / (weights.Semantic + weights.Recency + weights.Importance);
+                // Combined score (includes keyword weight)
+                var totalWeight = weights.Semantic + weights.Keyword + weights.Recency + weights.Importance;
+                var combinedScore = totalWeight > 0
+                    ? (semanticScore * weights.Semantic +
+                       keywordScore * weights.Keyword +
+                       recencyScore * weights.Recency +
+                       importanceScore * weights.Importance) / totalWeight
+                    : 0f;
 
                 return new RetrieveResult
                 {
@@ -685,7 +687,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
                     Breakdown = new ScoreBreakdown
                     {
                         SemanticScore = semanticScore,
-                        KeywordScore = 0, // TODO: Implement keyword scoring
+                        KeywordScore = keywordScore,
                         RecencyScore = recencyScore,
                         ImportanceScore = importanceScore,
                         RetentionScore = retentionScore,
@@ -709,8 +711,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             }
         }
 
-        _logger.LogDebug("Retrieved {Count} memories (reranking: {RerankEnabled})",
-            results.Count, rerankedResults != null);
+        LogRetrievedMemories(_logger, results.Count, rerankedResults != null);
 
         return results;
     }
@@ -732,11 +733,8 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             throw new InvalidOperationException("No memories found for summarization");
         }
 
-        // For now, simple concatenation - TODO: LLM-based summarization
-        var combinedContent = string.Join("\n\n", memories.Select(m => m.Content));
-        var summaryContent = request.FocusTopic != null
-            ? $"[Summary focusing on: {request.FocusTopic}]\n{combinedContent}"
-            : combinedContent;
+        var summaryContent = await SummarizeMemoriesAsync(
+            memories, request.FocusTopic, request.MaxTokens, cancellationToken);
 
         // Generate embedding for summary
         var embedding = await _embeddingService.GenerateEmbeddingAsync(summaryContent, cancellationToken);
@@ -775,7 +773,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
             }
         }
 
-        _logger.LogInformation("Summarized {Count} memories into {MemoryId}", memories.Count, stored.Id);
+        LogSummarizedMemories(_logger, memories.Count, stored.Id);
 
         return stored;
     }
@@ -799,7 +797,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         if (targetTier == memory.Tier)
         {
-            _logger.LogDebug("Memory {MemoryId} already at tier {Tier}", request.MemoryId, memory.Tier);
+            LogAlreadyAtTier(_logger, request.MemoryId, memory.Tier);
             return memory;
         }
 
@@ -813,7 +811,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         memory.MarkUpdated();
         await _memoryStore.UpdateAsync(memory, cancellationToken);
 
-        _logger.LogInformation("Promoted memory {MemoryId} to tier {Tier}", request.MemoryId, targetTier);
+        LogPromotedMemory(_logger, request.MemoryId, targetTier);
 
         return memory;
     }
@@ -833,7 +831,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         if (targetTier == memory.Tier)
         {
-            _logger.LogDebug("Memory {MemoryId} already at tier {Tier}", request.MemoryId, memory.Tier);
+            LogAlreadyAtTier(_logger, request.MemoryId, memory.Tier);
             return memory;
         }
 
@@ -849,8 +847,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         memory.MarkUpdated();
         await _memoryStore.UpdateAsync(memory, cancellationToken);
 
-        _logger.LogInformation("Demoted memory {MemoryId} to tier {Tier} (reason: {Reason})",
-            request.MemoryId, targetTier, request.Reason);
+        LogDemotedMemory(_logger, request.MemoryId, targetTier, request.Reason);
 
         return memory;
     }
@@ -867,7 +864,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
         if (memory == null)
         {
-            _logger.LogWarning("[CONFIRM] Memory {MemoryId} not found", request.MemoryId);
+            LogConfirmNotFound(_logger, request.MemoryId);
             return ConfirmResult.NotFound(request.MemoryId);
         }
 
@@ -901,9 +898,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         const int minConfirmCount = 3;
         var isArchiveEligible = memory.Confidence >= minConfidence && memory.ConfirmCount >= minConfirmCount;
 
-        _logger.LogInformation(
-            "[CONFIRM] Memory {MemoryId} confirmed: {PrevCount}→{NewCount}, confidence {PrevConf:F2}→{NewConf:F2}, eligible={Eligible}",
-            request.MemoryId,
+        LogConfirmed(_logger, request.MemoryId,
             previousConfirmCount, memory.ConfirmCount,
             previousConfidence, memory.Confidence,
             isArchiveEligible);
@@ -958,20 +953,14 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         if (result.Success)
         {
-            _logger.LogInformation(
-                "[DEDUP_CONFIRM] Memory {MemoryId} confirmed via deduplication: " +
-                "ConfirmCount {PrevCount}→{NewCount}, Confidence {PrevConf:F2}→{NewConf:F2}, " +
-                "ArchiveEligible={Eligible}",
-                existingMemory.Id,
+            LogDedupConfirmSuccess(_logger, existingMemory.Id,
                 result.PreviousConfirmCount, result.NewConfirmCount,
                 result.PreviousConfidence, result.NewConfidence,
                 result.IsArchiveEligible);
         }
         else
         {
-            _logger.LogWarning(
-                "[DEDUP_CONFIRM] Failed to confirm memory {MemoryId}: {Error}",
-                existingMemory.Id, result.Error);
+            LogDedupConfirmFailed(_logger, existingMemory.Id, result.Error);
         }
     }
 
@@ -1045,6 +1034,36 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         return chunks;
     }
 
+    /// <summary>
+    /// Tokenizes text for keyword matching: lowercase, split by non-alphanumeric, filter short tokens.
+    /// </summary>
+    private static HashSet<string> TokenizeForKeywordMatch(string text)
+    {
+        return text
+            .Split(TokenSeparators, StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => t.Length >= 2)
+            .Select(t => t.ToLowerInvariant())
+            .ToHashSet();
+    }
+
+    private static readonly char[] TokenSeparators = [' ', '\t', '\n', '\r', '.', ',', ';', ':', '!', '?', '(', ')', '[', ']', '{', '}', '"', '\'', '/', '\\', '-', '_', '+', '=', '<', '>', '&', '|', '@', '#', '$', '%', '^', '*', '~', '`'];
+
+    /// <summary>
+    /// Calculates keyword match score between memory content and pre-tokenized query.
+    /// Returns ratio of matched query tokens found in memory content (0.0 to 1.0).
+    /// </summary>
+    private static float CalculateKeywordScore(string memoryContent, HashSet<string> queryTokens)
+    {
+        if (queryTokens.Count == 0)
+        {
+            return 0f;
+        }
+
+        var contentTokens = TokenizeForKeywordMatch(memoryContent);
+        var matchCount = queryTokens.Count(token => contentTokens.Contains(token));
+        return (float)matchCount / queryTokens.Count;
+    }
+
     private static float CalculateRecencyScore(MemoryUnit memory)
     {
         var lastAccess = memory.LastAccessedAt ?? memory.CreatedAt;
@@ -1088,18 +1107,14 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         // Skip if no session ID (consolidation requires session context)
         if (string.IsNullOrWhiteSpace(memory.SessionId))
         {
-            _logger.LogDebug(
-                "[AUTO_CONSOLIDATION] Skipping - no session ID for memory {MemoryId}",
-                memory.Id);
+            LogAutoConsolidationSkipped(_logger, memory.Id);
             return;
         }
 
         try
         {
             // Step 1: Record activity (updates turn count, tokens, timestamp)
-            _logger.LogDebug(
-                "[AUTO_CONSOLIDATION] Recording activity for user {UserId}, session {SessionId}",
-                memory.UserId, memory.SessionId);
+            LogAutoConsolidationRecording(_logger, memory.UserId, memory.SessionId);
 
             await _orchestrator.RecordActivityAsync(
                 memory.UserId,
@@ -1114,10 +1129,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
             if (trigger.HasValue)
             {
-                _logger.LogInformation(
-                    "[AUTO_CONSOLIDATION] ✅ Trigger detected: {Trigger} for user {UserId}. " +
-                    "Initiating archival to Session tier.",
-                    trigger.Value, memory.UserId);
+                LogAutoConsolidationTriggerDetected(_logger, trigger.Value, memory.UserId);
 
                 // Step 3: Archive Working Memory → Session
                 var result = await _orchestrator.ArchiveToSessionAsync(
@@ -1128,24 +1140,17 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
                 if (result.Success)
                 {
-                    _logger.LogInformation(
-                        "[AUTO_CONSOLIDATION] ✅ Successfully archived {Count} memories. " +
-                        "Summary ID: {SummaryId}",
-                        result.MemoriesArchived,
-                        result.SummaryId?.ToString() ?? "none");
+                    var summaryIdStr = result.SummaryId?.ToString() ?? "none";
+                    LogAutoConsolidationSuccess(_logger, result.MemoriesArchived, summaryIdStr);
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "[AUTO_CONSOLIDATION] ⚠️ Archival failed: {Error}",
-                        result.Error);
+                    LogAutoConsolidationArchivalFailed(_logger, result.Error);
                 }
             }
             else
             {
-                _logger.LogDebug(
-                    "[AUTO_CONSOLIDATION] No triggers satisfied for user {UserId}",
-                    memory.UserId);
+                LogAutoConsolidationNoTriggers(_logger, memory.UserId);
             }
 
             // Phase 51: Capacity enforcement - Baddeley's 7±2 working memory limit
@@ -1160,10 +1165,7 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
         catch (Exception ex)
         {
             // Never fail the main EncodeAsync operation due to consolidation issues
-            _logger.LogError(ex,
-                "[AUTO_CONSOLIDATION] ❌ Consolidation check failed for user {UserId}. " +
-                "Main operation succeeded, but automatic archival could not proceed.",
-                memory.UserId);
+            LogAutoConsolidationError(_logger, ex, memory.UserId);
         }
     }
 
@@ -1193,49 +1195,251 @@ public sealed class MemoryPrimitivesService : IMemoryPrimitives
 
         if (currentCount <= capacity)
         {
-            _logger.LogDebug(
-                "[CAPACITY_ENFORCEMENT] Short tier within capacity: {Count}/{Capacity}",
-                currentCount, capacity);
+            LogCapacityWithinLimit(_logger, currentCount, capacity);
             return;
         }
 
         // Calculate excess items to promote
         var excessCount = currentCount - capacity;
 
-        _logger.LogInformation(
-            "[CAPACITY_ENFORCEMENT] 🧠 Short tier exceeds capacity: {Count}/{Capacity}. " +
-            "Promoting {Excess} oldest items to Long tier (Baddeley's 7±2 model).",
-            currentCount, capacity, excessCount);
+        LogCapacityExceeded(_logger, currentCount, capacity, excessCount);
 
         // Promote oldest items (already sorted by CreatedAtAsc)
         var itemsToPromote = shortTierMemories.Take(excessCount).ToList();
 
-        foreach (var memory in itemsToPromote)
+        foreach (var mem in itemsToPromote)
         {
-            memory.Tier = Tier.Long;
-            memory.UpdatedAt = DateTime.UtcNow;
+            mem.Tier = Tier.Long;
+            mem.UpdatedAt = DateTime.UtcNow;
 
-            var updated = await _memoryStore.UpdateAsync(memory, cancellationToken);
+            var updated = await _memoryStore.UpdateAsync(mem, cancellationToken);
 
             if (updated)
             {
-                _logger.LogDebug(
-                    "[CAPACITY_ENFORCEMENT] ✅ Promoted memory {MemoryId} from Short → Long tier",
-                    memory.Id);
+                LogCapacityPromotedMemory(_logger, mem.Id);
             }
             else
             {
-                _logger.LogWarning(
-                    "[CAPACITY_ENFORCEMENT] ⚠️ Failed to promote memory {MemoryId}",
-                    memory.Id);
+                LogCapacityPromotionFailed(_logger, mem.Id);
             }
         }
 
-        _logger.LogInformation(
-            "[CAPACITY_ENFORCEMENT] ✅ Capacity enforcement complete: " +
-            "Promoted {Promoted} items, new Short tier count: {NewCount}/{Capacity}",
-            itemsToPromote.Count, currentCount - itemsToPromote.Count, capacity);
+        LogCapacityEnforcementComplete(_logger, itemsToPromote.Count, currentCount - itemsToPromote.Count, capacity);
     }
 
     #endregion
+
+    // --- LoggerMessage declarations ---
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Encoding new memory for user {UserId}")]
+    private static partial void LogEncodingMemory(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Duplicate detected: {DuplicateType}, Action: {Action}")]
+    private static partial void LogDuplicateDetected(ILogger logger, DuplicateType duplicateType, DuplicateAction action);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Skipping duplicate memory (similarity: {Score:F3})")]
+    private static partial void LogSkippingDuplicate(ILogger logger, float score);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Updating existing memory {MemoryId} with new content")]
+    private static partial void LogUpdatingExistingMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Merging with existing memory {MemoryId}")]
+    private static partial void LogMergingWithExisting(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Adding memory with relation to {MemoryId} (similarity: {Score:F3})")]
+    private static partial void LogAddingWithRelation(ILogger logger, Guid memoryId, float score);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Auto-classified Type as {Type} with confidence {Confidence:F2}")]
+    private static partial void LogAutoClassifiedType(ILogger logger, MemoryType type, float confidence);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Auto-classified ImportanceScore as {Score:F2}")]
+    private static partial void LogAutoClassifiedImportance(ILogger logger, float score);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Auto-classification failed, using defaults")]
+    private static partial void LogAutoClassificationFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Encoded memory {MemoryId} at tier {Tier}")]
+    private static partial void LogEncodedMemory(ILogger logger, Guid memoryId, Tier tier);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Memory {MemoryId} not found for update")]
+    private static partial void LogMemoryNotFoundForUpdate(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated memory {MemoryId}")]
+    private static partial void LogUpdatedMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Memory {MemoryId} not found for split")]
+    private static partial void LogMemoryNotFoundForSplit(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Memory {MemoryId} not split - content too small")]
+    private static partial void LogMemoryNotSplit(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Split memory {MemoryId} into {Count} chunks")]
+    private static partial void LogSplitMemory(ILogger logger, Guid memoryId, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Merged {Count} memories into {MemoryId}")]
+    private static partial void LogMergedMemories(ILogger logger, int count, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cannot delete locked memory {MemoryId}")]
+    private static partial void LogCannotDeleteLocked(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Deleted memory {MemoryId} (hard: {HardDelete})")]
+    private static partial void LogDeletedMemory(ILogger logger, Guid memoryId, bool hardDelete);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Set expiration for memory {MemoryId} to {ExpiresAt}")]
+    private static partial void LogSetExpiration(ILogger logger, Guid memoryId, DateTime? expiresAt);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Action} memory {MemoryId}")]
+    private static partial void LogLockedOrUnlocked(ILogger logger, string action, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Labeled memory {MemoryId} with type {Type}")]
+    private static partial void LogLabeledMemory(ILogger logger, Guid memoryId, MemoryType type);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieving memories for user {UserId} with query: {Query}")]
+    private static partial void LogRetrievingMemories(ILogger logger, string userId, string query);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Re-ranking {Count} candidates with cross-encoder")]
+    private static partial void LogReranking(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Re-ranking complete. Top score: {TopScore:F4}")]
+    private static partial void LogRerankingComplete(ILogger logger, float topScore);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved {Count} memories (reranking: {RerankEnabled})")]
+    private static partial void LogRetrievedMemories(ILogger logger, int count, bool rerankEnabled);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Summarized {Count} memories into {MemoryId}")]
+    private static partial void LogSummarizedMemories(ILogger logger, int count, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Memory {MemoryId} already at tier {Tier}")]
+    private static partial void LogAlreadyAtTier(ILogger logger, Guid memoryId, Tier tier);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Promoted memory {MemoryId} to tier {Tier}")]
+    private static partial void LogPromotedMemory(ILogger logger, Guid memoryId, Tier tier);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Demoted memory {MemoryId} to tier {Tier} (reason: {Reason})")]
+    private static partial void LogDemotedMemory(ILogger logger, Guid memoryId, Tier tier, DemoteReason reason);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[CONFIRM] Memory {MemoryId} not found")]
+    private static partial void LogConfirmNotFound(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONFIRM] Memory {MemoryId} confirmed: {PrevCount}->{NewCount}, confidence {PrevConf:F2}->{NewConf:F2}, eligible={Eligible}")]
+    private static partial void LogConfirmed(ILogger logger, Guid memoryId, int prevCount, int newCount, float prevConf, float newConf, bool eligible);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[DEDUP_CONFIRM] Memory {MemoryId} confirmed via deduplication: ConfirmCount {PrevCount}->{NewCount}, Confidence {PrevConf:F2}->{NewConf:F2}, ArchiveEligible={Eligible}")]
+    private static partial void LogDedupConfirmSuccess(ILogger logger, Guid memoryId, int prevCount, int newCount, float prevConf, float newConf, bool eligible);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[DEDUP_CONFIRM] Failed to confirm memory {MemoryId}: {Error}")]
+    private static partial void LogDedupConfirmFailed(ILogger logger, Guid memoryId, string? error);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[AUTO_CONSOLIDATION] Skipping - no session ID for memory {MemoryId}")]
+    private static partial void LogAutoConsolidationSkipped(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[AUTO_CONSOLIDATION] Recording activity for user {UserId}, session {SessionId}")]
+    private static partial void LogAutoConsolidationRecording(ILogger logger, string userId, string? sessionId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[AUTO_CONSOLIDATION] Trigger detected: {Trigger} for user {UserId}. Initiating archival to Session tier.")]
+    private static partial void LogAutoConsolidationTriggerDetected(ILogger logger, Interfaces.WorkingPromotionTrigger trigger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[AUTO_CONSOLIDATION] Successfully archived {Count} memories. Summary ID: {SummaryId}")]
+    private static partial void LogAutoConsolidationSuccess(ILogger logger, int count, string summaryId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[AUTO_CONSOLIDATION] Archival failed: {Error}")]
+    private static partial void LogAutoConsolidationArchivalFailed(ILogger logger, string? error);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[AUTO_CONSOLIDATION] No triggers satisfied for user {UserId}")]
+    private static partial void LogAutoConsolidationNoTriggers(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "[AUTO_CONSOLIDATION] Consolidation check failed for user {UserId}. Main operation succeeded, but automatic archival could not proceed.")]
+    private static partial void LogAutoConsolidationError(ILogger logger, Exception exception, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[CAPACITY_ENFORCEMENT] Short tier within capacity: {Count}/{Capacity}")]
+    private static partial void LogCapacityWithinLimit(ILogger logger, int count, int capacity);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CAPACITY_ENFORCEMENT] Short tier exceeds capacity: {Count}/{Capacity}. Promoting {Excess} oldest items to Long tier (Baddeley's 7+/-2 model).")]
+    private static partial void LogCapacityExceeded(ILogger logger, int count, int capacity, int excess);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[CAPACITY_ENFORCEMENT] Promoted memory {MemoryId} from Short to Long tier")]
+    private static partial void LogCapacityPromotedMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[CAPACITY_ENFORCEMENT] Failed to promote memory {MemoryId}")]
+    private static partial void LogCapacityPromotionFailed(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CAPACITY_ENFORCEMENT] Capacity enforcement complete: Promoted {Promoted} items, new Short tier count: {NewCount}/{Capacity}")]
+    private static partial void LogCapacityEnforcementComplete(ILogger logger, int promoted, int newCount, int capacity);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[LLM_SUMMARY] Summarizing {Count} memories via LLM (focus: {Focus})")]
+    private static partial void LogLlmSummarizing(ILogger logger, int count, string focus);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[LLM_SUMMARY] LLM summarization unavailable, falling back to concatenation")]
+    private static partial void LogLlmSummarizationFallback(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[LLM_SUMMARY] LLM summarization failed, falling back to concatenation")]
+    private static partial void LogLlmSummarizationFailed(ILogger logger, Exception exception);
+
+    /// <summary>
+    /// Summarizes multiple memories using LLM. Falls back to concatenation if LLM is unavailable.
+    /// </summary>
+    private async Task<string> SummarizeForMergeAsync(
+        IReadOnlyList<MemoryUnit> memories,
+        CancellationToken cancellationToken)
+    {
+        return await SummarizeMemoriesAsync(memories, focusTopic: null, maxTokens: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Core LLM summarization logic shared by MergeAsync and SummarizeAsync.
+    /// </summary>
+    private async Task<string> SummarizeMemoriesAsync(
+        IReadOnlyList<MemoryUnit> memories,
+        string? focusTopic,
+        int? maxTokens,
+        CancellationToken cancellationToken)
+    {
+        var combinedContent = string.Join("\n\n", memories.Select(m => m.Content));
+
+        if (_completionService == null)
+        {
+            LogLlmSummarizationFallback(_logger);
+            return focusTopic != null
+                ? $"[Summary focusing on: {focusTopic}]\n{combinedContent}"
+                : combinedContent;
+        }
+
+        LogLlmSummarizing(_logger, memories.Count, focusTopic ?? "all");
+
+        try
+        {
+            var prompt = BuildSummarizationPrompt(combinedContent, focusTopic, maxTokens);
+            var result = await _completionService.CompleteAsync(prompt, new TextCompletionOptions
+            {
+                Temperature = 0.1f,
+                MaxTokens = maxTokens ?? 500,
+            }, cancellationToken);
+
+            return string.IsNullOrWhiteSpace(result) ? combinedContent : result;
+        }
+        catch (Exception ex)
+        {
+            LogLlmSummarizationFailed(_logger, ex);
+            return focusTopic != null
+                ? $"[Summary focusing on: {focusTopic}]\n{combinedContent}"
+                : combinedContent;
+        }
+    }
+
+    private static string BuildSummarizationPrompt(string content, string? focusTopic, int? maxTokens)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Summarize the following memories into a concise, factual synthesis.");
+        sb.AppendLine("Preserve key entities, concepts, and relationships.");
+        if (focusTopic != null)
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Focus on: {focusTopic}");
+        if (maxTokens.HasValue)
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Keep the summary under {maxTokens.Value} tokens.");
+        sb.AppendLine();
+        sb.AppendLine("Memories:");
+        sb.AppendLine(content);
+        sb.AppendLine();
+        sb.AppendLine("Summary:");
+        return sb.ToString();
+    }
 }

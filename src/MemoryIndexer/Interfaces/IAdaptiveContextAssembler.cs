@@ -71,7 +71,7 @@ public sealed class ContextAssemblyOptions
     /// <summary>
     /// Whether to include metadata (timestamps, types).
     /// </summary>
-    public bool IncludeMetadata { get; init; } = false;
+    public bool IncludeMetadata { get; init; }
 
     /// <summary>
     /// Percentage of budget for full-fidelity content (0-1).

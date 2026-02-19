@@ -54,7 +54,7 @@ public class LongTermStoreHealthCheck : IHealthCheck
                 {
                     // Ignore cleanup errors
                 }
-            });
+            }, cancellationToken);
 
             // Critical: Query latency too high
             if (queryLatencyMs > CriticalQueryLatencyMs)

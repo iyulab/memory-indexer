@@ -3,7 +3,8 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Evaluation;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Evaluation;
@@ -14,20 +15,19 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Evaluation;
 [Trait("Category", "Evaluation")]
 public class LoCoMoEvaluatorTests
 {
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
+    private readonly IEmbeddingService _mockEmbeddingService;
     private readonly LoCoMoEvaluator _evaluator;
 
     public LoCoMoEvaluatorTests()
     {
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
+        _mockEmbeddingService = Substitute.For<IEmbeddingService>();
         _evaluator = new LoCoMoEvaluator(
-            _mockEmbeddingService.Object,
+            _mockEmbeddingService,
             NullLogger<LoCoMoEvaluator>.Instance);
 
         // Setup default embedding generation
-        _mockEmbeddingService
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string text, CancellationToken _) => CreateMockEmbedding(text));
+        _mockEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => CreateMockEmbedding(callInfo.ArgAt<string>(0)));
     }
 
     private static Memory<float> CreateMockEmbedding(string text)
@@ -130,7 +130,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_WithRelevantResults_ShouldReturnSuccess()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var memoryId = Guid.NewGuid();
 
         var testQuery = new LoCoMoTestQuery
@@ -158,12 +158,11 @@ public class LoCoMoEvaluatorTests
             }
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert
         result.Should().NotBeNull();
@@ -177,7 +176,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_WithNoRelevantResults_ShouldReturnFailure()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var relevantId = Guid.NewGuid();
         var irrelevantId = Guid.NewGuid();
 
@@ -205,12 +204,11 @@ public class LoCoMoEvaluatorTests
             }
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert
         result.Should().NotBeNull();
@@ -223,7 +221,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_ShouldCalculateCorrectMRR()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var relevantId = Guid.NewGuid();
         var irrelevantId1 = Guid.NewGuid();
         var irrelevantId2 = Guid.NewGuid();
@@ -245,12 +243,11 @@ public class LoCoMoEvaluatorTests
             CreateSearchResult(relevantId, 0.85f)
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert
         result.MeanReciprocalRank.Should().BeApproximately(1f / 3f, 0.01f, "MRR should be 1/3 for relevant at position 3");
@@ -260,7 +257,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_ShouldApplyTemporalFilter()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var afterDate = DateTime.UtcNow.AddDays(-7);
         var beforeDate = DateTime.UtcNow;
 
@@ -278,21 +275,19 @@ public class LoCoMoEvaluatorTests
             }
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemorySearchResult>());
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemorySearchResult>());
 
         // Act
-        await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert
-        mockMemoryStore.Verify(x => x.SearchAsync(
-            It.IsAny<ReadOnlyMemory<float>>(),
-            It.Is<MemorySearchOptions>(opt =>
+        await mockMemoryStore.Received(1).SearchAsync(
+            Arg.Any<ReadOnlyMemory<float>>(),
+            Arg.Is<MemorySearchOptions>(opt =>
                 opt.CreatedAfter == afterDate &&
                 opt.CreatedBefore == beforeDate),
-            It.IsAny<CancellationToken>()),
-            Times.Once);
+            Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -303,7 +298,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateAsync_ShouldReturnAggregateMetrics()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var memoryId1 = Guid.NewGuid();
         var memoryId2 = Guid.NewGuid();
 
@@ -335,9 +330,8 @@ public class LoCoMoEvaluatorTests
 
         // Setup: First query succeeds, second fails
         var callCount = 0;
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
             {
                 callCount++;
                 return callCount == 1
@@ -346,7 +340,7 @@ public class LoCoMoEvaluatorTests
             });
 
         // Act
-        var result = await _evaluator.EvaluateAsync(mockMemoryStore.Object, testSuite, "test-user");
+        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user");
 
         // Assert
         result.Should().NotBeNull();
@@ -363,7 +357,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateAsync_ShouldGroupMetricsByQueryType()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
 
         var testSuite = new LoCoMoTestSuite
         {
@@ -400,12 +394,11 @@ public class LoCoMoEvaluatorTests
             ]
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemorySearchResult>());
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemorySearchResult>());
 
         // Act
-        var result = await _evaluator.EvaluateAsync(mockMemoryStore.Object, testSuite, "test-user");
+        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user");
 
         // Assert
         result.ByQueryType.Should().ContainKey(LoCoMoQueryType.SingleHop);
@@ -421,7 +414,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_ShouldCalculateNDCG_PerfectRanking()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var relevantId1 = Guid.NewGuid();
         var relevantId2 = Guid.NewGuid();
 
@@ -442,12 +435,11 @@ public class LoCoMoEvaluatorTests
             CreateSearchResult(Guid.NewGuid(), 0.85f)
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert
         result.NDCG.Should().Be(1.0f, "NDCG should be 1.0 for perfect ranking");
@@ -461,7 +453,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateAsync_ShouldRespectUserIdForTenantIsolation()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var userId = "tenant-123";
         var memoryId = Guid.NewGuid();
 
@@ -483,26 +475,24 @@ public class LoCoMoEvaluatorTests
             ]
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemorySearchResult>());
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemorySearchResult>());
 
         // Act
-        await _evaluator.EvaluateAsync(mockMemoryStore.Object, testSuite, userId);
+        await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, userId);
 
         // Assert - Verify that UserId is passed to search
-        mockMemoryStore.Verify(x => x.SearchAsync(
-            It.IsAny<ReadOnlyMemory<float>>(),
-            It.Is<MemorySearchOptions>(opt => opt.UserId == userId),
-            It.IsAny<CancellationToken>()),
-            Times.Once);
+        await mockMemoryStore.Received(1).SearchAsync(
+            Arg.Any<ReadOnlyMemory<float>>(),
+            Arg.Is<MemorySearchOptions>(opt => opt.UserId == userId),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task EvaluateAsync_ShouldSeedMemoriesWithCorrectUserId()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var userId = "tenant-456";
         var memoryId = Guid.NewGuid().ToString();
 
@@ -525,17 +515,20 @@ public class LoCoMoEvaluatorTests
         };
 
         var capturedMemories = new List<MemoryUnit>();
-        mockMemoryStore
-            .Setup(x => x.StoreBatchAsync(It.IsAny<IEnumerable<MemoryUnit>>(), It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<MemoryUnit>, CancellationToken>((memories, _) => capturedMemories.AddRange(memories))
-            .ReturnsAsync((IEnumerable<MemoryUnit> memories, CancellationToken _) => memories.ToList());
+        mockMemoryStore.StoreBatchAsync(Arg.Any<IEnumerable<MemoryUnit>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var memories = callInfo.ArgAt<IEnumerable<MemoryUnit>>(0);
+                capturedMemories.AddRange(memories);
+                return memories.ToList();
+            });
 
         // Act
-        await _evaluator.EvaluateAsync(mockMemoryStore.Object, testSuite, userId);
+        await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, userId);
 
         // Assert
         capturedMemories.Should().HaveCount(1);
-        capturedMemories.First().UserId.Should().Be(userId);
+        capturedMemories[0].UserId.Should().Be(userId);
     }
 
     #endregion
@@ -546,7 +539,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_ShouldCalculateF1Score_WhenPrecisionAndRecallAreNonZero()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var relevantId1 = Guid.NewGuid();
         var relevantId2 = Guid.NewGuid();
         var irrelevantId = Guid.NewGuid();
@@ -567,12 +560,11 @@ public class LoCoMoEvaluatorTests
             CreateSearchResult(irrelevantId, 0.90f)
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert
         result.Precision.Should().BeApproximately(0.5f, 0.01f);
@@ -584,7 +576,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_ShouldReturnZeroF1_WhenBothPrecisionAndRecallAreZero()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var relevantId = Guid.NewGuid();
         var irrelevantId = Guid.NewGuid();
 
@@ -603,12 +595,11 @@ public class LoCoMoEvaluatorTests
             CreateSearchResult(irrelevantId, 0.90f)
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert
         result.F1Score.Should().Be(0f);
@@ -622,7 +613,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_ShouldCalculateAnswerCoverage_WhenExpectedAnswerProvided()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var relevantId = Guid.NewGuid();
         const string expectedAnswer = "We discussed Python programming basics";
 
@@ -652,12 +643,11 @@ public class LoCoMoEvaluatorTests
             }
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert - When content matches expected answer, coverage should be 1.0 (identical embeddings)
         result.AnswerCoverage.Should().BeGreaterThan(0f, "identical content should have coverage of 1.0");
@@ -667,7 +657,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateQueryAsync_ShouldReturnZeroCoverage_WhenNoExpectedAnswer()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
         var relevantId = Guid.NewGuid();
 
         var testQuery = new LoCoMoTestQuery
@@ -680,12 +670,11 @@ public class LoCoMoEvaluatorTests
             TopK = 5
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemorySearchResult>());
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemorySearchResult>());
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore.Object, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
 
         // Assert
         result.AnswerCoverage.Should().Be(0f);
@@ -699,7 +688,7 @@ public class LoCoMoEvaluatorTests
     public async Task EvaluateAsync_ShouldHandleQueryEvaluationException()
     {
         // Arrange
-        var mockMemoryStore = new Mock<IMemoryStore>();
+        var mockMemoryStore = Substitute.For<IMemoryStore>();
 
         var testSuite = new LoCoMoTestSuite
         {
@@ -719,18 +708,17 @@ public class LoCoMoEvaluatorTests
             ]
         };
 
-        mockMemoryStore
-            .Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Search failed"));
+        mockMemoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Search failed"));
 
         // Act
-        var result = await _evaluator.EvaluateAsync(mockMemoryStore.Object, testSuite, "test-user");
+        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user");
 
         // Assert
         result.FailedQueries.Should().Be(1);
         result.QueryResults.Should().HaveCount(1);
-        result.QueryResults.First().Success.Should().BeFalse();
-        result.QueryResults.First().Error.Should().NotBeNullOrEmpty();
+        result.QueryResults[0].Success.Should().BeFalse();
+        result.QueryResults[0].Error.Should().NotBeNullOrEmpty();
     }
 
     #endregion

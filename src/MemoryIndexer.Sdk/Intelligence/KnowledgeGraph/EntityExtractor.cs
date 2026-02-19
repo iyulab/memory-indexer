@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 
@@ -64,7 +64,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
         if (string.IsNullOrWhiteSpace(content))
             return Task.FromResult<IReadOnlyList<Entity>>(entities);
 
-        _logger.LogDebug("Extracting entities from content of length {Length}", content.Length);
+        LogExtractingEntitiesContentLengthLength(_logger, content.Length);
 
         // Extract different entity types
         entities.AddRange(ExtractEmails(content));
@@ -77,7 +77,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
         // Deduplicate entities
         var deduplicated = DeduplicateEntities(entities);
 
-        _logger.LogDebug("Extracted {Count} unique entities", deduplicated.Count);
+        LogExtractedCountUniqueEntities(_logger, deduplicated.Count);
 
         return Task.FromResult<IReadOnlyList<Entity>>(deduplicated);
     }
@@ -94,7 +94,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
         if (string.IsNullOrWhiteSpace(content) || entityList.Count < 2)
             return Task.FromResult<IReadOnlyList<EntityRelation>>(relations);
 
-        _logger.LogDebug("Extracting relations from {EntityCount} entities", entityList.Count);
+        LogExtractingRelationsEntityCountEntities(_logger, entityList.Count);
 
         // Extract relations using pattern matching
         foreach (var (pattern, relationType) in RelationPatterns)
@@ -152,7 +152,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
             }
         }
 
-        _logger.LogDebug("Extracted {Count} relations", relations.Count);
+        LogExtractedCountRelations(_logger, relations.Count);
 
         return Task.FromResult<IReadOnlyList<EntityRelation>>(relations);
     }
@@ -165,7 +165,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
         var graph = new KnowledgeGraph();
         var contentList = memoryContents.ToList();
 
-        _logger.LogDebug("Building knowledge graph from {Count} contents", contentList.Count);
+        LogBuildingKnowledgeGraphCountContents(_logger, contentList.Count);
 
         foreach (var content in contentList)
         {
@@ -249,8 +249,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
 
         graph.UpdatedAt = DateTime.UtcNow;
 
-        _logger.LogInformation("Built knowledge graph with {EntityCount} entities and {RelationCount} relations",
-            graph.EntityCount, graph.RelationCount);
+        LogBuiltKnowledgeGraphEntityCountEntities(_logger, graph.EntityCount, graph.RelationCount);
 
         return graph;
     }
@@ -414,7 +413,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
         });
     }
 
-    private static IEnumerable<Entity> ExtractDates(string content)
+    private static List<Entity> ExtractDates(string content)
     {
         var entities = new List<Entity>();
 
@@ -451,7 +450,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
         return entities;
     }
 
-    private static IEnumerable<Entity> ExtractNumericValues(string content)
+    private static List<Entity> ExtractNumericValues(string content)
     {
         var entities = new List<Entity>();
 
@@ -480,7 +479,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
         return entities;
     }
 
-    private static IEnumerable<Entity> ExtractNamedEntities(string content)
+    private static List<Entity> ExtractNamedEntities(string content)
     {
         var entities = new List<Entity>();
 
@@ -507,7 +506,7 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
         return entities;
     }
 
-    private static IEnumerable<Entity> ExtractTechnicalTerms(string content)
+    private static List<Entity> ExtractTechnicalTerms(string content)
     {
         var entities = new List<Entity>();
 
@@ -637,4 +636,22 @@ public sealed partial class EntityExtractor : IKnowledgeGraphService
 
     [GeneratedRegex(@"(?:[A-Z][a-z]+\s*)+")]
     private static partial Regex CapitalizedSequenceRegex();
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting entities from content of length {Length}")]
+    private static partial void LogExtractingEntitiesContentLengthLength(ILogger logger, int length);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracted {Count} unique entities")]
+    private static partial void LogExtractedCountUniqueEntities(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting relations from {EntityCount} entities")]
+    private static partial void LogExtractingRelationsEntityCountEntities(ILogger logger, int entityCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracted {Count} relations")]
+    private static partial void LogExtractedCountRelations(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Building knowledge graph from {Count} contents")]
+    private static partial void LogBuildingKnowledgeGraphCountContents(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Built knowledge graph with {EntityCount} entities and {RelationCount} relations")]
+    private static partial void LogBuiltKnowledgeGraphEntityCountEntities(ILogger logger, int entityCount, int relationCount);
 }

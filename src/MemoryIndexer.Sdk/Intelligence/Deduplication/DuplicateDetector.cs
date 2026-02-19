@@ -13,7 +13,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Deduplication;
 /// Detects and handles duplicate or near-duplicate memories.
 /// Uses both content hashing and semantic similarity.
 /// </summary>
-public sealed class DuplicateDetector : IDeduplicationService
+public sealed partial class DuplicateDetector : IDeduplicationService
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -52,7 +52,7 @@ public sealed class DuplicateDetector : IDeduplicationService
 
         if (exactMatch != null)
         {
-            _logger.LogDebug("Found exact duplicate: {Id}", exactMatch.Id);
+            LogFoundExactDuplicate(_logger, exactMatch.Id);
 
             var exactAction = DetermineAction(content, exactMatch, 1.0f, contentType);
 
@@ -94,9 +94,7 @@ public sealed class DuplicateDetector : IDeduplicationService
         {
             var action = DetermineAction(content, mostSimilar.Memory, mostSimilar.Score, contentType);
 
-            _logger.LogDebug(
-                "Found semantic duplicate: {Id} with score {Score:F3}, action: {Action}",
-                mostSimilar.Memory.Id, mostSimilar.Score, action);
+            LogFoundSemanticDuplicate(_logger, mostSimilar.Memory.Id, mostSimilar.Score, action);
 
             return new DuplicateCheckResult
             {
@@ -134,7 +132,7 @@ public sealed class DuplicateDetector : IDeduplicationService
         if (memories.Count <= 1)
             return [];
 
-        _logger.LogInformation("Scanning {Count} memories for duplicates", memories.Count);
+        LogScanningMemoriesForDuplicates(_logger, memories.Count);
 
         var groups = new List<DuplicateGroup>();
         var processed = new HashSet<Guid>();
@@ -179,7 +177,7 @@ public sealed class DuplicateDetector : IDeduplicationService
             }
         }
 
-        _logger.LogInformation("Found {Count} duplicate groups", groups.Count);
+        LogFoundDuplicateGroups(_logger, groups.Count);
         return groups;
     }
 
@@ -249,9 +247,7 @@ public sealed class DuplicateDetector : IDeduplicationService
             await _memoryStore.DeleteAsync(duplicate.Id, hardDelete: true, cancellationToken: cancellationToken);
         }
 
-        _logger.LogInformation(
-            "Merged {Count} duplicates into {Id}",
-            group.Duplicates.Count, primary.Id);
+        LogMergedDuplicates(_logger, group.Duplicates.Count, primary.Id);
 
         return primary;
     }
@@ -393,6 +389,21 @@ public sealed class DuplicateDetector : IDeduplicationService
 
         return string.Join(". ", unique);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Found exact duplicate: {Id}")]
+    private static partial void LogFoundExactDuplicate(ILogger logger, Guid id);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Found semantic duplicate: {Id} with score {Score:F3}, action: {Action}")]
+    private static partial void LogFoundSemanticDuplicate(ILogger logger, Guid id, float score, DuplicateAction action);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Scanning {Count} memories for duplicates")]
+    private static partial void LogScanningMemoriesForDuplicates(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Found {Count} duplicate groups")]
+    private static partial void LogFoundDuplicateGroups(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Merged {Count} duplicates into {Id}")]
+    private static partial void LogMergedDuplicates(ILogger logger, int count, Guid id);
 
     private static float CalculateCosineSimilarity(
         ReadOnlyMemory<float> embedding1,

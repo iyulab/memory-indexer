@@ -7,7 +7,7 @@ namespace MemoryIndexer.Mock;
 /// Mock reranker service for development and testing.
 /// Returns candidates in original order without performing actual cross-encoder scoring.
 /// </summary>
-public sealed class MockRerankerService : IRerankerService
+public sealed partial class MockRerankerService : IRerankerService
 {
     private readonly ILogger<MockRerankerService> _logger;
 
@@ -23,7 +23,7 @@ public sealed class MockRerankerService : IRerankerService
         int topK = 5,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Mock rerank for {Count} candidates, returning top {TopK}", candidates.Count, topK);
+        LogMockRerank(_logger, candidates.Count, topK);
 
         // Return candidates in original order, preserving original scores
         var results = candidates
@@ -49,10 +49,15 @@ public sealed class MockRerankerService : IRerankerService
         string document,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Mock score for query length {QueryLen} and document length {DocLen}",
-            query.Length, document.Length);
+        LogMockScore(_logger, query.Length, document.Length);
 
         // Return a fixed score (0.5 = neutral)
         return Task.FromResult(0.5f);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Mock rerank for {Count} candidates, returning top {TopK}")]
+    private static partial void LogMockRerank(ILogger logger, int count, int topK);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Mock score for query length {QueryLen} and document length {DocLen}")]
+    private static partial void LogMockScore(ILogger logger, int queryLen, int docLen);
 }

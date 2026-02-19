@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Graph;
 /// Research basis: Label Propagation for community detection (Raghavan et al., 2007).
 /// Adapted for memory graphs with weighted edges based on entity co-occurrence.
 /// </remarks>
-public sealed class LabelPropagationCommunityDetector : ICommunityDetector
+public sealed partial class LabelPropagationCommunityDetector : ICommunityDetector
 {
     private readonly IMemoryGraphService _graphService;
     private readonly ITemporalEntityStore _entityStore;
@@ -50,7 +50,7 @@ public sealed class LabelPropagationCommunityDetector : ICommunityDetector
             ? new Random(options.RandomSeed.Value)
             : new Random();
 
-        _logger.LogDebug("Starting community detection for user {UserId}", userId);
+        LogStartingCommunityDetectionUserUserId(_logger, userId);
 
         // Build adjacency list from entity store
         var triples = await _entityStore.GetAllActiveAsync(userId, cancellationToken);
@@ -68,7 +68,7 @@ public sealed class LabelPropagationCommunityDetector : ICommunityDetector
         var entities = entityNeighbors.Keys.ToList();
         if (entities.Count == 0)
         {
-            _logger.LogDebug("No entities found for user {UserId}", userId);
+            LogEntitiesFoundUserUserId(_logger, userId);
             return new CommunityDetectionResult
             {
                 CommunityCount = 0,
@@ -131,8 +131,7 @@ public sealed class LabelPropagationCommunityDetector : ICommunityDetector
             var changeRate = (float)changedCount / entities.Count;
             converged = changeRate < options.ConvergenceThreshold;
 
-            _logger.LogDebug("Iteration {Iteration}: {Changed} nodes changed ({Rate:P1})",
-                iterations, changedCount, changeRate);
+            LogIterationIterationChangedNodesChanged(_logger, iterations, changedCount, changeRate);
         }
 
         // Renumber labels to be contiguous
@@ -196,9 +195,7 @@ public sealed class LabelPropagationCommunityDetector : ICommunityDetector
 
         stopwatch.Stop();
 
-        _logger.LogInformation(
-            "Community detection completed: {Communities} communities, {Entities} entities, modularity={Modularity:F3} in {Duration}ms",
-            finalSizes.Count, entities.Count, modularity, stopwatch.ElapsedMilliseconds);
+        LogCommunityDetectionCompletedCommunitiesCommunities(_logger, finalSizes.Count, entities.Count, modularity, stopwatch.ElapsedMilliseconds);
 
         return new CommunityDetectionResult
         {
@@ -453,4 +450,16 @@ public sealed class LabelPropagationCommunityDetector : ICommunityDetector
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Starting community detection for user {UserId}")]
+    private static partial void LogStartingCommunityDetectionUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No entities found for user {UserId}")]
+    private static partial void LogEntitiesFoundUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Iteration {Iteration}: {Changed} nodes changed ({Rate:P1})")]
+    private static partial void LogIterationIterationChangedNodesChanged(ILogger logger, int iteration, int changed, float rate);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Community detection completed: {Communities} communities, {Entities} entities, modularity={Modularity:F3} in {Duration}ms")]
+    private static partial void LogCommunityDetectionCompletedCommunitiesCommunities(ILogger logger, int communities, int entities, float modularity, long duration);
 }

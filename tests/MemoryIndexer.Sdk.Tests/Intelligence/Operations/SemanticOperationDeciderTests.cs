@@ -4,7 +4,7 @@ using MemoryIndexer.Sdk.Intelligence.Conflict;
 using MemoryIndexer.Sdk.Intelligence.Operations;
 using MemoryIndexer.Scoring;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Operations;
@@ -14,23 +14,23 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Operations;
 /// </summary>
 public class SemanticOperationDeciderTests
 {
-    private readonly Mock<IMemoryStore> _memoryStore;
-    private readonly Mock<IEmbeddingService> _embeddingService;
-    private readonly Mock<IContradictionDetector> _contradictionDetector;
+    private readonly IMemoryStore _memoryStore;
+    private readonly IEmbeddingService _embeddingService;
+    private readonly IContradictionDetector _contradictionDetector;
     private readonly ImportanceAnalyzer _importanceAnalyzer;
     private readonly SemanticOperationDecider _decider;
 
     public SemanticOperationDeciderTests()
     {
-        _memoryStore = new Mock<IMemoryStore>();
-        _embeddingService = new Mock<IEmbeddingService>();
-        _contradictionDetector = new Mock<IContradictionDetector>();
+        _memoryStore = Substitute.For<IMemoryStore>();
+        _embeddingService = Substitute.For<IEmbeddingService>();
+        _contradictionDetector = Substitute.For<IContradictionDetector>();
         _importanceAnalyzer = new ImportanceAnalyzer(NullLogger<ImportanceAnalyzer>.Instance);
 
         _decider = new SemanticOperationDecider(
-            _memoryStore.Object,
-            _embeddingService.Object,
-            _contradictionDetector.Object,
+            _memoryStore,
+            _embeddingService,
+            _contradictionDetector,
             _importanceAnalyzer,
             NullLogger<SemanticOperationDecider>.Instance);
     }
@@ -44,10 +44,10 @@ public class SemanticOperationDeciderTests
         var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<MemorySearchResult>());
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<MemorySearchResult>());
 
         // Act
         var decision = await _decider.DecideAsync(content, userId);
@@ -55,7 +55,7 @@ public class SemanticOperationDeciderTests
         // Assert
         Assert.Equal(MemoryOperation.Add, decision.Operation);
         Assert.True(decision.Confidence >= 0.9f);
-        Assert.Contains("novel", decision.Reasoning.ToLower());
+        Assert.Contains("novel", decision.Reasoning.ToLowerInvariant());
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class SemanticOperationDeciderTests
 
         // Assert
         Assert.Equal(MemoryOperation.Noop, decision.Operation);
-        Assert.Contains("importance", decision.Reasoning.ToLower());
+        Assert.Contains("importance", decision.Reasoning.ToLowerInvariant());
     }
 
     [Fact]
@@ -86,17 +86,17 @@ public class SemanticOperationDeciderTests
         // Use same content for existing memory so "additional info" check returns false
         var existingMemory = CreateMemory("User prefers dark mode in the IDE and always uses dark themes.", embedding);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { CreateSearchResult(existingMemory, 0.90f) });
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { CreateSearchResult(existingMemory, 0.90f) });
 
         // Act
         var decision = await _decider.DecideAsync(content, userId, new DecisionOptions { DuplicateThreshold = 0.85f });
 
         // Assert - When new content is shorter than existing and has no new info, return Noop
         Assert.Equal(MemoryOperation.Noop, decision.Operation);
-        Assert.Contains("duplicate", decision.Reasoning.ToLower());
+        Assert.Contains("duplicate", decision.Reasoning.ToLowerInvariant());
     }
 
     [Fact]
@@ -110,10 +110,10 @@ public class SemanticOperationDeciderTests
 
         var existingMemory = CreateMemory("User prefers dark mode.", embedding, importance: 0.5f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { CreateSearchResult(existingMemory, 0.88f) });
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { CreateSearchResult(existingMemory, 0.88f) });
 
         // Act
         var decision = await _decider.DecideAsync(content, userId, new DecisionOptions { DuplicateThreshold = 0.85f });
@@ -121,7 +121,7 @@ public class SemanticOperationDeciderTests
         // Assert
         Assert.Equal(MemoryOperation.Update, decision.Operation);
         Assert.NotNull(decision.TargetMemory);
-        Assert.Contains("additional", decision.Reasoning.ToLower());
+        Assert.Contains("additional", decision.Reasoning.ToLowerInvariant());
     }
 
     [Fact]
@@ -138,10 +138,10 @@ public class SemanticOperationDeciderTests
         var related1 = CreateMemory("User prefers TypeScript.", embedding);
         var related2 = CreateMemory("User uses React.", embedding);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[]
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new[]
             {
                 CreateSearchResult(related1, 0.75f),
                 CreateSearchResult(related2, 0.72f)
@@ -179,10 +179,10 @@ public class SemanticOperationDeciderTests
 
         var existingMemory = CreateMemory("User prefers dark mode.", existingEmbedding, importance: 0.4f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(newEmbedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { CreateSearchResult(existingMemory, 0.80f) });
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(newEmbedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { CreateSearchResult(existingMemory, 0.80f) });
 
         var contradictionAnalysis = new ContradictionAnalysis<MemoryUnit>
         {
@@ -193,12 +193,12 @@ public class SemanticOperationDeciderTests
             ConflictDescription = "Light mode vs dark mode preference conflict"
         };
 
-        _contradictionDetector.Setup(x => x.DetectMemoryContradictionAsync(
-            It.IsAny<MemoryUnit>(),
-            It.IsAny<IReadOnlyList<MemoryUnit>>(),
-            It.IsAny<ContradictionDetectionOptions?>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(contradictionAnalysis);
+        _contradictionDetector.DetectMemoryContradictionAsync(
+            Arg.Any<MemoryUnit>(),
+            Arg.Any<IReadOnlyList<MemoryUnit>>(),
+            Arg.Any<ContradictionDetectionOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(contradictionAnalysis);
 
         // Act
         var decision = await _decider.DecideAsync(content, userId, new DecisionOptions
@@ -224,10 +224,10 @@ public class SemanticOperationDeciderTests
         var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<MemorySearchResult>());
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<MemorySearchResult>());
 
         // Act
         var decision = await _decider.DecideAsync(content, userId);
@@ -249,10 +249,10 @@ public class SemanticOperationDeciderTests
         var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<MemorySearchResult>());
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<MemorySearchResult>());
 
         // Act
         var decision = await _decider.DecideAsync(content, userId);
@@ -275,10 +275,10 @@ public class SemanticOperationDeciderTests
         var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<MemorySearchResult>());
+        _embeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<MemorySearchResult>());
 
         // Act
         var decisions = await _decider.DecideBatchAsync(contents, userId);
@@ -298,10 +298,10 @@ public class SemanticOperationDeciderTests
         var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<MemorySearchResult>());
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<MemorySearchResult>());
 
         var options = new DecisionOptions { SessionId = sessionId };
 
@@ -309,10 +309,10 @@ public class SemanticOperationDeciderTests
         await _decider.DecideAsync(content, userId, options);
 
         // Assert - Verify search was called with correct session scope
-        _memoryStore.Verify(x => x.SearchAsync(
-            It.IsAny<ReadOnlyMemory<float>>(),
-            It.Is<MemorySearchOptions>(o => o.SessionId == sessionId),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _memoryStore.Received(1).SearchAsync(
+            Arg.Any<ReadOnlyMemory<float>>(),
+            Arg.Is<MemorySearchOptions>(o => o.SessionId == sessionId),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -324,10 +324,10 @@ public class SemanticOperationDeciderTests
         var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<MemorySearchResult>());
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<MemorySearchResult>());
 
         var options = new DecisionOptions { PreferredType = MemoryType.Fact };
 
@@ -349,10 +349,10 @@ public class SemanticOperationDeciderTests
 
         var existingMemory = CreateMemory("Old preference", embedding, importance: 0.3f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(content, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(embedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { CreateSearchResult(existingMemory, 0.75f) });
+        _embeddingService.GenerateEmbeddingAsync(content, Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(embedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { CreateSearchResult(existingMemory, 0.75f) });
 
         // Act
         var decision = await _decider.DecideAsync(content, userId, new DecisionOptions
@@ -385,10 +385,10 @@ public class SemanticOperationDeciderTests
 
         var existingMemory = CreateMemory("Important existing memory with detailed information and context.", existingEmbedding, importance: 0.8f);
 
-        _embeddingService.Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(newEmbedding));
-        _memoryStore.Setup(x => x.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<MemorySearchOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { CreateSearchResult(existingMemory, 0.75f) });
+        _embeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(newEmbedding));
+        _memoryStore.SearchAsync(Arg.Any<ReadOnlyMemory<float>>(), Arg.Any<MemorySearchOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { CreateSearchResult(existingMemory, 0.75f) });
 
         // Act - Content has lower importance than existing memory
         var decision = await _decider.DecideAsync(content, userId, new DecisionOptions
@@ -401,7 +401,7 @@ public class SemanticOperationDeciderTests
 
         // Assert - With single related memory and lower importance, should add as distinct
         Assert.Equal(MemoryOperation.Add, decision.Operation);
-        Assert.Contains("distinct", decision.Reasoning.ToLower());
+        Assert.Contains("distinct", decision.Reasoning.ToLowerInvariant());
     }
 
     private static MemoryUnit CreateMemory(string content, float[] embedding, float importance = 0.5f)

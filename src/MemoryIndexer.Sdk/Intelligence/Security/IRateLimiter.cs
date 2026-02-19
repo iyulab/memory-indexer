@@ -291,7 +291,7 @@ public sealed class SlidingWindowRateLimiter : IRateLimiter
 
     public void Reset(string userId)
     {
-        var keysToRemove = _states.Keys.Where(k => k.StartsWith(userId + ":")).ToList();
+        var keysToRemove = _states.Keys.Where(k => k.StartsWith(userId + ":", StringComparison.Ordinal)).ToList();
         foreach (var key in keysToRemove)
         {
             _states.TryRemove(key, out _);

@@ -64,12 +64,12 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
     /// <summary>
     /// Gets the embedding dimensions.
     /// </summary>
-    public int Dimensions => 384;
+    public static int Dimensions => 384;
 
     /// <summary>
     /// Gets the model ID.
     /// </summary>
-    public string ModelId => "all-MiniLM-L6-v2";
+    public static string ModelId => "all-MiniLM-L6-v2";
 
     public async Task InitializeAsync()
     {
@@ -138,7 +138,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
     /// <summary>
     /// Creates a pre-configured options object for test setup.
     /// </summary>
-    public IOptions<MemoryIndexerOptions> CreateOptions() =>
+    public static IOptions<MemoryIndexerOptions> CreateOptions() =>
         Options.Create(new MemoryIndexerOptions
         {
             Embedding = new EmbeddingOptions
@@ -160,7 +160,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
     /// When not defined, if ONNX initialization fails at runtime, tests will fail
     /// with a clear error message.
     /// </remarks>
-    public void EnsureAvailable()
+    public static void EnsureAvailable()
     {
 #if SKIP_ONNX_TESTS
         // This branch should never execute because all test classes

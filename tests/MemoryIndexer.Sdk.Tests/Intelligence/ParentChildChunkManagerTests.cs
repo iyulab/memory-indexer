@@ -1,32 +1,29 @@
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Chunking;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence;
 
 public sealed class ParentChildChunkManagerTests
 {
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
+    private readonly IEmbeddingService _mockEmbeddingService;
     private readonly ParentChildChunkManager _manager;
 
     public ParentChildChunkManagerTests()
     {
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
+        _mockEmbeddingService = Substitute.For<IEmbeddingService>();
 
         // Setup mock embedding service to return deterministic embeddings
-        _mockEmbeddingService
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string text, CancellationToken _) => CreateMockEmbedding(text));
+        _mockEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => CreateMockEmbedding(callInfo.ArgAt<string>(0)));
 
-        _mockEmbeddingService
-            .Setup(x => x.GenerateBatchEmbeddingsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IEnumerable<string> texts, CancellationToken _) =>
-                texts.Select(CreateMockEmbedding).ToList());
+        _mockEmbeddingService.GenerateBatchEmbeddingsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => callInfo.ArgAt<IEnumerable<string>>(0).Select(CreateMockEmbedding).ToList());
 
         _manager = new ParentChildChunkManager(
-            _mockEmbeddingService.Object,
+            _mockEmbeddingService,
             NullLogger<ParentChildChunkManager>.Instance);
     }
 
@@ -261,7 +258,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
         var hierarchy = await _manager.CreateHierarchyAsync(content);
 
-        var child = hierarchy.ChildChunks.First();
+        var child = hierarchy.ChildChunks[0];
 
         // Act
         var parent = _manager.GetParent(child, hierarchy);
@@ -279,7 +276,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
         var hierarchy = await _manager.CreateHierarchyAsync(content);
 
-        var parent = hierarchy.ParentChunks.First();
+        var parent = hierarchy.ParentChunks[0];
 
         // Act
         var result = _manager.GetParent(parent, hierarchy);
@@ -295,7 +292,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
         var hierarchy = await _manager.CreateHierarchyAsync(content);
 
-        var parent = hierarchy.ParentChunks.First();
+        var parent = hierarchy.ParentChunks[0];
 
         // Act
         var children = _manager.GetChildren(parent, hierarchy);
@@ -312,7 +309,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
         var hierarchy = await _manager.CreateHierarchyAsync(content);
 
-        var parent = hierarchy.ParentChunks.First();
+        var parent = hierarchy.ParentChunks[0];
         var child = hierarchy.ChildChunks.First(c => c.ParentId == parent.Id);
 
         // Act
@@ -330,7 +327,7 @@ public sealed class ParentChildChunkManagerTests
         var shortContent = "Short content only.";
         var hierarchy = await _manager.CreateHierarchyAsync(shortContent);
 
-        var parent = hierarchy.ParentChunks.First();
+        var parent = hierarchy.ParentChunks[0];
 
         // Act
         var siblings = _manager.GetSiblings(parent, hierarchy);

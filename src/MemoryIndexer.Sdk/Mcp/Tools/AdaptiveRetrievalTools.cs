@@ -211,7 +211,7 @@ public sealed class AdaptiveRetrievalTools
     /// <returns>Retrieval strategy recommendations.</returns>
     [McpServerTool]
     [Description("Get recommendations for retrieving specific information types. Helps choose the right strategy.")]
-    public Task<RetrievalRecommendationToolResult> GetRetrievalRecommendation(
+    public static Task<RetrievalRecommendationToolResult> GetRetrievalRecommendation(
         [Description("Information type: facts, context, history, relationships, all")] string informationType = "all")
     {
         var recommendation = informationType.ToLowerInvariant() switch

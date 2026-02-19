@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.ResourceManagement;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.ResourceManagement;
@@ -12,14 +12,14 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.ResourceManagement;
 /// </summary>
 public class InMemoryUsageTrackerTests
 {
-    private readonly Mock<IMemoryStore> _mockMemoryStore;
+    private readonly IMemoryStore _mockMemoryStore;
     private readonly InMemoryUsageTracker _tracker;
 
     public InMemoryUsageTrackerTests()
     {
-        _mockMemoryStore = new Mock<IMemoryStore>();
+        _mockMemoryStore = Substitute.For<IMemoryStore>();
         _tracker = new InMemoryUsageTracker(
-            _mockMemoryStore.Object,
+            _mockMemoryStore,
             NullLogger<InMemoryUsageTracker>.Instance);
     }
 
@@ -312,8 +312,8 @@ public class InMemoryUsageTrackerTests
         // Assert
         Assert.NotNull(summary.TopUsersByCount);
         Assert.NotNull(summary.TopUsersByStorage);
-        Assert.Equal("big-user", summary.TopUsersByCount.First().UserId);
-        Assert.Equal("big-user", summary.TopUsersByStorage.First().UserId);
+        Assert.Equal("big-user", summary.TopUsersByCount[0].UserId);
+        Assert.Equal("big-user", summary.TopUsersByStorage[0].UserId);
     }
 
     [Fact]
@@ -363,11 +363,11 @@ public class InMemoryUsageTrackerTests
             }
         };
 
-        _mockMemoryStore.Setup(x => x.GetAllAsync(
+        _mockMemoryStore.GetAllAsync(
                 "user1",
-                It.IsAny<MemoryFilterOptions?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+                Arg.Any<MemoryFilterOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         await _tracker.RefreshFromStoreAsync("user1");

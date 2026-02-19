@@ -59,19 +59,19 @@ public class ProfileExportOptions
     /// Include inferred facts.
     /// Default: false
     /// </summary>
-    public bool IncludeInferred { get; set; } = false;
+    public bool IncludeInferred { get; set; }
 
     /// <summary>
     /// Include metadata (embeddings, etc.).
     /// Default: false (embeddings can be large)
     /// </summary>
-    public bool IncludeMetadata { get; set; } = false;
+    public bool IncludeMetadata { get; set; }
 
     /// <summary>
     /// Include audit trail (access history).
     /// Default: false
     /// </summary>
-    public bool IncludeAuditTrail { get; set; } = false;
+    public bool IncludeAuditTrail { get; set; }
 
     /// <summary>
     /// Categories to include.
@@ -99,7 +99,7 @@ public class ProfileExportOptions
     /// Whether to redact sensitive information.
     /// Default: false
     /// </summary>
-    public bool RedactSensitive { get; set; } = false;
+    public bool RedactSensitive { get; set; }
 
     /// <summary>
     /// Patterns to redact (if RedactSensitive is true).

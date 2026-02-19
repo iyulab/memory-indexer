@@ -1,4 +1,4 @@
-using System.Numerics.Tensors;
+﻿using System.Numerics.Tensors;
 using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -52,7 +52,7 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
             };
         }
 
-        _logger.LogDebug("Summarizing {Count} memories", memoryList.Count);
+        LogSummarizingCountMemories(_logger, memoryList.Count);
 
         // Extract all sentences from memories
         var allSentences = new List<ScoredSentence>();
@@ -120,9 +120,7 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
             Embedding = embedding
         };
 
-        _logger.LogInformation(
-            "Summary created: {Original} → {Summary} tokens ({Ratio:P0} compression)",
-            originalTokenCount, summaryTokenCount, summary.CompressionRatio);
+        LogSummaryCreatedOriginalSummaryTokens(_logger, originalTokenCount, summaryTokenCount, summary.CompressionRatio);
 
         return summary;
     }
@@ -138,7 +136,7 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
         if (newMemoryList.Count == 0)
             return existing;
 
-        _logger.LogDebug("Incrementally updating summary with {Count} new memories", newMemoryList.Count);
+        LogIncrementallyUpdatingSummaryCountNew(_logger, newMemoryList.Count);
 
         // Create summary of new content
         var newSummary = await SummarizeAsync(newMemoryList, cancellationToken: cancellationToken);
@@ -192,8 +190,7 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
         var memoryList = memories.ToList();
         levels = Math.Clamp(levels, 2, 5);
 
-        _logger.LogDebug("Creating {Levels}-level hierarchical summary for {Count} memories",
-            levels, memoryList.Count);
+        LogCreatingLevelsLevelHierarchicalSummary(_logger, levels, memoryList.Count);
 
         var hierarchyLevels = new List<List<MemorySummary>>();
         var currentItems = memoryList;
@@ -503,7 +500,7 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
         "it", "we", "they", "my", "your", "his", "her", "its", "our"
     ];
 
-    private sealed class ScoredSentence
+    private sealed partial class ScoredSentence
     {
         public required string Text { get; init; }
         public required Guid SourceMemoryId { get; init; }
@@ -512,4 +509,16 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
         public float Score { get; set; }
         public ReadOnlyMemory<float>? Embedding { get; set; }
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Summarizing {Count} memories")]
+    private static partial void LogSummarizingCountMemories(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Summary created: {Original} → {Summary} tokens ({Ratio:P0} compression)")]
+    private static partial void LogSummaryCreatedOriginalSummaryTokens(ILogger logger, int original, int summary, float ratio);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Incrementally updating summary with {Count} new memories")]
+    private static partial void LogIncrementallyUpdatingSummaryCountNew(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Creating {Levels}-level hierarchical summary for {Count} memories")]
+    private static partial void LogCreatingLevelsLevelHierarchicalSummary(ILogger logger, int levels, int count);
 }

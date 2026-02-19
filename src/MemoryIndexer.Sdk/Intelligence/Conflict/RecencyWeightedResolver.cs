@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +22,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Conflict;
 /// - Close scores trigger conflict marking for review
 /// - Temporal conflicts preserve historical context via archiving
 /// </remarks>
-public sealed class RecencyWeightedResolver : IMemoryConflictResolver
+public sealed partial class RecencyWeightedResolver : IMemoryConflictResolver
 {
     private readonly LlmConflictDetector _conflictDetector;
     private readonly ILogger<RecencyWeightedResolver> _logger;
@@ -73,9 +73,7 @@ public sealed class RecencyWeightedResolver : IMemoryConflictResolver
         // Apply recency-weighted resolution logic
         var resolution = ApplyRecencyWeighting(newMemory, mostSimilar, analysis);
 
-        _logger.LogDebug(
-            "Conflict resolved: {Action} (type: {Type}, confidence: {Confidence})",
-            resolution.Action, resolution.ConflictType, resolution.Confidence);
+        LogConflictResolvedActionTypeType(_logger, resolution.Action, resolution.ConflictType, resolution.Confidence);
 
         return resolution;
     }
@@ -133,9 +131,7 @@ public sealed class RecencyWeightedResolver : IMemoryConflictResolver
             var newScore = ComputeMemoryScore(newMemory);
             var existingScore = ComputeMemoryScore(existingMemory);
 
-            _logger.LogDebug(
-                "Contradiction detected - NEW score: {NewScore:F3}, EXISTING score: {ExistingScore:F3}",
-                newScore, existingScore);
+            LogContradictionDetectedNEWScoreNewScore(_logger, newScore, existingScore);
 
             if (newScore > existingScore * REPLACEMENT_THRESHOLD)
             {
@@ -188,7 +184,7 @@ public sealed class RecencyWeightedResolver : IMemoryConflictResolver
     /// Computes memory score combining recency and confidence.
     /// Score = recency_weight * confidence
     /// </summary>
-    private float ComputeMemoryScore(MemoryUnit memory)
+    private static float ComputeMemoryScore(MemoryUnit memory)
     {
         var recencyWeight = ComputeRecencyWeight(memory.UpdatedAt);
         var confidence = memory.ConfidenceScore ?? 0.7f;  // Default confidence if not set
@@ -205,4 +201,10 @@ public sealed class RecencyWeightedResolver : IMemoryConflictResolver
         var ageInDays = (DateTime.UtcNow - timestamp).TotalDays;
         return (float)Math.Exp(-DECAY_RATE * ageInDays);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Conflict resolved: {Action} (type: {Type}, confidence: {Confidence})")]
+    private static partial void LogConflictResolvedActionTypeType(ILogger logger, MemoryAction action, ConflictType type, float confidence);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Contradiction detected - NEW score: {NewScore:F3}, EXISTING score: {ExistingScore:F3}")]
+    private static partial void LogContradictionDetectedNEWScoreNewScore(ILogger logger, float newScore, float existingScore);
 }

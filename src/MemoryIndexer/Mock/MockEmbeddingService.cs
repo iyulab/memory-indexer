@@ -9,7 +9,7 @@ namespace MemoryIndexer.Mock;
 /// Mock embedding service for development and testing.
 /// Generates deterministic pseudo-embeddings based on content hash.
 /// </summary>
-public sealed class MockEmbeddingService : IEmbeddingService
+public sealed partial class MockEmbeddingService : IEmbeddingService
 {
     private readonly ILogger<MockEmbeddingService> _logger;
     private readonly int _dimensions;
@@ -30,7 +30,7 @@ public sealed class MockEmbeddingService : IEmbeddingService
         string text,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Generating mock embedding for text of length {Length}", text.Length);
+        LogGeneratingMockEmbedding(_logger, text.Length);
 
         var embedding = GenerateDeterministicEmbedding(text);
         return Task.FromResult<ReadOnlyMemory<float>>(embedding);
@@ -42,7 +42,7 @@ public sealed class MockEmbeddingService : IEmbeddingService
         CancellationToken cancellationToken = default)
     {
         var textList = texts.ToList();
-        _logger.LogDebug("Generating mock embeddings for {Count} texts", textList.Count);
+        LogGeneratingMockBatchEmbeddings(_logger, textList.Count);
 
         var results = textList
             .Select(GenerateDeterministicEmbedding)
@@ -80,4 +80,10 @@ public sealed class MockEmbeddingService : IEmbeddingService
 
         return embedding;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Generating mock embedding for text of length {Length}")]
+    private static partial void LogGeneratingMockEmbedding(ILogger logger, int length);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Generating mock embeddings for {Count} texts")]
+    private static partial void LogGeneratingMockBatchEmbeddings(ILogger logger, int count);
 }

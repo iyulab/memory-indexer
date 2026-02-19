@@ -65,3 +65,7 @@ dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
 # Formatting
 dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false
+
+# Test projects: allow underscores in test method names (e.g., Method_Should_Work)
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none

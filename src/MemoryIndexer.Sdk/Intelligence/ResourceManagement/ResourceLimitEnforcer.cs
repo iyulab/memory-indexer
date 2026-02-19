@@ -14,7 +14,7 @@ namespace MemoryIndexer.Sdk.Intelligence.ResourceManagement;
 /// Phase v0.6.0-γ: Resource Management
 /// Integrates with IUsageTracker and ITenantContext for limit enforcement.
 /// </remarks>
-public sealed class ResourceLimitEnforcer : IResourceLimitEnforcer
+public sealed partial class ResourceLimitEnforcer : IResourceLimitEnforcer
 {
     private readonly IUsageTracker _usageTracker;
     private readonly ITenantContext _tenantContext;
@@ -52,7 +52,7 @@ public sealed class ResourceLimitEnforcer : IResourceLimitEnforcer
         // If enforcement is disabled, allow all operations
         if (!limits.EnforcementEnabled)
         {
-            _logger.LogTrace("Enforcement disabled for user {UserId}", userId);
+            LogEnforcementDisabled(_logger, userId);
             return Task.FromResult(EnforcementResult.Allowed(null, limits));
         }
 
@@ -71,9 +71,7 @@ public sealed class ResourceLimitEnforcer : IResourceLimitEnforcer
             MemoryIndexerTelemetry.RecordResourceLimitExceeded(
                 userId, _tenantContext.TenantId, "memory_count", usage.MemoryCount, limits.MaxMemories);
 
-            _logger.LogWarning(
-                "Memory count limit exceeded for user {UserId}: {Current} + {New} > {Limit}",
-                userId, usage.MemoryCount, count, limits.MaxMemories);
+            LogMemoryCountLimitExceeded(_logger, userId, usage.MemoryCount, count, limits.MaxMemories);
 
             return Task.FromResult(result);
         }
@@ -91,9 +89,7 @@ public sealed class ResourceLimitEnforcer : IResourceLimitEnforcer
             MemoryIndexerTelemetry.RecordResourceLimitExceeded(
                 userId, _tenantContext.TenantId, "storage_size", usage.StorageSizeBytes, limits.MaxStorageBytes);
 
-            _logger.LogWarning(
-                "Storage size limit exceeded for user {UserId}: {Current} + {New} > {Limit}",
-                userId, usage.StorageSizeBytes, estimatedTotalSize, limits.MaxStorageBytes);
+            LogStorageSizeLimitExceeded(_logger, userId, usage.StorageSizeBytes, estimatedTotalSize, limits.MaxStorageBytes);
 
             return Task.FromResult(result);
         }
@@ -107,9 +103,7 @@ public sealed class ResourceLimitEnforcer : IResourceLimitEnforcer
             MemoryIndexerTelemetry.RecordResourceWarning(
                 userId, _tenantContext.TenantId, "memory_count", countPercent);
 
-            _logger.LogInformation(
-                "Memory count warning for user {UserId}: {Percent:F1}% of limit",
-                userId, countPercent);
+            LogMemoryCountWarning(_logger, userId, countPercent);
         }
 
         if (storagePercent >= limits.WarningThresholdPercent)
@@ -117,9 +111,7 @@ public sealed class ResourceLimitEnforcer : IResourceLimitEnforcer
             MemoryIndexerTelemetry.RecordResourceWarning(
                 userId, _tenantContext.TenantId, "storage_size", storagePercent);
 
-            _logger.LogInformation(
-                "Storage size warning for user {UserId}: {Percent:F1}% of limit",
-                userId, storagePercent);
+            LogStorageSizeWarning(_logger, userId, storagePercent);
         }
 
         return Task.FromResult(EnforcementResult.Allowed(usage, limits));
@@ -175,4 +167,19 @@ public sealed class ResourceLimitEnforcer : IResourceLimitEnforcer
         // 3. Default limits
         return ResourceLimits.Default;
     }
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Enforcement disabled for user {UserId}")]
+    private static partial void LogEnforcementDisabled(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Memory count limit exceeded for user {UserId}: {Current} + {New} > {Limit}")]
+    private static partial void LogMemoryCountLimitExceeded(ILogger logger, string userId, long current, int @new, long limit);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Storage size limit exceeded for user {UserId}: {Current} + {New} > {Limit}")]
+    private static partial void LogStorageSizeLimitExceeded(ILogger logger, string userId, long current, long @new, long limit);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Memory count warning for user {UserId}: {Percent:F1}% of limit")]
+    private static partial void LogMemoryCountWarning(ILogger logger, string userId, double percent);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Storage size warning for user {UserId}: {Percent:F1}% of limit")]
+    private static partial void LogStorageSizeWarning(ILogger logger, string userId, double percent);
 }

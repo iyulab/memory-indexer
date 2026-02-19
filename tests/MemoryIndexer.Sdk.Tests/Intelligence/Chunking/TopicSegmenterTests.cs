@@ -2,25 +2,22 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Chunking;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Chunking;
 
 public class TopicSegmenterTests
 {
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly IEmbeddingService _embeddingServiceMock;
 
     public TopicSegmenterTests()
     {
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(new float[1024]));
-        _embeddingServiceMock
-            .Setup(x => x.GenerateBatchEmbeddingsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IEnumerable<string> texts, CancellationToken _) =>
-                texts.Select(_ => new ReadOnlyMemory<float>(new float[1024])).ToList());
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(new float[1024]));
+        _embeddingServiceMock.GenerateBatchEmbeddingsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => callInfo.ArgAt<IEnumerable<string>>(0).Select(_ => new ReadOnlyMemory<float>(new float[1024])).ToList());
     }
 
     [Fact]
@@ -28,7 +25,7 @@ public class TopicSegmenterTests
     {
         // Arrange
         var segmenter = new TopicSegmenter(
-            _embeddingServiceMock.Object,
+            _embeddingServiceMock,
             NullLogger<TopicSegmenter>.Instance)
         {
             IncludeRoleInContent = true,
@@ -55,7 +52,7 @@ public class TopicSegmenterTests
     {
         // Arrange
         var segmenter = new TopicSegmenter(
-            _embeddingServiceMock.Object,
+            _embeddingServiceMock,
             NullLogger<TopicSegmenter>.Instance)
         {
             IncludeRoleInContent = false,
@@ -84,7 +81,7 @@ public class TopicSegmenterTests
     {
         // Arrange
         var segmenter = new TopicSegmenter(
-            _embeddingServiceMock.Object,
+            _embeddingServiceMock,
             NullLogger<TopicSegmenter>.Instance)
         {
             MinSegmentLength = 1

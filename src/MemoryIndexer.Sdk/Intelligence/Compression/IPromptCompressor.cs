@@ -82,7 +82,7 @@ public sealed class CompressionOptions
     /// <summary>
     /// Maximum output tokens (0 for no limit).
     /// </summary>
-    public int MaxOutputTokens { get; set; } = 0;
+    public int MaxOutputTokens { get; set; }
 
     /// <summary>
     /// Compression strategy to use.

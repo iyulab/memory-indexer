@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -8,7 +8,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Profile;
 /// Service for managing user profile snapshots.
 /// Phase v0.10.0: User Profile Evolution.
 /// </summary>
-public class ProfileSnapshotService : IProfileSnapshotService
+public partial class ProfileSnapshotService : IProfileSnapshotService
 {
     private readonly IArchiveStore _archiveStore;
     private readonly IConfidenceDecayStrategy _decayStrategy;
@@ -56,8 +56,7 @@ public class ProfileSnapshotService : IProfileSnapshotService
         var userSnapshots = _snapshots.GetOrAdd(userId, _ => new ConcurrentDictionary<Guid, ProfileSnapshot>());
         userSnapshots[snapshot.Id] = snapshot;
 
-        _logger.LogDebug("Created profile snapshot {SnapshotId} for user {UserId} with {FactCount} facts",
-            snapshot.Id, userId, factsList.Count);
+        LogCreatedProfileSnapshotSnapshotIdUser(_logger, snapshot.Id, userId, factsList.Count);
 
         return snapshot;
     }
@@ -193,7 +192,7 @@ public class ProfileSnapshotService : IProfileSnapshotService
             var removed = userSnapshots.TryRemove(snapshotId, out _);
             if (removed)
             {
-                _logger.LogDebug("Deleted snapshot {SnapshotId} for user {UserId}", snapshotId, userId);
+                LogDeletedSnapshotSnapshotIdUserUserId(_logger, snapshotId, userId);
             }
             return Task.FromResult(removed);
         }
@@ -220,7 +219,7 @@ public class ProfileSnapshotService : IProfileSnapshotService
 
     #region Helper Methods
 
-    private ProfileStats CalculateStats(IReadOnlyList<SemanticStoreEntry> facts)
+    private ProfileStats CalculateStats(List<SemanticStoreEntry> facts)
     {
         var activeFacts = facts.Where(f => f.IsActive).ToList();
         var staleFacts = activeFacts.Count(f => _decayStrategy.NeedsReconfirmation(f));
@@ -281,7 +280,7 @@ public class ProfileSnapshotService : IProfileSnapshotService
             if (olderByKey.TryGetValue(key, out var older))
             {
                 // Check if modified
-                if (!string.Equals(older.Value, newer.Value) || Math.Abs(older.Confidence - newer.Confidence) > 0.01f)
+                if (!string.Equals(older.Value, newer.Value, StringComparison.Ordinal) || Math.Abs(older.Confidence - newer.Confidence) > 0.01f)
                 {
                     var changeType = DetermineChangeType(older, newer);
                     modified.Add(new FactChange
@@ -339,7 +338,7 @@ public class ProfileSnapshotService : IProfileSnapshotService
 
     private static FactChangeType DetermineChangeType(SemanticStoreEntry older, SemanticStoreEntry newer)
     {
-        if (!string.Equals(older.Value, newer.Value))
+        if (!string.Equals(older.Value, newer.Value, StringComparison.Ordinal))
             return FactChangeType.ValueChange;
 
         if (newer.Confidence > older.Confidence)
@@ -356,4 +355,10 @@ public class ProfileSnapshotService : IProfileSnapshotService
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created profile snapshot {SnapshotId} for user {UserId} with {FactCount} facts")]
+    private static partial void LogCreatedProfileSnapshotSnapshotIdUser(ILogger logger, Guid snapshotId, string userId, int factCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Deleted snapshot {SnapshotId} for user {UserId}")]
+    private static partial void LogDeletedSnapshotSnapshotIdUserUserId(ILogger logger, Guid snapshotId, string userId);
 }

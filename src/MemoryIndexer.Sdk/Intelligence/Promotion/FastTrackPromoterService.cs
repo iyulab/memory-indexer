@@ -20,7 +20,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 /// - Called during buffer drain in SensoryPromoterService
 /// - Can also be invoked directly via MCP tools
 /// </remarks>
-public sealed class FastTrackPromoterService : IFastTrackPromoter
+public sealed partial class FastTrackPromoterService : IFastTrackPromoter
 {
     private readonly IFactExtractor _factExtractor;
     private readonly IArchiveStore _archiveStore;
@@ -59,15 +59,14 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
 
         try
         {
-            _logger.LogDebug("Processing content for fast-track promotion: {UserId}",
-                context.UserId);
+            LogProcessingFastTrack(_logger, context.UserId);
 
             // Extract facts from content
             var extractionResult = await _factExtractor.ExtractAsync(context, cancellationToken);
 
             if (!extractionResult.HasFacts)
             {
-                _logger.LogDebug("No facts extracted from content");
+                LogNoFactsExtracted(_logger);
                 return new FastTrackResult
                 {
                     Success = true,
@@ -120,10 +119,7 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
                 }
             }
 
-            _logger.LogInformation(
-                "Fast-track processing complete: Extracted={Extracted}, FastTracked={FastTracked}, " +
-                "StandardPath={Standard}, Skipped={Skipped}",
-                extractionResult.Facts.Count, fastTracked.Count, standardPath.Count, skipped.Count);
+            LogFastTrackProcessingComplete(_logger, extractionResult.Facts.Count, fastTracked.Count, standardPath.Count, skipped.Count);
 
             return new FastTrackResult
             {
@@ -137,7 +133,7 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process content for fast-track promotion");
+            LogFailedFastTrackProcessing(_logger, ex);
             return FastTrackResult.Failure(ex.Message);
         }
     }
@@ -197,11 +193,7 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
 
             stopwatch.Stop();
 
-            _logger.LogInformation(
-                "Batch fast-track complete: Items={Items}, FastTracked={FastTracked}, " +
-                "StandardPath={Standard}, Skipped={Skipped}, Duration={Duration:F2}s",
-                items.Count, totalFastTracked, totalStandardPath, totalSkipped,
-                stopwatch.Elapsed.TotalSeconds);
+            LogBatchFastTrackComplete(_logger, items.Count, totalFastTracked, totalStandardPath, totalSkipped, stopwatch.Elapsed.TotalSeconds);
 
             return new FastTrackBatchResult
             {
@@ -217,7 +209,7 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process batch for fast-track promotion");
+            LogFailedBatchFastTrack(_logger, ex);
             stopwatch.Stop();
             return new FastTrackBatchResult
             {
@@ -283,7 +275,7 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get user profile for {UserId}", userId);
+            LogFailedGetUserProfile(_logger, ex, userId);
             return UserProfile.Empty(userId);
         }
     }
@@ -308,7 +300,7 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get existing facts for validation");
+            LogFailedGetExistingFacts(_logger, ex);
             return [];
         }
     }
@@ -385,9 +377,7 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
 
         await _archiveStore.SetAsync(userId, entry, cancellationToken);
 
-        _logger.LogInformation(
-            "Fast-tracked fact to Archive: Key={Key}, Category={Category}, Confidence={Confidence}",
-            key, fact.Category, fact.Confidence);
+        LogFastTrackedToArchive(_logger, key, fact.Category, fact.Confidence);
     }
 
     private async Task ReplaceInArchiveAsync(
@@ -408,9 +398,7 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
 
         await _archiveStore.SetAsync(userId, entry, cancellationToken);
 
-        _logger.LogInformation(
-            "Replaced fact in Archive: Key={Key}, Category={Category}, Confidence={Confidence}",
-            key, fact.Category, fact.Confidence);
+        LogReplacedInArchive(_logger, key, fact.Category, fact.Confidence);
     }
 
     private static string GenerateFactKey(UserFact fact)
@@ -459,6 +447,36 @@ public sealed class FastTrackPromoterService : IFastTrackPromoter
 
         return entry;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Processing content for fast-track promotion: {UserId}")]
+    private static partial void LogProcessingFastTrack(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No facts extracted from content")]
+    private static partial void LogNoFactsExtracted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Fast-track processing complete: Extracted={Extracted}, FastTracked={FastTracked}, StandardPath={Standard}, Skipped={Skipped}")]
+    private static partial void LogFastTrackProcessingComplete(ILogger logger, int extracted, int fastTracked, int standard, int skipped);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to process content for fast-track promotion")]
+    private static partial void LogFailedFastTrackProcessing(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Batch fast-track complete: Items={Items}, FastTracked={FastTracked}, StandardPath={Standard}, Skipped={Skipped}, Duration={Duration:F2}s")]
+    private static partial void LogBatchFastTrackComplete(ILogger logger, int items, int fastTracked, int standard, int skipped, double duration);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to process batch for fast-track promotion")]
+    private static partial void LogFailedBatchFastTrack(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get user profile for {UserId}")]
+    private static partial void LogFailedGetUserProfile(ILogger logger, Exception ex, string userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get existing facts for validation")]
+    private static partial void LogFailedGetExistingFacts(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Fast-tracked fact to Archive: Key={Key}, Category={Category}, Confidence={Confidence}")]
+    private static partial void LogFastTrackedToArchive(ILogger logger, string key, FactCategory category, float confidence);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Replaced fact in Archive: Key={Key}, Category={Category}, Confidence={Confidence}")]
+    private static partial void LogReplacedInArchive(ILogger logger, string key, FactCategory category, float confidence);
 
     /// <summary>
     /// Maps FactCategory to SemanticStoreCategory.

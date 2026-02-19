@@ -34,19 +34,19 @@ public static class HealthCheckExtensions
             .AddCheck<BufferHealthCheck>(
                 name: "Buffer",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: new[] { "tier", "tier:sensory", "memory" })
+                tags: ["tier", "tier:sensory", "memory"])
             .AddCheck<ShortTermMemoryHealthCheck>(
                 name: "Short-Term Memory",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: new[] { "tier", "tier:working", "memory", "critical" })
+                tags: ["tier", "tier:working", "memory", "critical"])
             .AddCheck<LongTermStoreHealthCheck>(
                 name: "Episodic Store",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: new[] { "tier", "tier:episodic", "memory", "critical" })
+                tags: ["tier", "tier:episodic", "memory", "critical"])
             .AddCheck<ArchiveStoreHealthCheck>(
                 name: "Semantic Store",
                 failureStatus: HealthStatus.Degraded,
-                tags: new[] { "tier", "tier:semantic", "memory" });
+                tags: ["tier", "tier:semantic", "memory"]);
     }
 
     /// <summary>
@@ -60,11 +60,11 @@ public static class HealthCheckExtensions
             .AddCheck<VectorDbHealthCheck>(
                 name: "Vector Database",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: new[] { "infrastructure", "infrastructure:storage", "critical" })
+                tags: ["infrastructure", "infrastructure:storage", "critical"])
             .AddCheck<EmbeddingServiceHealthCheck>(
                 name: "Embedding Service",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: new[] { "infrastructure", "infrastructure:embedding", "critical" });
+                tags: ["infrastructure", "infrastructure:embedding", "critical"]);
     }
 
     /// <summary>

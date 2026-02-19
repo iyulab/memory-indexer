@@ -10,7 +10,7 @@ namespace SharedLib.Embedding;
 /// Ollama embedding service implementation for samples and tests.
 /// Not included in the main MemoryIndexer packages.
 /// </summary>
-public sealed class OllamaEmbeddingService : IEmbeddingService, IDisposable
+public sealed partial class OllamaEmbeddingService : IEmbeddingService, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _model;
@@ -79,11 +79,10 @@ public sealed class OllamaEmbeddingService : IEmbeddingService, IDisposable
         else
         {
             Dimensions = 1024; // Default fallback
-            _logger.LogWarning("Unknown model '{Model}', using default dimensions {Dimensions}", model, Dimensions);
+            LogUnknownModelUsingDefaultDimensions(_logger, model, Dimensions);
         }
 
-        _logger.LogInformation("Ollama embedding service initialized: url={Url}, model={Model}, dimensions={Dimensions}",
-            baseUrl, model, Dimensions);
+        LogOllamaEmbeddingServiceInitialized(_logger, baseUrl, model, Dimensions);
     }
 
     /// <inheritdoc />
@@ -132,6 +131,12 @@ public sealed class OllamaEmbeddingService : IEmbeddingService, IDisposable
         if (_ownsHttpClient)
             _httpClient.Dispose();
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Unknown model '{Model}', using default dimensions {Dimensions}")]
+    private static partial void LogUnknownModelUsingDefaultDimensions(ILogger logger, string model, int dimensions);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ollama embedding service initialized: url={Url}, model={Model}, dimensions={Dimensions}")]
+    private static partial void LogOllamaEmbeddingServiceInitialized(ILogger logger, string url, string model, int dimensions);
 
     private sealed class OllamaEmbedRequest
     {

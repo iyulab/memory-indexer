@@ -11,7 +11,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Search;
 /// Uses Reciprocal Rank Fusion (RRF) for score combination.
 /// Supports HyDE (Hypothetical Document Embeddings) for improved query understanding.
 /// </summary>
-public sealed class HybridSearchService : IHybridSearchService
+public sealed partial class HybridSearchService : IHybridSearchService
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -52,10 +52,8 @@ public sealed class HybridSearchService : IHybridSearchService
         var useHyde = options.UseHyde ?? _options.EnableHyde;
         var hydeDocCount = options.HydeDocumentCount ?? _options.HydeDocumentCount;
 
-        _logger.LogDebug(
-            "Hybrid search: query='{Query}', denseWeight={DenseWeight}, sparseWeight={SparseWeight}, hyde={UseHyde}",
-            query.Length > 50 ? query[..50] + "..." : query,
-            denseWeight, sparseWeight, useHyde);
+        var truncatedQuery = query.Length > 50 ? query[..50] + "..." : query;
+        LogHybridSearch(_logger, truncatedQuery, denseWeight, sparseWeight, useHyde);
 
         // Generate query embedding (with optional HyDE)
         var queryEmbedding = await GenerateQueryEmbeddingAsync(query, useHyde, hydeDocCount, cancellationToken);
@@ -77,9 +75,7 @@ public sealed class HybridSearchService : IHybridSearchService
 
         var denseResults = await denseResultsTask;
 
-        _logger.LogDebug(
-            "Search results: dense={DenseCount}, sparse={SparseCount}",
-            denseResults.Count, sparseResults.Count);
+        LogSearchResults(_logger, denseResults.Count, sparseResults.Count);
 
         // Apply Reciprocal Rank Fusion (RRF)
         var fusedScores = new Dictionary<Guid, FusionScore>();
@@ -151,7 +147,7 @@ public sealed class HybridSearchService : IHybridSearchService
             results = ApplyMmrDiversity(results, options.MmrLambda ?? _options.MmrLambda);
         }
 
-        _logger.LogDebug("Hybrid search returned {Count} results", results.Count);
+        LogHybridSearchReturned(_logger, results.Count);
         return results;
     }
 
@@ -159,20 +155,20 @@ public sealed class HybridSearchService : IHybridSearchService
     public void IndexDocument(Guid id, string content)
     {
         _bm25Index.AddDocument(id, content);
-        _logger.LogDebug("Indexed document {Id} in BM25", id);
+        LogIndexedDocument(_logger, id);
     }
 
     /// <inheritdoc />
     public void RemoveDocument(Guid id)
     {
         _bm25Index.RemoveDocument(id);
-        _logger.LogDebug("Removed document {Id} from BM25", id);
+        LogRemovedDocument(_logger, id);
     }
 
     /// <inheritdoc />
     public async Task RebuildIndexAsync(string userId, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Rebuilding BM25 index for user {UserId}", userId);
+        LogRebuildingBm25Index(_logger, userId);
 
         var memories = await _memoryStore.GetAllAsync(userId, cancellationToken: cancellationToken);
 
@@ -181,7 +177,7 @@ public sealed class HybridSearchService : IHybridSearchService
             _bm25Index.AddDocument(memory.Id, memory.Content);
         }
 
-        _logger.LogInformation("Indexed {Count} documents", memories.Count);
+        LogIndexedDocuments(_logger, memories.Count);
     }
 
     /// <summary>
@@ -281,7 +277,7 @@ public sealed class HybridSearchService : IHybridSearchService
         var wordCount = query.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
         if (wordCount < _options.HydeMinQueryWords)
         {
-            _logger.LogDebug("Query too short for HyDE ({WordCount} words), using direct embedding", wordCount);
+            LogQueryTooShortForHyde(_logger, wordCount);
             return await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
         }
 
@@ -298,7 +294,7 @@ public sealed class HybridSearchService : IHybridSearchService
 
         if (hydeEmbeddings.Count == 0)
         {
-            _logger.LogWarning("HyDE generated no embeddings, falling back to direct embedding");
+            LogHydeNoEmbeddings(_logger);
             return await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
         }
 
@@ -338,9 +334,39 @@ public sealed class HybridSearchService : IHybridSearchService
             }
         }
 
-        _logger.LogDebug("HyDE ensemble: averaged {Count} hypothetical embeddings", count);
+        LogHydeEnsemble(_logger, count);
         return averaged;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid search: query='{Query}', denseWeight={DenseWeight}, sparseWeight={SparseWeight}, hyde={UseHyde}")]
+    private static partial void LogHybridSearch(ILogger logger, string query, float denseWeight, float sparseWeight, bool useHyde);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Search results: dense={DenseCount}, sparse={SparseCount}")]
+    private static partial void LogSearchResults(ILogger logger, int denseCount, int sparseCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid search returned {Count} results")]
+    private static partial void LogHybridSearchReturned(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Indexed document {Id} in BM25")]
+    private static partial void LogIndexedDocument(ILogger logger, Guid id);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Removed document {Id} from BM25")]
+    private static partial void LogRemovedDocument(ILogger logger, Guid id);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rebuilding BM25 index for user {UserId}")]
+    private static partial void LogRebuildingBm25Index(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Indexed {Count} documents")]
+    private static partial void LogIndexedDocuments(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Query too short for HyDE ({WordCount} words), using direct embedding")]
+    private static partial void LogQueryTooShortForHyde(ILogger logger, int wordCount);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "HyDE generated no embeddings, falling back to direct embedding")]
+    private static partial void LogHydeNoEmbeddings(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE ensemble: averaged {Count} hypothetical embeddings")]
+    private static partial void LogHydeEnsemble(ILogger logger, int count);
 
     private sealed class FusionScore
     {

@@ -71,9 +71,7 @@ public sealed partial class ImportanceAnalyzer
         // Clamp to valid range
         var finalScore = Math.Clamp(score, 0.1f, 1.0f);
 
-        _logger.LogDebug(
-            "Importance analysis: length={Length}, type={Type}, score={Score:F2}",
-            content.Length, memoryType, finalScore);
+        LogImportanceAnalysis(_logger, content.Length, memoryType, finalScore);
 
         return finalScore;
     }
@@ -175,7 +173,7 @@ public sealed partial class ImportanceAnalyzer
         var score = 0f;
 
         // Capitalized words (potential names/entities)
-        var capitalizedWords = CapitalWordRegex().Matches(content).Count;
+        var capitalizedWords = CapitalWordRegex().Count(content);
         if (capitalizedWords > 2)
         {
             score += Math.Min(0.1f, capitalizedWords * 0.02f);
@@ -201,7 +199,7 @@ public sealed partial class ImportanceAnalyzer
         var score = 0f;
 
         // Numbers (specific information)
-        var numberCount = NumberRegex().Matches(content).Count;
+        var numberCount = NumberRegex().Count(content);
         if (numberCount > 0)
         {
             score += Math.Min(0.1f, numberCount * 0.03f);
@@ -251,4 +249,7 @@ public sealed partial class ImportanceAnalyzer
 
     [GeneratedRegex(@"[$€£¥₩]\d+|\d+[$€£¥₩]")]
     private static partial Regex CurrencyRegex();
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Importance analysis: length={Length}, type={Type}, score={Score:F2}")]
+    private static partial void LogImportanceAnalysis(ILogger logger, int length, MemoryType type, float score);
 }

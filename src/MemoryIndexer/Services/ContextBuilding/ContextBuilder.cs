@@ -3,6 +3,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services.ContextStrategies;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Services.ContextBuilding;
 
@@ -10,7 +11,7 @@ namespace MemoryIndexer.Services.ContextBuilding;
 /// Default implementation of IContextBuilder that assembles context
 /// with token-budget awareness across memory tiers.
 /// </summary>
-public class ContextBuilder : IContextBuilder
+public partial class ContextBuilder : IContextBuilder
 {
     private readonly IBuffer _buffer;
     private readonly IShortTermMemory _shortTermMemory;
@@ -64,7 +65,7 @@ public class ContextBuilder : IContextBuilder
         // Get from Buffer (T0) - most recent first, then reverse for chronological order
         try
         {
-            var bufferItems = await _buffer.GetPendingAsync(userId);
+            var bufferItems = await _buffer.GetPendingAsync(userId, ct);
             var sessionBufferItems = bufferItems
                 .Where(b => b.SessionId == sessionId)
                 .OrderByDescending(b => b.Timestamp)
@@ -89,13 +90,13 @@ public class ContextBuilder : IContextBuilder
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get buffer items for context");
+            LogFailedToGetBufferItems(_logger, ex);
         }
 
         // Get from Short-Term Memory (T1) - filter by sessionId for session isolation
         try
         {
-            var shortTermItems = await _shortTermMemory.GetAllAsync();
+            var shortTermItems = await _shortTermMemory.GetAllAsync(ct);
             var sessionShortTermItems = shortTermItems
                 .Where(m => m.SessionId == sessionId)
                 .OrderByDescending(m => m.CreatedAt);
@@ -123,13 +124,13 @@ public class ContextBuilder : IContextBuilder
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get short-term items for context");
+            LogFailedToGetShortTermItems(_logger, ex);
         }
 
         // Reverse to get chronological order (oldest first)
         items.Reverse();
 
-        _logger.LogDebug("GetRecentTurns: {Count} items, {Tokens} tokens", items.Count, usedTokens);
+        LogGetRecentTurns(_logger, items.Count, usedTokens);
         return items;
     }
 
@@ -186,10 +187,10 @@ public class ContextBuilder : IContextBuilder
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get semantic context");
+            LogFailedToGetSemanticContext(_logger, ex);
         }
 
-        _logger.LogDebug("GetSemanticContext: {Count} items, {Tokens} tokens", items.Count, usedTokens);
+        LogGetSemanticContext(_logger, items.Count, usedTokens);
         return items;
     }
 
@@ -237,10 +238,10 @@ public class ContextBuilder : IContextBuilder
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get session context");
+            LogFailedToGetSessionContext(_logger, ex);
         }
 
-        _logger.LogDebug("GetSessionContext: {Count} items, {Tokens} tokens", items.Count, usedTokens);
+        LogGetSessionContext(_logger, items.Count, usedTokens);
         return items;
     }
 
@@ -289,10 +290,10 @@ public class ContextBuilder : IContextBuilder
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to get user facts");
+            LogFailedToGetUserFacts(_logger, ex);
         }
 
-        _logger.LogDebug("GetUserFacts: {Count} items, {Tokens} tokens", items.Count, usedTokens);
+        LogGetUserFacts(_logger, items.Count, usedTokens);
         return items;
     }
 
@@ -314,7 +315,7 @@ public class ContextBuilder : IContextBuilder
     {
         if (!_strategies.TryGetValue(strategyName, out var strategy))
         {
-            _logger.LogWarning("Strategy '{Name}' not found, using Balanced", strategyName);
+            LogStrategyNotFound(_logger, strategyName);
             strategy = _strategies["Balanced"];
         }
 
@@ -327,7 +328,7 @@ public class ContextBuilder : IContextBuilder
     public void RegisterStrategy(IContextStrategy strategy)
     {
         _strategies[strategy.Name] = strategy;
-        _logger.LogInformation("Registered context strategy: {Name}", strategy.Name);
+        LogRegisteredStrategy(_logger, strategy.Name);
     }
 
     private async Task<ContextBundle> BuildContextAsync(
@@ -344,9 +345,7 @@ public class ContextBuilder : IContextBuilder
                 request.Budget.FactTokens ?? 0)
             : strategy.AllocateBudget(request.Budget.TotalTokens);
 
-        _logger.LogDebug(
-            "Building context with strategy {Strategy}: Recent={Recent}, Semantic={Semantic}, Episodic={Episodic}, Fact={Fact}",
-            strategy.Name, allocation.RecentTokens, allocation.SemanticTokens,
+        LogBuildingContext(_logger, strategy.Name, allocation.RecentTokens, allocation.SemanticTokens,
             allocation.EpisodicTokens, allocation.FactTokens);
 
         var allItems = new List<ContextItem>();
@@ -397,16 +396,14 @@ public class ContextBuilder : IContextBuilder
             Items: allItems
         );
 
-        _logger.LogInformation(
-            "Built context: {Items} items, {Tokens} tokens (R:{Recent}/S:{Semantic}/E:{Episodic}/F:{Fact})",
-            bundle.ItemCount, bundle.TotalTokens,
+        LogBuiltContext(_logger, bundle.ItemCount, bundle.TotalTokens,
             bundle.Breakdown.RecentTokens, bundle.Breakdown.SemanticTokens,
             bundle.Breakdown.EpisodicTokens, bundle.Breakdown.FactTokens);
 
         return bundle;
     }
 
-    private static string FormatContext(IReadOnlyList<ContextItem> items)
+    private static string FormatContext(List<ContextItem> items)
     {
         if (items.Count == 0)
             return string.Empty;
@@ -432,7 +429,7 @@ public class ContextBuilder : IContextBuilder
                     _ => item.Role ?? "Unknown"
                 };
                 var age = FormatAge(item.Timestamp);
-                sb.AppendLine($"[{roleLabel}, {age}] {item.Content}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"[{roleLabel}, {age}] {item.Content}");
             }
             sb.AppendLine();
         }
@@ -444,7 +441,7 @@ public class ContextBuilder : IContextBuilder
             {
                 var score = item.Score.HasValue ? $", score:{item.Score:F2}" : "";
                 var age = FormatAge(item.Timestamp);
-                sb.AppendLine($"[{item.MemoryType}, {age}{score}] {item.Content}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"[{item.MemoryType}, {age}{score}] {item.Content}");
             }
             sb.AppendLine();
         }
@@ -455,7 +452,7 @@ public class ContextBuilder : IContextBuilder
             foreach (var item in episodicItems)
             {
                 var age = FormatAge(item.Timestamp);
-                sb.AppendLine($"[{age}] {item.Content}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"[{age}] {item.Content}");
             }
             sb.AppendLine();
         }
@@ -465,7 +462,7 @@ public class ContextBuilder : IContextBuilder
             sb.AppendLine("## Known Facts");
             foreach (var item in factItems)
             {
-                sb.AppendLine($"- {item.Content}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {item.Content}");
             }
             sb.AppendLine();
         }
@@ -481,4 +478,43 @@ public class ContextBuilder : IContextBuilder
                age.TotalHours < 24 ? $"{age.TotalHours:F0}h ago" :
                $"{age.TotalDays:F0}d ago";
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get buffer items for context")]
+    private static partial void LogFailedToGetBufferItems(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get short-term items for context")]
+    private static partial void LogFailedToGetShortTermItems(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "GetRecentTurns: {Count} items, {Tokens} tokens")]
+    private static partial void LogGetRecentTurns(ILogger logger, int count, int tokens);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get semantic context")]
+    private static partial void LogFailedToGetSemanticContext(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "GetSemanticContext: {Count} items, {Tokens} tokens")]
+    private static partial void LogGetSemanticContext(ILogger logger, int count, int tokens);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get session context")]
+    private static partial void LogFailedToGetSessionContext(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "GetSessionContext: {Count} items, {Tokens} tokens")]
+    private static partial void LogGetSessionContext(ILogger logger, int count, int tokens);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get user facts")]
+    private static partial void LogFailedToGetUserFacts(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "GetUserFacts: {Count} items, {Tokens} tokens")]
+    private static partial void LogGetUserFacts(ILogger logger, int count, int tokens);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Strategy '{Name}' not found, using Balanced")]
+    private static partial void LogStrategyNotFound(ILogger logger, string name);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Registered context strategy: {Name}")]
+    private static partial void LogRegisteredStrategy(ILogger logger, string name);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Building context with strategy {Strategy}: Recent={Recent}, Semantic={Semantic}, Episodic={Episodic}, Fact={Fact}")]
+    private static partial void LogBuildingContext(ILogger logger, string strategy, int recent, int semantic, int episodic, int fact);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Built context: {Items} items, {Tokens} tokens (R:{Recent}/S:{Semantic}/E:{Episodic}/F:{Fact})")]
+    private static partial void LogBuiltContext(ILogger logger, int items, int tokens, int recent, int semantic, int episodic, int fact);
 }

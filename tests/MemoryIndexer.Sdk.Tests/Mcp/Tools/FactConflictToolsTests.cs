@@ -1,7 +1,7 @@
 using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Mcp.Tools;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
@@ -12,15 +12,15 @@ namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
 /// </summary>
 public class FactConflictToolsTests
 {
-    private readonly Mock<IFactValidator> _mockValidator;
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
+    private readonly IFactValidator _mockValidator;
+    private readonly IArchiveStore _mockArchiveStore;
     private readonly FactConflictTools _tools;
 
     public FactConflictToolsTests()
     {
-        _mockValidator = new Mock<IFactValidator>();
-        _mockArchiveStore = new Mock<IArchiveStore>();
-        _tools = new FactConflictTools(_mockValidator.Object, _mockArchiveStore.Object);
+        _mockValidator = Substitute.For<IFactValidator>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
+        _tools = new FactConflictTools(_mockValidator, _mockArchiveStore);
     }
 
     #region ValidateFact Tests
@@ -29,15 +29,15 @@ public class FactConflictToolsTests
     public async Task ValidateFact_WithNoConflicts_ShouldReturnValid()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("default", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
-        _mockValidator.Setup(v => v.ValidateAsync(
-            It.IsAny<UserFact>(),
-            It.IsAny<IReadOnlyList<SemanticStoreEntry>>(),
-            It.IsAny<FactValidationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(FactConflictAnalysis.Valid());
+        _mockValidator.ValidateAsync(
+            Arg.Any<UserFact>(),
+            Arg.Any<IReadOnlyList<SemanticStoreEntry>>(),
+            Arg.Any<FactValidationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(FactConflictAnalysis.Valid());
 
         // Act
         var result = await _tools.ValidateFact("User's name is John", "Identity");
@@ -59,15 +59,15 @@ public class FactConflictToolsTests
             Value = "User's name is John"
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry> { existingFact });
+        _mockArchiveStore.GetAllAsync("default", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry> { existingFact });
 
-        _mockValidator.Setup(v => v.ValidateAsync(
-            It.IsAny<UserFact>(),
-            It.IsAny<IReadOnlyList<SemanticStoreEntry>>(),
-            It.IsAny<FactValidationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(FactConflictAnalysis.Duplicate(existingFact));
+        _mockValidator.ValidateAsync(
+            Arg.Any<UserFact>(),
+            Arg.Any<IReadOnlyList<SemanticStoreEntry>>(),
+            Arg.Any<FactValidationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(FactConflictAnalysis.Duplicate(existingFact));
 
         // Act
         var result = await _tools.ValidateFact("User's name is John", "Identity");
@@ -83,46 +83,46 @@ public class FactConflictToolsTests
     public async Task ValidateFact_WithCustomUserId_ShouldUseProvidedId()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("custom-user", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("custom-user", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
-        _mockValidator.Setup(v => v.ValidateAsync(
-            It.IsAny<UserFact>(),
-            It.IsAny<IReadOnlyList<SemanticStoreEntry>>(),
-            It.IsAny<FactValidationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(FactConflictAnalysis.Valid());
+        _mockValidator.ValidateAsync(
+            Arg.Any<UserFact>(),
+            Arg.Any<IReadOnlyList<SemanticStoreEntry>>(),
+            Arg.Any<FactValidationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(FactConflictAnalysis.Valid());
 
         // Act
         await _tools.ValidateFact("Test fact", "General", userId: "custom-user");
 
         // Assert
-        _mockArchiveStore.Verify(a => a.GetAllAsync("custom-user", It.IsAny<CancellationToken>()), Times.Once);
+        await _mockArchiveStore.Received(1).GetAllAsync("custom-user", Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ValidateFact_WithInvalidCategory_ShouldUseGeneral()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
-        _mockValidator.Setup(v => v.ValidateAsync(
-            It.Is<UserFact>(f => f.Category == FactCategory.General),
-            It.IsAny<IReadOnlyList<SemanticStoreEntry>>(),
-            It.IsAny<FactValidationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(FactConflictAnalysis.Valid());
+        _mockValidator.ValidateAsync(
+            Arg.Is<UserFact>(f => f.Category == FactCategory.General),
+            Arg.Any<IReadOnlyList<SemanticStoreEntry>>(),
+            Arg.Any<FactValidationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(FactConflictAnalysis.Valid());
 
         // Act
         await _tools.ValidateFact("Test", "InvalidCategory");
 
         // Assert
-        _mockValidator.Verify(v => v.ValidateAsync(
-            It.Is<UserFact>(f => f.Category == FactCategory.General),
-            It.IsAny<IReadOnlyList<SemanticStoreEntry>>(),
-            It.IsAny<FactValidationOptions>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _mockValidator.Received(1).ValidateAsync(
+            Arg.Is<UserFact>(f => f.Category == FactCategory.General),
+            Arg.Any<IReadOnlyList<SemanticStoreEntry>>(),
+            Arg.Any<FactValidationOptions>(),
+            Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -139,8 +139,8 @@ public class FactConflictToolsTests
             new() { Key = "key:v1", Value = "v1", Version = 1, IsActive = false }
         };
 
-        _mockArchiveStore.Setup(a => a.GetHistoryAsync("user1", "key", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(history);
+        _mockArchiveStore.GetHistoryAsync("user1", "key", Arg.Any<CancellationToken>())
+            .Returns(history);
 
         // Act
         var result = await _tools.GetFactHistory("key", userId: "user1");
@@ -157,8 +157,8 @@ public class FactConflictToolsTests
     public async Task GetFactHistory_NonExistentKey_ShouldReturnEmpty()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetHistoryAsync("user1", "nonexistent", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetHistoryAsync("user1", "nonexistent", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         // Act
         var result = await _tools.GetFactHistory("nonexistent", userId: "user1");
@@ -182,8 +182,8 @@ public class FactConflictToolsTests
             new() { Key = "key1", Value = "value1", Category = SemanticStoreCategory.Fact }
         };
 
-        _mockArchiveStore.Setup(a => a.GetValidAtAsync("user1", It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetValidAtAsync("user1", Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _tools.GetFactsValidAt("2024-01-15", userId: "user1");
@@ -221,8 +221,8 @@ public class FactConflictToolsTests
             SupersedesKey = "key:v1"
         };
 
-        _mockArchiveStore.Setup(a => a.ArchiveAndUpdateAsync("user1", "key", "new value", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(updatedEntry);
+        _mockArchiveStore.ArchiveAndUpdateAsync("user1", "key", "new value", Arg.Any<CancellationToken>())
+            .Returns(updatedEntry);
 
         // Act
         var result = await _tools.ArchiveAndUpdateFact("key", "new value", userId: "user1");
@@ -238,8 +238,8 @@ public class FactConflictToolsTests
     public async Task ArchiveAndUpdateFact_NonExistentFact_ShouldReturnFailure()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.ArchiveAndUpdateAsync("user1", "nonexistent", "value", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SemanticStoreEntry?)null);
+        _mockArchiveStore.ArchiveAndUpdateAsync("user1", "nonexistent", "value", Arg.Any<CancellationToken>())
+            .Returns((SemanticStoreEntry?)null);
 
         // Act
         var result = await _tools.ArchiveAndUpdateFact("nonexistent", "value", userId: "user1");
@@ -267,7 +267,7 @@ public class FactConflictToolsTests
             Description = "Identity facts require confirmation"
         };
 
-        _mockValidator.Setup(v => v.GetCategoryRule(FactCategory.Identity)).Returns(rule);
+        _mockValidator.GetCategoryRule(FactCategory.Identity).Returns(rule);
 
         // Act
         var result = await _tools.GetCategoryRule("Identity");
@@ -298,7 +298,7 @@ public class FactConflictToolsTests
     public async Task GetAllCategoryRules_ShouldReturnAllRules()
     {
         // Act
-        var result = await _tools.GetAllCategoryRules();
+        var result = await FactConflictTools.GetAllCategoryRules();
 
         // Assert
         result.Success.Should().BeTrue();

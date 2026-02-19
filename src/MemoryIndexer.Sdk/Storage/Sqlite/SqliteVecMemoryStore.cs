@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
@@ -7,6 +7,7 @@ using MemoryIndexer.Sdk.Observability;
 using MemoryIndexer.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Storage.Sqlite;
 
@@ -14,7 +15,7 @@ namespace MemoryIndexer.Sdk.Storage.Sqlite;
 /// SQLite-based memory store with vector search (sqlite-vec) and full-text search (FTS5).
 /// Supports both SDK embedded and MCP server standalone scenarios.
 /// </summary>
-public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
+public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 {
     private readonly string _connectionString;
     private readonly int _vectorDimensions;
@@ -85,8 +86,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             }
 
             _initialized = true;
-            _logger.LogInformation("Initialized SQLite memory store with {Dimensions} dimensions (AutoMaintenance={Enabled})",
-                _vectorDimensions, _options.EnableAutoMaintenance);
+            LogInitializedSQLiteMemoryStoreDimensions(_logger, _vectorDimensions, _options.EnableAutoMaintenance);
         }
         finally
         {
@@ -127,8 +127,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         await ExecuteNonQueryAsync("PRAGMA synchronous = NORMAL;", cancellationToken);
         await ExecuteNonQueryAsync("PRAGMA temp_store = MEMORY;", cancellationToken);
 
-        _logger.LogDebug("SQLite configured with WAL={WalMode}, CacheSize={CacheKb}KB, AutoVacuum={AutoVacuum}",
-            _options.UseWalMode, _options.CacheSizeKb, _options.AutoVacuum);
+        LogSQLiteConfiguredWALWalModeCacheSize(_logger, _options.UseWalMode, _options.CacheSizeKb, _options.AutoVacuum);
     }
 
     private async Task CreateSchemaAsync(CancellationToken cancellationToken)
@@ -182,7 +181,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             await CreateFtsTableAsync(cancellationToken);
         }
 
-        _logger.LogDebug("Schema created with FTS={FtsEnabled}", _options.EnableFullTextSearch);
+        LogSchemaCreatedFTSFtsEnabled(_logger, _options.EnableFullTextSearch);
     }
 
     /// <summary>
@@ -203,7 +202,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         // If table doesn't exist, CreateSchemaAsync will create it with tier/scope columns
         if (!tableExists)
         {
-            _logger.LogDebug("Table {Table} does not exist yet, skipping migration", TableName);
+            LogTableTableDoesExistYet(_logger, TableName);
             return;
         }
 
@@ -231,21 +230,21 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         {
             var alterSql = $"ALTER TABLE {TableName} ADD COLUMN role TEXT";
             await ExecuteNonQueryAsync(alterSql, cancellationToken);
-            _logger.LogInformation("Migrated database: added 'role' column to {Table}", TableName);
+            LogMigratedDatabaseAddedRoleColumn(_logger, TableName);
         }
 
         if (!hasTier)
         {
             var alterSql = $"ALTER TABLE {TableName} ADD COLUMN tier INTEGER NOT NULL DEFAULT 1";
             await ExecuteNonQueryAsync(alterSql, cancellationToken);
-            _logger.LogInformation("Migrated database: added 'tier' column to {Table}", TableName);
+            LogMigratedDatabaseAddedTierColumn(_logger, TableName);
         }
 
         if (!hasScope)
         {
             var alterSql = $"ALTER TABLE {TableName} ADD COLUMN scope INTEGER NOT NULL DEFAULT 2";
             await ExecuteNonQueryAsync(alterSql, cancellationToken);
-            _logger.LogInformation("Migrated database: added 'scope' column to {Table}", TableName);
+            LogMigratedDatabaseAddedScopeColumn(_logger, TableName);
         }
 
         // Create indexes if they don't exist
@@ -310,7 +309,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         await ExecuteNonQueryAsync(triggersSql, cancellationToken);
 
-        _logger.LogDebug("FTS5 table created with tokenizer: {Tokenizer}", tokenizer);
+        LogFTSTableCreatedTokenizerTokenizer(_logger, tokenizer);
     }
 
     /// <inheritdoc />
@@ -322,7 +321,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         await ExecuteNonQueryAsync($"DROP TABLE IF EXISTS {TableName};", cancellationToken);
 
         _initialized = false;
-        _logger.LogInformation("Deleted SQLite collection");
+        LogDeletedSQLiteCollection(_logger);
     }
 
     /// <inheritdoc />
@@ -367,7 +366,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             await command.ExecuteNonQueryAsync(cancellationToken);
 
             MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
-            _logger.LogDebug("Stored memory {MemoryId}", memory.Id);
+            LogStoredMemoryMemoryId(_logger, memory.Id);
             return memory;
         }
         catch (Exception ex)
@@ -417,7 +416,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             }
 
             await transaction.CommitAsync(cancellationToken);
-            _logger.LogDebug("Stored {Count} memories in batch", memoryList.Count);
+            LogStoredCountMemoriesBatch(_logger, memoryList.Count);
         }
         catch
         {
@@ -580,8 +579,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             activity?.SetTag("storage.results_count", results.Count);
             MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
 
-            _logger.LogDebug("Vector search found {Count} results from {Total} candidates (CTE pre-filtered)",
-                results.Count, candidates.Count);
+            LogVectorSearchFoundCountResults(_logger, results.Count, candidates.Count);
 
             return results;
         }
@@ -680,7 +678,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         if (rowsAffected > 0)
         {
-            _logger.LogDebug("Updated memory {MemoryId}", memory.Id);
+            LogUpdatedMemoryMemoryId(_logger, memory.Id);
         }
 
         return rowsAffected > 0;
@@ -712,8 +710,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         if (rowsAffected > 0)
         {
-            _logger.LogDebug("{DeleteType} deleted memory {MemoryId}",
-                hardDelete ? "Hard" : "Soft", id);
+            var deleteTypeValue = hardDelete ? "Hard" : "Soft";
+            LogDeleteTypeDeletedMemoryMemoryId(_logger, deleteTypeValue, id);
         }
 
         return rowsAffected > 0;
@@ -743,8 +741,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
 
-        _logger.LogDebug("{DeleteType} deleted {Count} memories for user {UserId}",
-            hardDelete ? "Hard" : "Soft", rowsAffected, userId);
+        var deleteTypeValue = hardDelete ? "Hard" : "Soft";
+        LogDeleteTypeDeletedCountMemoriesUser(_logger, deleteTypeValue, rowsAffected, userId);
 
         return rowsAffected;
     }
@@ -774,8 +772,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
 
-        _logger.LogDebug("{DeleteType} deleted {Count} memories for user {UserId} session {SessionId}",
-            hardDelete ? "Hard" : "Soft", rowsAffected, userId, sessionId);
+        var deleteTypeValue = hardDelete ? "Hard" : "Soft";
+        LogDeleteTypeDeletedCountMemoriesUser2(_logger, deleteTypeValue, rowsAffected, userId, sessionId);
 
         return rowsAffected;
     }
@@ -790,7 +788,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
         command.Parameters.AddWithValue("@user_id", userId);
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
-        return Convert.ToInt64(result);
+        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
     }
 
     /// <inheritdoc />
@@ -840,7 +838,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         if (!_options.EnableFullTextSearch)
         {
-            _logger.LogWarning("Full-text search is disabled");
+            LogFullTextSearchDisabled(_logger);
             return [];
         }
 
@@ -879,7 +877,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             });
         }
 
-        _logger.LogDebug("FTS search for '{Query}' found {Count} results", query, results.Count);
+        LogFTSSearchQueryFoundCount(_logger, query, results.Count);
         return results;
     }
 
@@ -944,8 +942,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             })
             .ToList();
 
-        _logger.LogDebug("Hybrid search found {Count} results (dense={DenseCount}, sparse={SparseCount})",
-            results.Count, vectorResults.Count, ftsResults.Count);
+        LogHybridSearchFoundCountResults(_logger, results.Count, vectorResults.Count, ftsResults.Count);
 
         return results;
     }
@@ -964,7 +961,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             await ExecuteNonQueryAsync($"INSERT INTO {FtsTableName}({FtsTableName}) VALUES('optimize');", cancellationToken);
         }
 
-        _logger.LogInformation("Database optimized");
+        LogDatabaseOptimized(_logger);
     }
 
     /// <summary>
@@ -976,7 +973,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
 
         await EnsureCollectionExistsAsync(cancellationToken);
         await ExecuteNonQueryAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
-        _logger.LogDebug("WAL checkpoint completed");
+        LogWALCheckpointCompleted(_logger);
     }
 
     #region Helper Methods
@@ -1061,8 +1058,8 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
                 : reader.GetString(reader.GetOrdinal("role")),
             ImportanceScore = reader.GetFloat(reader.GetOrdinal("importance_score")),
             AccessCount = reader.GetInt32(reader.GetOrdinal("access_count")),
-            CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("created_at"))),
-            UpdatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("updated_at"))),
+            CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("created_at")), CultureInfo.InvariantCulture),
+            UpdatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("updated_at")), CultureInfo.InvariantCulture),
             IsDeleted = reader.GetInt32(reader.GetOrdinal("is_deleted")) == 1
         };
 
@@ -1073,7 +1070,7 @@ public sealed class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
             var lastAccessedStr = reader.GetString(lastAccessedOrdinal);
             if (!string.IsNullOrEmpty(lastAccessedStr))
             {
-                memory.LastAccessedAt = DateTime.Parse(lastAccessedStr);
+                memory.LastAccessedAt = DateTime.Parse(lastAccessedStr, CultureInfo.InvariantCulture);
             }
         }
 
@@ -1307,7 +1304,7 @@ ORDER BY created_at DESC";
                 null,
                 checkpointInterval,
                 checkpointInterval);
-            _logger.LogInformation("Started WAL checkpoint timer (interval: {Minutes}min)", _options.CheckpointIntervalMinutes);
+            LogStartedWALCheckpointTimerInterval(_logger, _options.CheckpointIntervalMinutes);
         }
 
         // Start maintenance timer (optimize, cleanup, vacuum)
@@ -1319,7 +1316,7 @@ ORDER BY created_at DESC";
                 null,
                 maintenanceInterval,
                 maintenanceInterval);
-            _logger.LogInformation("Started auto-maintenance timer (interval: {Minutes}min)", _options.MaintenanceIntervalMinutes);
+            LogStartedAutoMaintenanceTimerInterval(_logger, _options.MaintenanceIntervalMinutes);
         }
     }
 
@@ -1331,7 +1328,7 @@ ORDER BY created_at DESC";
         _maintenanceTimer?.Dispose();
         _maintenanceTimer = null;
 
-        _logger.LogInformation("Stopped auto-maintenance timers");
+        LogStoppedAutoMaintenanceTimers(_logger);
     }
 
     private async Task PerformCheckpointAsync()
@@ -1339,11 +1336,11 @@ ORDER BY created_at DESC";
         try
         {
             await CheckpointAsync();
-            _logger.LogDebug("Auto checkpoint completed");
+            LogAutoCheckpointCompleted(_logger);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Auto checkpoint failed");
+            LogAutoCheckpointFailed(_logger, ex);
         }
     }
 
@@ -1351,11 +1348,11 @@ ORDER BY created_at DESC";
     {
         try
         {
-            _logger.LogInformation("Starting auto-maintenance");
+            LogStartingAutoMaintenance(_logger);
 
             // 1. Check database size
             var dbSizeMb = await GetDatabaseSizeMbAsync();
-            _logger.LogDebug("Database size: {SizeMb}MB", dbSizeMb);
+            LogDatabaseSizeSizeMbMB(_logger, dbSizeMb);
 
             // 2. Cleanup old memories if configured
             if (_options.AutoCleanupOldMemoriesDays > 0)
@@ -1363,7 +1360,7 @@ ORDER BY created_at DESC";
                 var deleted = await CleanupOldMemoriesAsync(CancellationToken.None);
                 if (deleted > 0)
                 {
-                    _logger.LogInformation("Deleted {Count} old memories (>{Days} days)", deleted, _options.AutoCleanupOldMemoriesDays);
+                    LogDeletedCountOldMemoriesDays(_logger, deleted, _options.AutoCleanupOldMemoriesDays);
                 }
             }
 
@@ -1371,8 +1368,7 @@ ORDER BY created_at DESC";
             if (_options.MaxDatabaseSizeMb > 0 && dbSizeMb > _options.MaxDatabaseSizeMb)
             {
                 var deleted = await CleanupOldestMemoriesAsync(1000, CancellationToken.None);
-                _logger.LogInformation("Database size limit exceeded ({CurrentMb}MB > {MaxMb}MB), deleted {Count} oldest memories",
-                    dbSizeMb, _options.MaxDatabaseSizeMb, deleted);
+                LogDatabaseSizeLimitExceededCurrentMb(_logger, dbSizeMb, _options.MaxDatabaseSizeMb, deleted);
             }
 
             // 4. Incremental vacuum (if enabled)
@@ -1384,11 +1380,11 @@ ORDER BY created_at DESC";
             // 5. Optimize database
             await OptimizeAsync();
 
-            _logger.LogInformation("Auto-maintenance completed");
+            LogAutoMaintenanceCompleted(_logger);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Auto-maintenance failed");
+            LogAutoMaintenanceFailed(_logger, ex);
         }
     }
 
@@ -1399,7 +1395,7 @@ ORDER BY created_at DESC";
             var cmd = _connection!.CreateCommand();
             cmd.CommandText = "SELECT (page_count * page_size) / 1048576.0 FROM pragma_page_count(), pragma_page_size()";
             var result = await cmd.ExecuteScalarAsync();
-            return result != null ? Convert.ToInt64(result) : 0;
+            return result != null ? Convert.ToInt64(result, CultureInfo.InvariantCulture) : 0;
         }
         catch
         {
@@ -1445,11 +1441,11 @@ ORDER BY created_at DESC";
         try
         {
             await ExecuteNonQueryAsync($"PRAGMA incremental_vacuum({_options.IncrementalVacuumPages});", cancellationToken);
-            _logger.LogDebug("Incremental vacuum completed ({Pages} pages)", _options.IncrementalVacuumPages);
+            LogIncrementalVacuumCompletedPagesPages(_logger, _options.IncrementalVacuumPages);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Incremental vacuum failed");
+            LogIncrementalVacuumFailed(_logger, ex);
         }
     }
 
@@ -1469,4 +1465,106 @@ ORDER BY created_at DESC";
 
         _initLock.Dispose();
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Initialized SQLite memory store with {Dimensions} dimensions (AutoMaintenance={Enabled})")]
+    private static partial void LogInitializedSQLiteMemoryStoreDimensions(ILogger logger, int dimensions, bool enabled);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "SQLite configured with WAL={WalMode}, CacheSize={CacheKb}KB, AutoVacuum={AutoVacuum}")]
+    private static partial void LogSQLiteConfiguredWALWalModeCacheSize(ILogger logger, bool walMode, int cacheKb, SqliteAutoVacuumMode autoVacuum);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Schema created with FTS={FtsEnabled}")]
+    private static partial void LogSchemaCreatedFTSFtsEnabled(ILogger logger, bool ftsEnabled);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Table {Table} does not exist yet, skipping migration")]
+    private static partial void LogTableTableDoesExistYet(ILogger logger, string table);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Migrated database: added 'role' column to {Table}")]
+    private static partial void LogMigratedDatabaseAddedRoleColumn(ILogger logger, string table);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Migrated database: added 'tier' column to {Table}")]
+    private static partial void LogMigratedDatabaseAddedTierColumn(ILogger logger, string table);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Migrated database: added 'scope' column to {Table}")]
+    private static partial void LogMigratedDatabaseAddedScopeColumn(ILogger logger, string table);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "FTS5 table created with tokenizer: {Tokenizer}")]
+    private static partial void LogFTSTableCreatedTokenizerTokenizer(ILogger logger, string tokenizer);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Deleted SQLite collection")]
+    private static partial void LogDeletedSQLiteCollection(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Stored memory {MemoryId}")]
+    private static partial void LogStoredMemoryMemoryId(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Stored {Count} memories in batch")]
+    private static partial void LogStoredCountMemoriesBatch(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Vector search found {Count} results from {Total} candidates (CTE pre-filtered)")]
+    private static partial void LogVectorSearchFoundCountResults(ILogger logger, int count, int total);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated memory {MemoryId}")]
+    private static partial void LogUpdatedMemoryMemoryId(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted memory {MemoryId}")]
+    private static partial void LogDeleteTypeDeletedMemoryMemoryId(ILogger logger, string deleteType, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted {Count} memories for user {UserId}")]
+    private static partial void LogDeleteTypeDeletedCountMemoriesUser(ILogger logger, string deleteType, int count, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted {Count} memories for user {UserId} session {SessionId}")]
+    private static partial void LogDeleteTypeDeletedCountMemoriesUser2(ILogger logger, string deleteType, int count, string userId, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Full-text search is disabled")]
+    private static partial void LogFullTextSearchDisabled(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "FTS search for '{Query}' found {Count} results")]
+    private static partial void LogFTSSearchQueryFoundCount(ILogger logger, string query, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid search found {Count} results (dense={DenseCount}, sparse={SparseCount})")]
+    private static partial void LogHybridSearchFoundCountResults(ILogger logger, int count, int denseCount, int sparseCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Database optimized")]
+    private static partial void LogDatabaseOptimized(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "WAL checkpoint completed")]
+    private static partial void LogWALCheckpointCompleted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Started WAL checkpoint timer (interval: {Minutes}min)")]
+    private static partial void LogStartedWALCheckpointTimerInterval(ILogger logger, int minutes);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Started auto-maintenance timer (interval: {Minutes}min)")]
+    private static partial void LogStartedAutoMaintenanceTimerInterval(ILogger logger, int minutes);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Stopped auto-maintenance timers")]
+    private static partial void LogStoppedAutoMaintenanceTimers(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Auto checkpoint completed")]
+    private static partial void LogAutoCheckpointCompleted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Auto checkpoint failed")]
+    private static partial void LogAutoCheckpointFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting auto-maintenance")]
+    private static partial void LogStartingAutoMaintenance(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Database size: {SizeMb}MB")]
+    private static partial void LogDatabaseSizeSizeMbMB(ILogger logger, long sizeMb);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Deleted {Count} old memories (>{Days} days)")]
+    private static partial void LogDeletedCountOldMemoriesDays(ILogger logger, int count, int days);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Database size limit exceeded ({CurrentMb}MB > {MaxMb}MB), deleted {Count} oldest memories")]
+    private static partial void LogDatabaseSizeLimitExceededCurrentMb(ILogger logger, long currentMb, long maxMb, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Auto-maintenance completed")]
+    private static partial void LogAutoMaintenanceCompleted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Auto-maintenance failed")]
+    private static partial void LogAutoMaintenanceFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Incremental vacuum completed ({Pages} pages)")]
+    private static partial void LogIncrementalVacuumCompletedPagesPages(ILogger logger, int pages);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Incremental vacuum failed")]
+    private static partial void LogIncrementalVacuumFailed(ILogger logger, Exception ex);
 }

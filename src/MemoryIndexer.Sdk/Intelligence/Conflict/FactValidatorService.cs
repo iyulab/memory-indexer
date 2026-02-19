@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.Conflict;
@@ -7,7 +7,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Conflict;
 /// Service for validating facts with category-specific conflict resolution rules.
 /// Phase v0.9.2: Fact Conflict Resolution.
 /// </summary>
-public sealed class FactValidatorService : IFactValidator
+public sealed partial class FactValidatorService : IFactValidator
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<FactValidatorService> _logger;
@@ -41,7 +41,7 @@ public sealed class FactValidatorService : IFactValidator
 
         if (existingFacts.Count == 0)
         {
-            _logger.LogDebug("No existing facts to compare against");
+            LogExistingFactsCompareAgainst(_logger);
             return FactConflictAnalysis.Valid();
         }
 
@@ -153,7 +153,7 @@ public sealed class FactValidatorService : IFactValidator
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to generate embedding for new fact");
+            LogFailedGenerateEmbeddingNewFact(_logger, ex);
         }
 
         foreach (var existing in existingFacts)
@@ -325,7 +325,7 @@ public sealed class FactValidatorService : IFactValidator
 
     #region Private Methods
 
-    private bool? CheckSpoMatch(UserFact newFact, SemanticStoreEntry existing)
+    private static bool? CheckSpoMatch(UserFact newFact, SemanticStoreEntry existing)
     {
         // Check if both have SPO metadata
         if (string.IsNullOrEmpty(newFact.Subject) || string.IsNullOrEmpty(newFact.Predicate))
@@ -476,4 +476,10 @@ public sealed class FactValidatorService : IFactValidator
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No existing facts to compare against")]
+    private static partial void LogExistingFactsCompareAgainst(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to generate embedding for new fact")]
+    private static partial void LogFailedGenerateEmbeddingNewFact(ILogger logger, Exception ex);
 }

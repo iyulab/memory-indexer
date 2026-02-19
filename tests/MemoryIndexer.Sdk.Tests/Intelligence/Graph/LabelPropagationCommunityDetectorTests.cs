@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Graph;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Graph;
@@ -12,20 +12,20 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Graph;
 /// </summary>
 public class LabelPropagationCommunityDetectorTests
 {
-    private readonly Mock<IMemoryGraphService> _graphServiceMock;
-    private readonly Mock<ITemporalEntityStore> _entityStoreMock;
-    private readonly Mock<IMemoryStore> _memoryStoreMock;
+    private readonly IMemoryGraphService _graphServiceMock;
+    private readonly ITemporalEntityStore _entityStoreMock;
+    private readonly IMemoryStore _memoryStoreMock;
     private readonly LabelPropagationCommunityDetector _detector;
 
     public LabelPropagationCommunityDetectorTests()
     {
-        _graphServiceMock = new Mock<IMemoryGraphService>();
-        _entityStoreMock = new Mock<ITemporalEntityStore>();
-        _memoryStoreMock = new Mock<IMemoryStore>();
+        _graphServiceMock = Substitute.For<IMemoryGraphService>();
+        _entityStoreMock = Substitute.For<ITemporalEntityStore>();
+        _memoryStoreMock = Substitute.For<IMemoryStore>();
         _detector = new LabelPropagationCommunityDetector(
-            _graphServiceMock.Object,
-            _entityStoreMock.Object,
-            _memoryStoreMock.Object,
+            _graphServiceMock,
+            _entityStoreMock,
+            _memoryStoreMock,
             NullLogger<LabelPropagationCommunityDetector>.Instance);
     }
 
@@ -33,8 +33,8 @@ public class LabelPropagationCommunityDetectorTests
     public async Task DetectCommunitiesAsync_EmptyGraph_ShouldReturnZeroCommunities()
     {
         // Arrange
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<EntityTriple>());
+        _entityStoreMock.GetAllActiveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<EntityTriple>());
 
         // Act
         var result = await _detector.DetectCommunitiesAsync("user1");
@@ -59,8 +59,8 @@ public class LabelPropagationCommunityDetectorTests
             new() { Id = Guid.NewGuid(), Subject = "B3", Predicate = "relates", ObjectValue = "B1", Confidence = 0.9f, UserId = "user1" }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
 
         // Act
         var result = await _detector.DetectCommunitiesAsync("user1", new CommunityDetectionOptions
@@ -86,8 +86,8 @@ public class LabelPropagationCommunityDetectorTests
             new() { Id = Guid.NewGuid(), Subject = "C", Predicate = "connects", ObjectValue = "A", Confidence = 1f, UserId = "user1" }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
 
         // Act
         var result = await _detector.DetectCommunitiesAsync("user1", new CommunityDetectionOptions
@@ -111,8 +111,8 @@ public class LabelPropagationCommunityDetectorTests
             new() { Id = Guid.NewGuid(), Subject = "B", Predicate = "to", ObjectValue = "C", Confidence = 1f, UserId = "user1" }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
 
         await _detector.DetectCommunitiesAsync("user1", new CommunityDetectionOptions
         {
@@ -176,8 +176,8 @@ public class LabelPropagationCommunityDetectorTests
             new() { Id = Guid.NewGuid(), Subject = "A", Predicate = "weak", ObjectValue = "C", Confidence = 0.1f, UserId = "user1" }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
 
         // Act
         var result = await _detector.DetectCommunitiesAsync("user1", new CommunityDetectionOptions
@@ -203,8 +203,8 @@ public class LabelPropagationCommunityDetectorTests
             new() { Id = Guid.NewGuid(), Subject = "C", Predicate = "to", ObjectValue = "A", Confidence = 1f, UserId = "user1" }
         };
 
-        _entityStoreMock.Setup(x => x.GetAllActiveAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triples);
+        _entityStoreMock.GetAllActiveAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(triples);
 
         // Act
         var result = await _detector.DetectCommunitiesAsync("user1", new CommunityDetectionOptions

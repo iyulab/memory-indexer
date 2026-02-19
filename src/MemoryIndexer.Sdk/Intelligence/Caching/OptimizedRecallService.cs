@@ -15,7 +15,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Caching;
 /// Phase 22.2: Recall Latency Optimization
 /// Phase v0.5.0: Session-level Recall Caching, Recall Pattern Telemetry
 /// </summary>
-public sealed class OptimizedRecallService
+public sealed partial class OptimizedRecallService
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -94,9 +94,9 @@ public sealed class OptimizedRecallService
                 stopwatch.Stop();
                 componentLatencies["CacheHit"] = stopwatch.Elapsed.TotalMilliseconds;
 
-                _logger.LogDebug(
-                    "Query cache hit for user {UserId}, tier {Tier}: {Query} (duplicates: {Count})",
-                    userId, tier, query.Length > 50 ? query[..50] + "..." : query, _duplicateQueryCount);
+                var queryPreview = query.Length > 50 ? query[..50] + "..." : query;
+                var dupCount = _duplicateQueryCount;
+                LogQueryCacheHit(_logger, userId, tier, queryPreview, dupCount);
 
                 return cachedResults;
             }
@@ -131,9 +131,7 @@ public sealed class OptimizedRecallService
 
                 if (averageScore >= _options.EarlyTerminationConfidence)
                 {
-                    _logger.LogDebug(
-                        "Early termination triggered: {Count} results with avg score {Score:F3}",
-                        searchResults.Count, averageScore);
+                    LogEarlyTermination(_logger, searchResults.Count, averageScore);
 
                     stopwatch.Stop();
                     componentLatencies["EarlyTermination"] = stopwatch.Elapsed.TotalMilliseconds - embeddingMs - searchMs;
@@ -167,9 +165,7 @@ public sealed class OptimizedRecallService
                     cancellationToken);
             }
 
-            _logger.LogDebug(
-                "Recall completed for {Tier} tier: {TotalMs}ms (Embedding: {EmbeddingMs}ms, Search: {SearchMs}ms)",
-                tier, stopwatch.Elapsed.TotalMilliseconds, embeddingMs, searchMs);
+            LogRecallCompleted(_logger, tier, stopwatch.Elapsed.TotalMilliseconds, embeddingMs, searchMs);
 
             var results = searchResults.OrderByDescending(r => r.Score).Take(limit).Select(r => r.Memory).ToList();
             CacheQueryResult(userId, query, tier, limit, results);
@@ -177,7 +173,7 @@ public sealed class OptimizedRecallService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during recall for user {UserId}, tier {Tier}", userId, tier);
+            LogRecallError(_logger, ex, userId, tier);
 
             // Still record latency even on error
             if (_profiler != null)
@@ -215,7 +211,7 @@ public sealed class OptimizedRecallService
             return sequentialResults;
         }
 
-        _logger.LogDebug("Batch recall for {Count} queries, tier {Tier}", queries.Count, tier);
+        LogBatchRecall(_logger, queries.Count, tier);
 
         // Process queries in parallel batches
         var batches = queries
@@ -255,6 +251,21 @@ public sealed class OptimizedRecallService
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(keySource));
         return $"recall:{Convert.ToHexString(hash)}";
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Query cache hit for user {UserId}, tier {Tier}: {Query} (duplicates: {Count})")]
+    private static partial void LogQueryCacheHit(ILogger logger, string userId, string tier, string query, long count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Early termination triggered: {Count} results with avg score {Score:F3}")]
+    private static partial void LogEarlyTermination(ILogger logger, int count, double score);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recall completed for {Tier} tier: {TotalMs}ms (Embedding: {EmbeddingMs}ms, Search: {SearchMs}ms)")]
+    private static partial void LogRecallCompleted(ILogger logger, string tier, double totalMs, double embeddingMs, double searchMs);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error during recall for user {UserId}, tier {Tier}")]
+    private static partial void LogRecallError(ILogger logger, Exception ex, string userId, string tier);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Batch recall for {Count} queries, tier {Tier}")]
+    private static partial void LogBatchRecall(ILogger logger, int count, string tier);
 
     /// <summary>
     /// Caches query results if caching is enabled.

@@ -10,7 +10,7 @@ namespace SharedLib.Completion;
 /// OpenAI completion service implementation for samples and tests.
 /// Not included in the main MemoryIndexer packages.
 /// </summary>
-public sealed class OpenAICompletionService : ITextCompletionService
+public sealed partial class OpenAICompletionService : ITextCompletionService
 {
     private readonly ChatClient _client;
     private readonly ILogger<OpenAICompletionService> _logger;
@@ -45,7 +45,7 @@ public sealed class OpenAICompletionService : ITextCompletionService
             _client = new ChatClient(model, credential);
         }
 
-        _logger.LogInformation("OpenAI completion service initialized: model={Model}", model);
+        LogOpenAICompletionServiceInitialized(_logger, model);
     }
 
     /// <inheritdoc />
@@ -85,6 +85,9 @@ public sealed class OpenAICompletionService : ITextCompletionService
         }
         return results;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "OpenAI completion service initialized: model={Model}")]
+    private static partial void LogOpenAICompletionServiceInitialized(ILogger logger, string model);
 
     private static ChatCompletionOptions MapToChatOptions(TextCompletionOptions? options)
     {

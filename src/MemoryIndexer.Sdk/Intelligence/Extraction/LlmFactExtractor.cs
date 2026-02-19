@@ -21,8 +21,10 @@ namespace MemoryIndexer.Sdk.Intelligence.Extraction;
 /// - "My name is John" → FastTrack (high confidence direct statement)
 /// - "In the book, the hero says 'My name is Lincoln'" → SessionOnly (quoted)
 /// </remarks>
-public sealed class LlmFactExtractor : IFactExtractor
+public sealed partial class LlmFactExtractor : IFactExtractor
 {
+    private static readonly JsonSerializerOptions s_caseInsensitiveJsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     private readonly ITextCompletionService _completionService;
     private readonly IEmbeddingService? _embeddingService;
     private readonly ILogger<LlmFactExtractor> _logger;
@@ -68,25 +70,23 @@ public sealed class LlmFactExtractor : IFactExtractor
                 StopSequences = ["###"]
             };
 
-            _logger.LogDebug("Extracting facts from content: {Content}",
-                context.Content.Length > 100 ? context.Content[..100] + "..." : context.Content);
+            var truncatedContent = context.Content.Length > 100 ? context.Content[..100] + "..." : context.Content;
+            LogExtractingFacts(_logger, truncatedContent);
 
             var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
 
             var result = ParseExtractionResponse(response);
 
-            _logger.LogDebug(
-                "Extracted {Count} facts (FastTrack: {FastTrack}, Standard: {Standard}, SessionOnly: {Session})",
-                result.Facts.Count,
-                result.Facts.Count(f => f.PromotionPath == PromotionPath.FastTrack),
-                result.Facts.Count(f => f.PromotionPath == PromotionPath.Standard),
-                result.Facts.Count(f => f.PromotionPath == PromotionPath.SessionOnly));
+            var fastTrackCount = result.Facts.Count(f => f.PromotionPath == PromotionPath.FastTrack);
+            var standardCount = result.Facts.Count(f => f.PromotionPath == PromotionPath.Standard);
+            var sessionOnlyCount = result.Facts.Count(f => f.PromotionPath == PromotionPath.SessionOnly);
+            LogExtractedFacts(_logger, result.Facts.Count, fastTrackCount, standardCount, sessionOnlyCount);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract facts from content");
+            LogFailedToExtractFacts(_logger, ex);
             return new FactExtractionResult
             {
                 Facts = [],
@@ -126,21 +126,19 @@ public sealed class LlmFactExtractor : IFactExtractor
                 StopSequences = ["###"]
             };
 
-            _logger.LogDebug("Validating fact against {Count} existing facts: {Content}",
-                existingFacts.Count, fact.Content);
+            LogValidatingFact(_logger, existingFacts.Count, fact.Content);
 
             var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
 
             var result = ParseValidationResponse(response, existingFacts);
 
-            _logger.LogDebug("Validation result: {ConflictType} -> {Action}",
-                result.ConflictType, result.RecommendedAction);
+            LogValidationResult(_logger, result.ConflictType, result.RecommendedAction);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to validate fact");
+            LogFailedToValidateFact(_logger, ex);
             return new FactValidationResult
             {
                 IsValid = true,  // Default to allowing the fact on error
@@ -285,7 +283,7 @@ public sealed class LlmFactExtractor : IFactExtractor
 
             if (jsonStart == -1 || jsonEnd == -1)
             {
-                _logger.LogWarning("No JSON found in extraction response");
+                LogNoJsonInExtractionResponse(_logger);
                 return new FactExtractionResult
                 {
                     Facts = [],
@@ -296,7 +294,7 @@ public sealed class LlmFactExtractor : IFactExtractor
 
             var json = response.Substring(jsonStart, jsonEnd - jsonStart + 1);
             var parsed = JsonSerializer.Deserialize<ExtractionResultJson>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                s_caseInsensitiveJsonOptions);
 
             if (parsed == null)
             {
@@ -333,7 +331,7 @@ public sealed class LlmFactExtractor : IFactExtractor
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex, "Failed to parse extraction response as JSON");
+            LogFailedToParseExtractionResponse(_logger, ex);
             return new FactExtractionResult
             {
                 Facts = [],
@@ -366,7 +364,7 @@ public sealed class LlmFactExtractor : IFactExtractor
 
             var json = response.Substring(jsonStart, jsonEnd - jsonStart + 1);
             var parsed = JsonSerializer.Deserialize<ValidationResultJson>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                s_caseInsensitiveJsonOptions);
 
             if (parsed == null)
             {
@@ -400,7 +398,7 @@ public sealed class LlmFactExtractor : IFactExtractor
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex, "Failed to parse validation response as JSON");
+            LogFailedToParseValidationResponse(_logger, ex);
             return new FactValidationResult
             {
                 IsValid = true,
@@ -526,6 +524,32 @@ public sealed class LlmFactExtractor : IFactExtractor
             _ => FactConflictAction.Add
         };
     }
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting facts from content: {Content}")]
+    private static partial void LogExtractingFacts(ILogger logger, string content);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracted {Count} facts (FastTrack: {FastTrack}, Standard: {Standard}, SessionOnly: {Session})")]
+    private static partial void LogExtractedFacts(ILogger logger, int count, int fastTrack, int standard, int session);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to extract facts from content")]
+    private static partial void LogFailedToExtractFacts(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Validating fact against {Count} existing facts: {Content}")]
+    private static partial void LogValidatingFact(ILogger logger, int count, string content);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Validation result: {ConflictType} -> {Action}")]
+    private static partial void LogValidationResult(ILogger logger, FactConflictType conflictType, FactConflictAction action);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to validate fact")]
+    private static partial void LogFailedToValidateFact(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No JSON found in extraction response")]
+    private static partial void LogNoJsonInExtractionResponse(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse extraction response as JSON")]
+    private static partial void LogFailedToParseExtractionResponse(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse validation response as JSON")]
+    private static partial void LogFailedToParseValidationResponse(ILogger logger, Exception ex);
 }
 
 #region JSON Models

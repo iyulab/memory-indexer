@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Autonomous;
 /// Autonomous Memory Manager implementation.
 /// Implements MemGPT-inspired self-directed memory management.
 /// </summary>
-public sealed class AutonomousMemoryManager : IAutonomousMemoryManager
+public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
 {
     private readonly IMemoryStore _memoryStore;
     private readonly ITieredMemoryStore _tieredStore;
@@ -55,7 +55,7 @@ public sealed class AutonomousMemoryManager : IAutonomousMemoryManager
         MemoryOperationRequest request,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Processing memory operation: {Operation}", request.OperationType);
+        LogProcessingOperation(_logger, request.OperationType);
 
         try
         {
@@ -72,7 +72,7 @@ public sealed class AutonomousMemoryManager : IAutonomousMemoryManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Memory operation failed: {Operation}", request.OperationType);
+            LogOperationFailed(_logger, ex, request.OperationType);
             return CreateFailedResponse(ex.Message);
         }
     }
@@ -82,7 +82,8 @@ public sealed class AutonomousMemoryManager : IAutonomousMemoryManager
         string currentContext,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Memory heartbeat with context length: {Length}", currentContext?.Length ?? 0);
+        var contextLength = currentContext?.Length ?? 0;
+        LogHeartbeat(_logger, contextLength);
 
         var alerts = new List<MemoryAlert>();
         var recommendations = new List<SuggestedOperation>();
@@ -149,7 +150,7 @@ public sealed class AutonomousMemoryManager : IAutonomousMemoryManager
         QueryIntent? intent = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Autonomous page-in: query={Query}, intent={Intent}", query, intent);
+        LogAutonomousPageIn(_logger, query, intent);
 
         var pagedInMemories = new List<MemoryWithScore>();
 
@@ -188,7 +189,7 @@ public sealed class AutonomousMemoryManager : IAutonomousMemoryManager
         int tokensNeeded,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Autonomous page-out: tokens={Tokens}", tokensNeeded);
+        LogAutonomousPageOut(_logger, tokensNeeded);
 
         var pagedOut = new List<MemoryReference>();
         var archived = new List<MemoryReference>();
@@ -227,7 +228,7 @@ public sealed class AutonomousMemoryManager : IAutonomousMemoryManager
         CancellationToken cancellationToken = default)
     {
         options ??= new OptimizationOptions();
-        _logger.LogDebug("Optimizing memory with target utilization: {Target}", options.TargetUtilization);
+        LogOptimizingMemory(_logger, options.TargetUtilization);
 
         var startTime = DateTimeOffset.UtcNow;
         var actions = new List<OptimizationAction>();
@@ -571,6 +572,24 @@ public sealed class AutonomousMemoryManager : IAutonomousMemoryManager
 
     private static int EstimateTokenCount(IEnumerable<string?> contents) =>
         contents.Sum(EstimateTokenCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Processing memory operation: {Operation}")]
+    private static partial void LogProcessingOperation(ILogger logger, MemoryOperationType operation);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Memory operation failed: {Operation}")]
+    private static partial void LogOperationFailed(ILogger logger, Exception ex, MemoryOperationType operation);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Memory heartbeat with context length: {Length}")]
+    private static partial void LogHeartbeat(ILogger logger, int length);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Autonomous page-in: query={Query}, intent={Intent}")]
+    private static partial void LogAutonomousPageIn(ILogger logger, string query, QueryIntent? intent);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Autonomous page-out: tokens={Tokens}")]
+    private static partial void LogAutonomousPageOut(ILogger logger, int tokens);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Optimizing memory with target utilization: {Target}")]
+    private static partial void LogOptimizingMemory(ILogger logger, float target);
 
     private sealed class MemoryAccessRecord
     {

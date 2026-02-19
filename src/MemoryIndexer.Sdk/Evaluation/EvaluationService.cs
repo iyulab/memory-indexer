@@ -252,7 +252,7 @@ public class EvaluationService : IEvaluationService
     /// <summary>
     /// Records NIAH test execution.
     /// </summary>
-    public void RecordNiahTest(bool success)
+    public static void RecordNiahTest(bool success)
     {
         NiahTestsCounter.Add(1, new KeyValuePair<string, object?>("success", success));
     }
@@ -268,7 +268,7 @@ public class EvaluationService : IEvaluationService
         return (text.Length + 3) / 4;
     }
 
-    private class TierPromotionLatencyTracker
+    private sealed class TierPromotionLatencyTracker
     {
         public int TotalMemoriesStored { get; set; }
         public long TotalStoredTokens { get; set; }

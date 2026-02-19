@@ -3,7 +3,7 @@ using MemoryIndexer.Models;
 using MemoryIndexer.Tests;
 using MemoryIndexer.Sdk.Intelligence.ContextOptimization;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence;
@@ -11,27 +11,25 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence;
 public class ContextWindowOptimizerTests
 {
     private readonly ContextWindowOptimizer _optimizer;
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly Mock<IMemoryStore> _memoryStoreMock;
+    private readonly IEmbeddingService _embeddingServiceMock;
+    private readonly IMemoryStore _memoryStoreMock;
 
     public ContextWindowOptimizerTests()
     {
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string text, CancellationToken _) => GenerateMockEmbedding(text));
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => GenerateMockEmbedding(callInfo.ArgAt<string>(0)));
 
-        _memoryStoreMock = new Mock<IMemoryStore>();
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _memoryStoreMock = Substitute.For<IMemoryStore>();
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
 
         _optimizer = new ContextWindowOptimizer(
-            _embeddingServiceMock.Object,
-            _memoryStoreMock.Object,
+            _embeddingServiceMock,
+            _memoryStoreMock,
             NullLogger<ContextWindowOptimizer>.Instance);
     }
 

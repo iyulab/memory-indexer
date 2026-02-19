@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 
@@ -7,7 +7,7 @@ namespace MemoryIndexer.Sdk.Intelligence.ContextOptimization;
 /// <summary>
 /// Implements context window optimization strategies.
 /// </summary>
-public sealed class ContextWindowOptimizer : IContextOptimizer
+public sealed partial class ContextWindowOptimizer : IContextOptimizer
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly IMemoryStore _memoryStore;
@@ -58,7 +58,7 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
         endItems.Reverse();
         result.AddRange(endItems);
 
-        _logger.LogDebug("LongContextReorder applied to {Count} memories", memoryList.Count);
+        LogLongContextReorderAppliedCountMemories(_logger, memoryList.Count);
 
         return result;
     }
@@ -122,8 +122,7 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
             }
         }
 
-        _logger.LogDebug("MMR applied: selected {Selected} from {Total} memories (λ={Lambda})",
-            selected.Count, memoryList.Count, lambda);
+        LogMMRAppliedSelectedSelectedTotal(_logger, selected.Count, memoryList.Count, lambda);
 
         return selected;
     }
@@ -145,7 +144,7 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
         // Average the embeddings for enhanced retrieval
         var enhancedEmbedding = AverageEmbeddings(originalEmbedding, hydeEmbedding);
 
-        _logger.LogDebug("HyDE generated for query: {Query}", query);
+        LogHyDEGeneratedQueryQuery(_logger, query);
 
         return new HyDEResult
         {
@@ -218,8 +217,7 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
             }
         }
 
-        _logger.LogDebug("Expanded chunk context: {Before} before, {After} after",
-            result.PrecedingChunks.Count, result.FollowingChunks.Count);
+        LogExpandedChunkContextBeforeBefore(_logger, result.PrecedingChunks.Count, result.FollowingChunks.Count);
 
         return result;
     }
@@ -296,9 +294,7 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
         result.FinalTokenCount = EstimateTokens(optimized);
         result.TargetAchieved = result.FinalTokenCount <= options.TargetTokens;
 
-        _logger.LogInformation(
-            "Context optimized: {OriginalTokens} → {FinalTokens} tokens, {Optimizations} applied",
-            result.OriginalTokenCount, result.FinalTokenCount, result.OptimizationsApplied.Count);
+        LogContextOptimizedOriginalTokensFinalTokensTokens(_logger, result.OriginalTokenCount, result.FinalTokenCount, result.OptimizationsApplied.Count);
 
         return result;
     }
@@ -394,4 +390,19 @@ public sealed class ContextWindowOptimizer : IContextOptimizer
         var wordCount = text.Split([' ', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
         return (int)(wordCount * TokensPerWord);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "LongContextReorder applied to {Count} memories")]
+    private static partial void LogLongContextReorderAppliedCountMemories(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "MMR applied: selected {Selected} from {Total} memories (λ={Lambda})")]
+    private static partial void LogMMRAppliedSelectedSelectedTotal(ILogger logger, int selected, int total, float lambda);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE generated for query: {Query}")]
+    private static partial void LogHyDEGeneratedQueryQuery(ILogger logger, string query);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Expanded chunk context: {Before} before, {After} after")]
+    private static partial void LogExpandedChunkContextBeforeBefore(ILogger logger, int before, int after);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Context optimized: {OriginalTokens} → {FinalTokens} tokens, {Optimizations} applied")]
+    private static partial void LogContextOptimizedOriginalTokensFinalTokensTokens(ILogger logger, int originalTokens, int finalTokens, int optimizations);
 }

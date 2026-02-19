@@ -20,7 +20,7 @@ namespace MemoryIndexer.Services;
 /// services.AddSingleton&lt;IEmbeddingService&gt;(cached);
 /// </code>
 /// </remarks>
-public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
+public sealed partial class CachingEmbeddingService : IEmbeddingService, IDisposable
 {
     private readonly IEmbeddingService _inner;
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
@@ -54,9 +54,7 @@ public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
                 TimeSpan.FromMinutes(5));
         }
 
-        _logger.LogInformation(
-            "Embedding cache initialized: enabled={Enabled}, ttl={Ttl}, maxSize={MaxSize}",
-            _options.Enabled, _options.Ttl, _options.MaxSize);
+        LogCacheInitialized(_logger, _options.Enabled, _options.Ttl, _options.MaxSize);
     }
 
     /// <inheritdoc />
@@ -82,7 +80,7 @@ public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
         // Check cache
         if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired(_options.Ttl))
         {
-            _logger.LogDebug("Cache hit for embedding (key={Key})", key[..8]);
+            LogCacheHit(_logger, key[..8]);
             return entry.Embedding;
         }
 
@@ -117,9 +115,9 @@ public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
         for (int i = 0; i < textList.Count; i++)
         {
             var key = ComputeCacheKey(textList[i]);
-            if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired(_options.Ttl))
+            if (_cache.TryGetValue(key, out var cacheEntry) && !cacheEntry.IsExpired(_options.Ttl))
             {
-                results[i] = entry.Embedding;
+                results[i] = cacheEntry.Embedding;
             }
             else
             {
@@ -146,9 +144,7 @@ public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
         }
 
         var cacheHits = textList.Count - uncachedTexts.Count;
-        _logger.LogDebug(
-            "Batch embedding: {Total} total, {Cached} cached, {Generated} generated",
-            textList.Count, cacheHits, uncachedTexts.Count);
+        LogBatchEmbedding(_logger, textList.Count, cacheHits, uncachedTexts.Count);
 
         return results;
     }
@@ -160,7 +156,7 @@ public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
     {
         var count = _cache.Count;
         _cache.Clear();
-        _logger.LogInformation("Cache cleared: {Count} entries removed", count);
+        LogCacheCleared(_logger, count);
     }
 
     /// <summary>
@@ -216,7 +212,7 @@ public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
             _cache.TryRemove(oldKey, out _);
         }
 
-        _logger.LogDebug("Cache eviction: removed {Count} entries", oldestKeys.Count);
+        LogCacheEviction(_logger, oldestKeys.Count);
     }
 
     private void CleanupExpiredEntries()
@@ -235,7 +231,7 @@ public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
 
         if (expiredKeys.Count > 0)
         {
-            _logger.LogDebug("Cleanup: removed {Count} expired entries", expiredKeys.Count);
+            LogCacheCleanup(_logger, expiredKeys.Count);
         }
     }
 
@@ -261,6 +257,24 @@ public sealed class CachingEmbeddingService : IEmbeddingService, IDisposable
 
         public bool IsExpired(TimeSpan ttl) => DateTime.UtcNow - CreatedAt > ttl;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Embedding cache initialized: enabled={Enabled}, ttl={Ttl}, maxSize={MaxSize}")]
+    private static partial void LogCacheInitialized(ILogger logger, bool enabled, TimeSpan ttl, int maxSize);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache hit for embedding (key={Key})")]
+    private static partial void LogCacheHit(ILogger logger, string key);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Batch embedding: {Total} total, {Cached} cached, {Generated} generated")]
+    private static partial void LogBatchEmbedding(ILogger logger, int total, int cached, int generated);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Cache cleared: {Count} entries removed")]
+    private static partial void LogCacheCleared(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache eviction: removed {Count} entries")]
+    private static partial void LogCacheEviction(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cleanup: removed {Count} expired entries")]
+    private static partial void LogCacheCleanup(ILogger logger, int count);
 }
 
 /// <summary>

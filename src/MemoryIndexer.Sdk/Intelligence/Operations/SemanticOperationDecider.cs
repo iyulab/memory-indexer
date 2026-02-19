@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Utilities;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
@@ -21,7 +21,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Operations;
 /// For full LLM-based decisions, this service can be extended or replaced
 /// with an implementation that calls an LLM API for complex reasoning.
 /// </remarks>
-public sealed class SemanticOperationDecider : IMemoryOperationDecider
+public sealed partial class SemanticOperationDecider : IMemoryOperationDecider
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -52,7 +52,7 @@ public sealed class SemanticOperationDecider : IMemoryOperationDecider
     {
         options ??= new DecisionOptions();
 
-        _logger.LogDebug("Evaluating content for operation decision: {ContentLength} chars", content.Length);
+        LogEvaluatingContentOperationDecisionContentLength(_logger, content.Length);
 
         // Step 1: Analyze content importance and extract topics
         var importanceScore = _importanceAnalyzer.AnalyzeImportance(content);
@@ -62,8 +62,7 @@ public sealed class SemanticOperationDecider : IMemoryOperationDecider
         // Step 2: Check if content meets minimum importance threshold
         if (importanceScore < options.MinimumImportance)
         {
-            _logger.LogDebug("Content below importance threshold: {Score} < {Threshold}",
-                importanceScore, options.MinimumImportance);
+            LogContentBelowImportanceThresholdScore(_logger, importanceScore, options.MinimumImportance);
 
             return CreateDecision(
                 MemoryOperation.Noop,
@@ -121,7 +120,7 @@ public sealed class SemanticOperationDecider : IMemoryOperationDecider
     private async Task<OperationDecision> DetermineOperationAsync(
         string content,
         ReadOnlyMemory<float> embedding,
-        IReadOnlyList<MemoryUnit> similarMemories,
+        List<MemoryUnit> similarMemories,
         float importanceScore,
         MemoryType detectedType,
         IReadOnlyList<string> topics,
@@ -449,4 +448,10 @@ public sealed class SemanticOperationDecider : IMemoryOperationDecider
             ContradictionDetails = contradictionDetails
         };
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Evaluating content for operation decision: {ContentLength} chars")]
+    private static partial void LogEvaluatingContentOperationDecisionContentLength(ILogger logger, int contentLength);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Content below importance threshold: {Score} < {Threshold}")]
+    private static partial void LogContentBelowImportanceThresholdScore(ILogger logger, float score, float threshold);
 }

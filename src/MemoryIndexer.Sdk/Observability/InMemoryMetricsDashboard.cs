@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Observability;
 /// In-memory implementation of metrics dashboard.
 /// Phase v0.11.0: Operational Metrics Dashboard.
 /// </summary>
-public sealed class InMemoryMetricsDashboard : IMetricsDashboard
+public sealed partial class InMemoryMetricsDashboard : IMetricsDashboard
 {
     private readonly ILatencyProfiler? _latencyProfiler;
     private readonly IMemoryGrowthMonitor? _growthMonitor;
@@ -261,11 +261,12 @@ public sealed class InMemoryMetricsDashboard : IMetricsDashboard
                 currentBucket += interval;
             }
 
-            if (!buckets.ContainsKey(currentBucket))
+            if (!buckets.TryGetValue(currentBucket, out var bucketList))
             {
-                buckets[currentBucket] = new List<double>();
+                bucketList = new List<double>();
+                buckets[currentBucket] = bucketList;
             }
-            buckets[currentBucket].Add(record.Value);
+            bucketList.Add(record.Value);
         }
 
         var result = buckets
@@ -467,7 +468,7 @@ public sealed class InMemoryMetricsDashboard : IMetricsDashboard
     {
         // ConcurrentQueue doesn't support removal, so we'd need a different structure
         // For now, alerts will age out
-        _logger.LogDebug("Alert {AlertId} clear requested - alerts auto-expire", alertId);
+        LogAlertAlertIdClearRequestedAlerts(_logger, alertId);
     }
 
     #endregion
@@ -573,4 +574,7 @@ public sealed class InMemoryMetricsDashboard : IMetricsDashboard
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Alert {AlertId} clear requested - alerts auto-expire")]
+    private static partial void LogAlertAlertIdClearRequestedAlerts(ILogger logger, Guid alertId);
 }

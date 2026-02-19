@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,7 +11,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Profile;
 /// JSON profile exporter for GDPR compliance.
 /// Phase v0.10.0: User Profile Evolution.
 /// </summary>
-public class JsonProfileExporter : IProfileExporter
+public partial class JsonProfileExporter : IProfileExporter
 {
     private readonly IArchiveStore _archiveStore;
     private readonly ILogger<JsonProfileExporter> _logger;
@@ -83,8 +83,7 @@ public class JsonProfileExporter : IProfileExporter
             // Re-serialize with checksum
             json = JsonSerializer.Serialize(export, JsonOptions);
 
-            _logger.LogInformation("Exported profile for user {UserId}: {FactCount} facts, {Size} bytes",
-                userId, metadata.FactCount, metadata.SizeBytes);
+            LogExportedProfileUserUserIdFactCount(_logger, userId, metadata.FactCount, metadata.SizeBytes);
 
             return new ProfileExportResult
             {
@@ -95,7 +94,7 @@ public class JsonProfileExporter : IProfileExporter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to export profile for user {UserId}", userId);
+            LogFailedExportProfileUserUserId(_logger, ex, userId);
             return new ProfileExportResult
             {
                 Success = false,
@@ -234,4 +233,10 @@ public class JsonProfileExporter : IProfileExporter
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Exported profile for user {UserId}: {FactCount} facts, {Size} bytes")]
+    private static partial void LogExportedProfileUserUserIdFactCount(ILogger logger, string userId, int factCount, long size);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to export profile for user {UserId}")]
+    private static partial void LogFailedExportProfileUserUserId(ILogger logger, Exception ex, string userId);
 }

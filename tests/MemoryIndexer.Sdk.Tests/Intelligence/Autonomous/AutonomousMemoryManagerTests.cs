@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Autonomous;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Autonomous;
@@ -10,60 +10,55 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Autonomous;
 public class AutonomousMemoryManagerTests
 {
     private readonly AutonomousMemoryManager _manager;
-    private readonly Mock<IMemoryStore> _memoryStoreMock;
-    private readonly Mock<ITieredMemoryStore> _tieredStoreMock;
-    private readonly Mock<IVirtualContextManager> _contextManagerMock;
-    private readonly Mock<IScoringService> _scoringServiceMock;
+    private readonly IMemoryStore _memoryStoreMock;
+    private readonly ITieredMemoryStore _tieredStoreMock;
+    private readonly IVirtualContextManager _contextManagerMock;
+    private readonly IScoringService _scoringServiceMock;
 
     public AutonomousMemoryManagerTests()
     {
-        _memoryStoreMock = new Mock<IMemoryStore>();
-        _tieredStoreMock = new Mock<ITieredMemoryStore>();
-        _contextManagerMock = new Mock<IVirtualContextManager>();
-        _scoringServiceMock = new Mock<IScoringService>();
+        _memoryStoreMock = Substitute.For<IMemoryStore>();
+        _tieredStoreMock = Substitute.For<ITieredMemoryStore>();
+        _contextManagerMock = Substitute.For<IVirtualContextManager>();
+        _scoringServiceMock = Substitute.For<IScoringService>();
 
         SetupDefaultMocks();
 
         _manager = new AutonomousMemoryManager(
-            _memoryStoreMock.Object,
-            _tieredStoreMock.Object,
-            _contextManagerMock.Object,
-            _scoringServiceMock.Object,
+            _memoryStoreMock,
+            _tieredStoreMock,
+            _contextManagerMock,
+            _scoringServiceMock,
             NullLogger<AutonomousMemoryManager>.Instance);
     }
 
     private void SetupDefaultMocks()
     {
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _memoryStoreMock
-            .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Guid id, CancellationToken _) => new MemoryUnit
+        _memoryStoreMock.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => new MemoryUnit
             {
-                Id = id,
+                Id = callInfo.ArgAt<Guid>(0),
                 Content = "Test memory content",
                 Stability = MemoryStability.Stable
             });
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _tieredStoreMock
-            .Setup(x => x.DemoteAsync(It.IsAny<MemoryUnit>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((MemoryUnit m, CancellationToken _) => m);
+        _tieredStoreMock.DemoteAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => callInfo.ArgAt<MemoryUnit>(0));
 
-        _contextManagerMock
-            .Setup(x => x.GetContextUsageAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ContextUsageStatistics
+        _contextManagerMock.GetContextUsageAsync(Arg.Any<CancellationToken>())
+            .Returns(new ContextUsageStatistics
             {
                 TotalTokens = 1000,
                 WorkingMemoryTokens = 500,
@@ -75,8 +70,7 @@ public class AutonomousMemoryManagerTests
                 SaturationPercentage = 10
             });
 
-        _contextManagerMock
-            .Setup(x => x.State)
+        _contextManagerMock.State
             .Returns(new VirtualContextState
             {
                 IsInitialized = true,
@@ -85,12 +79,10 @@ public class AutonomousMemoryManagerTests
                 SaturationLevel = ContextSaturationLevel.Normal
             });
 
-        _contextManagerMock
-            .Setup(x => x.PageOutAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _contextManagerMock.PageOutAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        _scoringServiceMock
-            .Setup(x => x.CalculateScore(It.IsAny<MemoryUnit>(), It.IsAny<ReadOnlyMemory<float>?>()))
+        _scoringServiceMock.CalculateScore(Arg.Any<MemoryUnit>(), Arg.Any<ReadOnlyMemory<float>?>())
             .Returns(0.75f);
     }
 
@@ -150,12 +142,11 @@ public class AutonomousMemoryManagerTests
             Stability = MemoryStability.Stable
         };
 
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new MemorySearchResult { Memory = testMemory, Score = 0.9f }]);
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns([new MemorySearchResult { Memory = testMemory, Score = 0.9f }]);
 
         // Act
         var result = await _manager.AutonomousPageInAsync("test query");
@@ -169,9 +160,8 @@ public class AutonomousMemoryManagerTests
     public async Task AutonomousPageOutAsync_ValidRequest_ShouldReturnSuccess()
     {
         // Arrange
-        _contextManagerMock
-            .Setup(x => x.PageOutAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([
+        _contextManagerMock.PageOutAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([
                 new MemoryUnit { Id = Guid.NewGuid(), Content = "Old memory" },
                 new MemoryUnit { Id = Guid.NewGuid(), Content = "Newer memory" }
             ]);
@@ -196,12 +186,11 @@ public class AutonomousMemoryManagerTests
             })
             .ToList();
 
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(
-                It.IsAny<string>(),
-                It.IsAny<MemoryFilterOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(testMemories);
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(testMemories);
 
         // Act
         var result = await _manager.OptimizeMemoryAsync();
@@ -365,9 +354,8 @@ public class AutonomousMemoryManagerTests
             TargetMemoryIds = [memoryId]
         };
 
-        _memoryStoreMock
-            .Setup(x => x.DeleteAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _memoryStoreMock.DeleteAsync(Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(true);
 
         // Act
         var result = await _manager.RequestOperationAsync(request);

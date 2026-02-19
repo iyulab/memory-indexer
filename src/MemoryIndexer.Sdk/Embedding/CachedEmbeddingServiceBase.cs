@@ -12,12 +12,21 @@ namespace MemoryIndexer.Sdk.Embedding;
 /// <summary>
 /// Base class for embedding services with caching and batch processing support.
 /// </summary>
-public abstract class CachedEmbeddingServiceBase : IEmbeddingService
+public abstract partial class CachedEmbeddingServiceBase : IEmbeddingService
 {
-    protected readonly IMemoryCache Cache;
-    protected readonly ILogger Logger;
-    protected readonly TimeSpan CacheTtl;
-    protected readonly int BatchSize;
+    private readonly IMemoryCache _cache;
+    private readonly ILogger _logger;
+    private readonly TimeSpan _cacheTtl;
+    private readonly int _batchSize;
+
+    /// <summary>Gets the memory cache.</summary>
+    protected IMemoryCache Cache => _cache;
+    /// <summary>Gets the logger.</summary>
+    protected ILogger Logger => _logger;
+    /// <summary>Gets the cache TTL.</summary>
+    protected TimeSpan CacheTtl => _cacheTtl;
+    /// <summary>Gets the batch size.</summary>
+    protected int BatchSize => _batchSize;
 
     /// <summary>
     /// Unique prefix for cache keys to avoid collisions between providers.
@@ -32,10 +41,10 @@ public abstract class CachedEmbeddingServiceBase : IEmbeddingService
         ILogger logger,
         EmbeddingOptions options)
     {
-        Cache = cache;
-        Logger = logger;
-        CacheTtl = TimeSpan.FromMinutes(options.CacheTtlMinutes);
-        BatchSize = options.BatchSize;
+        _cache = cache;
+        _logger = logger;
+        _cacheTtl = TimeSpan.FromMinutes(options.CacheTtlMinutes);
+        _batchSize = options.BatchSize;
     }
 
     /// <inheritdoc />
@@ -67,7 +76,7 @@ public abstract class CachedEmbeddingServiceBase : IEmbeddingService
                 activity?.SetTag("embedding.cache_hit", true);
                 MemoryIndexerTelemetry.EmbeddingCacheHits.Add(1,
                     new KeyValuePair<string, object?>("provider", CacheKeyPrefix));
-                Logger.LogDebug("Cache hit for embedding");
+                LogCacheHit(Logger);
                 return cached;
             }
 
@@ -118,7 +127,7 @@ public abstract class CachedEmbeddingServiceBase : IEmbeddingService
                 return [];
             }
 
-            Logger.LogDebug("Generating batch embeddings for {Count} texts", textList.Count);
+            LogBatchEmbeddings(Logger, textList.Count);
 
             var results = new ReadOnlyMemory<float>[textList.Count];
             var uncached = new List<(int Index, string Text)>();
@@ -158,7 +167,7 @@ public abstract class CachedEmbeddingServiceBase : IEmbeddingService
 
             if (uncached.Count == 0)
             {
-                Logger.LogDebug("All {Count} embeddings found in cache", textList.Count);
+                LogAllEmbeddingsFromCache(Logger, textList.Count);
                 MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
                 return results;
             }
@@ -237,4 +246,13 @@ public abstract class CachedEmbeddingServiceBase : IEmbeddingService
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(text));
         return $"emb:{CacheKeyPrefix}:{Convert.ToHexString(hash)}";
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cache hit for embedding")]
+    private static partial void LogCacheHit(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Generating batch embeddings for {Count} texts")]
+    private static partial void LogBatchEmbeddings(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "All {Count} embeddings found in cache")]
+    private static partial void LogAllEmbeddingsFromCache(ILogger logger, int count);
 }

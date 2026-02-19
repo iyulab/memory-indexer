@@ -5,17 +5,17 @@ using MemoryIndexer.Services.ContextBuilding;
 using MemoryIndexer.Services.ContextStrategies;
 using MemoryIndexer.Services.TokenCounting;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Tests.Services.ContextBuilding;
 
 public class ContextBuilderTests
 {
-    private readonly Mock<IBuffer> _bufferMock;
-    private readonly Mock<IShortTermMemory> _shortTermMemoryMock;
-    private readonly Mock<IMemoryStore> _memoryStoreMock;
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly IBuffer _bufferMock;
+    private readonly IShortTermMemory _shortTermMemoryMock;
+    private readonly IMemoryStore _memoryStoreMock;
+    private readonly IEmbeddingService _embeddingServiceMock;
     private readonly ITokenCounter _tokenCounter;
     private readonly ContextBuilder _builder;
 
@@ -24,22 +24,21 @@ public class ContextBuilderTests
 
     public ContextBuilderTests()
     {
-        _bufferMock = new Mock<IBuffer>();
-        _shortTermMemoryMock = new Mock<IShortTermMemory>();
-        _memoryStoreMock = new Mock<IMemoryStore>();
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _bufferMock = Substitute.For<IBuffer>();
+        _shortTermMemoryMock = Substitute.For<IShortTermMemory>();
+        _memoryStoreMock = Substitute.For<IMemoryStore>();
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
         _tokenCounter = new ApproximateTokenCounter();
 
         // Setup default embedding service behavior
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new float[1024]);
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[1024]);
 
         _builder = new ContextBuilder(
-            _bufferMock.Object,
-            _shortTermMemoryMock.Object,
-            _memoryStoreMock.Object,
-            _embeddingServiceMock.Object,
+            _bufferMock,
+            _shortTermMemoryMock,
+            _memoryStoreMock,
+            _embeddingServiceMock,
             _tokenCounter,
             NullLogger<ContextBuilder>.Instance);
     }
@@ -70,10 +69,10 @@ public class ContextBuilderTests
             }
         };
 
-        _bufferMock.Setup(x => x.GetPendingAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bufferItems);
-        _shortTermMemoryMock.Setup(x => x.GetAllAsync())
-            .ReturnsAsync(Array.Empty<MemoryUnit>());
+        _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns(bufferItems);
+        _shortTermMemoryMock.GetAllAsync()
+            .Returns(Array.Empty<MemoryUnit>());
 
         // Act
         var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000);
@@ -112,10 +111,10 @@ public class ContextBuilderTests
             }
         };
 
-        _bufferMock.Setup(x => x.GetPendingAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bufferItems);
-        _shortTermMemoryMock.Setup(x => x.GetAllAsync())
-            .ReturnsAsync(Array.Empty<MemoryUnit>());
+        _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns(bufferItems);
+        _shortTermMemoryMock.GetAllAsync()
+            .Returns(Array.Empty<MemoryUnit>());
 
         // Act - only 5 tokens allowed (2 for first item fits, 22 for second doesn't fit)
         var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 5);
@@ -149,10 +148,10 @@ public class ContextBuilderTests
             }
         };
 
-        _bufferMock.Setup(x => x.GetPendingAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bufferItems);
-        _shortTermMemoryMock.Setup(x => x.GetAllAsync())
-            .ReturnsAsync(Array.Empty<MemoryUnit>());
+        _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns(bufferItems);
+        _shortTermMemoryMock.GetAllAsync()
+            .Returns(Array.Empty<MemoryUnit>());
 
         // Act
         var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000);
@@ -167,8 +166,8 @@ public class ContextBuilderTests
     {
         // Arrange - This test verifies session isolation for ShortTermMemory (T1)
         // BUG FIX: Previously, ShortTermMemory items from other sessions were included
-        _bufferMock.Setup(x => x.GetPendingAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<SensoryMemory>());
+        _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<SensoryMemory>());
 
         var shortTermItems = new List<MemoryUnit>
         {
@@ -194,8 +193,8 @@ public class ContextBuilderTests
             }
         };
 
-        _shortTermMemoryMock.Setup(x => x.GetAllAsync())
-            .ReturnsAsync(shortTermItems);
+        _shortTermMemoryMock.GetAllAsync()
+            .Returns(shortTermItems);
 
         // Act
         var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000);
@@ -223,12 +222,11 @@ public class ContextBuilderTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
         var result = await _builder.GetSemanticContextAsync(UserId, query, maxTokens: 1000);
@@ -238,9 +236,7 @@ public class ContextBuilderTests
         result[0].Source.Should().Be(ContextItemSource.Semantic);
         result[0].Score.Should().Be(0.9f);
 
-        _embeddingServiceMock.Verify(
-            x => x.GenerateEmbeddingAsync(query, It.IsAny<CancellationToken>()),
-            Times.Once);
+        await _embeddingServiceMock.Received(1).GenerateEmbeddingAsync(query, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -261,12 +257,11 @@ public class ContextBuilderTests
             }
         };
 
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(searchResults);
 
         // Act
         var result = await _builder.GetSemanticContextAsync(UserId, "query", maxTokens: 5);
@@ -377,19 +372,17 @@ public class ContextBuilderTests
             CreateMemory("User fact", MemoryType.Fact)
         };
 
-        _bufferMock.Setup(x => x.GetPendingAsync(UserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bufferItems);
-        _shortTermMemoryMock.Setup(x => x.GetAllAsync())
-            .ReturnsAsync(Array.Empty<MemoryUnit>());
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(searchResults);
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(UserId, It.IsAny<MemoryFilterOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(userFacts);
+        _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns(bufferItems);
+        _shortTermMemoryMock.GetAllAsync()
+            .Returns(Array.Empty<MemoryUnit>());
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(searchResults);
+        _memoryStoreMock.GetAllAsync(UserId, Arg.Any<MemoryFilterOptions>(), Arg.Any<CancellationToken>())
+            .Returns(userFacts);
 
         var request = new ContextRequest(UserId, SessionId, "test query", new ContextBudget(1000));
 
@@ -463,19 +456,17 @@ public class ContextBuilderTests
 
     private void SetupEmptyMocks()
     {
-        _bufferMock.Setup(x => x.GetPendingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SensoryMemory>());
-        _shortTermMemoryMock.Setup(x => x.GetAllAsync())
-            .ReturnsAsync(Array.Empty<MemoryUnit>());
-        _memoryStoreMock
-            .Setup(x => x.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemorySearchResult>());
-        _memoryStoreMock
-            .Setup(x => x.GetAllAsync(It.IsAny<string>(), It.IsAny<MemoryFilterOptions>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit>());
+        _bufferMock.GetPendingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<SensoryMemory>());
+        _shortTermMemoryMock.GetAllAsync()
+            .Returns(Array.Empty<MemoryUnit>());
+        _memoryStoreMock.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new List<MemorySearchResult>());
+        _memoryStoreMock.GetAllAsync(Arg.Any<string>(), Arg.Any<MemoryFilterOptions>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit>());
     }
 
     private static MemoryUnit CreateMemory(string content, MemoryType type)

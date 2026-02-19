@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -14,7 +14,7 @@ namespace MemoryIndexer.Sdk.Intelligence.SelfCorrection;
 /// Research basis: A-MEM's self-evolution, MemR³'s evidence-gap tracking.
 /// Implements contradiction detection, outdated identification, and confidence management.
 /// </remarks>
-public sealed class MemorySelfCorrector : IMemorySelfCorrector
+public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -50,7 +50,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         options ??= new MemoryAnalysisOptions();
         var stopwatch = Stopwatch.StartNew();
 
-        _logger.LogDebug("Starting memory analysis for user {UserId}", userId);
+        LogStartingMemoryAnalysisUserUserId(_logger, userId);
 
         var memories = await GetMemoriesForAnalysisAsync(userId, options, cancellationToken);
         var result = new MemoryAnalysisResult
@@ -100,9 +100,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         stopwatch.Stop();
         result.Duration = stopwatch.Elapsed;
 
-        _logger.LogInformation(
-            "Memory analysis complete for user {UserId}: {Analyzed} memories, health={Health:F2}, {Duration}ms",
-            userId, result.MemoriesAnalyzed, result.HealthScore, stopwatch.ElapsedMilliseconds);
+        LogMemoryAnalysisCompleteUserUserId(_logger, userId, result.MemoriesAnalyzed, result.HealthScore, stopwatch.ElapsedMilliseconds);
 
         return result;
     }
@@ -117,7 +115,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         if (memories.Count < 2)
             return contradictions;
 
-        _logger.LogDebug("Detecting contradictions in {Count} memories", memories.Count);
+        LogDetectingContradictionsCountMemories(_logger, memories.Count);
 
         // Group by related entities for efficient comparison
         var entityGroups = GroupMemoriesByEntities(memories);
@@ -147,7 +145,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             }
         }
 
-        _logger.LogDebug("Found {Count} contradictions", contradictions.Count);
+        LogFoundCountContradictions(_logger, contradictions.Count);
         return contradictions;
     }
 
@@ -225,7 +223,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             }
         }
 
-        _logger.LogDebug("Identified {Count} outdated memories for user {UserId}", outdated.Count, userId);
+        LogIdentifiedCountOutdatedMemoriesUser(_logger, outdated.Count, userId);
         return outdated;
     }
 
@@ -275,7 +273,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             }
         }
 
-        _logger.LogDebug("Tracked {Count} evidence gaps for query: {Query}", gaps.Count, query);
+        LogTrackedCountEvidenceGapsQuery(_logger, gaps.Count, query);
         return gaps;
     }
 
@@ -342,7 +340,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to apply correction {Id}", correction.Id);
+                LogFailedApplyCorrectionId(_logger, ex, correction.Id);
                 failed.Add(new FailedCorrection
                 {
                     Correction = correction,
@@ -353,9 +351,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
 
         stopwatch.Stop();
 
-        _logger.LogInformation(
-            "Corrections applied: {Applied} applied, {Failed} failed, {Skipped} skipped in {Duration}ms",
-            applied.Count, failed.Count, skipped.Count, stopwatch.ElapsedMilliseconds);
+        LogCorrectionsAppliedAppliedAppliedFailed(_logger, applied.Count, failed.Count, skipped.Count, stopwatch.ElapsedMilliseconds);
 
         return new CorrectionResult
         {
@@ -374,8 +370,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         ResolutionStrategy strategy = ResolutionStrategy.KeepNewest,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Resolving contradiction {Id} with strategy {Strategy}",
-            contradiction.Id, strategy);
+        LogResolvingContradictionIdStrategyStrategy(_logger, contradiction.Id, strategy);
 
         var resolution = new ContradictionResolution
         {
@@ -422,7 +417,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to resolve contradiction {Id}", contradiction.Id);
+            LogFailedResolveContradictionId(_logger, ex, contradiction.Id);
             resolution.Success = false;
             resolution.Explanation = $"Resolution failed: {ex.Message}";
         }
@@ -494,9 +489,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         result.AverageConfidenceAfter = memories.Count > 0 ? confidenceSum / memories.Count : 0;
         result.LowConfidenceMemories = lowConfidenceIds;
 
-        _logger.LogInformation(
-            "Confidence update complete: {Updated} memories updated, avg confidence {Before:F2} → {After:F2}",
-            result.MemoriesUpdated, result.AverageConfidenceBefore, result.AverageConfidenceAfter);
+        LogConfidenceUpdateCompleteUpdatedMemories(_logger, result.MemoriesUpdated, result.AverageConfidenceBefore, result.AverageConfidenceAfter);
 
         return result;
     }
@@ -556,11 +549,12 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
 
             foreach (var entity in entities)
             {
-                if (!groups.ContainsKey(entity))
+                if (!groups.TryGetValue(entity, out var group))
                 {
-                    groups[entity] = [];
+                    group = [];
+                    groups[entity] = group;
                 }
-                groups[entity].Add(memory);
+                group.Add(memory);
             }
         }
 
@@ -583,7 +577,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         }
     }
 
-    private async Task<MemoryContradiction?> DetectContradictionBetweenAsync(
+    private static async Task<MemoryContradiction?> DetectContradictionBetweenAsync(
         MemoryUnit memory1,
         MemoryUnit memory2,
         string sharedEntity,
@@ -663,7 +657,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         return null;
     }
 
-    private async Task<IReadOnlyList<DuplicateGroup>> DetectDuplicatesAsync(
+    private static async Task<IReadOnlyList<DuplicateGroup>> DetectDuplicatesAsync(
         IReadOnlyList<MemoryUnit> memories,
         CancellationToken cancellationToken)
     {
@@ -742,7 +736,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         return Math.Max(0, 1.0f - totalPenalty);
     }
 
-    private static IReadOnlyList<MemoryCorrection> GenerateSuggestedCorrections(MemoryAnalysisResult result)
+    private static List<MemoryCorrection> GenerateSuggestedCorrections(MemoryAnalysisResult result)
     {
         var corrections = new List<MemoryCorrection>();
 
@@ -827,7 +821,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
         };
     }
 
-    private Task<bool> ValidateCorrectionAsync(MemoryCorrection correction, CancellationToken cancellationToken)
+    private static Task<bool> ValidateCorrectionAsync(MemoryCorrection correction, CancellationToken cancellationToken)
     {
         // Basic validation
         if (correction.MemoryId == Guid.Empty)
@@ -901,7 +895,7 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
                 break;
 
             default:
-                _logger.LogWarning("Unhandled correction type: {Type}", correction.Type);
+                LogUnhandledCorrectionTypeType(_logger, correction.Type);
                 break;
         }
     }
@@ -1094,4 +1088,40 @@ public sealed class MemorySelfCorrector : IMemorySelfCorrector
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Starting memory analysis for user {UserId}")]
+    private static partial void LogStartingMemoryAnalysisUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Memory analysis complete for user {UserId}: {Analyzed} memories, health={Health:F2}, {Duration}ms")]
+    private static partial void LogMemoryAnalysisCompleteUserUserId(ILogger logger, string userId, int analyzed, float health, long duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Detecting contradictions in {Count} memories")]
+    private static partial void LogDetectingContradictionsCountMemories(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Found {Count} contradictions")]
+    private static partial void LogFoundCountContradictions(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Identified {Count} outdated memories for user {UserId}")]
+    private static partial void LogIdentifiedCountOutdatedMemoriesUser(ILogger logger, int count, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Tracked {Count} evidence gaps for query: {Query}")]
+    private static partial void LogTrackedCountEvidenceGapsQuery(ILogger logger, int count, string query);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to apply correction {Id}")]
+    private static partial void LogFailedApplyCorrectionId(ILogger logger, Exception ex, Guid id);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Corrections applied: {Applied} applied, {Failed} failed, {Skipped} skipped in {Duration}ms")]
+    private static partial void LogCorrectionsAppliedAppliedAppliedFailed(ILogger logger, int applied, int failed, int skipped, long duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Resolving contradiction {Id} with strategy {Strategy}")]
+    private static partial void LogResolvingContradictionIdStrategyStrategy(ILogger logger, Guid id, ResolutionStrategy strategy);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to resolve contradiction {Id}")]
+    private static partial void LogFailedResolveContradictionId(ILogger logger, Exception ex, Guid id);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Confidence update complete: {Updated} memories updated, avg confidence {Before:F2} → {After:F2}")]
+    private static partial void LogConfidenceUpdateCompleteUpdatedMemories(ILogger logger, int updated, float before, float after);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Unhandled correction type: {Type}")]
+    private static partial void LogUnhandledCorrectionTypeType(ILogger logger, CorrectionType type);
 }

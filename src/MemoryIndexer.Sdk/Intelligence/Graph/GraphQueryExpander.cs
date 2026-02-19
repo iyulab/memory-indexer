@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
@@ -6,6 +6,7 @@ using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 
 using EntityRelationType = MemoryIndexer.Interfaces.EntityRelation;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Graph;
 
@@ -17,7 +18,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Graph;
 /// Research basis: Mem0g graph-augmented retrieval, LightRAG entity expansion.
 /// Key insight: Queries about "X" benefit from knowing related entities and facts.
 /// </remarks>
-public sealed class GraphQueryExpander : IGraphQueryExpander
+public sealed partial class GraphQueryExpander : IGraphQueryExpander
 {
     private readonly IGraphRetriever _graphRetriever;
     private readonly IImportancePropagator _importancePropagator;
@@ -65,7 +66,7 @@ public sealed class GraphQueryExpander : IGraphQueryExpander
         options ??= new QueryExpansionOptions();
         var stopwatch = Stopwatch.StartNew();
 
-        _logger.LogDebug("Expanding query for user {UserId}: '{Query}'", userId, query);
+        LogExpandingQueryUserUserIdQuery(_logger, userId, query);
 
         // Step 1: Extract entities from query
         var mentionedEntities = await ExtractQueryEntitiesAsync(query, userId, cancellationToken);
@@ -154,9 +155,7 @@ public sealed class GraphQueryExpander : IGraphQueryExpander
 
         stopwatch.Stop();
 
-        _logger.LogInformation(
-            "Query expanded: {MentionedCount} mentioned, {RelatedCount} related, {FactCount} facts in {Duration}ms",
-            mentionedEntities.Count, relatedEntities.Count, relevantFacts.Count, stopwatch.ElapsedMilliseconds);
+        LogQueryExpandedMentionedCountMentionedRelatedCount(_logger, mentionedEntities.Count, relatedEntities.Count, relevantFacts.Count, stopwatch.ElapsedMilliseconds);
 
         return new ExpandedQuery
         {
@@ -393,14 +392,14 @@ public sealed class GraphQueryExpander : IGraphQueryExpander
                 var summary = await _communityDetector.GetCommunitySummaryAsync(
                     communityId, userId, cancellationToken);
 
-                sb.AppendLine($"- {summary.TopicLabel} ({summary.MemoryCount} memories)");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {summary.TopicLabel} ({summary.MemoryCount} memories)");
             }
 
             return sb.ToString();
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to get community context");
+            LogFailedGetCommunityContext(_logger, ex);
             return null;
         }
     }
@@ -408,8 +407,8 @@ public sealed class GraphQueryExpander : IGraphQueryExpander
     private static string BuildExpandedQueryText(
         string originalQuery,
         IReadOnlyList<QueryEntity> mentionedEntities,
-        IReadOnlyList<QueryEntity> relatedEntities,
-        IReadOnlyList<EntityTriple> relevantFacts,
+        List<QueryEntity> relatedEntities,
+        List<EntityTriple> relevantFacts,
         string? communityContext,
         QueryExpansionOptions options)
     {
@@ -479,4 +478,13 @@ public sealed class GraphQueryExpander : IGraphQueryExpander
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Expanding query for user {UserId}: '{Query}'")]
+    private static partial void LogExpandingQueryUserUserIdQuery(ILogger logger, string userId, string query);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Query expanded: {MentionedCount} mentioned, {RelatedCount} related, {FactCount} facts in {Duration}ms")]
+    private static partial void LogQueryExpandedMentionedCountMentionedRelatedCount(ILogger logger, int mentionedCount, int relatedCount, int factCount, long duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Failed to get community context")]
+    private static partial void LogFailedGetCommunityContext(ILogger logger, Exception ex);
 }

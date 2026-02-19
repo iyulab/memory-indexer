@@ -1,6 +1,6 @@
 using MemoryIndexer.Sdk.Intelligence.Security;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Security;
@@ -11,8 +11,8 @@ public class RegexPiiDetectorTests
 
     public RegexPiiDetectorTests()
     {
-        var logger = new Mock<ILogger<RegexPiiDetector>>();
-        _detector = new RegexPiiDetector(logger.Object);
+        var logger = Substitute.For<ILogger<RegexPiiDetector>>();
+        _detector = new RegexPiiDetector(logger);
     }
 
     #region Email Detection

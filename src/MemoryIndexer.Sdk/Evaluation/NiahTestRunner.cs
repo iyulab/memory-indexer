@@ -425,7 +425,7 @@ public class NiahTestRunner
         return segments;
     }
 
-    private string GenerateSyntheticSegment(Random random, int targetTokens)
+    private static string GenerateSyntheticSegment(Random random, int targetTokens)
     {
         // Generate realistic-looking but meaningless text
         var topics = new[]
@@ -452,7 +452,7 @@ public class NiahTestRunner
         return string.Join(" ", words.Take(targetTokens));
     }
 
-    private int CalculateNeedlePosition(int segmentCount, double position)
+    private static int CalculateNeedlePosition(int segmentCount, double position)
     {
         // Position is 0.0 to 1.0, where 0.25 = 25% into content
         var index = (int)(segmentCount * position);

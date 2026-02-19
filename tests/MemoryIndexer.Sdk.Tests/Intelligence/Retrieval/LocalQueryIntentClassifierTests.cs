@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Retrieval;
 
 public class LocalQueryIntentClassifierTests
 {
-    private readonly IQueryIntentClassifier _classifier;
+    private readonly LocalQueryIntentClassifier _classifier;
 
     public LocalQueryIntentClassifierTests()
     {
@@ -34,7 +34,7 @@ public class LocalQueryIntentClassifierTests
         // Assert
         result.Intent.Should().Be(QueryIntent.Factual);
         result.Confidence.Should().BeGreaterThan(0.3f);
-        result.TierPriority.First().Should().Be(Tier.Archive);
+        result.TierPriority[0].Should().Be(Tier.Archive);
     }
 
     #endregion
@@ -54,7 +54,7 @@ public class LocalQueryIntentClassifierTests
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Contextual);
-        result.TierPriority.First().Should().Be(Tier.Short);
+        result.TierPriority[0].Should().Be(Tier.Short);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class LocalQueryIntentClassifierTests
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Temporal);
-        result.TierPriority.First().Should().Be(Tier.Long);
+        result.TierPriority[0].Should().Be(Tier.Long);
     }
 
     [Fact]

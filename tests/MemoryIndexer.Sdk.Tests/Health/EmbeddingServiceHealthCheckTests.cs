@@ -2,20 +2,21 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Health;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Health;
 
 public class EmbeddingServiceHealthCheckTests
 {
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
+    private readonly IEmbeddingService _mockEmbeddingService;
     private readonly EmbeddingServiceHealthCheck _healthCheck;
 
     public EmbeddingServiceHealthCheckTests()
     {
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _healthCheck = new EmbeddingServiceHealthCheck(_mockEmbeddingService.Object);
+        _mockEmbeddingService = Substitute.For<IEmbeddingService>();
+        _healthCheck = new EmbeddingServiceHealthCheck(_mockEmbeddingService);
     }
 
     [Fact]
@@ -23,10 +24,10 @@ public class EmbeddingServiceHealthCheckTests
     {
         // Arrange
         var validEmbedding = Enumerable.Repeat(0.5f, 1024).ToArray();
-        _mockEmbeddingService.Setup(es => es.GenerateEmbeddingAsync(
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(validEmbedding);
+        _mockEmbeddingService.GenerateEmbeddingAsync(
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(validEmbedding);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
@@ -42,10 +43,10 @@ public class EmbeddingServiceHealthCheckTests
     public async Task CheckHealthAsync_EmptyEmbedding_ReturnsUnhealthy()
     {
         // Arrange
-        _mockEmbeddingService.Setup(es => es.GenerateEmbeddingAsync(
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<float>());
+        _mockEmbeddingService.GenerateEmbeddingAsync(
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<float>());
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
@@ -60,10 +61,10 @@ public class EmbeddingServiceHealthCheckTests
     {
         // Arrange
         var invalidEmbedding = new[] { 0.5f, float.NaN, 0.3f };
-        _mockEmbeddingService.Setup(es => es.GenerateEmbeddingAsync(
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(invalidEmbedding);
+        _mockEmbeddingService.GenerateEmbeddingAsync(
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Returns(invalidEmbedding);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
@@ -77,10 +78,10 @@ public class EmbeddingServiceHealthCheckTests
     public async Task CheckHealthAsync_ServiceFailure_ReturnsUnhealthy()
     {
         // Arrange
-        _mockEmbeddingService.Setup(es => es.GenerateEmbeddingAsync(
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Service unavailable"));
+        _mockEmbeddingService.GenerateEmbeddingAsync(
+                Arg.Any<string>(),
+                Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Service unavailable"));
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());

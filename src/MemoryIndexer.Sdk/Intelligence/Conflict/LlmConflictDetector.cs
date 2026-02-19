@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -22,7 +22,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Conflict;
 /// - Contradiction detection (opposing facts)
 /// - Temporal detection (time-based evolution)
 /// </remarks>
-public sealed class LlmConflictDetector
+public sealed partial class LlmConflictDetector
 {
     private readonly ITextCompletionService _completionService;
     private readonly ILogger<LlmConflictDetector> _logger;
@@ -54,23 +54,19 @@ public sealed class LlmConflictDetector
                 StopSequences = new[] { "###" }
             };
 
-            _logger.LogDebug(
-                "Analyzing conflict: NEW[{NewCreatedAt}] vs EXISTING[{ExistingCreatedAt}]",
-                newMemory.CreatedAt, existingMemory.CreatedAt);
+            LogAnalyzingConflictNEWNewCreatedAtVs(_logger, newMemory.CreatedAt, existingMemory.CreatedAt);
 
             var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
 
             var analysis = ParseConflictAnalysis(response);
 
-            _logger.LogDebug(
-                "Conflict analysis: {Type} (confidence: {Confidence})",
-                analysis.ConflictType, analysis.Confidence);
+            LogConflictAnalysisTypeConfidenceConfidence(_logger, analysis.ConflictType, analysis.Confidence);
 
             return analysis;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to analyze conflict");
+            LogFailedAnalyzeConflict(_logger, ex);
 
             // Fallback: treat as unrelated if analysis fails
             return new ConflictAnalysis
@@ -152,7 +148,7 @@ public sealed class LlmConflictDetector
 
             if (jsonStart == -1 || jsonEnd == -1)
             {
-                _logger.LogWarning("No JSON found in conflict analysis response");
+                LogJSONFoundConflictAnalysisResponse(_logger);
                 return CreateFallbackAnalysis();
             }
 
@@ -161,7 +157,7 @@ public sealed class LlmConflictDetector
 
             if (result == null)
             {
-                _logger.LogWarning("Failed to deserialize conflict analysis JSON");
+                LogFailedDeserializeConflictAnalysisJSON(_logger);
                 return CreateFallbackAnalysis();
             }
 
@@ -176,7 +172,7 @@ public sealed class LlmConflictDetector
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex, "Failed to parse conflict analysis as JSON: {Response}", response);
+            LogFailedParseConflictAnalysisJSON(_logger, ex, response);
             return CreateFallbackAnalysis();
         }
     }
@@ -219,6 +215,24 @@ public sealed class LlmConflictDetector
             Reasoning = "Unable to analyze conflict, treating as new memory"
         };
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Analyzing conflict: NEW[{NewCreatedAt}] vs EXISTING[{ExistingCreatedAt}]")]
+    private static partial void LogAnalyzingConflictNEWNewCreatedAtVs(ILogger logger, DateTime newCreatedAt, DateTime existingCreatedAt);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Conflict analysis: {Type} (confidence: {Confidence})")]
+    private static partial void LogConflictAnalysisTypeConfidenceConfidence(ILogger logger, ConflictType type, float confidence);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to analyze conflict")]
+    private static partial void LogFailedAnalyzeConflict(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No JSON found in conflict analysis response")]
+    private static partial void LogJSONFoundConflictAnalysisResponse(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to deserialize conflict analysis JSON")]
+    private static partial void LogFailedDeserializeConflictAnalysisJSON(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse conflict analysis as JSON: {Response}")]
+    private static partial void LogFailedParseConflictAnalysisJSON(ILogger logger, Exception ex, string response);
 }
 
 #region DTOs

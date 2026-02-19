@@ -207,7 +207,7 @@ public class InferenceOptions
     /// Whether to automatically store high-confidence inferences.
     /// Default: false
     /// </summary>
-    public bool AutoStore { get; set; } = false;
+    public bool AutoStore { get; set; }
 
     /// <summary>
     /// Confidence threshold for auto-store.

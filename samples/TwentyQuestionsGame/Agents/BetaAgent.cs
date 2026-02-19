@@ -2,17 +2,17 @@ using Microsoft.Extensions.Logging;
 using TwentyQuestionsGame.Game;
 using TwentyQuestionsGame.LLM;
 using TwentyQuestionsGame.ToolCall;
+using System.Globalization;
 
 namespace TwentyQuestionsGame.Agents;
 
 /// <summary>
 /// Beta agent - the Guesser who asks questions.
 /// </summary>
-public sealed class BetaAgent(
+public sealed partial class BetaAgent(
     LlmClient llmClient,
-    ToolCallParser parser,
     ToolCallExecutor executor,
-    ILogger<BetaAgent> logger) : AgentBase(llmClient, parser, executor, logger)
+    ILogger<BetaAgent> logger) : AgentBase(llmClient, executor, logger)
 {
     private string _systemPromptTemplate = "";
 
@@ -43,14 +43,14 @@ public sealed class BetaAgent(
         // ==========================================================================
 
         var userMessageBuilder = new System.Text.StringBuilder();
-        userMessageBuilder.Append($"Alpha says: \"{alphaLastResponse}\"\n\n");
+        userMessageBuilder.Append(CultureInfo.InvariantCulture, $"Alpha says: \"{alphaLastResponse}\"\n\n");
 
         // NOTE: Q&A history is NOT injected here - Beta must use memory_recall
         // This validates Memory Indexer's recall functionality
 
         if (currentRound >= 19)
         {
-            userMessageBuilder.Append($"⚠️ THIS IS ROUND {currentRound}/20 - YOU MUST MAKE YOUR FINAL GUESS NOW!\nFormat: \"My final guess is: [specific answer]\"");
+            userMessageBuilder.Append(CultureInfo.InvariantCulture, $"⚠️ THIS IS ROUND {currentRound}/20 - YOU MUST MAKE YOUR FINAL GUESS NOW!\nFormat: \"My final guess is: [specific answer]\"");
         }
         else
         {
@@ -73,7 +73,7 @@ public sealed class BetaAgent(
             if (string.IsNullOrEmpty(question) && attempt < MaxRetryAttempts)
             {
                 userMessage = $"{userMessage}\n\n⚠️ YOUR PREVIOUS RESPONSE DID NOT CONTAIN A VALID QUESTION. You MUST output a yes/no question ending with '?' or a final guess starting with 'My final guess is:'";
-                logger.LogWarning("Beta failed to generate question (attempt {Attempt}), retrying...", attempt);
+                LogBetaFailedToGenerateQuestion(logger, attempt);
             }
         } while (string.IsNullOrEmpty(question) && attempt < MaxRetryAttempts);
 
@@ -81,7 +81,7 @@ public sealed class BetaAgent(
         if (string.IsNullOrEmpty(question))
         {
             question = GenerateContextualFallback(questionHistory, currentRound);
-            logger.LogWarning("Beta failed to generate question after {Attempts} attempts, using fallback: {Fallback}", attempt, question);
+            LogBetaUsingFallbackQuestion(logger, attempt, question);
         }
 
         // Enforce final guess format on Round 19-20
@@ -118,7 +118,7 @@ public sealed class BetaAgent(
     private string BuildSystemPrompt(int currentRound, string lastResponse)
     {
         return _systemPromptTemplate
-            .Replace("{{ROUND}}", currentRound.ToString())
+            .Replace("{{ROUND}}", currentRound.ToString(CultureInfo.InvariantCulture))
             .Replace("{{LAST_RESPONSE}}", lastResponse);
     }
 
@@ -281,7 +281,7 @@ public sealed class BetaAgent(
         }
 
         // Fall back to the cleaned question if it looks like a specific guess
-        if (cleanedQuestion.Contains("Is it") && cleanedQuestion.Contains("?"))
+        if (cleanedQuestion.Contains("Is it") && cleanedQuestion.Contains('?'))
         {
             var guessMatch = System.Text.RegularExpressions.Regex.Match(
                 cleanedQuestion,
@@ -403,7 +403,7 @@ public sealed class BetaAgent(
         var prefixes = new[] { "is it ", "are there ", "does it ", "can it ", "will it ", "has it ", "my final guess is " };
         foreach (var prefix in prefixes)
         {
-            if (normalized.StartsWith(prefix))
+            if (normalized.StartsWith(prefix, StringComparison.Ordinal))
             {
                 normalized = normalized[prefix.Length..];
                 break;
@@ -412,6 +412,12 @@ public sealed class BetaAgent(
 
         return normalized;
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Beta failed to generate question (attempt {Attempt}), retrying...")]
+    private static partial void LogBetaFailedToGenerateQuestion(ILogger logger, int attempt);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Beta failed to generate question after {Attempt} attempts, using fallback: {Fallback}")]
+    private static partial void LogBetaUsingFallbackQuestion(ILogger logger, int attempt, string fallback);
 }
 
 /// <summary>

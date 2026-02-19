@@ -8,7 +8,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Summarization;
 /// Manages rolling summaries for active sessions with periodic consolidation.
 /// Implements a sliding window approach to maintain fresh, up-to-date summaries.
 /// </summary>
-public sealed class RollingSummaryManager : IRollingSummaryManager
+public sealed partial class RollingSummaryManager : IRollingSummaryManager
 {
     private readonly ISummarizationService _summarizer;
     private readonly ILogger<RollingSummaryManager> _logger;
@@ -34,14 +34,11 @@ public sealed class RollingSummaryManager : IRollingSummaryManager
 
         if (!_states.TryAdd(sessionId, state))
         {
-            _logger.LogWarning("Rolling summary already initialized for session {SessionId}, resetting", sessionId);
+            LogRollingSummaryAlreadyInitialized(_logger, sessionId);
             _states[sessionId] = state;
         }
 
-        _logger.LogDebug(
-            "Initialized rolling summary for session {SessionId}: turnInterval={TurnInterval}, " +
-            "timeInterval={TimeInterval}, maxWindow={MaxWindow}",
-            sessionId, state.Config.TurnInterval, state.Config.TimeInterval, state.Config.MaxWindowSize);
+        LogInitializedRollingSummary(_logger, sessionId, state.Config.TurnInterval, state.Config.TimeInterval, state.Config.MaxWindowSize);
     }
 
     /// <inheritdoc />
@@ -52,7 +49,7 @@ public sealed class RollingSummaryManager : IRollingSummaryManager
     {
         if (!_states.TryGetValue(sessionId, out var state))
         {
-            _logger.LogDebug("Session {SessionId} not initialized for rolling summary", sessionId);
+            LogSessionNotInitialized(_logger, sessionId);
             return null;
         }
 
@@ -64,10 +61,7 @@ public sealed class RollingSummaryManager : IRollingSummaryManager
         var estimatedTokens = memory.Content.Length / 4;
         state.WindowTokenCount += estimatedTokens;
 
-        _logger.LogDebug(
-            "Added memory to rolling window for session {SessionId}: " +
-            "windowSize={WindowSize}, windowTokens={WindowTokens}",
-            sessionId, state.WindowMemories.Count, state.WindowTokenCount);
+        LogAddedMemoryToWindow(_logger, sessionId, state.WindowMemories.Count, state.WindowTokenCount);
 
         // Check if we should trigger summarization
         if (state.ShouldTriggerSummary())
@@ -141,10 +135,7 @@ public sealed class RollingSummaryManager : IRollingSummaryManager
         // Remove state after finalization
         _states.TryRemove(sessionId, out _);
 
-        _logger.LogInformation(
-            "Finalized rolling summary for session {SessionId}: " +
-            "{TotalSummaries} summaries, {TotalMemories} memories processed",
-            sessionId, state.TotalSummariesGenerated, state.TotalMemoriesProcessed);
+        LogFinalizedRollingSummary(_logger, sessionId, state.TotalSummariesGenerated, state.TotalMemoriesProcessed);
 
         return finalSummary;
     }
@@ -154,10 +145,7 @@ public sealed class RollingSummaryManager : IRollingSummaryManager
     {
         if (_states.TryRemove(sessionId, out var state))
         {
-            _logger.LogDebug(
-                "Removed rolling summary state for session {SessionId}: " +
-                "{TotalSummaries} summaries, {TotalMemories} memories",
-                sessionId, state.TotalSummariesGenerated, state.TotalMemoriesProcessed);
+            LogRemovedRollingSummaryState(_logger, sessionId, state.TotalSummariesGenerated, state.TotalMemoriesProcessed);
         }
     }
 
@@ -190,10 +178,7 @@ public sealed class RollingSummaryManager : IRollingSummaryManager
                 state.WindowMemories,
                 cancellationToken);
 
-            _logger.LogDebug(
-                "Incremental summary update for session {SessionId}: " +
-                "{NewMemories} new memories merged",
-                state.SessionId, state.WindowMemories.Count);
+            LogIncrementalSummaryUpdate(_logger, state.SessionId, state.WindowMemories.Count);
         }
         else if (state.WindowMemories.Count > 0)
         {
@@ -203,10 +188,7 @@ public sealed class RollingSummaryManager : IRollingSummaryManager
                 options,
                 cancellationToken);
 
-            _logger.LogDebug(
-                "Full summary generated for session {SessionId}: " +
-                "{MemoryCount} memories → {TokenCount} tokens",
-                state.SessionId, state.WindowMemories.Count, newSummary.SummarizedTokenCount);
+            LogFullSummaryGenerated(_logger, state.SessionId, state.WindowMemories.Count, newSummary.SummarizedTokenCount);
         }
         else if (state.CurrentSummary != null)
         {
@@ -232,11 +214,35 @@ public sealed class RollingSummaryManager : IRollingSummaryManager
         state.LastSummaryAt = DateTime.UtcNow;
         state.TotalSummariesGenerated++;
 
-        _logger.LogInformation(
-            "Rolling summary updated for session {SessionId}: " +
-            "compressionRatio={Ratio:P0}, summaryCount={Count}",
-            state.SessionId, newSummary.CompressionRatio, state.TotalSummariesGenerated);
+        LogRollingSummaryUpdated(_logger, state.SessionId, newSummary.CompressionRatio, state.TotalSummariesGenerated);
 
         return newSummary;
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Rolling summary already initialized for session {SessionId}, resetting")]
+    private static partial void LogRollingSummaryAlreadyInitialized(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Initialized rolling summary for session {SessionId}: turnInterval={TurnInterval}, timeInterval={TimeInterval}, maxWindow={MaxWindow}")]
+    private static partial void LogInitializedRollingSummary(ILogger logger, string sessionId, int turnInterval, TimeSpan timeInterval, int maxWindow);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Session {SessionId} not initialized for rolling summary")]
+    private static partial void LogSessionNotInitialized(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Added memory to rolling window for session {SessionId}: windowSize={WindowSize}, windowTokens={WindowTokens}")]
+    private static partial void LogAddedMemoryToWindow(ILogger logger, string sessionId, int windowSize, int windowTokens);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Finalized rolling summary for session {SessionId}: {TotalSummaries} summaries, {TotalMemories} memories processed")]
+    private static partial void LogFinalizedRollingSummary(ILogger logger, string sessionId, int totalSummaries, int totalMemories);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Removed rolling summary state for session {SessionId}: {TotalSummaries} summaries, {TotalMemories} memories")]
+    private static partial void LogRemovedRollingSummaryState(ILogger logger, string sessionId, int totalSummaries, int totalMemories);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Incremental summary update for session {SessionId}: {NewMemories} new memories merged")]
+    private static partial void LogIncrementalSummaryUpdate(ILogger logger, string sessionId, int newMemories);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Full summary generated for session {SessionId}: {MemoryCount} memories -> {TokenCount} tokens")]
+    private static partial void LogFullSummaryGenerated(ILogger logger, string sessionId, int memoryCount, int tokenCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rolling summary updated for session {SessionId}: compressionRatio={Ratio:P0}, summaryCount={Count}")]
+    private static partial void LogRollingSummaryUpdated(ILogger logger, string sessionId, float ratio, int count);
 }

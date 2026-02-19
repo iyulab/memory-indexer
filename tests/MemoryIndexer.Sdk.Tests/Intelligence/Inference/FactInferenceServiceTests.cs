@@ -2,7 +2,7 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Inference;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Inference;
@@ -13,27 +13,26 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Inference;
 /// </summary>
 public class FactInferenceServiceTests
 {
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<ILogger<FactInferenceService>> _mockLogger;
+    private readonly IArchiveStore _mockArchiveStore;
+    private readonly IEmbeddingService _mockEmbeddingService;
+    private readonly ILogger<FactInferenceService> _mockLogger;
     private readonly FactInferenceService _service;
 
     private readonly ReadOnlyMemory<float> _testEmbedding = new float[] { 0.1f, 0.2f, 0.3f, 0.4f };
 
     public FactInferenceServiceTests()
     {
-        _mockArchiveStore = new Mock<IArchiveStore>();
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockLogger = new Mock<ILogger<FactInferenceService>>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
+        _mockEmbeddingService = Substitute.For<IEmbeddingService>();
+        _mockLogger = Substitute.For<ILogger<FactInferenceService>>();
 
-        _mockEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testEmbedding);
+        _mockEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(_testEmbedding);
 
         _service = new FactInferenceService(
-            _mockArchiveStore.Object,
-            _mockEmbeddingService.Object,
-            _mockLogger.Object);
+            _mockArchiveStore,
+            _mockEmbeddingService,
+            _mockLogger);
     }
 
     #region InferAsync Tests
@@ -222,8 +221,8 @@ public class FactInferenceServiceTests
             new() { Key = "pref3", Value = "User likes sushi", Category = SemanticStoreCategory.Preference, IsActive = true, Confidence = 0.85f }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _service.InferForUserAsync("user1");
@@ -244,8 +243,8 @@ public class FactInferenceServiceTests
             new() { Key = "work1", Value = "User works at Samsung in Seoul", Category = SemanticStoreCategory.Work, IsActive = true, Confidence = 0.95f }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         var options = new InferenceOptions
         {
@@ -271,11 +270,11 @@ public class FactInferenceServiceTests
     public void RegisterRule_ShouldAddRule()
     {
         // Arrange
-        var mockRule = new Mock<IInferenceRule>();
-        mockRule.Setup(r => r.Name).Returns("TestRule");
+        var mockRule = Substitute.For<IInferenceRule>();
+        mockRule.Name.Returns("TestRule");
 
         // Act
-        _service.RegisterRule(mockRule.Object);
+        _service.RegisterRule(mockRule);
 
         // Assert
         var rules = _service.GetRegisteredRules();
@@ -286,11 +285,11 @@ public class FactInferenceServiceTests
     public async Task InferAsync_WithCustomRule_ShouldEvaluate()
     {
         // Arrange
-        var mockRule = new Mock<IInferenceRule>();
-        mockRule.Setup(r => r.Name).Returns("TestRule");
-        mockRule.Setup(r => r.Type).Returns(InferenceType.Custom);
-        mockRule.Setup(r => r.EvaluateAsync(It.IsAny<IReadOnlyList<SemanticStoreEntry>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InferredFact>
+        var mockRule = Substitute.For<IInferenceRule>();
+        mockRule.Name.Returns("TestRule");
+        mockRule.Type.Returns(InferenceType.Custom);
+        mockRule.EvaluateAsync(Arg.Any<IReadOnlyList<SemanticStoreEntry>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<InferredFact>
             {
                 new InferredFact
                 {
@@ -302,7 +301,7 @@ public class FactInferenceServiceTests
                 }
             });
 
-        _service.RegisterRule(mockRule.Object);
+        _service.RegisterRule(mockRule);
 
         var facts = new List<SemanticStoreEntry>
         {

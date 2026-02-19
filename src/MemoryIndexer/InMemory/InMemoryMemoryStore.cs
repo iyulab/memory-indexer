@@ -10,7 +10,7 @@ namespace MemoryIndexer.InMemory;
 /// In-memory implementation of IMemoryStore.
 /// Useful for development and testing.
 /// </summary>
-public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : IMemoryStore
+public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : IMemoryStore
 {
     private readonly ConcurrentDictionary<Guid, MemoryUnit> _memories = new();
 
@@ -22,7 +22,7 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
         memory.UpdatedAt = memory.UpdatedAt == default ? DateTime.UtcNow : memory.UpdatedAt;
 
         _memories[memory.Id] = memory;
-        logger.LogDebug("Stored memory {MemoryId} for user {UserId}", memory.Id, memory.UserId);
+        LogStoredMemory(logger, memory.Id, memory.UserId);
 
         return Task.FromResult(memory);
     }
@@ -69,7 +69,7 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
 
         memory.UpdatedAt = DateTime.UtcNow;
         _memories[memory.Id] = memory;
-        logger.LogDebug("Updated memory {MemoryId}", memory.Id);
+        LogUpdatedMemory(logger, memory.Id);
 
         return Task.FromResult(true);
     }
@@ -81,7 +81,7 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
         {
             var removed = _memories.TryRemove(id, out _);
             if (removed)
-                logger.LogDebug("Hard deleted memory {MemoryId}", id);
+                LogHardDeletedMemory(logger, id);
             return Task.FromResult(removed);
         }
 
@@ -89,7 +89,7 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
         {
             memory.IsDeleted = true;
             memory.UpdatedAt = DateTime.UtcNow;
-            logger.LogDebug("Soft deleted memory {MemoryId}", id);
+            LogSoftDeletedMemory(logger, id);
             return Task.FromResult(true);
         }
 
@@ -117,8 +117,7 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
             }
         }
 
-        logger.LogDebug("{DeleteType} deleted {Count} memories for user {UserId}",
-            hardDelete ? "Hard" : "Soft", count, userId);
+        LogDeletedMemoriesForUser(logger, hardDelete ? "Hard" : "Soft", count, userId);
         return Task.FromResult(count);
     }
 
@@ -145,8 +144,7 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
             }
         }
 
-        logger.LogDebug("{DeleteType} deleted {Count} memories for user {UserId} session {SessionId}",
-            hardDelete ? "Hard" : "Soft", count, userId, sessionId);
+        LogDeletedMemoriesForSession(logger, hardDelete ? "Hard" : "Soft", count, userId, sessionId);
         return Task.FromResult(count);
     }
 
@@ -198,7 +196,7 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
             })
             .ToList();
 
-        logger.LogDebug("Search returned {Count} results", results.Count);
+        LogSearchResults(logger, results.Count);
         return Task.FromResult<IReadOnlyList<MemorySearchResult>>(results);
     }
 
@@ -286,8 +284,31 @@ public sealed class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> logger) : I
     public Task DeleteCollectionAsync(CancellationToken cancellationToken = default)
     {
         _memories.Clear();
-        logger.LogInformation("Cleared all memories from in-memory store");
+        LogClearedAllMemories(logger);
         return Task.CompletedTask;
     }
 
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Stored memory {MemoryId} for user {UserId}")]
+    private static partial void LogStoredMemory(ILogger logger, Guid memoryId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated memory {MemoryId}")]
+    private static partial void LogUpdatedMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Hard deleted memory {MemoryId}")]
+    private static partial void LogHardDeletedMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Soft deleted memory {MemoryId}")]
+    private static partial void LogSoftDeletedMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted {Count} memories for user {UserId}")]
+    private static partial void LogDeletedMemoriesForUser(ILogger logger, string deleteType, int count, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted {Count} memories for user {UserId} session {SessionId}")]
+    private static partial void LogDeletedMemoriesForSession(ILogger logger, string deleteType, int count, string userId, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Search returned {Count} results")]
+    private static partial void LogSearchResults(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Cleared all memories from in-memory store")]
+    private static partial void LogClearedAllMemories(ILogger logger);
 }

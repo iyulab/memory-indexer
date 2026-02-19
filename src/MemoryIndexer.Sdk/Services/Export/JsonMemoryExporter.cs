@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -14,7 +14,7 @@ namespace MemoryIndexer.Sdk.Services.Export;
 /// JSON-based memory exporter for backup/restore operations.
 /// Phase v0.6.0-β: Memory Export/Import (Backup/Restore).
 /// </summary>
-public class JsonMemoryExporter : IMemoryExporter
+public partial class JsonMemoryExporter : IMemoryExporter
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService? _embeddingService;
@@ -55,7 +55,7 @@ public class JsonMemoryExporter : IMemoryExporter
 
         try
         {
-            _logger.LogInformation("Starting memory export for user: {UserId}", options.UserId ?? "all");
+            LogStartingMemoryExportUserUserId(_logger, options.UserId ?? "all");
 
             // Fetch memories based on options
             var memories = await FetchMemoriesAsync(options, cancellationToken);
@@ -84,16 +84,13 @@ public class JsonMemoryExporter : IMemoryExporter
             activity?.SetTag("export.unique_users", package.Statistics.UniqueUsers);
             MemoryIndexerTelemetry.CompleteOperation(activity, success: true);
 
-            _logger.LogInformation(
-                "Export completed: {Count} memories in {Duration}ms",
-                package.Statistics.TotalMemories,
-                sw.ElapsedMilliseconds);
+            LogExportCompletedCountMemoriesDuration(_logger, package.Statistics.TotalMemories, sw.ElapsedMilliseconds);
 
             return package;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Export failed");
+            LogExportFailed(_logger, ex);
             MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
             throw;
         }
@@ -118,10 +115,7 @@ public class JsonMemoryExporter : IMemoryExporter
 
         try
         {
-            _logger.LogInformation(
-                "Starting memory import: {Count} memories, conflict resolution: {Resolution}",
-                package.Memories.Count,
-                options.ConflictResolution);
+            LogStartingMemoryImportCountMemories(_logger, package.Memories.Count, options.ConflictResolution);
 
             // Verify checksum if present
             if (!string.IsNullOrEmpty(package.Checksum))
@@ -130,7 +124,7 @@ public class JsonMemoryExporter : IMemoryExporter
                 var calculatedChecksum = CalculateChecksum(packageForChecksum);
                 if (calculatedChecksum != package.Checksum)
                 {
-                    _logger.LogWarning("Package checksum mismatch - data may be corrupted");
+                    LogPackageChecksumMismatchDataMay(_logger);
                 }
             }
 
@@ -177,18 +171,13 @@ public class JsonMemoryExporter : IMemoryExporter
             activity?.SetTag("import.failed_count", result.FailedCount);
             MemoryIndexerTelemetry.CompleteOperation(activity, success: result.Success);
 
-            _logger.LogInformation(
-                "Import completed: {Imported} imported, {Skipped} skipped, {Failed} failed in {Duration}ms",
-                result.ImportedCount,
-                result.SkippedCount,
-                result.FailedCount,
-                sw.ElapsedMilliseconds);
+            LogImportCompletedImportedImportedSkipped(_logger, result.ImportedCount, result.SkippedCount, result.FailedCount, sw.ElapsedMilliseconds);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Import failed");
+            LogImportFailed(_logger, ex);
             result.Success = false;
             result.Duration = sw.Elapsed;
             result.Conflicts = conflicts;
@@ -254,7 +243,7 @@ public class JsonMemoryExporter : IMemoryExporter
 
         // For all users export, we need to iterate (storage doesn't support cross-user query)
         // This is a simplified implementation - production would need pagination
-        _logger.LogWarning("Exporting all users is not fully supported - using current user context");
+        LogExportingAllUsersFullySupported(_logger);
         return [];
     }
 
@@ -282,7 +271,7 @@ public class JsonMemoryExporter : IMemoryExporter
         return filtered.ToList();
     }
 
-    private static IReadOnlyList<MemoryUnit> PrepareMemoriesForExport(
+    private static List<MemoryUnit> PrepareMemoriesForExport(
         List<MemoryUnit> memories,
         ExportOptions options)
     {
@@ -584,4 +573,28 @@ public class JsonMemoryExporter : IMemoryExporter
             return text;
         return text[..maxLength] + "...";
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting memory export for user: {UserId}")]
+    private static partial void LogStartingMemoryExportUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Export completed: {Count} memories in {Duration}ms")]
+    private static partial void LogExportCompletedCountMemoriesDuration(ILogger logger, int count, long duration);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Export failed")]
+    private static partial void LogExportFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting memory import: {Count} memories, conflict resolution: {Resolution}")]
+    private static partial void LogStartingMemoryImportCountMemories(ILogger logger, int count, ImportConflictResolution resolution);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Package checksum mismatch - data may be corrupted")]
+    private static partial void LogPackageChecksumMismatchDataMay(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Import completed: {Imported} imported, {Skipped} skipped, {Failed} failed in {Duration}ms")]
+    private static partial void LogImportCompletedImportedImportedSkipped(ILogger logger, int imported, int skipped, int failed, long duration);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Import failed")]
+    private static partial void LogImportFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Exporting all users is not fully supported - using current user context")]
+    private static partial void LogExportingAllUsersFullySupported(ILogger logger);
 }

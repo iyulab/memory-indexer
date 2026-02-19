@@ -38,7 +38,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateStorageOptions(StorageOptions options, ConfigurationValidationResult result)
+    private static void ValidateStorageOptions(StorageOptions options, ConfigurationValidationResult result)
     {
         if (options.VectorDimensions <= 0)
         {
@@ -66,7 +66,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         ValidateSqliteOptions(options.Sqlite, result);
     }
 
-    private void ValidateSqliteOptions(SqliteOptions options, ConfigurationValidationResult result)
+    private static void ValidateSqliteOptions(SqliteOptions options, ConfigurationValidationResult result)
     {
         if (options.CacheSizeKb < 0)
         {
@@ -101,7 +101,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateEmbeddingOptions(EmbeddingOptions options, ConfigurationValidationResult result)
+    private static void ValidateEmbeddingOptions(EmbeddingOptions options, ConfigurationValidationResult result)
     {
         if (options.Dimensions <= 0)
         {
@@ -173,7 +173,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateCompletionOptions(CompletionOptions options, ConfigurationValidationResult result)
+    private static void ValidateCompletionOptions(CompletionOptions options, ConfigurationValidationResult result)
     {
         if (string.IsNullOrWhiteSpace(options.Model))
         {
@@ -220,7 +220,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateScoringOptions(ScoringOptions options, ConfigurationValidationResult result)
+    private static void ValidateScoringOptions(ScoringOptions options, ConfigurationValidationResult result)
     {
         if (options.RecencyWeight < 0)
         {
@@ -278,7 +278,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateSearchOptions(SearchOptions options, ConfigurationValidationResult result)
+    private static void ValidateSearchOptions(SearchOptions options, ConfigurationValidationResult result)
     {
         if (options.DefaultLimit <= 0)
         {
@@ -357,7 +357,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateSecurityOptions(SecurityOptions options, ConfigurationValidationResult result)
+    private static void ValidateSecurityOptions(SecurityOptions options, ConfigurationValidationResult result)
     {
         if (options.PiiMinConfidence < 0 || options.PiiMinConfidence > 1)
         {
@@ -393,7 +393,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateIntelligenceOptions(IntelligenceOptions options, ConfigurationValidationResult result)
+    private static void ValidateIntelligenceOptions(IntelligenceOptions options, ConfigurationValidationResult result)
     {
         if (options.MaxGeneratorTokens <= 0)
         {
@@ -418,7 +418,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateSensoryBufferOptions(SensoryBufferOptions options, ConfigurationValidationResult result)
+    private static void ValidateSensoryBufferOptions(SensoryBufferOptions options, ConfigurationValidationResult result)
     {
         if (options.IdleTimeout <= TimeSpan.Zero)
         {
@@ -465,7 +465,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateDeduplicationOptions(DeduplicationOptions options, ConfigurationValidationResult result)
+    private static void ValidateDeduplicationOptions(DeduplicationOptions options, ConfigurationValidationResult result)
     {
         ValidateThreshold(options.DefaultSimilarityThreshold, "Deduplication.DefaultSimilarityThreshold", result);
         ValidateThreshold(options.ExactDuplicateThreshold, "Deduplication.ExactDuplicateThreshold", result);
@@ -485,7 +485,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateMemoryGrowthOptions(MemoryGrowthOptions options, ConfigurationValidationResult result)
+    private static void ValidateMemoryGrowthOptions(MemoryGrowthOptions options, ConfigurationValidationResult result)
     {
         if (options.MaxGrowthRatePerRound <= 0)
         {
@@ -512,7 +512,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateLatencyOptions(LatencyOptions options, ConfigurationValidationResult result)
+    private static void ValidateLatencyOptions(LatencyOptions options, ConfigurationValidationResult result)
     {
         if (options.WorkingMemoryBudgetMs <= 0)
         {
@@ -539,7 +539,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         ValidateThreshold(options.EarlyTerminationConfidence, "Latency.EarlyTerminationConfidence", result);
     }
 
-    private void ValidateTypeBalancerOptions(TypeBalancerOptions options, ConfigurationValidationResult result)
+    private static void ValidateTypeBalancerOptions(TypeBalancerOptions options, ConfigurationValidationResult result)
     {
         if (options.BoostSensitivity < 0)
         {
@@ -567,7 +567,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateWorkingMemoryOptions(WorkingMemoryOptions options, ConfigurationValidationResult result)
+    private static void ValidateWorkingMemoryOptions(WorkingMemoryOptions options, ConfigurationValidationResult result)
     {
         if (options.Capacity <= 0)
         {
@@ -605,7 +605,7 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         ValidateThreshold(options.TopicChangeSimilarityThreshold, "WorkingMemory.TopicChangeSimilarityThreshold", result);
     }
 
-    private void ValidateThreshold(float value, string propertyPath, ConfigurationValidationResult result)
+    private static void ValidateThreshold(float value, string propertyPath, ConfigurationValidationResult result)
     {
         if (value < 0 || value > 1)
         {

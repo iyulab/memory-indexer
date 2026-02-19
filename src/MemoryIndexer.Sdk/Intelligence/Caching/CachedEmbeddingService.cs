@@ -12,7 +12,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Caching;
 /// Embedding service decorator with LRU cache.
 /// Phase 22.2: Recall Latency Optimization
 /// </summary>
-public sealed class CachedEmbeddingService : IEmbeddingService
+public sealed partial class CachedEmbeddingService : IEmbeddingService
 {
     private readonly IEmbeddingService _inner;
     private readonly ILatencyProfiler? _profiler;
@@ -62,7 +62,7 @@ public sealed class CachedEmbeddingService : IEmbeddingService
                     await _profiler.RecordCacheAccessAsync("system", "Embedding", hit: true, cancellationToken);
                 }
 
-                _logger.LogDebug("Embedding cache hit for key {CacheKey}", cacheKey);
+                LogCacheHit(_logger, cacheKey);
                 return entry.Embedding;
             }
             else
@@ -79,7 +79,7 @@ public sealed class CachedEmbeddingService : IEmbeddingService
             await _profiler.RecordCacheAccessAsync("system", "Embedding", hit: false, cancellationToken);
         }
 
-        _logger.LogDebug("Embedding cache miss for key {CacheKey}", cacheKey);
+        LogCacheMiss(_logger, cacheKey);
         var embedding = await _inner.GenerateEmbeddingAsync(text, cancellationToken);
 
         // Add to cache with LRU eviction
@@ -101,7 +101,7 @@ public sealed class CachedEmbeddingService : IEmbeddingService
                     var evictKey = _lruList.Last.Value;
                     _lruList.RemoveLast();
                     _cache.TryRemove(evictKey, out _);
-                    _logger.LogDebug("Evicted embedding cache entry {EvictKey}", evictKey);
+                    LogEvicted(_logger, evictKey);
                 }
             }
 
@@ -209,6 +209,15 @@ public sealed class CachedEmbeddingService : IEmbeddingService
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
         return Convert.ToHexString(bytes);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Embedding cache hit for key {CacheKey}")]
+    private static partial void LogCacheHit(ILogger logger, string cacheKey);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Embedding cache miss for key {CacheKey}")]
+    private static partial void LogCacheMiss(ILogger logger, string cacheKey);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Evicted embedding cache entry {EvictKey}")]
+    private static partial void LogEvicted(ILogger logger, string evictKey);
 
     private sealed class CacheEntry
     {

@@ -2,27 +2,28 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Health;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Health;
 
 public class BufferHealthCheckTests
 {
-    private readonly Mock<IBuffer> _mockBuffer;
+    private readonly IBuffer _mockBuffer;
     private readonly BufferHealthCheck _healthCheck;
 
     public BufferHealthCheckTests()
     {
-        _mockBuffer = new Mock<IBuffer>();
-        _healthCheck = new BufferHealthCheck(_mockBuffer.Object);
+        _mockBuffer = Substitute.For<IBuffer>();
+        _healthCheck = new BufferHealthCheck(_mockBuffer);
     }
 
     [Fact]
     public async Task CheckHealthAsync_HealthyBuffer_ReturnsHealthy()
     {
         // Arrange
-        _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        _mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 5,
@@ -45,7 +46,7 @@ public class BufferHealthCheckTests
     public async Task CheckHealthAsync_HighTokenCount_ReturnsDegraded()
     {
         // Arrange
-        _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        _mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 10,
@@ -67,7 +68,7 @@ public class BufferHealthCheckTests
     public async Task CheckHealthAsync_CriticalTokenCount_ReturnsUnhealthy()
     {
         // Arrange
-        _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        _mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 20,
@@ -89,7 +90,7 @@ public class BufferHealthCheckTests
     public async Task CheckHealthAsync_HighProcessingLag_ReturnsDegraded()
     {
         // Arrange
-        _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        _mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 5,
@@ -110,7 +111,7 @@ public class BufferHealthCheckTests
     public async Task CheckHealthAsync_CriticalProcessingLag_ReturnsUnhealthy()
     {
         // Arrange
-        _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        _mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 10,
@@ -132,8 +133,8 @@ public class BufferHealthCheckTests
     public async Task CheckHealthAsync_Exception_ReturnsUnhealthy()
     {
         // Arrange
-        _mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
-            .Throws(new Exception("Test exception"));
+        _mockBuffer.GetStats(Arg.Any<string>())
+            .Throws(new InvalidOperationException("Test exception"));
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());

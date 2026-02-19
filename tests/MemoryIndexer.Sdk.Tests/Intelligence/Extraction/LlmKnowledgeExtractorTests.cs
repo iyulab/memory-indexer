@@ -1,7 +1,8 @@
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Extraction;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Extraction;
@@ -12,14 +13,14 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Extraction;
 /// </summary>
 public sealed class LlmKnowledgeExtractorTests
 {
-    private readonly Mock<ITextCompletionService> _mockCompletionService;
+    private readonly ITextCompletionService _mockCompletionService;
     private readonly LlmKnowledgeExtractor _extractor;
 
     public LlmKnowledgeExtractorTests()
     {
-        _mockCompletionService = new Mock<ITextCompletionService>();
+        _mockCompletionService = Substitute.For<ITextCompletionService>();
         _extractor = new LlmKnowledgeExtractor(
-            _mockCompletionService.Object,
+            _mockCompletionService,
             NullLogger<LlmKnowledgeExtractor>.Instance);
     }
 
@@ -48,12 +49,11 @@ public sealed class LlmKnowledgeExtractorTests
             }
             """;
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var facts = await _extractor.ExtractAsync(context);
@@ -97,12 +97,11 @@ public sealed class LlmKnowledgeExtractorTests
             }
             """;
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var facts = await _extractor.ExtractAsync(context);
@@ -142,12 +141,11 @@ public sealed class LlmKnowledgeExtractorTests
             ```
             """;
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var facts = await _extractor.ExtractAsync(context);
@@ -171,12 +169,11 @@ public sealed class LlmKnowledgeExtractorTests
 
         var llmResponse = "I cannot extract facts from this uncertain response.";
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var facts = await _extractor.ExtractAsync(context);
@@ -205,12 +202,11 @@ public sealed class LlmKnowledgeExtractorTests
             }
             """;
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var facts = await _extractor.ExtractAsync(context);
@@ -237,12 +233,11 @@ public sealed class LlmKnowledgeExtractorTests
             }
             """;
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var facts = await _extractor.ExtractAsync(context);
@@ -263,12 +258,11 @@ public sealed class LlmKnowledgeExtractorTests
             UserId = "test-user"
         };
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new HttpRequestException("LLM service unavailable"));
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Throws(new HttpRequestException("LLM service unavailable"));
 
         // Act
         var facts = await _extractor.ExtractAsync(context);
@@ -304,14 +298,15 @@ public sealed class LlmKnowledgeExtractorTests
 
         TextCompletionOptions? capturedOptions = null;
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, TextCompletionOptions?, CancellationToken>(
-                (prompt, options, ct) => capturedOptions = options)
-            .ReturnsAsync(llmResponse);
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                capturedOptions = callInfo.ArgAt<TextCompletionOptions?>(1);
+                return llmResponse;
+            });
 
         // Act
         await _extractor.ExtractAsync(context);
@@ -350,14 +345,15 @@ public sealed class LlmKnowledgeExtractorTests
 
         string? capturedPrompt = null;
 
-        _mockCompletionService
-            .Setup(x => x.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .Callback<string, TextCompletionOptions?, CancellationToken>(
-                (prompt, options, ct) => capturedPrompt = prompt)
-            .ReturnsAsync(llmResponse);
+        _mockCompletionService.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                capturedPrompt = callInfo.ArgAt<string>(0);
+                return llmResponse;
+            });
 
         // Act
         await _extractor.ExtractAsync(context);

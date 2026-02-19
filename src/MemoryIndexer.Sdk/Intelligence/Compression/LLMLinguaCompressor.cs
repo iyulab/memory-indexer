@@ -79,8 +79,7 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
             };
         }
 
-        _logger.LogDebug("Compressing text of length {Length} with target ratio {Ratio}",
-            text.Length, options.TargetRatio);
+        LogCompressing(_logger, text.Length, options.TargetRatio);
 
         return options.Strategy switch
         {
@@ -122,7 +121,7 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
         return 1.0f - (float)removableCount / tokens.Count * 0.4f;
     }
 
-    private async Task<CompressionResult> TokenPruningCompressionAsync(
+    private static async Task<CompressionResult> TokenPruningCompressionAsync(
         string text,
         CompressionOptions options,
         CancellationToken cancellationToken)
@@ -257,7 +256,7 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
         };
     }
 
-    private CompressionResult HeuristicCompression(string text, CompressionOptions options)
+    private static CompressionResult HeuristicCompression(string text, CompressionOptions options)
     {
         var tokens = Tokenize(text);
         var originalCount = tokens.Count;
@@ -306,7 +305,7 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
         };
     }
 
-    private async Task<List<ScoredToken>> ScoreTokensAsync(
+    private static async Task<List<ScoredToken>> ScoreTokensAsync(
         List<string> tokens,
         string originalText,
         CompressionOptions options,
@@ -324,7 +323,7 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
         return scoredTokens;
     }
 
-    private float CalculateTokenImportance(string token, int position, int totalTokens, CompressionOptions options)
+    private static float CalculateTokenImportance(string token, int position, int totalTokens, CompressionOptions options)
     {
         var score = 0f;
 
@@ -636,6 +635,9 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
 
     [GeneratedRegex(@"[{}\[\]();=>]|->|::|//")]
     private static partial Regex CodePatternRegex();
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Compressing text of length {Length} with target ratio {Ratio}")]
+    private static partial void LogCompressing(ILogger logger, int length, float ratio);
 
     private sealed record ScoredToken(string Token, float Score, int Position);
     private sealed record ScoredSentence(string Text, float Score, int Position);

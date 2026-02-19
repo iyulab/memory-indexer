@@ -13,10 +13,16 @@ namespace MemoryIndexer.Sdk.Tests.Storage.Sqlite;
 /// Unit tests for SqliteVecMemoryStore.
 /// Uses temporary database files that are cleaned up after each test.
 /// </summary>
-public class SqliteVecMemoryStoreTests : IAsyncLifetime
+public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
 {
     private readonly string _testDbPath;
     private SqliteVecMemoryStore _store = null!;
+
+    public void Dispose()
+    {
+        // Cleanup handled by IAsyncLifetime.DisposeAsync
+        GC.SuppressFinalize(this);
+    }
 
     public SqliteVecMemoryStoreTests()
     {
@@ -594,8 +600,8 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime
         var retrieved = await _store.GetByIdAsync(stored.Id);
 
         // Assert
-        retrieved!.Topics.Should().BeEquivalentTo(new[] { "AI", "Machine Learning", "NLP" });
-        retrieved.Entities.Should().BeEquivalentTo(new[] { "GPT-4", "Claude", "Anthropic" });
+        retrieved!.Topics.Should().BeEquivalentTo(["AI", "Machine Learning", "NLP"]);
+        retrieved.Entities.Should().BeEquivalentTo(["GPT-4", "Claude", "Anthropic"]);
     }
 
     [Fact]

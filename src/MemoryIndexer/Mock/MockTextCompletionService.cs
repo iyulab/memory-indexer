@@ -7,7 +7,7 @@ namespace MemoryIndexer.Mock;
 /// Mock text completion service for development and testing.
 /// Returns placeholder responses without calling any external LLM.
 /// </summary>
-public sealed class MockTextCompletionService : ITextCompletionService
+public sealed partial class MockTextCompletionService : ITextCompletionService
 {
     private readonly ILogger<MockTextCompletionService> _logger;
 
@@ -22,7 +22,7 @@ public sealed class MockTextCompletionService : ITextCompletionService
         TextCompletionOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Mock completion for prompt of length {Length}", prompt.Length);
+        LogMockCompletion(_logger, prompt.Length);
 
         // Return a placeholder response
         var response = $"[Mock completion for prompt: {TruncatePrompt(prompt)}]";
@@ -36,7 +36,7 @@ public sealed class MockTextCompletionService : ITextCompletionService
         CancellationToken cancellationToken = default)
     {
         var promptList = prompts.ToList();
-        _logger.LogDebug("Mock batch completion for {Count} prompts", promptList.Count);
+        LogMockBatchCompletion(_logger, promptList.Count);
 
         var results = promptList
             .Select(p => $"[Mock completion for prompt: {TruncatePrompt(p)}]")
@@ -52,4 +52,10 @@ public sealed class MockTextCompletionService : ITextCompletionService
             ? prompt
             : string.Concat(prompt.AsSpan(0, maxLength), "...");
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Mock completion for prompt of length {Length}")]
+    private static partial void LogMockCompletion(ILogger logger, int length);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Mock batch completion for {Count} prompts")]
+    private static partial void LogMockBatchCompletion(ILogger logger, int count);
 }

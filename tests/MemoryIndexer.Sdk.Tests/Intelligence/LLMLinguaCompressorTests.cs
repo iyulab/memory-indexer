@@ -1,7 +1,7 @@
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Compression;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence;
@@ -9,23 +9,20 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence;
 public class LLMLinguaCompressorTests
 {
     private readonly LLMLinguaCompressor _compressor;
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly IEmbeddingService _embeddingServiceMock;
 
     public LLMLinguaCompressorTests()
     {
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
 
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string text, CancellationToken _) => GenerateMockEmbedding(text));
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => GenerateMockEmbedding(callInfo.ArgAt<string>(0)));
 
-        _embeddingServiceMock
-            .Setup(x => x.GenerateBatchEmbeddingsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IEnumerable<string> texts, CancellationToken _) =>
-                texts.Select(t => GenerateMockEmbedding(t)).ToList());
+        _embeddingServiceMock.GenerateBatchEmbeddingsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => callInfo.ArgAt<IEnumerable<string>>(0).Select(t => GenerateMockEmbedding(t)).ToList());
 
         _compressor = new LLMLinguaCompressor(
-            _embeddingServiceMock.Object,
+            _embeddingServiceMock,
             NullLogger<LLMLinguaCompressor>.Instance);
     }
 

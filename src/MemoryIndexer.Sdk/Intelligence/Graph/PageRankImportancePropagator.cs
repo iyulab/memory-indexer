@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -14,7 +14,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Graph;
 /// Research basis: PageRank (Brin & Page, 1998) adapted for knowledge graphs.
 /// Key insight: Important entities are referenced by many other important entities.
 /// </remarks>
-public sealed class PageRankImportancePropagator : IImportancePropagator
+public sealed partial class PageRankImportancePropagator : IImportancePropagator
 {
     private readonly ITemporalEntityStore _entityStore;
     private readonly IMemoryGraphService _graphService;
@@ -50,7 +50,7 @@ public sealed class PageRankImportancePropagator : IImportancePropagator
         options ??= new ImportanceOptions();
         var stopwatch = Stopwatch.StartNew();
 
-        _logger.LogDebug("Computing PageRank importance for user {UserId}", userId);
+        LogComputingPageRankImportanceUserUserId(_logger, userId);
 
         // Build graph from entity store
         var triples = await _entityStore.GetAllActiveAsync(userId, cancellationToken);
@@ -86,7 +86,7 @@ public sealed class PageRankImportancePropagator : IImportancePropagator
 
         if (entities.Count == 0)
         {
-            _logger.LogDebug("No entities found for user {UserId}", userId);
+            LogEntitiesFoundUserUserId(_logger, userId);
             return new ImportanceResult
             {
                 EntityCount = 0,
@@ -156,7 +156,7 @@ public sealed class PageRankImportancePropagator : IImportancePropagator
 
             if (iterations % 10 == 0)
             {
-                _logger.LogDebug("PageRank iteration {Iteration}: diff={Diff:E3}", iterations, difference);
+                LogPageRankIterationIterationDiffDiff(_logger, iterations, difference);
             }
         }
 
@@ -205,9 +205,7 @@ public sealed class PageRankImportancePropagator : IImportancePropagator
 
         stopwatch.Stop();
 
-        _logger.LogInformation(
-            "PageRank completed: {Entities} entities, {Edges} edges, {Iterations} iterations, converged={Converged} in {Duration}ms",
-            n, tripleList.Count, iterations, converged, stopwatch.ElapsedMilliseconds);
+        LogPageRankCompletedEntitiesEntitiesEdges(_logger, n, tripleList.Count, iterations, converged, stopwatch.ElapsedMilliseconds);
 
         return new ImportanceResult
         {
@@ -267,7 +265,7 @@ public sealed class PageRankImportancePropagator : IImportancePropagator
         // would use personalized PageRank or incremental updates)
         if (affectedEntities.Count > 0)
         {
-            _logger.LogDebug("Recomputing importance due to {Count} affected entities", affectedEntities.Count);
+            LogRecomputingImportanceDueCountAffected(_logger, affectedEntities.Count);
             await ComputeImportanceAsync(userId, cancellationToken: cancellationToken);
         }
     }
@@ -301,4 +299,19 @@ public sealed class PageRankImportancePropagator : IImportancePropagator
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Computing PageRank importance for user {UserId}")]
+    private static partial void LogComputingPageRankImportanceUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No entities found for user {UserId}")]
+    private static partial void LogEntitiesFoundUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "PageRank iteration {Iteration}: diff={Diff:E3}")]
+    private static partial void LogPageRankIterationIterationDiffDiff(ILogger logger, int iteration, double diff);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "PageRank completed: {Entities} entities, {Edges} edges, {Iterations} iterations, converged={Converged} in {Duration}ms")]
+    private static partial void LogPageRankCompletedEntitiesEntitiesEdges(ILogger logger, int entities, int edges, int iterations, bool converged, long duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recomputing importance due to {Count} affected entities")]
+    private static partial void LogRecomputingImportanceDueCountAffected(ILogger logger, int count);
 }

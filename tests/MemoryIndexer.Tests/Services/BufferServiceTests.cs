@@ -11,7 +11,7 @@ namespace MemoryIndexer.Tests.Services;
 
 public class BufferServiceTests
 {
-    private readonly IBuffer _buffer;
+    private readonly BufferService _buffer;
     private readonly SensoryBufferOptions _options;
 
     public BufferServiceTests()

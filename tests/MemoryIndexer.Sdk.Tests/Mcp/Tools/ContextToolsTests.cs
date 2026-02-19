@@ -2,7 +2,7 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Mcp.Tools;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
@@ -13,13 +13,13 @@ namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
 /// </summary>
 public class ContextToolsTests
 {
-    private readonly Mock<IContextBuilder> _mockContextBuilder;
+    private readonly IContextBuilder _mockContextBuilder;
     private readonly ContextTools _tools;
 
     public ContextToolsTests()
     {
-        _mockContextBuilder = new Mock<IContextBuilder>();
-        _tools = new ContextTools(_mockContextBuilder.Object);
+        _mockContextBuilder = Substitute.For<IContextBuilder>();
+        _tools = new ContextTools(_mockContextBuilder);
     }
 
     #region ContextBuild Tests
@@ -40,11 +40,11 @@ public class ContextToolsTests
             }
         );
 
-        _mockContextBuilder.Setup(b => b.BuildAsync(
-            It.IsAny<ContextRequest>(),
+        _mockContextBuilder.BuildAsync(
+            Arg.Any<ContextRequest>(),
             "Balanced",
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bundle);
+            Arg.Any<CancellationToken>())
+            .Returns(bundle);
 
         // Act
         var result = await _tools.ContextBuild("test query", 2000, "Balanced");
@@ -72,11 +72,11 @@ public class ContextToolsTests
             Items: []
         );
 
-        _mockContextBuilder.Setup(b => b.BuildAsync(
-            It.IsAny<ContextRequest>(),
+        _mockContextBuilder.BuildAsync(
+            Arg.Any<ContextRequest>(),
             "RecentHeavy",
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bundle);
+            Arg.Any<CancellationToken>())
+            .Returns(bundle);
 
         // Act
         var result = await _tools.ContextBuild("test query", 2000, "RecentHeavy");
@@ -84,10 +84,10 @@ public class ContextToolsTests
         // Assert
         result.Success.Should().BeTrue();
         result.Strategy.Should().Be("RecentHeavy");
-        _mockContextBuilder.Verify(b => b.BuildAsync(
-            It.IsAny<ContextRequest>(),
+        await _mockContextBuilder.Received(1).BuildAsync(
+            Arg.Any<ContextRequest>(),
             "RecentHeavy",
-            It.IsAny<CancellationToken>()), Times.Once);
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -95,21 +95,21 @@ public class ContextToolsTests
     {
         // Arrange
         var bundle = new ContextBundle("", 0, new ContextBreakdown(0, 0, 0, 0), []);
-        _mockContextBuilder.Setup(b => b.BuildAsync(
-            It.Is<ContextRequest>(r => r.Budget.TotalTokens >= 100 && r.Budget.TotalTokens <= 16000),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bundle);
+        _mockContextBuilder.BuildAsync(
+            Arg.Is<ContextRequest>(r => r.Budget.TotalTokens >= 100 && r.Budget.TotalTokens <= 16000),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>())
+            .Returns(bundle);
 
         // Act - request way too many tokens
         var result = await _tools.ContextBuild("test", 999999, "Balanced");
 
         // Assert
         result.Success.Should().BeTrue();
-        _mockContextBuilder.Verify(b => b.BuildAsync(
-            It.Is<ContextRequest>(r => r.Budget.TotalTokens == 16000),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _mockContextBuilder.Received(1).BuildAsync(
+            Arg.Is<ContextRequest>(r => r.Budget.TotalTokens == 16000),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -127,9 +127,9 @@ public class ContextToolsTests
             new("User: How are you?", 12, ContextItemSource.Recent, null, DateTime.UtcNow.AddMinutes(-3), "user")
         };
 
-        _mockContextBuilder.Setup(b => b.GetRecentTurnsAsync(
-            "default", "session1", 1000, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(items);
+        _mockContextBuilder.GetRecentTurnsAsync(
+            "default", "session1", 1000, Arg.Any<CancellationToken>())
+            .Returns(items);
 
         // Act
         var result = await _tools.GetRecentConversation(1000, "session1");
@@ -147,19 +147,19 @@ public class ContextToolsTests
     public async Task GetRecentConversation_ClampsMaxTokens()
     {
         // Arrange
-        _mockContextBuilder.Setup(b => b.GetRecentTurnsAsync(
-            It.IsAny<string>(), It.IsAny<string>(),
-            It.Is<int>(t => t >= 50 && t <= 8000),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ContextItem>());
+        _mockContextBuilder.GetRecentTurnsAsync(
+            Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Is<int>(t => t >= 50 && t <= 8000),
+            Arg.Any<CancellationToken>())
+            .Returns(new List<ContextItem>());
 
         // Act
         var result = await _tools.GetRecentConversation(50000, "session1");
 
         // Assert
         result.Success.Should().BeTrue();
-        _mockContextBuilder.Verify(b => b.GetRecentTurnsAsync(
-            "default", "session1", 8000, It.IsAny<CancellationToken>()), Times.Once);
+        await _mockContextBuilder.Received(1).GetRecentTurnsAsync(
+            "default", "session1", 8000, Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -176,9 +176,9 @@ public class ContextToolsTests
             new("Question 1 asked", 25, ContextItemSource.Episodic, null, DateTime.UtcNow.AddMinutes(-30), null, MemoryType.Episodic)
         };
 
-        _mockContextBuilder.Setup(b => b.GetSessionContextAsync(
-            "default", "game-session-1", 1000, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(items);
+        _mockContextBuilder.GetSessionContextAsync(
+            "default", "game-session-1", 1000, Arg.Any<CancellationToken>())
+            .Returns(items);
 
         // Act
         var result = await _tools.GetSessionContext("game-session-1", 1000);
@@ -206,9 +206,9 @@ public class ContextToolsTests
             new("User likes pizza", 8, ContextItemSource.Fact, 0.80f, DateTime.UtcNow.AddDays(-7), null, MemoryType.Semantic)
         };
 
-        _mockContextBuilder.Setup(b => b.GetUserFactsAsync(
-            "default", 500, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(items);
+        _mockContextBuilder.GetUserFactsAsync(
+            "default", 500, Arg.Any<CancellationToken>())
+            .Returns(items);
 
         // Act
         var result = await _tools.GetUserFacts(500);
@@ -226,19 +226,19 @@ public class ContextToolsTests
     public async Task GetUserFacts_ClampsMaxTokens()
     {
         // Arrange
-        _mockContextBuilder.Setup(b => b.GetUserFactsAsync(
-            It.IsAny<string>(),
-            It.Is<int>(t => t >= 50 && t <= 4000),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ContextItem>());
+        _mockContextBuilder.GetUserFactsAsync(
+            Arg.Any<string>(),
+            Arg.Is<int>(t => t >= 50 && t <= 4000),
+            Arg.Any<CancellationToken>())
+            .Returns(new List<ContextItem>());
 
         // Act
         var result = await _tools.GetUserFacts(10000);
 
         // Assert
         result.Success.Should().BeTrue();
-        _mockContextBuilder.Verify(b => b.GetUserFactsAsync(
-            "default", 4000, It.IsAny<CancellationToken>()), Times.Once);
+        await _mockContextBuilder.Received(1).GetUserFactsAsync(
+            "default", 4000, Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -249,7 +249,7 @@ public class ContextToolsTests
     public async Task GetContextStrategies_ReturnsAllStrategies()
     {
         // Act
-        var result = await _tools.GetContextStrategies();
+        var result = await ContextTools.GetContextStrategies();
 
         // Assert
         result.Success.Should().BeTrue();
@@ -278,21 +278,21 @@ public class ContextToolsTests
     {
         // Arrange
         var bundle = new ContextBundle("", 0, new ContextBreakdown(0, 0, 0, 0), []);
-        _mockContextBuilder.Setup(b => b.BuildAsync(
-            It.Is<ContextRequest>(r => r.SessionId == "my-session"),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bundle);
+        _mockContextBuilder.BuildAsync(
+            Arg.Is<ContextRequest>(r => r.SessionId == "my-session"),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>())
+            .Returns(bundle);
 
         // Act
         var result = await _tools.ContextBuild("query", 1000, "Balanced", "my-session");
 
         // Assert
         result.Success.Should().BeTrue();
-        _mockContextBuilder.Verify(b => b.BuildAsync(
-            It.Is<ContextRequest>(r => r.SessionId == "my-session"),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _mockContextBuilder.Received(1).BuildAsync(
+            Arg.Is<ContextRequest>(r => r.SessionId == "my-session"),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -300,21 +300,21 @@ public class ContextToolsTests
     {
         // Arrange
         var bundle = new ContextBundle("", 0, new ContextBreakdown(0, 0, 0, 0), []);
-        _mockContextBuilder.Setup(b => b.BuildAsync(
-            It.Is<ContextRequest>(r => r.UserId == "custom-user"),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(bundle);
+        _mockContextBuilder.BuildAsync(
+            Arg.Is<ContextRequest>(r => r.UserId == "custom-user"),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>())
+            .Returns(bundle);
 
         // Act
         var result = await _tools.ContextBuild("query", 1000, "Balanced", null, "custom-user");
 
         // Assert
         result.Success.Should().BeTrue();
-        _mockContextBuilder.Verify(b => b.BuildAsync(
-            It.Is<ContextRequest>(r => r.UserId == "custom-user"),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _mockContextBuilder.Received(1).BuildAsync(
+            Arg.Is<ContextRequest>(r => r.UserId == "custom-user"),
+            Arg.Any<string>(),
+            Arg.Any<CancellationToken>());
     }
 
     #endregion

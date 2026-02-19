@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Observability;
 /// <summary>
 /// Instrumented wrapper for MemoryService that automatically records telemetry.
 /// </summary>
-public sealed class InstrumentedMemoryService
+public sealed partial class InstrumentedMemoryService
 {
     private readonly MemoryService _inner;
     private readonly ILogger<InstrumentedMemoryService> _logger;
@@ -56,9 +56,7 @@ public sealed class InstrumentedMemoryService
 
             activity?.SetTag("memory.id", result.Id.ToString());
 
-            _logger.LogDebug(
-                "Stored memory {MemoryId} of type {Type} in {ElapsedMs:F2}ms",
-                result.Id, type, sw.Elapsed.TotalMilliseconds);
+            LogStoredMemoryMemoryIdTypeType(_logger, result.Id, type, sw.Elapsed.TotalMilliseconds);
 
             return result;
         }
@@ -67,7 +65,7 @@ public sealed class InstrumentedMemoryService
             sw.Stop();
             MemoryIndexerTelemetry.CompleteOperation(activity, false, ex);
 
-            _logger.LogError(ex, "Failed to store memory after {ElapsedMs:F2}ms", sw.Elapsed.TotalMilliseconds);
+            LogFailedStoreMemoryAfterElapsedMs(_logger, ex, sw.Elapsed.TotalMilliseconds);
             throw;
         }
     }
@@ -118,9 +116,7 @@ public sealed class InstrumentedMemoryService
                 activity?.SetTag("memory.top_score", topScore.Value);
             }
 
-            _logger.LogDebug(
-                "Recalled {Count} memories for query in {ElapsedMs:F2}ms (top score: {TopScore:F3})",
-                results.Count, sw.Elapsed.TotalMilliseconds, topScore ?? 0);
+            LogRecalledCountMemoriesQueryElapsedMs(_logger, results.Count, sw.Elapsed.TotalMilliseconds, topScore ?? 0);
 
             return results;
         }
@@ -129,7 +125,7 @@ public sealed class InstrumentedMemoryService
             sw.Stop();
             MemoryIndexerTelemetry.CompleteOperation(activity, false, ex);
 
-            _logger.LogError(ex, "Failed to recall memories after {ElapsedMs:F2}ms", sw.Elapsed.TotalMilliseconds);
+            LogFailedRecallMemoriesAfterElapsedMs(_logger, ex, sw.Elapsed.TotalMilliseconds);
             throw;
         }
     }
@@ -298,4 +294,16 @@ public sealed class InstrumentedMemoryService
             throw;
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Stored memory {MemoryId} of type {Type} in {ElapsedMs:F2}ms")]
+    private static partial void LogStoredMemoryMemoryIdTypeType(ILogger logger, Guid memoryId, MemoryType type, double elapsedMs);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to store memory after {ElapsedMs:F2}ms")]
+    private static partial void LogFailedStoreMemoryAfterElapsedMs(ILogger logger, Exception ex, double elapsedMs);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recalled {Count} memories for query in {ElapsedMs:F2}ms (top score: {TopScore:F3})")]
+    private static partial void LogRecalledCountMemoriesQueryElapsedMs(ILogger logger, int count, double elapsedMs, double topScore);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to recall memories after {ElapsedMs:F2}ms")]
+    private static partial void LogFailedRecallMemoriesAfterElapsedMs(ILogger logger, Exception ex, double elapsedMs);
 }

@@ -1,9 +1,10 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Graph;
 
@@ -15,7 +16,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Graph;
 /// Research basis: Combines Graphiti's temporal graph traversal with LightRAG's
 /// entity-relation retrieval patterns.
 /// </remarks>
-public sealed class InMemoryGraphRetriever : IGraphRetriever
+public sealed partial class InMemoryGraphRetriever : IGraphRetriever
 {
     private readonly ITemporalEntityStore _tripleStore;
     private readonly IEmbeddingService _embeddingService;
@@ -55,8 +56,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
         var traversedRelations = new List<TraversedRelation>();
         var currentFrontier = new List<(string Entity, int Depth, float Score)> { (startEntity, 0, 1.0f) };
 
-        _logger.LogDebug("Starting graph traversal from '{Entity}' with max {MaxHops} hops",
-            startEntity, maxHops);
+        LogStartingGraphTraversalEntityMax(_logger, startEntity, maxHops);
 
         while (currentFrontier.Count > 0 && discoveredEntities.Count < options.MaxEntities)
         {
@@ -137,9 +137,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
 
         stopwatch.Stop();
 
-        _logger.LogInformation(
-            "Graph traversal completed: {Entities} entities, {Relations} relations in {Duration}ms",
-            discoveredEntities.Count, traversedRelations.Count, stopwatch.ElapsedMilliseconds);
+        LogGraphTraversalCompletedEntitiesEntities(_logger, discoveredEntities.Count, traversedRelations.Count, stopwatch.ElapsedMilliseconds);
 
         return new GraphTraversalResult
         {
@@ -175,7 +173,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
         queue.Enqueue(fromEntity);
         visited[fromEntity] = (null, null);
 
-        _logger.LogDebug("Finding path from '{From}' to '{To}'", fromEntity, toEntity);
+        LogFindingPath(_logger, fromEntity, toEntity);
 
         while (queue.Count > 0)
         {
@@ -221,7 +219,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
             }
         }
 
-        _logger.LogDebug("No path found from '{From}' to '{To}'", fromEntity, toEntity);
+        LogPathFound(_logger, fromEntity, toEntity);
         return null;
     }
 
@@ -301,7 +299,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
     {
         options ??= new HybridGraphOptions();
 
-        _logger.LogDebug("Hybrid retrieval for query: '{Query}'", query);
+        LogHybridRetrievalQueryQuery(_logger, query);
 
         // Step 1: Semantic search for relevant memories
         var embedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
@@ -536,7 +534,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
         // Simple heuristic-based type inference
         var lowerName = entityName.ToLowerInvariant();
 
-        if (lowerName.Contains("@") || lowerName.Contains("email"))
+        if (lowerName.Contains('@') || lowerName.Contains("email"))
             return EntityType.Email;
 
         if (facts.Any(f => f.Predicate.Contains("located", StringComparison.OrdinalIgnoreCase) ||
@@ -600,8 +598,8 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
     }
 
     private static string FormatGraphContext(
-        IReadOnlyList<ScoredEntity> entities,
-        IReadOnlyList<EntityTriple> facts)
+        List<ScoredEntity> entities,
+        List<EntityTriple> facts)
     {
         var sb = new StringBuilder();
 
@@ -611,7 +609,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
             foreach (var entity in entities.Take(10))
             {
                 var typeStr = entity.Type.HasValue ? $" ({entity.Type})" : "";
-                sb.AppendLine($"- {entity.Name}{typeStr}: {entity.FactCount} facts");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {entity.Name}{typeStr}: {entity.FactCount} facts");
             }
             sb.AppendLine();
         }
@@ -621,7 +619,7 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
             sb.AppendLine("## Knowledge Graph Facts");
             foreach (var fact in facts.Take(20))
             {
-                sb.AppendLine($"- {fact.Subject} → {fact.Predicate} → {fact.ObjectValue}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {fact.Subject} → {fact.Predicate} → {fact.ObjectValue}");
             }
         }
 
@@ -629,4 +627,19 @@ public sealed class InMemoryGraphRetriever : IGraphRetriever
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Starting graph traversal from '{Entity}' with max {MaxHops} hops")]
+    private static partial void LogStartingGraphTraversalEntityMax(ILogger logger, string entity, int maxHops);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Graph traversal completed: {Entities} entities, {Relations} relations in {Duration}ms")]
+    private static partial void LogGraphTraversalCompletedEntitiesEntities(ILogger logger, int entities, int relations, long duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Finding path from '{From}' to '{To}'")]
+    private static partial void LogFindingPath(ILogger logger, object from, object to);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No path found from '{From}' to '{To}'")]
+    private static partial void LogPathFound(ILogger logger, object from, object to);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid retrieval for query: '{Query}'")]
+    private static partial void LogHybridRetrievalQueryQuery(ILogger logger, string query);
 }

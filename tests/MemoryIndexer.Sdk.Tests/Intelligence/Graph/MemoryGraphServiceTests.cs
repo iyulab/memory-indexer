@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Graph;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Graph;
@@ -12,17 +12,17 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Graph;
 /// </summary>
 public class MemoryGraphServiceTests
 {
-    private readonly Mock<ITemporalEntityStore> _entityStoreMock;
-    private readonly Mock<IMemoryStore> _memoryStoreMock;
+    private readonly ITemporalEntityStore _entityStoreMock;
+    private readonly IMemoryStore _memoryStoreMock;
     private readonly MemoryGraphService _service;
 
     public MemoryGraphServiceTests()
     {
-        _entityStoreMock = new Mock<ITemporalEntityStore>();
-        _memoryStoreMock = new Mock<IMemoryStore>();
+        _entityStoreMock = Substitute.For<ITemporalEntityStore>();
+        _memoryStoreMock = Substitute.For<IMemoryStore>();
         _service = new MemoryGraphService(
-            _entityStoreMock.Object,
-            _memoryStoreMock.Object,
+            _entityStoreMock,
+            _memoryStoreMock,
             NullLogger<MemoryGraphService>.Instance);
     }
 
@@ -35,7 +35,7 @@ public class MemoryGraphServiceTests
             Id = Guid.NewGuid(),
             UserId = "user1",
             Content = "Test memory",
-            Embedding = new ReadOnlyMemory<float>(new float[] { 0.1f, 0.2f, 0.3f })
+            Embedding = new ReadOnlyMemory<float>([0.1f, 0.2f, 0.3f])
         };
 
         var entities = new List<EntityTriple>
@@ -71,7 +71,7 @@ public class MemoryGraphServiceTests
             Id = Guid.NewGuid(),
             UserId = "user1",
             Content = "Test memory without entities",
-            Embedding = new ReadOnlyMemory<float>(new float[] { 0.1f, 0.2f, 0.3f })
+            Embedding = new ReadOnlyMemory<float>([0.1f, 0.2f, 0.3f])
         };
 
         // Act
@@ -95,7 +95,7 @@ public class MemoryGraphServiceTests
             Id = memoryId,
             UserId = userId,
             Content = "Main memory",
-            Embedding = new ReadOnlyMemory<float>(new float[] { 0.1f, 0.2f })
+            Embedding = new ReadOnlyMemory<float>([0.1f, 0.2f])
         };
 
         var relatedMemory = new MemoryUnit
@@ -103,7 +103,7 @@ public class MemoryGraphServiceTests
             Id = relatedMemoryId,
             UserId = userId,
             Content = "Related memory",
-            Embedding = new ReadOnlyMemory<float>(new float[] { 0.3f, 0.4f })
+            Embedding = new ReadOnlyMemory<float>([0.3f, 0.4f])
         };
 
         var entities = new List<EntityTriple>
@@ -138,8 +138,8 @@ public class MemoryGraphServiceTests
         await _service.LinkMemoryToGraphAsync(memory, entities);
         await _service.LinkMemoryToGraphAsync(relatedMemory, relatedEntities);
 
-        _memoryStoreMock.Setup(x => x.GetByIdAsync(relatedMemoryId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(relatedMemory);
+        _memoryStoreMock.GetByIdAsync(relatedMemoryId, Arg.Any<CancellationToken>())
+            .Returns(relatedMemory);
 
         // Act
         var result = await _service.FindRelatedMemoriesAsync(memoryId);
@@ -162,7 +162,7 @@ public class MemoryGraphServiceTests
             Id = memoryId1,
             UserId = userId,
             Content = "Memory 1",
-            Embedding = new ReadOnlyMemory<float>(new float[] { 0.1f, 0.2f })
+            Embedding = new ReadOnlyMemory<float>([0.1f, 0.2f])
         };
 
         var memory2 = new MemoryUnit
@@ -170,7 +170,7 @@ public class MemoryGraphServiceTests
             Id = memoryId2,
             UserId = userId,
             Content = "Memory 2",
-            Embedding = new ReadOnlyMemory<float>(new float[] { 0.3f, 0.4f })
+            Embedding = new ReadOnlyMemory<float>([0.3f, 0.4f])
         };
 
         var entities1 = new List<EntityTriple>

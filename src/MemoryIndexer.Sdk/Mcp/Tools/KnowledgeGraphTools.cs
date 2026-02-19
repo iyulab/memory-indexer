@@ -254,7 +254,7 @@ public sealed class KnowledgeGraphTools
     /// <param name="userId">User ID whose graph to analyze.</param>
     /// <returns>Graph statistics including entity and relation counts by type.</returns>
     [McpServerTool, Description("Get statistics about the knowledge graph")]
-    public Task<GraphStatsResult> GetGraphStats(
+    public static Task<GraphStatsResult> GetGraphStats(
         [Description("User ID (optional)")] string? userId = null)
     {
         var uid = userId ?? DefaultUserId;
@@ -300,7 +300,7 @@ public sealed class KnowledgeGraphTools
     /// <param name="userId">User ID whose graph to clear.</param>
     /// <returns>Result of the clear operation.</returns>
     [McpServerTool, Description("Clear the cached knowledge graph")]
-    public Task<ClearGraphResult> ClearKnowledgeGraph(
+    public static Task<ClearGraphResult> ClearKnowledgeGraph(
         [Description("User ID (optional)")] string? userId = null)
     {
         var uid = userId ?? DefaultUserId;

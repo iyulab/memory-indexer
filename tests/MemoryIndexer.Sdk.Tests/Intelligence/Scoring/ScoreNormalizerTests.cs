@@ -245,7 +245,7 @@ public class ZScoreNormalizerTests
 
         // Assert
         var outlier = result.First(m => m.Memory.Content == "outlier");
-        var normals = result.Where(m => m.Memory.Content.StartsWith("normal")).ToList();
+        var normals = result.Where(m => m.Memory.Content.StartsWith("normal", StringComparison.Ordinal)).ToList();
 
         // Outlier should have significantly higher normalized score than normals
         Assert.True(outlier.NormalizedScore > 0.7f, $"Outlier score {outlier.NormalizedScore} should be > 0.7");

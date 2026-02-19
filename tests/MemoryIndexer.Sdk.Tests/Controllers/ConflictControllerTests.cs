@@ -3,7 +3,7 @@ using McpServer.Controllers;
 using MemoryIndexer.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Controllers;
@@ -13,20 +13,20 @@ namespace MemoryIndexer.Sdk.Tests.Controllers;
 /// </summary>
 public class ConflictControllerTests
 {
-    private readonly Mock<IFactValidator> _mockValidator;
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
-    private readonly Mock<ILogger<ConflictController>> _mockLogger;
+    private readonly IFactValidator _mockValidator;
+    private readonly IArchiveStore _mockArchiveStore;
+    private readonly ILogger<ConflictController> _mockLogger;
     private readonly ConflictController _controller;
 
     public ConflictControllerTests()
     {
-        _mockValidator = new Mock<IFactValidator>();
-        _mockArchiveStore = new Mock<IArchiveStore>();
-        _mockLogger = new Mock<ILogger<ConflictController>>();
+        _mockValidator = Substitute.For<IFactValidator>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
+        _mockLogger = Substitute.For<ILogger<ConflictController>>();
         _controller = new ConflictController(
-            _mockValidator.Object,
-            _mockArchiveStore.Object,
-            _mockLogger.Object);
+            _mockValidator,
+            _mockArchiveStore,
+            _mockLogger);
     }
 
     #region ValidateFact Tests
@@ -41,15 +41,15 @@ public class ConflictControllerTests
             Category = "Identity"
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
-        _mockValidator.Setup(v => v.ValidateAsync(
-            It.IsAny<UserFact>(),
-            It.IsAny<IReadOnlyList<SemanticStoreEntry>>(),
-            It.IsAny<FactValidationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(FactConflictAnalysis.Valid());
+        _mockValidator.ValidateAsync(
+            Arg.Any<UserFact>(),
+            Arg.Any<IReadOnlyList<SemanticStoreEntry>>(),
+            Arg.Any<FactValidationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(FactConflictAnalysis.Valid());
 
         // Act
         var result = await _controller.ValidateFact(request, CancellationToken.None);
@@ -115,15 +115,15 @@ public class ConflictControllerTests
             RequiresConfirmation = true
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry> { existingFact });
+        _mockArchiveStore.GetAllAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry> { existingFact });
 
-        _mockValidator.Setup(v => v.ValidateAsync(
-            It.IsAny<UserFact>(),
-            It.IsAny<IReadOnlyList<SemanticStoreEntry>>(),
-            It.IsAny<FactValidationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(analysis);
+        _mockValidator.ValidateAsync(
+            Arg.Any<UserFact>(),
+            Arg.Any<IReadOnlyList<SemanticStoreEntry>>(),
+            Arg.Any<FactValidationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(analysis);
 
         var request = new ValidateFactRequest
         {
@@ -152,21 +152,21 @@ public class ConflictControllerTests
             UserId = "custom-user-123"
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("custom-user-123", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("custom-user-123", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
-        _mockValidator.Setup(v => v.ValidateAsync(
-            It.IsAny<UserFact>(),
-            It.IsAny<IReadOnlyList<SemanticStoreEntry>>(),
-            It.IsAny<FactValidationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(FactConflictAnalysis.Valid());
+        _mockValidator.ValidateAsync(
+            Arg.Any<UserFact>(),
+            Arg.Any<IReadOnlyList<SemanticStoreEntry>>(),
+            Arg.Any<FactValidationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(FactConflictAnalysis.Valid());
 
         // Act
         await _controller.ValidateFact(request, CancellationToken.None);
 
         // Assert
-        _mockArchiveStore.Verify(a => a.GetAllAsync("custom-user-123", It.IsAny<CancellationToken>()), Times.Once);
+        await _mockArchiveStore.Received(1).GetAllAsync("custom-user-123", Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -183,8 +183,8 @@ public class ConflictControllerTests
             new() { Key = "name_v1", Value = "Jane", Version = 1, IsActive = false }
         };
 
-        _mockArchiveStore.Setup(a => a.GetHistoryAsync("default", "name", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(history);
+        _mockArchiveStore.GetHistoryAsync("default", "name", Arg.Any<CancellationToken>())
+            .Returns(history);
 
         // Act
         var result = await _controller.GetFactHistory("name", cancellationToken: CancellationToken.None);
@@ -219,8 +219,8 @@ public class ConflictControllerTests
             new() { Key = "name", Value = "John", ValidFrom = DateTime.UtcNow.AddDays(-10), IsActive = true }
         };
 
-        _mockArchiveStore.Setup(a => a.GetValidAtAsync("default", It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
+        _mockArchiveStore.GetValidAtAsync("default", Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(facts);
 
         // Act
         var result = await _controller.GetFactsValidAt("2024-01-15", cancellationToken: CancellationToken.None);
@@ -267,9 +267,9 @@ public class ConflictControllerTests
             SupersedesKey = "name_v1"
         };
 
-        _mockArchiveStore.Setup(a => a.ArchiveAndUpdateAsync(
-            "default", "name", "New Value", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(updatedEntry);
+        _mockArchiveStore.ArchiveAndUpdateAsync(
+            "default", "name", "New Value", Arg.Any<CancellationToken>())
+            .Returns(updatedEntry);
 
         var request = new ArchiveAndUpdateRequest
         {
@@ -291,9 +291,9 @@ public class ConflictControllerTests
     public async Task ArchiveAndUpdateFact_WithNonExistentKey_ReturnsNotFound()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.ArchiveAndUpdateAsync(
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((SemanticStoreEntry?)null);
+        _mockArchiveStore.ArchiveAndUpdateAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((SemanticStoreEntry?)null);
 
         var request = new ArchiveAndUpdateRequest
         {
@@ -334,7 +334,7 @@ public class ConflictControllerTests
     {
         // Arrange
         var rule = CategoryResolutionRule.Defaults[FactCategory.Identity];
-        _mockValidator.Setup(v => v.GetCategoryRule(FactCategory.Identity)).Returns(rule);
+        _mockValidator.GetCategoryRule(FactCategory.Identity).Returns(rule);
 
         // Act
         var result = _controller.GetCategoryRule("Identity");

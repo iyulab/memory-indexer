@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.Scoring;
@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Scoring;
 /// Best for distributions with outliers.
 /// Phase 21.2: Score Distribution Normalization.
 /// </summary>
-public sealed class ZScoreNormalizer : IScoreNormalizer
+public sealed partial class ZScoreNormalizer : IScoreNormalizer
 {
     private readonly ILogger<ZScoreNormalizer> _logger;
     private NormalizationStats _stats = new() { Strategy = NormalizationStrategy.ZScore };
@@ -50,7 +50,7 @@ public sealed class ZScoreNormalizer : IScoreNormalizer
                 memory.NormalizedScore = 0.5f;
             }
             _stats.NormalizedSpread = 0f;
-            _logger.LogWarning("All scores identical (stdDev=0), normalized to 0.5");
+            LogAllScoresIdenticalStdDevNormalized(_logger);
             return scoredMemories;
         }
 
@@ -68,13 +68,7 @@ public sealed class ZScoreNormalizer : IScoreNormalizer
         var normalizedScores = scoredMemories.Select(m => m.NormalizedScore).ToList();
         _stats.NormalizedSpread = normalizedScores.Max() - normalizedScores.Min();
 
-        _logger.LogDebug(
-            "Z-score normalized {Count} scores: mean={Mean:F3}, stdDev={StdDev:F3}, spread {Original:F3} → {Normalized:F3}",
-            scoredMemories.Count,
-            mean,
-            stdDev,
-            _stats.OriginalSpread,
-            _stats.NormalizedSpread);
+        LogScoreNormalizedCountScoresMean(_logger, scoredMemories.Count, mean, stdDev, _stats.OriginalSpread, _stats.NormalizedSpread);
 
         return scoredMemories.OrderByDescending(m => m.NormalizedScore).ToList();
     }
@@ -88,4 +82,10 @@ public sealed class ZScoreNormalizer : IScoreNormalizer
         var variance = values.Average(v => MathF.Pow(v - mean, 2));
         return MathF.Sqrt(variance);
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "All scores identical (stdDev=0), normalized to 0.5")]
+    private static partial void LogAllScoresIdenticalStdDevNormalized(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Z-score normalized {Count} scores: mean={Mean:F3}, stdDev={StdDev:F3}, spread {Original:F3} → {Normalized:F3}")]
+    private static partial void LogScoreNormalizedCountScoresMean(ILogger logger, int count, float mean, float stdDev, float original, float normalized);
 }

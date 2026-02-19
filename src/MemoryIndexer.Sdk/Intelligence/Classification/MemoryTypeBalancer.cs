@@ -22,7 +22,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Classification;
 /// 3. Apply boost for underrepresented types: boost = (target - current) * sensitivity
 /// 4. Clamp boost to [0, maxBoost] to prevent over-correction
 /// </remarks>
-public sealed class MemoryTypeBalancer : IMemoryTypeBalancer
+public sealed partial class MemoryTypeBalancer : IMemoryTypeBalancer
 {
     private readonly IMemoryStore _store;
     private readonly TypeBalancerOptions _options;
@@ -37,9 +37,8 @@ public sealed class MemoryTypeBalancer : IMemoryTypeBalancer
         _options = options.Value.TypeBalancing;
         _logger = logger;
 
-        _logger.LogInformation("MemoryTypeBalancer initialized (Phase 23.1). Enabled: {Enabled}, Targets: {Targets}",
-            _options.Enabled,
-            string.Join(", ", _options.TargetDistribution.Select(x => $"{x.Key}={x.Value:F2}")));
+        var targetsStr = string.Join(", ", _options.TargetDistribution.Select(x => $"{x.Key}={x.Value:F2}"));
+        LogBalancerInitialized(_logger, _options.Enabled, targetsStr);
     }
 
     /// <inheritdoc />
@@ -58,9 +57,7 @@ public sealed class MemoryTypeBalancer : IMemoryTypeBalancer
         var totalCount = counts.Values.Sum();
         if (totalCount < _options.MinMemoriesForBalancing)
         {
-            _logger.LogDebug(
-                "Not enough memories for balancing ({TotalCount} < {MinRequired}). Skipping boost.",
-                totalCount, _options.MinMemoriesForBalancing);
+            LogNotEnoughMemories(_logger, totalCount, _options.MinMemoriesForBalancing);
             return 0f;
         }
 
@@ -77,9 +74,7 @@ public sealed class MemoryTypeBalancer : IMemoryTypeBalancer
 
         if (boost > 0.01f)
         {
-            _logger.LogDebug(
-                "Type boost for {Type}: current={Current:F2}, target={Target:F2}, boost={Boost:F2}",
-                type, currentPercentage, targetPercentage, boost);
+            LogTypeBoost(_logger, type, currentPercentage, targetPercentage, boost);
         }
 
         return boost;
@@ -110,4 +105,13 @@ public sealed class MemoryTypeBalancer : IMemoryTypeBalancer
     {
         return await _store.GetTypeCountsAsync(userId, cancellationToken);
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "MemoryTypeBalancer initialized (Phase 23.1). Enabled: {Enabled}, Targets: {Targets}")]
+    private static partial void LogBalancerInitialized(ILogger logger, bool enabled, string targets);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Not enough memories for balancing ({TotalCount} < {MinRequired}). Skipping boost.")]
+    private static partial void LogNotEnoughMemories(ILogger logger, int totalCount, int minRequired);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Type boost for {Type}: current={Current:F2}, target={Target:F2}, boost={Boost:F2}")]
+    private static partial void LogTypeBoost(ILogger logger, MemoryType type, float current, float target, float boost);
 }

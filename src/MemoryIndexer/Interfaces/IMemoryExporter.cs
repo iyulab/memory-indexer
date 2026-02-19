@@ -106,7 +106,7 @@ public class ExportOptions
     /// <summary>
     /// Whether to include soft-deleted memories.
     /// </summary>
-    public bool IncludeDeleted { get; set; } = false;
+    public bool IncludeDeleted { get; set; }
 
     /// <summary>
     /// Export format version for compatibility.
@@ -128,7 +128,7 @@ public class ImportOptions
     /// Whether to regenerate embeddings on import.
     /// Useful when migrating between embedding providers.
     /// </summary>
-    public bool RegenerateEmbeddings { get; set; } = false;
+    public bool RegenerateEmbeddings { get; set; }
 
     /// <summary>
     /// Whether to preserve original timestamps.

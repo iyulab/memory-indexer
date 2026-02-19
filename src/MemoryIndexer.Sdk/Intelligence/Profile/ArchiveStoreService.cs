@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,7 +16,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Profile;
 /// - Confidence threshold >= 0.8
 /// - Consistent evidence across sources
 /// </remarks>
-public sealed class ArchiveStoreService : IArchiveStore
+public sealed partial class ArchiveStoreService : IArchiveStore
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly SemanticStoreOptions _options;
@@ -114,9 +114,7 @@ public sealed class ArchiveStoreService : IArchiveStore
         // Check max entries limit
         if (userProfile.Count >= _options.MaxEntriesPerUser && !userProfile.ContainsKey(entry.Key))
         {
-            _logger.LogWarning(
-                "User {UserId} semantic store at capacity ({Max} entries), cannot add new entry",
-                userId, _options.MaxEntriesPerUser);
+            LogUserUserIdSemanticStoreCapacity(_logger, userId, _options.MaxEntriesPerUser);
             return false;
         }
 
@@ -131,7 +129,7 @@ public sealed class ArchiveStoreService : IArchiveStore
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to generate embedding for semantic entry {Key}", entry.Key);
+                LogFailedGenerateEmbeddingSemanticEntry(_logger, ex, entry.Key);
             }
         }
 
@@ -142,13 +140,13 @@ public sealed class ArchiveStoreService : IArchiveStore
             // Update existing entry
             entry.UpdatedAt = DateTime.UtcNow;
             userProfile[entry.Key] = entry;
-            _logger.LogDebug("Updated semantic entry {Key} for user {UserId}", entry.Key, userId);
+            LogUpdatedSemanticEntryKeyUser(_logger, entry.Key, userId);
         }
         else
         {
             // Add new entry
             userProfile[entry.Key] = entry;
-            _logger.LogDebug("Created semantic entry {Key} for user {UserId}", entry.Key, userId);
+            LogCreatedSemanticEntryKeyUser(_logger, entry.Key, userId);
         }
 
         return isUpdate;
@@ -188,9 +186,7 @@ public sealed class ArchiveStoreService : IArchiveStore
             entry.Metadata[evidenceKey] = evidence;
         }
 
-        _logger.LogDebug(
-            "Confirmed semantic entry {Key} for user {UserId}: Count={Count}, Confidence={Confidence}",
-            key, userId, entry.ConfirmationCount, entry.Confidence);
+        LogConfirmedSemanticEntryKeyUser(_logger, key, userId, entry.ConfirmationCount, entry.Confidence);
 
         return Task.FromResult<SemanticStoreEntry?>(entry);
     }
@@ -212,7 +208,7 @@ public sealed class ArchiveStoreService : IArchiveStore
         var removed = userProfile.TryRemove(key, out _);
         if (removed)
         {
-            _logger.LogDebug("Removed semantic entry {Key} for user {UserId}", key, userId);
+            LogRemovedSemanticEntryKeyUser(_logger, key, userId);
         }
 
         return Task.FromResult(removed);
@@ -454,13 +450,11 @@ public sealed class ArchiveStoreService : IArchiveStore
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to generate embedding for updated entry {Key}", key);
+                LogFailedGenerateEmbeddingUpdatedEntry(_logger, ex, key);
             }
         }
 
-        _logger.LogDebug(
-            "Archived entry {OldKey} (v{OldVersion}) and created new version {NewKey} (v{NewVersion})",
-            archivedKey, existingEntry.Version, key, existingEntry.Version + 1);
+        LogArchivedEntryOldKeyOldVersionCreated(_logger, archivedKey, existingEntry.Version, key, existingEntry.Version + 1);
 
         return userProfile[key];
     }
@@ -485,4 +479,28 @@ public sealed class ArchiveStoreService : IArchiveStore
         var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
         return denominator == 0 ? 0 : dotProduct / denominator;
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "User {UserId} semantic store at capacity ({Max} entries), cannot add new entry")]
+    private static partial void LogUserUserIdSemanticStoreCapacity(ILogger logger, string userId, object max);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to generate embedding for semantic entry {Key}")]
+    private static partial void LogFailedGenerateEmbeddingSemanticEntry(ILogger logger, Exception ex, string key);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated semantic entry {Key} for user {UserId}")]
+    private static partial void LogUpdatedSemanticEntryKeyUser(ILogger logger, string key, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created semantic entry {Key} for user {UserId}")]
+    private static partial void LogCreatedSemanticEntryKeyUser(ILogger logger, string key, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Confirmed semantic entry {Key} for user {UserId}: Count={Count}, Confidence={Confidence}")]
+    private static partial void LogConfirmedSemanticEntryKeyUser(ILogger logger, string key, string userId, int count, float confidence);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Removed semantic entry {Key} for user {UserId}")]
+    private static partial void LogRemovedSemanticEntryKeyUser(ILogger logger, string key, string userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to generate embedding for updated entry {Key}")]
+    private static partial void LogFailedGenerateEmbeddingUpdatedEntry(ILogger logger, Exception ex, string key);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Archived entry {OldKey} (v{OldVersion}) and created new version {NewKey} (v{NewVersion})")]
+    private static partial void LogArchivedEntryOldKeyOldVersionCreated(ILogger logger, string oldKey, int oldVersion, string newKey, int newVersion);
 }

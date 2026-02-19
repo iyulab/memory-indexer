@@ -53,9 +53,8 @@ public sealed class ShortTermMemoryService : IShortTermMemory
         lock (_lock)
         {
             // If already in working memory, just update
-            if (_entries.ContainsKey(memory.Id))
+            if (_entries.TryGetValue(memory.Id, out var entry))
             {
-                var entry = _entries[memory.Id];
                 entry.Memory = memory;
                 entry.LastAccessed = DateTime.UtcNow;
                 entry.RelevanceScore = Math.Min(1.0f, entry.RelevanceScore + 0.1f);
@@ -314,5 +313,5 @@ public sealed class WorkingMemoryOptions
     /// When true, embeddings are cleared from Short-Term Memory and restored only when needed.
     /// Memory savings: ~3KB per memory unit (768 floats × 4 bytes).
     /// </summary>
-    public bool LazyEmbeddingLoading { get; set; } = false;
+    public bool LazyEmbeddingLoading { get; set; }
 }

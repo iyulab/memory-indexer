@@ -63,6 +63,7 @@ public class IntelligenceIntegrationTests : IDisposable
     public void Dispose()
     {
         _serviceProvider.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     #region Configuration Validation Tests

@@ -172,7 +172,7 @@ public class ThresholdBasedTriggerTests
 
         // Assert
         Assert.True(result.ShouldSummarize);
-        Assert.Contains("message", result.Explanation.ToLower());
+        Assert.Contains("message", result.Explanation.ToLowerInvariant());
     }
 
     [Fact]
@@ -222,7 +222,7 @@ public class ThresholdBasedTriggerTests
 
         // Assert
         Assert.True(result.ShouldSummarize);
-        Assert.Contains("importance", result.Explanation.ToLower());
+        Assert.Contains("importance", result.Explanation.ToLowerInvariant());
     }
 
     [Fact]
@@ -248,7 +248,7 @@ public class ThresholdBasedTriggerTests
 
         // Assert
         Assert.True(result.ShouldSummarize);
-        Assert.Contains("time", result.Explanation.ToLower());
+        Assert.Contains("time", result.Explanation.ToLowerInvariant());
     }
 
     [Fact]
@@ -442,7 +442,7 @@ public class ThresholdBasedTriggerTests
         var result = await _trigger.EvaluateAsync(context);
 
         // Assert - Explanation should contain info about both conditions
-        Assert.Contains("token", result.Explanation.ToLower());
-        Assert.Contains("message", result.Explanation.ToLower());
+        Assert.Contains("token", result.Explanation.ToLowerInvariant());
+        Assert.Contains("message", result.Explanation.ToLowerInvariant());
     }
 }

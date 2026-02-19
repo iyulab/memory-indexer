@@ -9,7 +9,7 @@ namespace MemoryIndexer.Services;
 /// Implementation of scope management for the 3-axis memory model.
 /// Tracks temporal boundaries: Turn → Topic → Session → User.
 /// </summary>
-public sealed class ScopeManager : IScopeManager
+public sealed partial class ScopeManager : IScopeManager
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<ScopeManager> _logger;
@@ -17,6 +17,7 @@ public sealed class ScopeManager : IScopeManager
     private readonly ScopeState _state;
     private readonly List<string> _topicHistory = [];
     private readonly Queue<(string Content, ReadOnlyMemory<float>? Embedding, DateTime Timestamp)> _recentTurns = new();
+    private ReadOnlyMemory<float>? _pendingEmbedding;
 
     public ScopeManager(
         IEmbeddingService embeddingService,
@@ -41,7 +42,7 @@ public sealed class ScopeManager : IScopeManager
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        _logger.LogInformation("Initializing ScopeManager for user {UserId}, session {SessionId}", userId, sessionId);
+        LogInitializing(_logger, userId, sessionId);
 
         _state.UserId = userId;
         _state.SessionId = sessionId;
@@ -58,7 +59,7 @@ public sealed class ScopeManager : IScopeManager
         _topicHistory.Add(_state.TopicId);
         _recentTurns.Clear();
 
-        _logger.LogDebug("ScopeManager initialized with topic {TopicId}", _state.TopicId);
+        LogInitialized(_logger, _state.TopicId);
 
         return Task.CompletedTask;
     }
@@ -78,8 +79,13 @@ public sealed class ScopeManager : IScopeManager
         // Generate embedding for topic change detection
         var embedding = await _embeddingService.GenerateEmbeddingAsync(content, cancellationToken);
 
+        // Store embedding for reuse in DetectTopicChangeAsync (avoids duplicate generation)
+        _pendingEmbedding = embedding;
+
         // Detect topic change
         var topicChanged = await DetectTopicChangeAsync(content, cancellationToken);
+
+        _pendingEmbedding = null;
 
         var boundaryType = ScopeBoundaryType.Turn;
         var boundaryCrossed = true; // Always crosses turn boundary
@@ -95,8 +101,7 @@ public sealed class ScopeManager : IScopeManager
 
             boundaryType = ScopeBoundaryType.Topic;
 
-            _logger.LogInformation("Topic transition detected: {OldTopic} → {NewTopic}",
-                _topicHistory[^2], _state.TopicId);
+            LogTopicTransition(_logger, _topicHistory[^2], _state.TopicId);
         }
 
         // Add to recent turns queue for topic detection
@@ -119,8 +124,7 @@ public sealed class ScopeManager : IScopeManager
             Confidence = 1.0f
         };
 
-        _logger.LogTrace("Turn {TurnIndex} recorded in topic {TopicId} (topic turn {TopicTurnIndex})",
-            _state.TurnCount, _state.TopicId, _state.TopicTurnCount);
+        LogTurnRecorded(_logger, _state.TurnCount, _state.TopicId, _state.TopicTurnCount);
 
         return resolution;
     }
@@ -159,14 +163,13 @@ public sealed class ScopeManager : IScopeManager
             _ => Scope.Session
         };
 
-        _logger.LogTrace("Resolved scope {Scope} for type {Type} with importance {Importance:F2}",
-            scope, type, importance);
+        LogResolvedScope(_logger, scope, type, importance);
 
         return Task.FromResult(scope);
     }
 
     /// <inheritdoc />
-    public Task<bool> DetectTopicChangeAsync(
+    public async Task<bool> DetectTopicChangeAsync(
         string currentContent,
         CancellationToken cancellationToken = default)
     {
@@ -175,44 +178,60 @@ public sealed class ScopeManager : IScopeManager
         // No topic change if this is the first turn or not enough history
         if (_state.TurnCount == 0 || _recentTurns.Count < 2)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         // Topic change detection based on:
-        // 1. Semantic similarity with recent turns
-        // 2. Time gap between turns
-        // 3. Turn count threshold
+        // 1. Time gap between turns
+        // 2. Turn count threshold
+        // 3. Semantic similarity with recent turns
 
         // Time-based detection: Long pause suggests topic change
         var timeSinceLastTurn = DateTime.UtcNow - _state.LastTurnTimestamp!.Value;
         if (timeSinceLastTurn > _options.TopicIdleThreshold)
         {
-            _logger.LogDebug("Topic change detected: idle time {IdleTime} > threshold {Threshold}",
-                timeSinceLastTurn, _options.TopicIdleThreshold);
-            return Task.FromResult(true);
+            LogTopicChangeIdleTime(_logger, timeSinceLastTurn, _options.TopicIdleThreshold);
+            return true;
         }
 
         // Turn count-based detection: Long topic suggests natural transition
         if (_state.TopicTurnCount >= _options.MaxTurnsPerTopic)
         {
-            _logger.LogDebug("Topic change detected: turn count {TurnCount} >= max {Max}",
-                _state.TopicTurnCount, _options.MaxTurnsPerTopic);
-            return Task.FromResult(true);
+            LogTopicChangeTurnCount(_logger, _state.TopicTurnCount, _options.MaxTurnsPerTopic);
+            return true;
         }
 
         // Semantic similarity-based detection
-        // Get the last embedding from queue
-        var lastTurn = _recentTurns.LastOrDefault();
-        if (lastTurn.Embedding == null || lastTurn.Embedding.Value.IsEmpty)
+        // Collect embeddings from recent turns
+        var recentEmbeddings = _recentTurns
+            .Where(t => t.Embedding is { IsEmpty: false })
+            .Select(t => t.Embedding!.Value)
+            .ToList();
+
+        if (recentEmbeddings.Count == 0)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        // TODO: Implement semantic similarity comparison with current content
-        // For now, use conservative approach - no topic change
-        // Future: Compare embedding similarity with recent turn average
+        // Get current content embedding (reuse from RecordTurnAsync if available)
+        var currentEmbedding = _pendingEmbedding
+            ?? await _embeddingService.GenerateEmbeddingAsync(currentContent, cancellationToken);
 
-        return Task.FromResult(false);
+        if (currentEmbedding.IsEmpty)
+        {
+            return false;
+        }
+
+        // Compute centroid of recent turn embeddings
+        var centroid = ComputeEmbeddingCentroid(recentEmbeddings);
+
+        // Calculate cosine similarity between current content and recent turn centroid
+        var similarity = CosineSimilarity(currentEmbedding.Span, centroid.AsSpan());
+
+        LogTopicSimilarity(_logger, similarity, _options.TopicSimilarityThreshold);
+
+        // Topic change if similarity is below threshold
+        return similarity < _options.TopicSimilarityThreshold;
     }
 
     /// <inheritdoc />
@@ -246,8 +265,7 @@ public sealed class ScopeManager : IScopeManager
             return m.Scope < targetScope;
         }).ToList();
 
-        _logger.LogTrace("Filtered {Count} memories for scope {Scope} (includeNarrower: {IncludeNarrower})",
-            filtered.Count, targetScope, includeNarrower);
+        LogFilteredMemories(_logger, filtered.Count, targetScope, includeNarrower);
 
         return filtered;
     }
@@ -260,8 +278,7 @@ public sealed class ScopeManager : IScopeManager
             return Task.CompletedTask;
         }
 
-        _logger.LogInformation("Ending session {SessionId}: {Turns} turns, {Topics} topics",
-            _state.SessionId, _state.TurnCount, _state.TopicTransitionCount + 1);
+        LogEndingSession(_logger, _state.SessionId!, _state.TurnCount, _state.TopicTransitionCount + 1);
 
         _state.IsInitialized = false;
         _state.SessionId = null;
@@ -329,7 +346,91 @@ public sealed class ScopeManager : IScopeManager
         return $"topic-{Guid.NewGuid():N}"[..16];
     }
 
+    /// <summary>
+    /// Computes cosine similarity between two vectors.
+    /// Returns 0 if either vector is empty or has zero magnitude.
+    /// </summary>
+    internal static float CosineSimilarity(ReadOnlySpan<float> a, ReadOnlySpan<float> b)
+    {
+        if (a.Length != b.Length || a.Length == 0)
+        {
+            return 0f;
+        }
+
+        float dot = 0f, normA = 0f, normB = 0f;
+        for (var i = 0; i < a.Length; i++)
+        {
+            dot += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+
+        var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
+        return denominator == 0f ? 0f : dot / denominator;
+    }
+
+    /// <summary>
+    /// Computes the centroid (average) of multiple embedding vectors.
+    /// </summary>
+    private static float[] ComputeEmbeddingCentroid(List<ReadOnlyMemory<float>> embeddings)
+    {
+        if (embeddings.Count == 0)
+        {
+            return [];
+        }
+
+        var dimensions = embeddings[0].Length;
+        var centroid = new float[dimensions];
+
+        foreach (var embedding in embeddings)
+        {
+            var span = embedding.Span;
+            for (var i = 0; i < dimensions; i++)
+            {
+                centroid[i] += span[i];
+            }
+        }
+
+        var count = (float)embeddings.Count;
+        for (var i = 0; i < dimensions; i++)
+        {
+            centroid[i] /= count;
+        }
+
+        return centroid;
+    }
+
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Initializing ScopeManager for user {UserId}, session {SessionId}")]
+    private static partial void LogInitializing(ILogger logger, string userId, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "ScopeManager initialized with topic {TopicId}")]
+    private static partial void LogInitialized(ILogger logger, string topicId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Topic transition detected: {OldTopic} → {NewTopic}")]
+    private static partial void LogTopicTransition(ILogger logger, string oldTopic, string newTopic);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Turn {TurnIndex} recorded in topic {TopicId} (topic turn {TopicTurnIndex})")]
+    private static partial void LogTurnRecorded(ILogger logger, int turnIndex, string? topicId, int topicTurnIndex);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Resolved scope {Scope} for type {Type} with importance {Importance:F2}")]
+    private static partial void LogResolvedScope(ILogger logger, Scope scope, MemoryType type, float importance);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Topic change detected: idle time {IdleTime} > threshold {Threshold}")]
+    private static partial void LogTopicChangeIdleTime(ILogger logger, TimeSpan idleTime, TimeSpan threshold);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Topic change detected: turn count {TurnCount} >= max {Max}")]
+    private static partial void LogTopicChangeTurnCount(ILogger logger, int turnCount, int max);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Topic similarity: {Similarity:F4} (threshold: {Threshold:F2})")]
+    private static partial void LogTopicSimilarity(ILogger logger, float similarity, float threshold);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Filtered {Count} memories for scope {Scope} (includeNarrower: {IncludeNarrower})")]
+    private static partial void LogFilteredMemories(ILogger logger, int count, Scope scope, bool includeNarrower);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ending session {SessionId}: {Turns} turns, {Topics} topics")]
+    private static partial void LogEndingSession(ILogger logger, string sessionId, int turns, int topics);
 }
 
 /// <summary>

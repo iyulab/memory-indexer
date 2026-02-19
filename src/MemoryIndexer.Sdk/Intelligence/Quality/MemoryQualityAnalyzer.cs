@@ -1,4 +1,4 @@
-using System.Numerics.Tensors;
+﻿using System.Numerics.Tensors;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -13,7 +13,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Quality;
 /// Analyzes memory quality using multiple metrics.
 /// Phase 20.1: Smart Deduplication & Quality Control
 /// </summary>
-public sealed class MemoryQualityAnalyzer : IMemoryQualityService
+public sealed partial class MemoryQualityAnalyzer : IMemoryQualityService
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
@@ -118,7 +118,7 @@ public sealed class MemoryQualityAnalyzer : IMemoryQualityService
     {
         if (_deduplicationService == null)
         {
-            _logger.LogWarning("Deduplication service not available, defaulting uniqueness to 1.0");
+            LogDeduplicationServiceAvailableDefaultingUniqueness(_logger);
             return 1.0f;
         }
 
@@ -150,7 +150,7 @@ public sealed class MemoryQualityAnalyzer : IMemoryQualityService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to calculate uniqueness score");
+            LogFailedCalculateUniquenessScore(_logger, ex);
             return 0.5f;
         }
     }
@@ -171,7 +171,7 @@ public sealed class MemoryQualityAnalyzer : IMemoryQualityService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to calculate relevance score");
+            LogFailedCalculateRelevanceScore(_logger, ex);
             return 0f;
         }
     }
@@ -237,7 +237,7 @@ public sealed class MemoryQualityAnalyzer : IMemoryQualityService
         // If contradiction detector not available, use simple heuristic fallback
         if (_contradictionDetector == null)
         {
-            _logger.LogDebug("Contradiction detector not available, using simple heuristic");
+            LogContradictionDetectorAvailableUsingSimple(_logger);
             return await CalculateSimpleConsistencyAsync(memory, userId, issues, cancellationToken);
         }
 
@@ -294,7 +294,7 @@ public sealed class MemoryQualityAnalyzer : IMemoryQualityService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to detect contradictions, using simple heuristic");
+            LogFailedDetectContradictionsUsingSimple(_logger, ex);
             return await CalculateSimpleConsistencyAsync(memory, userId, issues, cancellationToken);
         }
     }
@@ -410,4 +410,19 @@ public sealed class MemoryQualityAnalyzer : IMemoryQualityService
 
         return dotProduct / (norm1 * norm2);
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Deduplication service not available, defaulting uniqueness to 1.0")]
+    private static partial void LogDeduplicationServiceAvailableDefaultingUniqueness(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to calculate uniqueness score")]
+    private static partial void LogFailedCalculateUniquenessScore(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to calculate relevance score")]
+    private static partial void LogFailedCalculateRelevanceScore(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Contradiction detector not available, using simple heuristic")]
+    private static partial void LogContradictionDetectorAvailableUsingSimple(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to detect contradictions, using simple heuristic")]
+    private static partial void LogFailedDetectContradictionsUsingSimple(ILogger logger, Exception ex);
 }

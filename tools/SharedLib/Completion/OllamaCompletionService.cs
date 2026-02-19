@@ -10,7 +10,7 @@ namespace SharedLib.Completion;
 /// Ollama completion service implementation for samples and tests.
 /// Not included in the main MemoryIndexer packages.
 /// </summary>
-public sealed class OllamaCompletionService : ITextCompletionService, IDisposable
+public sealed partial class OllamaCompletionService : ITextCompletionService, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _model;
@@ -51,7 +51,7 @@ public sealed class OllamaCompletionService : ITextCompletionService, IDisposabl
             _ownsHttpClient = true;
         }
 
-        _logger.LogInformation("Ollama completion service initialized: url={Url}, model={Model}", baseUrl, model);
+        LogOllamaCompletionServiceInitialized(_logger, baseUrl, model);
     }
 
     /// <inheritdoc />
@@ -104,6 +104,9 @@ public sealed class OllamaCompletionService : ITextCompletionService, IDisposabl
         if (_ownsHttpClient)
             _httpClient.Dispose();
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ollama completion service initialized: url={Url}, model={Model}")]
+    private static partial void LogOllamaCompletionServiceInitialized(ILogger logger, string url, string model);
 
     private static OllamaOptions? MapToOllamaOptions(TextCompletionOptions? options)
     {

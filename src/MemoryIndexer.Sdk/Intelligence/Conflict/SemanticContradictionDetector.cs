@@ -1,7 +1,8 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Utilities;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Conflict;
 
@@ -9,7 +10,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Conflict;
 /// Hybrid contradiction detector using semantic similarity and rule-based analysis.
 /// Based on research: NLI + Semantic approach achieves 70.9% F1 for contradiction detection.
 /// </summary>
-public sealed class SemanticContradictionDetector : IContradictionDetector
+public sealed partial class SemanticContradictionDetector : IContradictionDetector
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<SemanticContradictionDetector> _logger;
@@ -125,7 +126,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
                     ConflictDescription = description,
                     Context = new Dictionary<string, string>
                     {
-                        ["SemanticSimilarity"] = similarity.ToString("F3"),
+                        ["SemanticSimilarity"] = similarity.ToString("F3", CultureInfo.InvariantCulture),
                         ["ExistingMemoryId"] = existing.Id.ToString(),
                         ["NewContent"] = TruncateForContext(newMemory.Content),
                         ["ExistingContent"] = TruncateForContext(existing.Content)
@@ -136,10 +137,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
 
         if (bestMatch != null && bestMatch.ContradictionConfidence >= options.MinContradictionConfidence)
         {
-            _logger.LogInformation(
-                "Detected {Type} contradiction (confidence: {Confidence:P1}) between new memory and existing {ExistingId}",
-                bestMatch.Type, bestMatch.ContradictionConfidence,
-                bestMatch.ConflictingItem!.Id);
+            LogDetectedTypeContradictionConfidenceConfidence(_logger, bestMatch.Type, bestMatch.ContradictionConfidence, bestMatch.ConflictingItem!.Id);
 
             return bestMatch;
         }
@@ -206,10 +204,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
 
                 if (confidence >= options.MinContradictionConfidence)
                 {
-                    _logger.LogInformation(
-                        "Detected temporal contradiction for {Subject}.{Predicate}: '{OldValue}' vs '{NewValue}'",
-                        newTriple.Subject, newTriple.Predicate,
-                        existing.ObjectValue, newTriple.ObjectValue);
+                    LogDetectedTemporalContradictionSubjectPredicate(_logger, newTriple.Subject, newTriple.Predicate, existing.ObjectValue, newTriple.ObjectValue);
 
                     return Task.FromResult(new ContradictionAnalysis<EntityTriple>
                     {
@@ -223,7 +218,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
                         Context = new Dictionary<string, string>
                         {
                             ["ExistingTripleId"] = existing.Id.ToString(),
-                            ["ExistingVersion"] = existing.Version.ToString(),
+                            ["ExistingVersion"] = existing.Version.ToString(CultureInfo.InvariantCulture),
                             ["ExistingValue"] = existing.ObjectValue,
                             ["NewValue"] = newTriple.ObjectValue,
                             ["OverlapPeriod"] = $"{(newFrom > existingFrom ? newFrom : existingFrom):yyyy-MM-dd} to {(newTo < existingTo ? newTo : existingTo):yyyy-MM-dd}"
@@ -264,7 +259,7 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
     /// <summary>
     /// Analyzes two text contents for contradiction patterns.
     /// </summary>
-    private (bool HasContradiction, ContradictionType Type, float Confidence, string Description)
+    private static (bool HasContradiction, ContradictionType Type, float Confidence, string Description)
         AnalyzeContradiction(string newContent, string existingContent)
     {
         var newLower = newContent.ToLowerInvariant();
@@ -385,4 +380,10 @@ public sealed class SemanticContradictionDetector : IContradictionDetector
         if (string.IsNullOrEmpty(content)) return string.Empty;
         return content.Length <= maxLength ? content : content[..maxLength] + "...";
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Detected {Type} contradiction (confidence: {Confidence:P1}) between new memory and existing {ExistingId}")]
+    private static partial void LogDetectedTypeContradictionConfidenceConfidence(ILogger logger, ContradictionType type, float confidence, Guid existingId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Detected temporal contradiction for {Subject}.{Predicate}: '{OldValue}' vs '{NewValue}'")]
+    private static partial void LogDetectedTemporalContradictionSubjectPredicate(ILogger logger, string subject, string predicate, object oldValue, object newValue);
 }

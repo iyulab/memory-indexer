@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Summarization;
@@ -12,21 +12,21 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Summarization;
 /// </summary>
 public class SummarizationOrchestratorTests
 {
-    private readonly Mock<ISummarizationTrigger> _triggerMock;
-    private readonly Mock<ISummarizationService> _summarizerMock;
-    private readonly Mock<IMemoryStore> _memoryStoreMock;
+    private readonly ISummarizationTrigger _triggerMock;
+    private readonly ISummarizationService _summarizerMock;
+    private readonly IMemoryStore _memoryStoreMock;
     private readonly SummarizationOrchestrator _orchestrator;
 
     public SummarizationOrchestratorTests()
     {
-        _triggerMock = new Mock<ISummarizationTrigger>();
-        _summarizerMock = new Mock<ISummarizationService>();
-        _memoryStoreMock = new Mock<IMemoryStore>();
+        _triggerMock = Substitute.For<ISummarizationTrigger>();
+        _summarizerMock = Substitute.For<ISummarizationService>();
+        _memoryStoreMock = Substitute.For<IMemoryStore>();
 
         _orchestrator = new SummarizationOrchestrator(
-            _triggerMock.Object,
-            _summarizerMock.Object,
-            _memoryStoreMock.Object,
+            _triggerMock,
+            _summarizerMock,
+            _memoryStoreMock,
             NullLogger<SummarizationOrchestrator>.Instance);
     }
 
@@ -51,7 +51,7 @@ public class SummarizationOrchestratorTests
         _orchestrator.StartSession("session-1", "user-1");
 
         // Assert
-        _triggerMock.Verify(t => t.RegisterEvent("session-1", SessionEventType.SessionStart, null), Times.Once);
+        _triggerMock.Received(1).RegisterEvent("session-1", SessionEventType.SessionStart, null);
     }
 
     [Fact]
@@ -95,8 +95,8 @@ public class SummarizationOrchestratorTests
         // Arrange
         _orchestrator.StartSession("session-1", "user-1");
 
-        _triggerMock.Setup(t => t.EvaluateAsync(It.IsAny<SummarizationContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TriggerEvaluation
+        _triggerMock.EvaluateAsync(Arg.Any<SummarizationContext>(), Arg.Any<CancellationToken>())
+            .Returns(new TriggerEvaluation
             {
                 ShouldSummarize = false,
                 Explanation = "No trigger"
@@ -145,8 +145,8 @@ public class SummarizationOrchestratorTests
             SummarizedTokenCount = 30
         };
 
-        _triggerMock.Setup(t => t.EvaluateAsync(It.IsAny<SummarizationContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TriggerEvaluation
+        _triggerMock.EvaluateAsync(Arg.Any<SummarizationContext>(), Arg.Any<CancellationToken>())
+            .Returns(new TriggerEvaluation
             {
                 ShouldSummarize = true,
                 Priority = SummarizationPriority.High,
@@ -154,14 +154,14 @@ public class SummarizationOrchestratorTests
                 Explanation = "Token threshold exceeded"
             });
 
-        _memoryStoreMock.Setup(s => s.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit> { memory });
+        _memoryStoreMock.GetByIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit> { memory });
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(expectedSummary);
 
         // Act
         var result = await _orchestrator.RecordMemoryAsync("session-1", memory);
@@ -187,8 +187,8 @@ public class SummarizationOrchestratorTests
             Explanation = "Test evaluation"
         };
 
-        _triggerMock.Setup(t => t.EvaluateAsync(It.IsAny<SummarizationContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedEvaluation);
+        _triggerMock.EvaluateAsync(Arg.Any<SummarizationContext>(), Arg.Any<CancellationToken>())
+            .Returns(expectedEvaluation);
 
         // Act
         var result = await _orchestrator.EvaluateTriggerAsync("session-1");
@@ -213,8 +213,8 @@ public class SummarizationOrchestratorTests
         };
 
         // Pre-record a memory
-        _triggerMock.Setup(t => t.EvaluateAsync(It.IsAny<SummarizationContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TriggerEvaluation { ShouldSummarize = false, Explanation = "No trigger" });
+        _triggerMock.EvaluateAsync(Arg.Any<SummarizationContext>(), Arg.Any<CancellationToken>())
+            .Returns(new TriggerEvaluation { ShouldSummarize = false, Explanation = "No trigger" });
         await _orchestrator.RecordMemoryAsync("session-1", memory);
 
         var expectedSummary = new MemorySummary
@@ -225,14 +225,14 @@ public class SummarizationOrchestratorTests
             SummarizedTokenCount = 15
         };
 
-        _memoryStoreMock.Setup(s => s.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit> { memory });
+        _memoryStoreMock.GetByIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit> { memory });
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(expectedSummary);
 
         // Act
         var result = await _orchestrator.TriggerSummarizationAsync("session-1", SummarizationStrategy.Compression);
@@ -255,8 +255,8 @@ public class SummarizationOrchestratorTests
             UserId = "user-1"
         };
 
-        _triggerMock.Setup(t => t.EvaluateAsync(It.IsAny<SummarizationContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TriggerEvaluation
+        _triggerMock.EvaluateAsync(Arg.Any<SummarizationContext>(), Arg.Any<CancellationToken>())
+            .Returns(new TriggerEvaluation
             {
                 ShouldSummarize = true,
                 RecommendedStrategy = SummarizationStrategy.Reflection,
@@ -271,14 +271,14 @@ public class SummarizationOrchestratorTests
             SourceMemoryIds = [memory.Id]
         };
 
-        _memoryStoreMock.Setup(s => s.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemoryUnit> { memory });
+        _memoryStoreMock.GetByIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<MemoryUnit> { memory });
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(finalSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(finalSummary);
 
         // Act
         var result = await _orchestrator.EndSessionAsync("session-1");
@@ -297,14 +297,14 @@ public class SummarizationOrchestratorTests
         // Arrange
         _orchestrator.StartSession("session-1", "user-1");
 
-        _triggerMock.Setup(t => t.EvaluateAsync(It.IsAny<SummarizationContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new TriggerEvaluation { ShouldSummarize = false, Explanation = "Empty session" });
+        _triggerMock.EvaluateAsync(Arg.Any<SummarizationContext>(), Arg.Any<CancellationToken>())
+            .Returns(new TriggerEvaluation { ShouldSummarize = false, Explanation = "Empty session" });
 
         // Act
         await _orchestrator.EndSessionAsync("session-1");
 
         // Assert
-        _triggerMock.Verify(t => t.RegisterEvent("session-1", SessionEventType.SessionEnd, null), Times.Once);
+        _triggerMock.Received(1).RegisterEvent("session-1", SessionEventType.SessionEnd, null);
     }
 
     [Fact]

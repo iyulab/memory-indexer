@@ -3,13 +3,14 @@ using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Summarization;
 
 /// <summary>
 /// Orchestrates session-aware summarization by integrating triggers, services, and memory storage.
 /// </summary>
-public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
+public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrator
 {
     private readonly ISummarizationTrigger _trigger;
     private readonly ISummarizationService _summarizer;
@@ -41,12 +42,12 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
 
         if (!_sessions.TryAdd(sessionId, state))
         {
-            _logger.LogWarning("Session {SessionId} already exists, resetting state", sessionId);
+            LogSessionAlreadyExists(_logger, sessionId);
             _sessions[sessionId] = state;
         }
 
         _trigger.RegisterEvent(sessionId, SessionEventType.SessionStart);
-        _logger.LogInformation("Started tracking session {SessionId} for user {UserId}", sessionId, userId);
+        LogStartedTrackingSession(_logger, sessionId, userId);
     }
 
     /// <inheritdoc />
@@ -54,7 +55,7 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
     {
         if (!_sessions.TryGetValue(sessionId, out var state))
         {
-            _logger.LogWarning("Cannot end unknown session {SessionId}", sessionId);
+            LogCannotEndUnknownSession(_logger, sessionId);
             return null;
         }
 
@@ -72,9 +73,7 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
         }
 
         _sessions.TryRemove(sessionId, out _);
-        _logger.LogInformation(
-            "Ended session {SessionId}: {MemoryCount} memories, {SummaryCount} summaries generated",
-            sessionId, state.MemoriesCreated, state.Summaries.Count);
+        LogEndedSession(_logger, sessionId, state.MemoriesCreated, state.Summaries.Count);
 
         return finalSummary;
     }
@@ -87,7 +86,7 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
     {
         if (!_sessions.TryGetValue(sessionId, out var state))
         {
-            _logger.LogDebug("Session {SessionId} not tracked, skipping memory recording", sessionId);
+            LogSessionNotTracked(_logger, sessionId);
             return null;
         }
 
@@ -103,13 +102,11 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
         // Register event with importance metadata
         _trigger.RegisterEvent(sessionId, SessionEventType.MemoryStored, new Dictionary<string, string>
         {
-            ["importance"] = memory.ImportanceScore.ToString("F2"),
+            ["importance"] = memory.ImportanceScore.ToString("F2", CultureInfo.InvariantCulture),
             ["memoryId"] = memory.Id.ToString()
         });
 
-        _logger.LogDebug(
-            "Recorded memory {MemoryId} for session {SessionId}: importance={Importance:F2}",
-            memory.Id, sessionId, memory.ImportanceScore);
+        LogRecordedMemory(_logger, memory.Id, sessionId, memory.ImportanceScore);
 
         // Evaluate if summarization should be triggered
         var evaluation = await _trigger.EvaluateAsync(state.ToContext(), cancellationToken);
@@ -119,9 +116,7 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
             return SummarizationResult.Skipped(evaluation);
         }
 
-        _logger.LogInformation(
-            "Summarization triggered for session {SessionId}: {Condition} - {Priority}",
-            sessionId, evaluation.Condition, evaluation.Priority);
+        LogSummarizationTriggered(_logger, sessionId, evaluation.Condition, evaluation.Priority);
 
         return await ExecuteSummarizationAsync(state, evaluation.RecommendedStrategy, cancellationToken);
     }
@@ -140,7 +135,7 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
         var eventType = isUserMessage ? SessionEventType.UserMessage : SessionEventType.AssistantResponse;
         _trigger.RegisterEvent(sessionId, eventType, new Dictionary<string, string>
         {
-            ["tokenCount"] = tokenCount.ToString()
+            ["tokenCount"] = tokenCount.ToString(CultureInfo.InvariantCulture)
         });
     }
 
@@ -292,11 +287,7 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
             var tokensAfter = tokensBefore - summary.OriginalTokenCount + summary.SummarizedTokenCount;
             state.CurrentTokenCount = Math.Max(0, tokensAfter);
 
-            _logger.LogInformation(
-                "Summarization completed for session {SessionId}: {Strategy}, {MemoriesProcessed} memories, " +
-                "{TokensBefore} -> {TokensAfter} tokens ({CompressionRatio:P0} compression) in {Duration}ms",
-                state.SessionId, strategy, memories.Count,
-                tokensBefore, tokensAfter, summary.CompressionRatio, stopwatch.ElapsedMilliseconds);
+            LogSummarizationCompleted(_logger, state.SessionId, strategy, memories.Count, tokensBefore, tokensAfter, summary.CompressionRatio, stopwatch.ElapsedMilliseconds);
 
             return new SummarizationResult
             {
@@ -312,7 +303,7 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Summarization failed for session {SessionId}", state.SessionId);
+            LogSummarizationFailed(_logger, ex, state.SessionId);
 
             return new SummarizationResult
             {
@@ -323,4 +314,31 @@ public sealed class SummarizationOrchestrator : ISummarizationOrchestrator
             };
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Session {SessionId} already exists, resetting state")]
+    private static partial void LogSessionAlreadyExists(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Started tracking session {SessionId} for user {UserId}")]
+    private static partial void LogStartedTrackingSession(ILogger logger, string sessionId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cannot end unknown session {SessionId}")]
+    private static partial void LogCannotEndUnknownSession(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ended session {SessionId}: {MemoryCount} memories, {SummaryCount} summaries generated")]
+    private static partial void LogEndedSession(ILogger logger, string sessionId, int memoryCount, int summaryCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Session {SessionId} not tracked, skipping memory recording")]
+    private static partial void LogSessionNotTracked(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recorded memory {MemoryId} for session {SessionId}: importance={Importance:F2}")]
+    private static partial void LogRecordedMemory(ILogger logger, Guid memoryId, string sessionId, float importance);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Summarization triggered for session {SessionId}: {Condition} - {Priority}")]
+    private static partial void LogSummarizationTriggered(ILogger logger, string sessionId, TriggerCondition condition, SummarizationPriority priority);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Summarization completed for session {SessionId}: {Strategy}, {MemoriesProcessed} memories, {TokensBefore} -> {TokensAfter} tokens ({CompressionRatio:P0} compression) in {Duration}ms")]
+    private static partial void LogSummarizationCompleted(ILogger logger, string sessionId, SummarizationStrategy strategy, int memoriesProcessed, int tokensBefore, int tokensAfter, float compressionRatio, long duration);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Summarization failed for session {SessionId}")]
+    private static partial void LogSummarizationFailed(ILogger logger, Exception ex, string sessionId);
 }

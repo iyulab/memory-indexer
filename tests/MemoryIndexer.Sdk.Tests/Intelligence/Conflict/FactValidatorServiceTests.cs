@@ -2,7 +2,7 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Conflict;
@@ -13,22 +13,21 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Conflict;
 /// </summary>
 public class FactValidatorServiceTests
 {
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<ILogger<FactValidatorService>> _mockLogger;
+    private readonly IEmbeddingService _mockEmbeddingService;
+    private readonly ILogger<FactValidatorService> _mockLogger;
     private readonly FactValidatorService _service;
 
     private readonly ReadOnlyMemory<float> _testEmbedding = new float[] { 0.1f, 0.2f, 0.3f, 0.4f };
 
     public FactValidatorServiceTests()
     {
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockLogger = new Mock<ILogger<FactValidatorService>>();
+        _mockEmbeddingService = Substitute.For<IEmbeddingService>();
+        _mockLogger = Substitute.For<ILogger<FactValidatorService>>();
 
-        _mockEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testEmbedding);
+        _mockEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(_testEmbedding);
 
-        _service = new FactValidatorService(_mockEmbeddingService.Object, _mockLogger.Object);
+        _service = new FactValidatorService(_mockEmbeddingService, _mockLogger);
     }
 
     #region ValidateAsync Tests
@@ -298,9 +297,8 @@ public class FactValidatorServiceTests
         var newEmbedding = new float[] { 1.0f, 0.0f, 0.0f, 0.0f };
         var existingEmbedding = new float[] { 0.85f, 0.52f, 0.0f, 0.0f }; // ~0.85 similarity
 
-        _mockEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ReadOnlyMemory<float>(newEmbedding));
+        _mockEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(newEmbedding));
 
         var existingFacts = new List<SemanticStoreEntry>
         {

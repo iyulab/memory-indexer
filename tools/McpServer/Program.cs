@@ -15,7 +15,10 @@ var httpPort = 3001;
 var portIndex = Array.FindIndex(args, a => a == "--port");
 if (portIndex >= 0 && portIndex + 1 < args.Length)
 {
-    int.TryParse(args[portIndex + 1], out httpPort);
+    if (int.TryParse(args[portIndex + 1], out var parsedPort))
+    {
+        httpPort = parsedPort;
+    }
 }
 
 if (transportMode == "http")

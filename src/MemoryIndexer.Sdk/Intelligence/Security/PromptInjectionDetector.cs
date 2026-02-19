@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 
@@ -95,11 +95,7 @@ public sealed partial class PromptInjectionDetector : IPromptInjectionDetector
             result.Recommendations = GenerateRecommendations(result);
         }
 
-        _logger.LogDebug(
-            "Injection detection complete: {Detected}, Risk: {Level} ({Score:P0})",
-            result.IsDetected,
-            result.RiskLevel,
-            result.RiskScore);
+        LogInjectionDetectionCompleteDetectedRisk(_logger, result.IsDetected, result.RiskLevel, result.RiskScore);
 
         return Task.FromResult(result);
     }
@@ -222,10 +218,7 @@ public sealed partial class PromptInjectionDetector : IPromptInjectionDetector
         result.SanitizedText = sanitized;
         result.WasModified = result.Modifications.Count > 0 || text != sanitized;
 
-        _logger.LogInformation(
-            "Sanitization complete: {Modified}, {ModCount} modifications",
-            result.WasModified,
-            result.Modifications.Count);
+        LogSanitizationCompleteModifiedModCountModifications(_logger, result.WasModified, result.Modifications.Count);
 
         return result;
     }
@@ -408,7 +401,7 @@ public sealed partial class PromptInjectionDetector : IPromptInjectionDetector
         return recommendations;
     }
 
-    private List<InjectionRule> InitializeRules()
+    private static List<InjectionRule> InitializeRules()
     {
         return
         [
@@ -544,6 +537,12 @@ public sealed partial class PromptInjectionDetector : IPromptInjectionDetector
     private static partial Regex EncodedBase64Regex();
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Injection detection complete: {Detected}, Risk: {Level} ({Score:P0})")]
+    private static partial void LogInjectionDetectionCompleteDetectedRisk(ILogger logger, bool detected, RiskLevel level, float score);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Sanitization complete: {Modified}, {ModCount} modifications")]
+    private static partial void LogSanitizationCompleteModifiedModCountModifications(ILogger logger, bool modified, int modCount);
 }
 
 /// <summary>

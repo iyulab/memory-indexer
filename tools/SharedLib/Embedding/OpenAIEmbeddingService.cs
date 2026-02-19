@@ -18,7 +18,7 @@ namespace SharedLib.Embedding;
 /// var cached = new CachingEmbeddingService(openAi);
 /// </code>
 /// </remarks>
-public sealed class OpenAIEmbeddingService : IEmbeddingService
+public sealed partial class OpenAIEmbeddingService : IEmbeddingService
 {
     private readonly EmbeddingClient _client;
     private readonly ILogger<OpenAIEmbeddingService> _logger;
@@ -82,11 +82,10 @@ public sealed class OpenAIEmbeddingService : IEmbeddingService
         else
         {
             Dimensions = 1536; // Default fallback
-            _logger.LogWarning("Unknown model '{Model}', using default dimensions {Dimensions}", model, Dimensions);
+            LogUnknownModelUsingDefaultDimensions(_logger, model, Dimensions);
         }
 
-        _logger.LogInformation("OpenAI embedding service initialized: model={Model}, dimensions={Dimensions}",
-            model, Dimensions);
+        LogOpenAIEmbeddingServiceInitialized(_logger, model, Dimensions);
     }
 
     /// <inheritdoc />
@@ -114,4 +113,10 @@ public sealed class OpenAIEmbeddingService : IEmbeddingService
         var response = await _client.GenerateEmbeddingsAsync(textList, cancellationToken: cancellationToken);
         return response.Value.OrderBy(e => e.Index).Select(e => e.ToFloats()).ToList();
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Unknown model '{Model}', using default dimensions {Dimensions}")]
+    private static partial void LogUnknownModelUsingDefaultDimensions(ILogger logger, string model, int dimensions);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "OpenAI embedding service initialized: model={Model}, dimensions={Dimensions}")]
+    private static partial void LogOpenAIEmbeddingServiceInitialized(ILogger logger, string model, int dimensions);
 }

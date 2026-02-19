@@ -243,7 +243,7 @@ public sealed class SanitizationOptions
     /// <summary>
     /// Maximum allowed text length (0 = no limit).
     /// </summary>
-    public int MaxLength { get; set; } = 0;
+    public int MaxLength { get; set; }
 }
 
 /// <summary>

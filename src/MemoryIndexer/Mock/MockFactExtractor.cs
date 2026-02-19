@@ -237,9 +237,9 @@ public sealed partial class MockFactExtractor : IFactExtractor
 
         // Question markers
         if (content.TrimEnd().EndsWith('?') ||
-            lower.StartsWith("is my") ||
-            lower.StartsWith("what is my") ||
-            lower.StartsWith("do i"))
+            lower.StartsWith("is my", StringComparison.Ordinal) ||
+            lower.StartsWith("what is my", StringComparison.Ordinal) ||
+            lower.StartsWith("do i", StringComparison.Ordinal))
         {
             return StatementContextType.Question;
         }

@@ -13,7 +13,7 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Deduplication;
 
 public class DeduplicationServiceTests
 {
-    private readonly IMemoryStore _memoryStore;
+    private readonly InMemoryMemoryStore _memoryStore;
     private readonly MockEmbeddingService _embeddingService;
     private readonly IScoringService _scoringService;
     private readonly DeduplicationService _deduplicationService;

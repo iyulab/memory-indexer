@@ -4,6 +4,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 
@@ -18,7 +19,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 /// - TurnThreshold: 10 conversation turns
 /// - TopicChange: Significant topic shift detected
 /// </remarks>
-public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchestrator
+public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchestrator
 {
     private readonly IShortTermMemory _workingMemory;
     private readonly IEmbeddingService _embeddingService;
@@ -69,9 +70,7 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
             }
         }
 
-        _logger.LogDebug(
-            "Recorded activity for user {UserId}: Turn {Turn}, Tokens {Tokens}",
-            userId, state.TurnCount, state.TotalTokens);
+        LogRecordedActivity(_logger, userId, state.TurnCount, state.TotalTokens);
 
         await Task.CompletedTask;
     }
@@ -88,10 +87,7 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
 
         lock (state.Lock)
         {
-            _logger.LogInformation(
-                "[CONSOLIDATION] Checking triggers for user {UserId}: " +
-                "Memories={MemoryCount}, Tokens={TotalTokens}, Turns={TurnCount}",
-                userId, state.Memories.Count, state.TotalTokens, state.TurnCount);
+            LogCheckingTriggers(_logger, userId, state.Memories.Count, state.TotalTokens, state.TurnCount);
 
             // Check idle timeout
             if (state.LastActivityTime.HasValue)
@@ -99,9 +95,7 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
                 var idleDuration = DateTime.UtcNow - state.LastActivityTime.Value;
                 if (idleDuration >= _options.IdleTimeout)
                 {
-                    _logger.LogInformation(
-                        "[CONSOLIDATION] ✅ Idle timeout trigger for user {UserId}: {Duration} >= {Threshold}",
-                        userId, idleDuration, _options.IdleTimeout);
+                    LogIdleTimeoutTrigger(_logger, userId, idleDuration, _options.IdleTimeout);
                     return WorkingPromotionTrigger.IdleTimeout;
                 }
             }
@@ -109,18 +103,14 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
             // Check token threshold
             if (state.TotalTokens >= _options.TokenThreshold)
             {
-                _logger.LogInformation(
-                    "[CONSOLIDATION] ✅ Token threshold trigger for user {UserId}: {Tokens} >= {Threshold}",
-                    userId, state.TotalTokens, _options.TokenThreshold);
+                LogTokenThresholdTrigger(_logger, userId, state.TotalTokens, _options.TokenThreshold);
                 return WorkingPromotionTrigger.TokenThreshold;
             }
 
             // Check turn threshold
             if (state.TurnCount >= _options.TurnThreshold)
             {
-                _logger.LogInformation(
-                    "[CONSOLIDATION] ✅ Turn threshold trigger for user {UserId}: {Turns} >= {Threshold}",
-                    userId, state.TurnCount, _options.TurnThreshold);
+                LogTurnThresholdTrigger(_logger, userId, state.TurnCount, _options.TurnThreshold);
                 return WorkingPromotionTrigger.TurnThreshold;
             }
 
@@ -135,14 +125,12 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
 
                 if (similarity < _options.TopicChangeSimilarityThreshold)
                 {
-                    _logger.LogInformation(
-                        "[CONSOLIDATION] ✅ Topic change trigger for user {UserId}: Similarity {Sim:F3} < {Threshold}",
-                        userId, similarity, _options.TopicChangeSimilarityThreshold);
+                    LogTopicChangeTrigger(_logger, userId, similarity, _options.TopicChangeSimilarityThreshold);
                     return WorkingPromotionTrigger.TopicChange;
                 }
             }
 
-            _logger.LogInformation("[CONSOLIDATION] ⏸️ No trigger satisfied for user {UserId}", userId);
+            LogNoTriggerSatisfied(_logger, userId);
         }
 
         return null;
@@ -155,11 +143,11 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
         bool summarize = true,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("[CONSOLIDATION] Starting archival for user {UserId}", userId);
+        LogStartingArchival(_logger, userId);
 
         if (!_userStates.TryGetValue(userId, out var state))
         {
-            _logger.LogWarning("[CONSOLIDATION] ⚠️ No state found for user {UserId}", userId);
+            LogNoStateFoundForUser(_logger, userId);
             return WorkingArchivalResult.Empty;
         }
 
@@ -168,16 +156,14 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
         {
             if (state.Memories.Count == 0)
             {
-                _logger.LogInformation("[CONSOLIDATION] ⏸️ No memories to archive for user {UserId}", userId);
+                LogNoMemoriesToArchive(_logger, userId);
                 return WorkingArchivalResult.Empty;
             }
 
             memoriesToArchive = [.. state.Memories];
         }
 
-        _logger.LogInformation(
-            "[CONSOLIDATION] Trigger: {Trigger}. Archiving {Count} memories for user {UserId}",
-            trigger, memoriesToArchive.Count, userId);
+        LogTriggerArchiving(_logger, trigger, memoriesToArchive.Count, userId);
 
         try
         {
@@ -208,17 +194,15 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
                     {
                         ["source"] = "working_archival",
                         ["archival_trigger"] = trigger.ToString(),
-                        ["memory_count"] = memoriesToArchive.Count.ToString(),
-                        ["original_tokens"] = state.TotalTokens.ToString(),
-                        ["summary_tokens"] = EstimateTokens(summaryContent).ToString()
+                        ["memory_count"] = memoriesToArchive.Count.ToString(CultureInfo.InvariantCulture),
+                        ["original_tokens"] = state.TotalTokens.ToString(CultureInfo.InvariantCulture),
+                        ["summary_tokens"] = EstimateTokens(summaryContent).ToString(CultureInfo.InvariantCulture)
                     }
                 };
 
                 summaryId = sessionSummary.Id;
 
-                _logger.LogDebug(
-                    "Created session summary {SummaryId} for user {UserId}",
-                    summaryId, userId);
+                LogCreatedSessionSummary(_logger, summaryId, userId);
             }
 
             // Clear working memory state for this user
@@ -235,16 +219,13 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
                 if (demoted != null)
                 {
                     demotedCount++;
-                    _logger.LogInformation(
-                        "[CONSOLIDATION] ✅ Archived: {Content}",
-                        memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content);
+                    var truncatedContent = memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content;
+                    LogArchived(_logger, truncatedContent);
                 }
             }
 
-            _logger.LogInformation(
-                "[CONSOLIDATION] ✅ Successfully archived {Count} memories for user {UserId}. " +
-                "Summary: {SummaryCreated}",
-                demotedCount, userId, summaryId.HasValue ? "Created" : "Skipped");
+            var summaryCreated = summaryId.HasValue ? "Created" : "Skipped";
+            LogSuccessfullyArchived(_logger, demotedCount, userId, summaryCreated);
 
             return new WorkingArchivalResult
             {
@@ -256,7 +237,7 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[CONSOLIDATION] ❌ Failed to archive working memory for user {UserId}", userId);
+            LogFailedToArchive(_logger, ex, userId);
             return WorkingArchivalResult.Failure(ex.Message);
         }
     }
@@ -309,7 +290,7 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
                 state.Reset();
             }
 
-            _logger.LogDebug("Cleared state for user {UserId}", userId);
+            LogClearedState(_logger, userId);
         }
     }
 
@@ -389,11 +370,11 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
                 ? memory.Content[..200] + "..."
                 : memory.Content;
 
-            sb.AppendLine($"• {excerpt}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"• {excerpt}");
         }
 
         sb.AppendLine();
-        sb.AppendLine($"[{memories.Count} memories archived]");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"[{memories.Count} memories archived]");
 
         return sb.ToString();
     }
@@ -455,6 +436,54 @@ public sealed class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchest
         }
         return [.. topics];
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recorded activity for user {UserId}: Turn {Turn}, Tokens {Tokens}")]
+    private static partial void LogRecordedActivity(ILogger logger, string userId, int turn, int tokens);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Checking triggers for user {UserId}: Memories={MemoryCount}, Tokens={TotalTokens}, Turns={TurnCount}")]
+    private static partial void LogCheckingTriggers(ILogger logger, string userId, int memoryCount, int totalTokens, int turnCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Idle timeout trigger for user {UserId}: {Duration} >= {Threshold}")]
+    private static partial void LogIdleTimeoutTrigger(ILogger logger, string userId, TimeSpan duration, TimeSpan threshold);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Token threshold trigger for user {UserId}: {Tokens} >= {Threshold}")]
+    private static partial void LogTokenThresholdTrigger(ILogger logger, string userId, int tokens, int threshold);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Turn threshold trigger for user {UserId}: {Turns} >= {Threshold}")]
+    private static partial void LogTurnThresholdTrigger(ILogger logger, string userId, int turns, int threshold);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Topic change trigger for user {UserId}: Similarity {Sim:F3} < {Threshold}")]
+    private static partial void LogTopicChangeTrigger(ILogger logger, string userId, float sim, float threshold);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] No trigger satisfied for user {UserId}")]
+    private static partial void LogNoTriggerSatisfied(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Starting archival for user {UserId}")]
+    private static partial void LogStartingArchival(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[CONSOLIDATION] No state found for user {UserId}")]
+    private static partial void LogNoStateFoundForUser(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] No memories to archive for user {UserId}")]
+    private static partial void LogNoMemoriesToArchive(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Trigger: {Trigger}. Archiving {Count} memories for user {UserId}")]
+    private static partial void LogTriggerArchiving(ILogger logger, WorkingPromotionTrigger trigger, int count, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created session summary {SummaryId} for user {UserId}")]
+    private static partial void LogCreatedSessionSummary(ILogger logger, Guid? summaryId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Archived: {Content}")]
+    private static partial void LogArchived(ILogger logger, string content);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Successfully archived {Count} memories for user {UserId}. Summary: {SummaryCreated}")]
+    private static partial void LogSuccessfullyArchived(ILogger logger, int count, string userId, string summaryCreated);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "[CONSOLIDATION] Failed to archive working memory for user {UserId}")]
+    private static partial void LogFailedToArchive(ILogger logger, Exception ex, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cleared state for user {UserId}")]
+    private static partial void LogClearedState(ILogger logger, string userId);
 
     /// <summary>
     /// Internal state tracking for a user.

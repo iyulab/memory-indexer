@@ -2,7 +2,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence;
@@ -10,24 +10,21 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence;
 public class ExtractiveSummarizerTests
 {
     private readonly ExtractiveSummarizer _summarizer;
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly IEmbeddingService _embeddingServiceMock;
 
     public ExtractiveSummarizerTests()
     {
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
 
         // Setup mock embedding service to return consistent embeddings
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string text, CancellationToken _) => GenerateMockEmbedding(text));
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => GenerateMockEmbedding(callInfo.ArgAt<string>(0)));
 
-        _embeddingServiceMock
-            .Setup(x => x.GenerateBatchEmbeddingsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IEnumerable<string> texts, CancellationToken _) =>
-                texts.Select(t => GenerateMockEmbedding(t)).ToList());
+        _embeddingServiceMock.GenerateBatchEmbeddingsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => callInfo.ArgAt<IEnumerable<string>>(0).Select(t => GenerateMockEmbedding(t)).ToList());
 
         _summarizer = new ExtractiveSummarizer(
-            _embeddingServiceMock.Object,
+            _embeddingServiceMock,
             NullLogger<ExtractiveSummarizer>.Instance);
     }
 

@@ -198,7 +198,7 @@ public sealed class TemporalEntityQuery
     /// <summary>
     /// Whether to include inactive triples.
     /// </summary>
-    public bool IncludeInactive { get; init; } = false;
+    public bool IncludeInactive { get; init; }
 
     /// <summary>
     /// Whether to only return current versions (exclude superseded).

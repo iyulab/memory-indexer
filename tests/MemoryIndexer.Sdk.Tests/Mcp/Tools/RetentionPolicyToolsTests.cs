@@ -1,7 +1,8 @@
 using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Mcp.Tools;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
@@ -12,16 +13,16 @@ namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
 /// </summary>
 public class RetentionPolicyToolsTests
 {
-    private readonly Mock<IRetentionPolicyService> _mockRetentionService;
-    private readonly Mock<IRetentionPolicy> _mockPolicy;
+    private readonly IRetentionPolicyService _mockRetentionService;
+    private readonly IRetentionPolicy _mockPolicy;
     private readonly RetentionPolicyTools _tools;
 
     public RetentionPolicyToolsTests()
     {
-        _mockRetentionService = new Mock<IRetentionPolicyService>();
-        _mockPolicy = new Mock<IRetentionPolicy>();
-        _mockRetentionService.Setup(s => s.Policy).Returns(_mockPolicy.Object);
-        _tools = new RetentionPolicyTools(_mockRetentionService.Object);
+        _mockRetentionService = Substitute.For<IRetentionPolicyService>();
+        _mockPolicy = Substitute.For<IRetentionPolicy>();
+        _mockRetentionService.Policy.Returns(_mockPolicy);
+        _tools = new RetentionPolicyTools(_mockRetentionService);
     }
 
     #region PreviewCleanup Tests
@@ -55,9 +56,8 @@ public class RetentionPolicyToolsTests
             ]
         };
 
-        _mockRetentionService
-            .Setup(s => s.PreviewCleanupAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(preview);
+        _mockRetentionService.PreviewCleanupAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(preview);
 
         // Act
         var result = await _tools.PreviewCleanup("user1");
@@ -86,25 +86,23 @@ public class RetentionPolicyToolsTests
             CleanupDecisions = []
         };
 
-        _mockRetentionService
-            .Setup(s => s.PreviewCleanupAsync("mcp-user", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(preview);
+        _mockRetentionService.PreviewCleanupAsync("mcp-user", Arg.Any<CancellationToken>())
+            .Returns(preview);
 
         // Act
         var result = await _tools.PreviewCleanup();
 
         // Assert
         result.Success.Should().BeTrue();
-        _mockRetentionService.Verify(s => s.PreviewCleanupAsync("mcp-user", It.IsAny<CancellationToken>()), Times.Once);
+        await _mockRetentionService.Received(1).PreviewCleanupAsync("mcp-user", Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task PreviewCleanup_OnError_ShouldReturnFailure()
     {
         // Arrange
-        _mockRetentionService
-            .Setup(s => s.PreviewCleanupAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new Exception("Database error"));
+        _mockRetentionService.PreviewCleanupAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Database error"));
 
         // Act
         var result = await _tools.PreviewCleanup("user1");
@@ -132,9 +130,8 @@ public class RetentionPolicyToolsTests
             ProcessingTimeMs = 50
         };
 
-        _mockRetentionService
-            .Setup(s => s.ApplyAsync("user1", true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(applyResult);
+        _mockRetentionService.ApplyAsync("user1", true, Arg.Any<CancellationToken>())
+            .Returns(applyResult);
 
         // Act
         var result = await _tools.ApplyRetentionPolicy("user1", dryRun: true);
@@ -160,9 +157,8 @@ public class RetentionPolicyToolsTests
             ProcessingTimeMs = 100
         };
 
-        _mockRetentionService
-            .Setup(s => s.ApplyAsync("user1", false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(applyResult);
+        _mockRetentionService.ApplyAsync("user1", false, Arg.Any<CancellationToken>())
+            .Returns(applyResult);
 
         // Act
         var result = await _tools.ApplyRetentionPolicy("user1", dryRun: false);
@@ -185,9 +181,8 @@ public class RetentionPolicyToolsTests
             ErrorMessage = "Storage connection failed"
         };
 
-        _mockRetentionService
-            .Setup(s => s.ApplyAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(applyResult);
+        _mockRetentionService.ApplyAsync(Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(applyResult);
 
         // Act
         var result = await _tools.ApplyRetentionPolicy("user1");
@@ -211,7 +206,7 @@ public class RetentionPolicyToolsTests
             [SemanticStoreCategory.Preference] = new() { Category = SemanticStoreCategory.Preference, MaxAgeDays = 365, MinConfidence = 0.2f }
         };
 
-        _mockPolicy.Setup(p => p.GetAllRules()).Returns(rules);
+        _mockPolicy.GetAllRules().Returns(rules);
 
         // Act
         var result = await _tools.GetRetentionRules();
@@ -241,7 +236,7 @@ public class RetentionPolicyToolsTests
             Description = "Identity facts never expire"
         };
 
-        _mockPolicy.Setup(p => p.GetRule(SemanticStoreCategory.Fact)).Returns(rule);
+        _mockPolicy.GetRule(SemanticStoreCategory.Fact).Returns(rule);
 
         // Act
         var result = await _tools.GetRetentionRule("Fact");
@@ -269,7 +264,7 @@ public class RetentionPolicyToolsTests
     {
         // Arrange
         var rule = new RetentionRule { Category = SemanticStoreCategory.Goal, MaxAgeDays = 180 };
-        _mockPolicy.Setup(p => p.GetRule(SemanticStoreCategory.Goal)).Returns(rule);
+        _mockPolicy.GetRule(SemanticStoreCategory.Goal).Returns(rule);
 
         // Act
         var result = await _tools.GetRetentionRule("goal");
@@ -312,9 +307,8 @@ public class RetentionPolicyToolsTests
             ]
         };
 
-        _mockRetentionService
-            .Setup(s => s.PreviewCleanupAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(preview);
+        _mockRetentionService.PreviewCleanupAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(preview);
 
         // Act
         var result = await _tools.EvaluateRetention("test-key", "user1");
@@ -338,9 +332,8 @@ public class RetentionPolicyToolsTests
             CleanupDecisions = []
         };
 
-        _mockRetentionService
-            .Setup(s => s.PreviewCleanupAsync("user1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(preview);
+        _mockRetentionService.PreviewCleanupAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(preview);
 
         // Act
         var result = await _tools.EvaluateRetention("missing-key", "user1");

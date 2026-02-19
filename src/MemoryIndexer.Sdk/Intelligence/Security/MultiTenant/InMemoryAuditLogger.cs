@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.Security.MultiTenant;
@@ -7,7 +7,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Security.MultiTenant;
 /// In-memory implementation of audit logging.
 /// Suitable for development and testing. For production, use a persistent store.
 /// </summary>
-public sealed class InMemoryAuditLogger : IAuditLogger
+public sealed partial class InMemoryAuditLogger : IAuditLogger
 {
     private readonly ConcurrentQueue<AuditEvent> _events = new();
     private readonly ITenantContext _tenantContext;
@@ -24,9 +24,9 @@ public sealed class InMemoryAuditLogger : IAuditLogger
         _maxEvents = maxEvents;
     }
 
-    public Task LogAsync(AuditEvent @event, CancellationToken cancellationToken = default)
+    public Task LogAsync(AuditEvent auditEvent, CancellationToken cancellationToken = default)
     {
-        _events.Enqueue(@event);
+        _events.Enqueue(auditEvent);
 
         // Trim if exceeding max
         while (_events.Count > _maxEvents && _events.TryDequeue(out _))
@@ -34,21 +34,19 @@ public sealed class InMemoryAuditLogger : IAuditLogger
         }
 
         // Log based on severity
-        var logMessage = $"[AUDIT] {{{@event.Action}}} {{{@event.ResourceType}}}/{{{@event.ResourceId}}} - {{{@event.Outcome}}}";
-
-        switch (@event.Severity)
+        switch (auditEvent.Severity)
         {
             case AuditSeverity.Critical:
-                _logger.LogCritical(logMessage);
+                LogAUDITActionResourceTypeResourceIdOutcome(_logger, auditEvent.Action, auditEvent.ResourceType, auditEvent.ResourceId, auditEvent.Outcome);
                 break;
             case AuditSeverity.Error:
-                _logger.LogError(logMessage);
+                LogAUDITActionResourceTypeResourceIdOutcome2(_logger, auditEvent.Action, auditEvent.ResourceType, auditEvent.ResourceId, auditEvent.Outcome);
                 break;
             case AuditSeverity.Warning:
-                _logger.LogWarning(logMessage);
+                LogAUDITActionResourceTypeResourceIdOutcome3(_logger, auditEvent.Action, auditEvent.ResourceType, auditEvent.ResourceId, auditEvent.Outcome);
                 break;
             default:
-                _logger.LogInformation(logMessage);
+                LogAUDITActionResourceTypeResourceIdOutcome4(_logger, auditEvent.Action, auditEvent.ResourceType, auditEvent.ResourceId, auditEvent.Outcome);
                 break;
         }
 
@@ -65,7 +63,7 @@ public sealed class InMemoryAuditLogger : IAuditLogger
     {
         var severity = DetermineSeverity(action, outcome);
 
-        var @event = new AuditEvent
+        var auditEvent = new AuditEvent
         {
             TenantId = _tenantContext.TenantId,
             UserId = _tenantContext.UserId,
@@ -78,7 +76,7 @@ public sealed class InMemoryAuditLogger : IAuditLogger
             Severity = severity
         };
 
-        return LogAsync(@event, cancellationToken);
+        return LogAsync(auditEvent, cancellationToken);
     }
 
     public Task<IReadOnlyList<AuditEvent>> QueryAsync(
@@ -236,4 +234,16 @@ public sealed class InMemoryAuditLogger : IAuditLogger
 
         return AuditSeverity.Info;
     }
+
+    [LoggerMessage(Level = LogLevel.Critical, Message = "[AUDIT] {Action} {ResourceType}/{ResourceId} - {Outcome}")]
+    private static partial void LogAUDITActionResourceTypeResourceIdOutcome(ILogger logger, AuditAction action, string resourceType, string resourceId, AuditOutcome outcome);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "[AUDIT] {Action} {ResourceType}/{ResourceId} - {Outcome}")]
+    private static partial void LogAUDITActionResourceTypeResourceIdOutcome2(ILogger logger, AuditAction action, string resourceType, string resourceId, AuditOutcome outcome);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[AUDIT] {Action} {ResourceType}/{ResourceId} - {Outcome}")]
+    private static partial void LogAUDITActionResourceTypeResourceIdOutcome3(ILogger logger, AuditAction action, string resourceType, string resourceId, AuditOutcome outcome);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[AUDIT] {Action} {ResourceType}/{ResourceId} - {Outcome}")]
+    private static partial void LogAUDITActionResourceTypeResourceIdOutcome4(ILogger logger, AuditAction action, string resourceType, string resourceId, AuditOutcome outcome);
 }

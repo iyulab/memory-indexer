@@ -7,7 +7,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Caching;
 /// Monitors token usage across sessions and provides budget awareness hooks.
 /// Phase v0.5.0: Token Budget Awareness Hooks
 /// </summary>
-public sealed class TokenBudgetMonitor : ITokenBudgetMonitor
+public sealed partial class TokenBudgetMonitor : ITokenBudgetMonitor
 {
     private readonly ILogger<TokenBudgetMonitor> _logger;
     private readonly ConcurrentDictionary<string, SessionTokenTracker> _sessions = new();
@@ -39,13 +39,11 @@ public sealed class TokenBudgetMonitor : ITokenBudgetMonitor
         if (_sessions.TryAdd(sessionId, tracker))
         {
             Interlocked.Increment(ref _totalSessionsStarted);
-            _logger.LogDebug(
-                "Token budget monitoring started for session {SessionId}, user {UserId}, budget {Budget}",
-                sessionId, userId, maxTokenBudget);
+            LogSessionStarted(_logger, sessionId, userId, maxTokenBudget);
         }
         else
         {
-            _logger.LogWarning("Session {SessionId} already exists, resetting", sessionId);
+            LogSessionAlreadyExists(_logger, sessionId);
             _sessions[sessionId] = tracker;
         }
     }
@@ -55,7 +53,7 @@ public sealed class TokenBudgetMonitor : ITokenBudgetMonitor
     {
         if (!_sessions.TryGetValue(sessionId, out var tracker))
         {
-            _logger.LogWarning("Recording tokens for unknown session {SessionId}", sessionId);
+            LogUnknownSession(_logger, sessionId);
             return;
         }
 
@@ -72,9 +70,7 @@ public sealed class TokenBudgetMonitor : ITokenBudgetMonitor
             tracker.WarningCount++;
 
             var args = CreateEventArgs(tracker, TokenBudgetEventType.Warning);
-            _logger.LogWarning(
-                "Token budget warning for session {SessionId}: {Usage}/{Budget} ({Ratio:P0})",
-                sessionId, tracker.TotalTokens, tracker.MaxBudget, currentRatio);
+            LogBudgetWarning(_logger, sessionId, tracker.TotalTokens, tracker.MaxBudget, currentRatio);
 
             OnBudgetWarning?.Invoke(this, args);
         }
@@ -86,9 +82,7 @@ public sealed class TokenBudgetMonitor : ITokenBudgetMonitor
             Interlocked.Increment(ref _exceededSessionCount);
 
             var args = CreateEventArgs(tracker, TokenBudgetEventType.Exceeded);
-            _logger.LogError(
-                "Token budget EXCEEDED for session {SessionId}: {Usage}/{Budget}",
-                sessionId, tracker.TotalTokens, tracker.MaxBudget);
+            LogBudgetExceeded(_logger, sessionId, tracker.TotalTokens, tracker.MaxBudget);
 
             OnBudgetExceeded?.Invoke(this, args);
         }
@@ -220,9 +214,7 @@ public sealed class TokenBudgetMonitor : ITokenBudgetMonitor
             WarningCount = tracker.WarningCount
         };
 
-        _logger.LogInformation(
-            "Session {SessionId} ended: {Tokens}/{Budget} tokens ({Ratio:P0}), {Duration}",
-            sessionId, summary.TotalTokens, summary.MaxBudget, summary.FinalUsageRatio, summary.Duration);
+        LogSessionEnded(_logger, sessionId, summary.TotalTokens, summary.MaxBudget, summary.FinalUsageRatio, summary.Duration);
 
         OnSessionEnded?.Invoke(this, new SessionTokenSummaryEventArgs { Summary = summary });
 
@@ -256,6 +248,24 @@ public sealed class TokenBudgetMonitor : ITokenBudgetMonitor
             TopOperation = topOperation
         };
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Token budget monitoring started for session {SessionId}, user {UserId}, budget {Budget}")]
+    private static partial void LogSessionStarted(ILogger logger, string sessionId, string userId, int budget);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Session {SessionId} already exists, resetting")]
+    private static partial void LogSessionAlreadyExists(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Recording tokens for unknown session {SessionId}")]
+    private static partial void LogUnknownSession(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Token budget warning for session {SessionId}: {Usage}/{Budget} ({Ratio:P0})")]
+    private static partial void LogBudgetWarning(ILogger logger, string sessionId, int usage, int budget, float ratio);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Token budget EXCEEDED for session {SessionId}: {Usage}/{Budget}")]
+    private static partial void LogBudgetExceeded(ILogger logger, string sessionId, int usage, int budget);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Session {SessionId} ended: {Tokens}/{Budget} tokens ({Ratio:P0}), {Duration}")]
+    private static partial void LogSessionEnded(ILogger logger, string sessionId, int tokens, int budget, float ratio, TimeSpan duration);
 
     private TokenBudgetEventArgs CreateEventArgs(SessionTokenTracker tracker, TokenBudgetEventType eventType)
     {

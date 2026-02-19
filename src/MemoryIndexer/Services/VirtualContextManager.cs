@@ -13,7 +13,7 @@ namespace MemoryIndexer.Services;
 /// Research reference: research-04.md Section 3 "Virtual Context Management"
 /// Inspired by MemGPT's virtual context management approach.
 /// </remarks>
-public sealed class VirtualContextManager : IVirtualContextManager
+public sealed partial class VirtualContextManager : IVirtualContextManager
 {
     private readonly IShortTermMemory _workingMemory;
     private readonly IMemoryStore _memoryStore;
@@ -21,6 +21,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
     private readonly IScoringService _scoringService;
     private readonly IScopeManager _scopeManager;
     private readonly ITierManager _tierManager;
+    private readonly ITextCompletionService? _completionService;
     private readonly ILogger<VirtualContextManager> _logger;
     private readonly VCMOptions _options;
     private readonly VirtualContextState _state;
@@ -33,7 +34,8 @@ public sealed class VirtualContextManager : IVirtualContextManager
         IScopeManager scopeManager,
         ITierManager tierManager,
         IOptions<VCMOptions> options,
-        ILogger<VirtualContextManager> logger)
+        ILogger<VirtualContextManager> logger,
+        ITextCompletionService? completionService = null)
     {
         _workingMemory = workingMemory;
         _memoryStore = memoryStore;
@@ -41,6 +43,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
         _scoringService = scoringService;
         _scopeManager = scopeManager;
         _tierManager = tierManager;
+        _completionService = completionService;
         _logger = logger;
         _options = options.Value;
         _state = new VirtualContextState
@@ -62,10 +65,11 @@ public sealed class VirtualContextManager : IVirtualContextManager
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        _logger.LogInformation("Initializing VCM for user {UserId}, session {SessionId}", userId, sessionId);
+        LogInitializingVcm(_logger, userId, sessionId);
 
         _state.UserId = userId;
         _state.SessionId = sessionId;
+        _state.SessionStartedAt = DateTime.UtcNow;
         _state.IsInitialized = true;
 
         // Initialize scope tracking (3-axis model: Scope dimension)
@@ -86,7 +90,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
         // Update state
         await UpdateStateAsync(cancellationToken);
 
-        _logger.LogInformation("VCM initialized with {Count} working memories", _workingMemory.Count);
+        LogVcmInitialized(_logger, _workingMemory.Count);
     }
 
     /// <inheritdoc />
@@ -97,7 +101,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
     {
         EnsureInitialized();
 
-        _logger.LogDebug("Paging in memories for query: {Query}", query);
+        LogPagingIn(_logger, query);
 
         // Generate query embedding
         var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
@@ -140,7 +144,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
                 if (demoteResult.Success && demoteResult.UpdatedMemory != null)
                 {
                     await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
-                    _logger.LogDebug("Evicted memory {MemoryId} to Long tier", evicted.Id);
+                    LogEvictedMemory(_logger, evicted.Id);
                 }
             }
 
@@ -161,7 +165,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
 
         await UpdateStateAsync(cancellationToken);
 
-        _logger.LogInformation("Paged in {Count} memories", pagedIn.Count);
+        LogPagedIn(_logger, pagedIn.Count);
 
         return pagedIn;
     }
@@ -252,7 +256,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
 
         await UpdateStateAsync(cancellationToken);
 
-        _logger.LogDebug("Paged out {Count} memories", pagedOut.Count);
+        LogPagedOut(_logger, pagedOut.Count);
 
         return pagedOut;
     }
@@ -264,7 +268,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
     {
         EnsureInitialized();
 
-        _logger.LogInformation("Starting defensive eviction, target saturation: {Target}", targetSaturation);
+        LogStartingDefensiveEviction(_logger, targetSaturation);
 
         var targetPercentage = targetSaturation switch
         {
@@ -314,14 +318,46 @@ public sealed class VirtualContextManager : IVirtualContextManager
             }
         }
 
-        _logger.LogInformation("Defensive eviction complete: {Demoted} demoted, {Tokens} tokens freed",
-            demotedCount, tokensFreed);
+        // Try to merge similar evicted memories to reduce memory count
+        var summarizedCount = 0;
+        if (_completionService != null && affectedIds.Count >= 2)
+        {
+            var evictedMemories = new List<MemoryUnit>();
+            foreach (var id in affectedIds)
+            {
+                var m = await _memoryStore.GetByIdAsync(id, cancellationToken);
+                if (m != null)
+                {
+                    evictedMemories.Add(m);
+                }
+            }
+
+            var mergeGroups = FindMergeGroups(evictedMemories, 0.85f);
+            foreach (var group in mergeGroups)
+            {
+                var merged = await MergeMemoryGroupAsync(group, cancellationToken);
+                if (merged == null) continue;
+
+                merged.Tier = Tier.Long;
+                var stored = await _memoryStore.StoreAsync(merged, cancellationToken);
+
+                foreach (var source in group)
+                {
+                    await _memoryStore.DeleteAsync(source.Id, hardDelete: false, cancellationToken);
+                }
+
+                summarizedCount += group.Count;
+                LogMergedEvictedMemories(_logger, group.Count, stored.Id);
+            }
+        }
+
+        LogDefensiveEvictionComplete(_logger, demotedCount, tokensFreed);
 
         return new EvictionResult
         {
             EvictedCount = evictedCount,
             DemotedCount = demotedCount,
-            SummarizedCount = 0, // TODO: Implement summarization during eviction
+            SummarizedCount = summarizedCount,
             TokensFreed = tokensFreed,
             AffectedIds = affectedIds,
             NewSaturationLevel = _state.SaturationLevel
@@ -333,7 +369,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
     {
         EnsureInitialized();
 
-        _logger.LogInformation("Starting memory consolidation for user {UserId}", _state.UserId);
+        LogStartingConsolidation(_logger, _state.UserId!);
 
         var stabilityUpgradedCount = 0;
         var promotedCount = 0;
@@ -411,14 +447,42 @@ public sealed class VirtualContextManager : IVirtualContextManager
             }
         }
 
-        _logger.LogInformation("Consolidation complete: {Upgraded} stability upgrades, {Promoted} promotions",
-            stabilityUpgradedCount, promotedCount);
+        // Merge similar memories using LLM summarization
+        var mergedCount = 0;
+        var summarizedCount = 0;
+        if (_completionService != null)
+        {
+            var mergeGroups = FindMergeGroups(sessionMemories, 0.85f);
+            foreach (var group in mergeGroups)
+            {
+                var merged = await MergeMemoryGroupAsync(group, cancellationToken);
+                if (merged == null) continue;
+
+                var stored = await _memoryStore.StoreAsync(merged, cancellationToken);
+                newMergedIds.Add(stored.Id);
+
+                foreach (var source in group)
+                {
+                    source.SupersedesId = stored.Id;
+                    source.MarkUpdated();
+                    await _memoryStore.UpdateAsync(source, cancellationToken);
+                    await _memoryStore.DeleteAsync(source.Id, hardDelete: false, cancellationToken);
+                }
+
+                mergedCount += group.Count;
+                LogMergedMemories(_logger, group.Count, stored.Id);
+            }
+
+            summarizedCount = mergedCount;
+        }
+
+        LogConsolidationComplete(_logger, stabilityUpgradedCount, promotedCount);
 
         return new ConsolidationResult
         {
-            MergedCount = 0, // TODO: Implement memory merging
+            MergedCount = mergedCount,
             StabilityUpgradedCount = stabilityUpgradedCount,
-            SummarizedCount = 0, // TODO: Implement summarization
+            SummarizedCount = summarizedCount,
             PromotedCount = promotedCount,
             NewMergedIds = newMergedIds
         };
@@ -454,7 +518,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
             }
         }
 
-        _logger.LogDebug("Updated retention scores for {Count} memories", updatedCount);
+        LogUpdatedRetentionScores(_logger, updatedCount);
 
         return updatedCount;
     }
@@ -464,10 +528,10 @@ public sealed class VirtualContextManager : IVirtualContextManager
     {
         EnsureInitialized();
 
-        var sessionStart = DateTime.UtcNow.AddHours(-1); // TODO: Track actual session start
+        var sessionStart = _state.SessionStartedAt ?? DateTime.UtcNow;
         var sessionId = _state.SessionId!;
 
-        _logger.LogInformation("Ending session {SessionId}", sessionId);
+        LogEndingSession(_logger, sessionId);
 
         // Clear working memory
         var clearedMemories = await _workingMemory.ClearAsync(cancellationToken);
@@ -520,8 +584,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
         _state.IsInitialized = false;
         _state.SessionId = null;
 
-        _logger.LogInformation("Session ended: {Migrated} migrated, {Discarded} discarded",
-            migratedIds.Count, discardedCount);
+        LogSessionEnded(_logger, migratedIds.Count, discardedCount);
 
         return new SessionEndResult
         {
@@ -549,11 +612,11 @@ public sealed class VirtualContextManager : IVirtualContextManager
             .Where(m => m.IsLocked)
             .Sum(m => EstimateTokens(m.Content));
 
-        var sessionCount = 0L;
+        var userMemoryCount = 0L;
 
         if (_state.IsInitialized)
         {
-            sessionCount = await _memoryStore.GetCountAsync(_state.UserId!, cancellationToken);
+            userMemoryCount = await _memoryStore.GetCountAsync(_state.UserId!, cancellationToken);
         }
 
         return new ContextUsageStatistics
@@ -565,8 +628,8 @@ public sealed class VirtualContextManager : IVirtualContextManager
             SaturationLevel = _state.SaturationLevel,
             SaturationPercentage = _state.SaturationPercentage,
             WorkingMemoryCount = _workingMemory.Count,
-            SessionMemoryCount = (int)sessionCount,
-            UserMemoryCount = 0, // TODO: Track user tier separately
+            SessionMemoryCount = _workingMemory.Count, // Working memory is session-scoped
+            UserMemoryCount = (int)userMemoryCount,
             Recommendation = GetRecommendation(_state.SaturationPercentage)
         };
     }
@@ -576,7 +639,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
     {
         EnsureInitialized();
 
-        _logger.LogDebug("Optimizing working memory for context");
+        LogOptimizingWorkingMemory(_logger);
 
         // Generate context embedding
         var contextEmbedding = await _embeddingService.GenerateEmbeddingAsync(currentContext, cancellationToken);
@@ -621,7 +684,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
                 }
             }
 
-            _logger.LogDebug("Optimized: paged out {Count} low-relevance memories", toPageOut.Count);
+            LogOptimizedPagedOut(_logger, toPageOut.Count);
         }
 
         // Update relevance scores for remaining memories
@@ -657,7 +720,7 @@ public sealed class VirtualContextManager : IVirtualContextManager
             await _workingMemory.PromoteAsync(memory, cancellationToken);
         }
 
-        _logger.LogDebug("Loaded {Count} locked memories", lockedMemories.Count);
+        LogLoadedLockedMemories(_logger, lockedMemories.Count);
     }
 
     private async Task UpdateStateAsync(CancellationToken cancellationToken)
@@ -691,7 +754,165 @@ public sealed class VirtualContextManager : IVirtualContextManager
         _ => ContextActionRecommendation.Critical
     };
 
+    private List<List<MemoryUnit>> FindMergeGroups(
+        IReadOnlyList<MemoryUnit> memories, float similarityThreshold)
+    {
+        var groups = new List<List<MemoryUnit>>();
+        var assigned = new HashSet<Guid>();
+
+        var withEmbeddings = memories
+            .Where(m => m.Embedding.HasValue && !m.IsLocked && !m.IsDeleted && m.Tier != Tier.Archive)
+            .ToList();
+
+        for (var i = 0; i < withEmbeddings.Count; i++)
+        {
+            if (assigned.Contains(withEmbeddings[i].Id)) continue;
+
+            var group = new List<MemoryUnit> { withEmbeddings[i] };
+            assigned.Add(withEmbeddings[i].Id);
+
+            for (var j = i + 1; j < withEmbeddings.Count; j++)
+            {
+                if (assigned.Contains(withEmbeddings[j].Id)) continue;
+
+                var similarity = _scoringService.CalculateCosineSimilarity(
+                    withEmbeddings[i].Embedding!.Value, withEmbeddings[j].Embedding!.Value);
+
+                if (similarity >= similarityThreshold)
+                {
+                    group.Add(withEmbeddings[j]);
+                    assigned.Add(withEmbeddings[j].Id);
+                }
+            }
+
+            if (group.Count >= 2)
+            {
+                groups.Add(group);
+            }
+        }
+
+        return groups;
+    }
+
+    private async Task<MemoryUnit?> MergeMemoryGroupAsync(
+        List<MemoryUnit> group, CancellationToken cancellationToken)
+    {
+        var combinedContent = string.Join("\n\n", group.Select(m => m.Content));
+
+        try
+        {
+            LogMergingMemoryGroup(_logger, group.Count);
+
+            var prompt = "Merge the following related memories into a single, concise synthesis.\n"
+                + "Preserve all key facts, entities, and relationships.\n"
+                + "Remove redundancy while keeping important details.\n\n"
+                + "Memories:\n"
+                + combinedContent + "\n\n"
+                + "Merged memory:";
+
+            var mergedContent = await _completionService!.CompleteAsync(
+                prompt,
+                new TextCompletionOptions { Temperature = 0.1f, MaxTokens = 500 },
+                cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(mergedContent))
+            {
+                return null;
+            }
+
+            var embedding = await _embeddingService.GenerateEmbeddingAsync(
+                mergedContent, cancellationToken);
+
+            var primary = group.OrderByDescending(m => m.ImportanceScore).First();
+
+            return new MemoryUnit
+            {
+                UserId = primary.UserId,
+                SessionId = primary.SessionId,
+                Content = mergedContent,
+                Embedding = embedding,
+                ImportanceScore = group.Max(m => m.ImportanceScore),
+                Tier = primary.Tier,
+                Type = MemoryType.Semantic,
+                Stability = MemoryStability.Stable,
+                Confidence = group.Average(m => m.Confidence),
+                AccessCount = group.Sum(m => m.AccessCount),
+                Topics = group.SelectMany(m => m.Topics ?? []).Distinct().ToList(),
+                Entities = group.SelectMany(m => m.Entities ?? []).Distinct().ToList(),
+                Metadata = new Dictionary<string, string>
+                {
+                    ["MergedFrom"] = string.Join(",", group.Select(m => m.Id))
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            LogMergeGroupFailed(_logger, group.Count, ex);
+            return null;
+        }
+    }
+
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Initializing VCM for user {UserId}, session {SessionId}")]
+    private static partial void LogInitializingVcm(ILogger logger, string userId, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "VCM initialized with {Count} working memories")]
+    private static partial void LogVcmInitialized(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Paging in memories for query: {Query}")]
+    private static partial void LogPagingIn(ILogger logger, string query);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Evicted memory {MemoryId} to Long tier")]
+    private static partial void LogEvictedMemory(ILogger logger, Guid memoryId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Paged in {Count} memories")]
+    private static partial void LogPagedIn(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Paged out {Count} memories")]
+    private static partial void LogPagedOut(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting defensive eviction, target saturation: {Target}")]
+    private static partial void LogStartingDefensiveEviction(ILogger logger, ContextSaturationLevel target);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Defensive eviction complete: {Demoted} demoted, {Tokens} tokens freed")]
+    private static partial void LogDefensiveEvictionComplete(ILogger logger, int demoted, int tokens);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting memory consolidation for user {UserId}")]
+    private static partial void LogStartingConsolidation(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Consolidation complete: {Upgraded} stability upgrades, {Promoted} promotions")]
+    private static partial void LogConsolidationComplete(ILogger logger, int upgraded, int promoted);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated retention scores for {Count} memories")]
+    private static partial void LogUpdatedRetentionScores(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Ending session {SessionId}")]
+    private static partial void LogEndingSession(ILogger logger, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Session ended: {Migrated} migrated, {Discarded} discarded")]
+    private static partial void LogSessionEnded(ILogger logger, int migrated, int discarded);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Optimizing working memory for context")]
+    private static partial void LogOptimizingWorkingMemory(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Optimized: paged out {Count} low-relevance memories")]
+    private static partial void LogOptimizedPagedOut(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Loaded {Count} locked memories")]
+    private static partial void LogLoadedLockedMemories(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Merging group of {Count} similar memories")]
+    private static partial void LogMergingMemoryGroup(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to merge group of {Count} memories")]
+    private static partial void LogMergeGroupFailed(ILogger logger, int count, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Merged {Count} evicted memories into {MergedId}")]
+    private static partial void LogMergedEvictedMemories(ILogger logger, int count, Guid mergedId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Merged {Count} similar memories into {MergedId}")]
+    private static partial void LogMergedMemories(ILogger logger, int count, Guid mergedId);
 }
 
 /// <summary>

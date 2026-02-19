@@ -9,7 +9,7 @@ namespace MemoryIndexer.Services;
 /// <summary>
 /// Implementation of tier promotion management for the 4-tier cognitive architecture.
 /// </summary>
-public sealed class TierManager : ITierManager
+public sealed partial class TierManager : ITierManager
 {
     private readonly ILogger<TierManager> _logger;
     private readonly MemoryIndexerOptions _options;
@@ -51,6 +51,9 @@ public sealed class TierManager : ITierManager
                 Explanation = "Memory is already at highest tier (Archive)"
             });
         }
+
+        // Track evaluation
+        _metrics[currentTier].RecordEvaluation();
 
         // Evaluate promotion based on tier-specific logic
         var recommendation = currentTier switch
@@ -121,11 +124,11 @@ public sealed class TierManager : ITierManager
             }
         }
 
-        // Update metrics
+        // Update metrics: leaving source tier, entering target tier
         _metrics[originalTier].RecordPromotion();
+        _metrics[targetTier].RecordEntry();
 
-        _logger.LogDebug("Promoted memory {MemoryId} from {OriginalTier} to {NewTier} (reason: {Reason})",
-            memory.Id, originalTier, targetTier, reason);
+        LogPromoted(_logger, memory.Id, originalTier, targetTier, reason);
 
         return Task.FromResult(new TierPromotionResult
         {
@@ -164,11 +167,11 @@ public sealed class TierManager : ITierManager
         memory.Tier = targetTier;
         memory.MarkUpdated();
 
-        // Update metrics
-        _metrics[targetTier].RecordDemotion();
+        // Update metrics: leaving source tier, entering target tier
+        _metrics[originalTier].RecordDemotion();
+        _metrics[targetTier].RecordEntry();
 
-        _logger.LogDebug("Demoted memory {MemoryId} from {OriginalTier} to {NewTier} (reason: {Reason})",
-            memory.Id, originalTier, targetTier, reason);
+        LogDemoted(_logger, memory.Id, originalTier, targetTier, reason);
 
         return Task.FromResult(new TierPromotionResult
         {
@@ -190,10 +193,10 @@ public sealed class TierManager : ITierManager
             Tier = tier,
             TotalPromotions = metrics.PromotionCount,
             TotalDemotions = metrics.DemotionCount,
-            CurrentCount = 0, // TODO: Track current count
-            AverageRetentionTime = TimeSpan.Zero, // TODO: Calculate from metrics
+            CurrentCount = metrics.CurrentCount,
+            AverageRetentionTime = TimeSpan.Zero, // Requires per-memory entry timestamps
             MostCommonTrigger = metrics.MostCommonTrigger,
-            PromotionRate = 0 // TODO: Calculate rate
+            PromotionRate = metrics.GetPromotionRate()
         };
     }
 
@@ -262,12 +265,12 @@ public sealed class TierManager : ITierManager
         var triggers = CheckLongTriggers(context);
 
         // Long → Archive uses AND logic (confidence AND confirmations)
-        // TODO: Replace with proper ArchiveStoreOptions when configuration is added
-        const float minConfidenceThreshold = 0.8f;
-        const int minConfirmationCount = 3;
+        var archiveOptions = _options.ArchivePromotion;
+        var minConfidence = archiveOptions.MinConfidenceThreshold;
+        var minConfirmations = archiveOptions.MinConfirmationCount;
 
-        var hasConfidence = memory.Confidence >= minConfidenceThreshold;
-        var hasConfirmations = memory.ConfirmCount >= minConfirmationCount;
+        var hasConfidence = memory.Confidence >= minConfidence;
+        var hasConfirmations = memory.ConfirmCount >= minConfirmations;
 
         if (!hasConfidence || !hasConfirmations)
         {
@@ -275,7 +278,7 @@ public sealed class TierManager : ITierManager
             {
                 ShouldPromote = false,
                 Confidence = 0.9f,
-                Explanation = $"Archive promotion requires confidence ≥ {minConfidenceThreshold} AND confirmations ≥ {minConfirmationCount}. Current: {memory.Confidence:F2} confidence, {memory.ConfirmCount} confirmations"
+                Explanation = $"Archive promotion requires confidence ≥ {minConfidence} AND confirmations ≥ {minConfirmations}. Current: {memory.Confidence:F2} confidence, {memory.ConfirmCount} confirmations"
             };
         }
 
@@ -337,10 +340,10 @@ public sealed class TierManager : ITierManager
 
     private TierTriggerStatus CheckShortTriggers(TierEvaluationContext context)
     {
-        // TODO: Replace with proper ShortTermMemoryOrchestratorOptions when configuration is added
-        var idleTimeout = TimeSpan.FromMinutes(10);
-        var tokenThreshold = 2000;
-        var turnThreshold = 10;
+        var workingMemory = _options.WorkingMemory;
+        var idleTimeout = workingMemory.IdleTimeout;
+        var tokenThreshold = workingMemory.TokenThreshold;
+        var turnThreshold = workingMemory.TurnThreshold;
 
         var triggers = new List<PromotionTrigger>
         {
@@ -399,10 +402,8 @@ public sealed class TierManager : ITierManager
         };
     }
 
-    private TierTriggerStatus CheckLongTriggers(TierEvaluationContext context)
+    private static TierTriggerStatus CheckLongTriggers(TierEvaluationContext context)
     {
-        // TODO: Replace with proper ArchiveStoreOptions when configuration is added
-
         // For Long → Archive, we need actual memory to check confidence/confirmations
         // This method checks context-level triggers only
         var triggers = new List<PromotionTrigger>
@@ -446,18 +447,48 @@ public sealed class TierManager : ITierManager
     {
         public int PromotionCount { get; private set; }
         public int DemotionCount { get; private set; }
+        public int CurrentCount { get; private set; }
+        public int EvaluationCount { get; private set; }
         public PromotionTriggerType? MostCommonTrigger { get; private set; }
+        private readonly Dictionary<PromotionTriggerType, int> _triggerCounts = [];
 
-        public void RecordPromotion()
+        public void RecordPromotion(PromotionTriggerType? triggerType = null)
         {
             PromotionCount++;
+            CurrentCount--;
+            if (triggerType.HasValue)
+            {
+                _triggerCounts.TryGetValue(triggerType.Value, out var count);
+                _triggerCounts[triggerType.Value] = count + 1;
+                MostCommonTrigger = _triggerCounts.MaxBy(kv => kv.Value).Key;
+            }
         }
 
         public void RecordDemotion()
         {
             DemotionCount++;
+            CurrentCount--;
         }
+
+        public void RecordEntry()
+        {
+            CurrentCount++;
+        }
+
+        public void RecordEvaluation()
+        {
+            EvaluationCount++;
+        }
+
+        public float GetPromotionRate()
+            => EvaluationCount > 0 ? (float)PromotionCount / EvaluationCount : 0f;
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Promoted memory {MemoryId} from {OriginalTier} to {NewTier} (reason: {Reason})")]
+    private static partial void LogPromoted(ILogger logger, Guid memoryId, Tier originalTier, Tier newTier, PromotionReason reason);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Demoted memory {MemoryId} from {OriginalTier} to {NewTier} (reason: {Reason})")]
+    private static partial void LogDemoted(ILogger logger, Guid memoryId, Tier originalTier, Tier newTier, PromotionReason reason);
 }

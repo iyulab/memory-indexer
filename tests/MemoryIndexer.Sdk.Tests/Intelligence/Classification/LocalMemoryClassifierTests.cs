@@ -14,7 +14,7 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Classification;
 /// </summary>
 public class LocalMemoryClassifierTests
 {
-    private readonly IMemoryClassifier _classifier;
+    private readonly LocalMemoryClassifier _classifier;
 
     public LocalMemoryClassifierTests()
     {

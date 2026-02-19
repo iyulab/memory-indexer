@@ -2,7 +2,7 @@ using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Mcp.Tools;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
@@ -12,23 +12,23 @@ namespace MemoryIndexer.Sdk.Tests.Mcp.Tools;
 /// </summary>
 public class GraphTraversalToolsTests
 {
-    private readonly Mock<IMemoryGraphService> _mockGraphService;
-    private readonly Mock<IImportancePropagator> _mockImportancePropagator;
-    private readonly Mock<ICommunityDetector> _mockCommunityDetector;
+    private readonly IMemoryGraphService _mockGraphService;
+    private readonly IImportancePropagator _mockImportancePropagator;
+    private readonly ICommunityDetector _mockCommunityDetector;
     private readonly GraphTraversalTools _tools;
 
     private const string DefaultUserId = "default";
 
     public GraphTraversalToolsTests()
     {
-        _mockGraphService = new Mock<IMemoryGraphService>();
-        _mockImportancePropagator = new Mock<IImportancePropagator>();
-        _mockCommunityDetector = new Mock<ICommunityDetector>();
+        _mockGraphService = Substitute.For<IMemoryGraphService>();
+        _mockImportancePropagator = Substitute.For<IImportancePropagator>();
+        _mockCommunityDetector = Substitute.For<ICommunityDetector>();
 
         _tools = new GraphTraversalTools(
-            _mockGraphService.Object,
-            _mockImportancePropagator.Object,
-            _mockCommunityDetector.Object);
+            _mockGraphService,
+            _mockImportancePropagator,
+            _mockCommunityDetector);
     }
 
     #region DetectCommunities Tests
@@ -56,11 +56,11 @@ public class GraphTraversalToolsTests
             IterationsToConverge = 15
         };
 
-        _mockCommunityDetector.Setup(c => c.DetectCommunitiesAsync(
+        _mockCommunityDetector.DetectCommunitiesAsync(
             DefaultUserId,
-            It.IsAny<CommunityDetectionOptions?>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(detectionResult);
+            Arg.Any<CommunityDetectionOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(detectionResult);
 
         // Act
         var result = await _tools.DetectCommunities();
@@ -86,12 +86,12 @@ public class GraphTraversalToolsTests
             IterationsToConverge = 10
         };
 
-        _mockCommunityDetector.Setup(c => c.DetectCommunitiesAsync(
+        _mockCommunityDetector.DetectCommunitiesAsync(
             DefaultUserId,
-            It.Is<CommunityDetectionOptions>(o =>
+            Arg.Is<CommunityDetectionOptions>(o =>
                 o.MaxIterations == 50 && o.MinCommunitySize == 5),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(detectionResult);
+            Arg.Any<CancellationToken>())
+            .Returns(detectionResult);
 
         // Act
         var result = await _tools.DetectCommunities(maxIterations: 50, minCommunitySize: 5);
@@ -129,11 +129,11 @@ public class GraphTraversalToolsTests
             }
         };
 
-        _mockCommunityDetector.Setup(c => c.GetCommunityMemoriesAsync(
+        _mockCommunityDetector.GetCommunityMemoriesAsync(
             communityId,
             DefaultUserId,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(memories);
+            Arg.Any<CancellationToken>())
+            .Returns(memories);
 
         // Act
         var result = await _tools.GetCommunityMemories(communityId);
@@ -165,11 +165,11 @@ public class GraphTraversalToolsTests
             CommonPredicates = ["uses", "implements", "builds"]
         };
 
-        _mockCommunityDetector.Setup(c => c.GetCommunitySummaryAsync(
+        _mockCommunityDetector.GetCommunitySummaryAsync(
             communityId,
             DefaultUserId,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(summary);
+            Arg.Any<CancellationToken>())
+            .Returns(summary);
 
         // Act
         var result = await _tools.GetCommunitySummary(communityId);
@@ -206,11 +206,11 @@ public class GraphTraversalToolsTests
             Converged = true
         };
 
-        _mockImportancePropagator.Setup(p => p.ComputeImportanceAsync(
+        _mockImportancePropagator.ComputeImportanceAsync(
             DefaultUserId,
-            It.IsAny<ImportanceOptions?>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(importanceResult);
+            Arg.Any<ImportanceOptions?>(),
+            Arg.Any<CancellationToken>())
+            .Returns(importanceResult);
 
         // Act
         var result = await _tools.ComputeImportance();
@@ -235,14 +235,14 @@ public class GraphTraversalToolsTests
             Converged = true
         };
 
-        _mockImportancePropagator.Setup(p => p.ComputeImportanceAsync(
+        _mockImportancePropagator.ComputeImportanceAsync(
             DefaultUserId,
-            It.Is<ImportanceOptions>(o =>
+            Arg.Is<ImportanceOptions>(o =>
                 o.DampingFactor == 0.9f &&
                 o.MaxIterations == 100 &&
                 o.ConvergenceThreshold == 0.00001f),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(importanceResult);
+            Arg.Any<CancellationToken>())
+            .Returns(importanceResult);
 
         // Act
         var result = await _tools.ComputeImportance(
@@ -263,11 +263,11 @@ public class GraphTraversalToolsTests
     {
         // Arrange
         var entityName = "Python";
-        _mockImportancePropagator.Setup(p => p.GetEntityImportanceAsync(
+        _mockImportancePropagator.GetEntityImportanceAsync(
             entityName,
             DefaultUserId,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0.95f);
+            Arg.Any<CancellationToken>())
+            .Returns(0.95f);
 
         // Act
         var result = await _tools.GetEntityImportance(entityName);
@@ -284,11 +284,11 @@ public class GraphTraversalToolsTests
     {
         // Arrange
         var entityName = "NonExistentEntity";
-        _mockImportancePropagator.Setup(p => p.GetEntityImportanceAsync(
+        _mockImportancePropagator.GetEntityImportanceAsync(
             entityName,
             DefaultUserId,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync((float?)null);
+            Arg.Any<CancellationToken>())
+            .Returns((float?)null);
 
         // Act
         var result = await _tools.GetEntityImportance(entityName);
@@ -314,11 +314,11 @@ public class GraphTraversalToolsTests
             new() { EntityName = "Machine Learning", Score = 0.80f, Rank = 3, MemoryConnectionCount = 6 }
         };
 
-        _mockImportancePropagator.Setup(p => p.GetTopEntitiesAsync(
+        _mockImportancePropagator.GetTopEntitiesAsync(
             DefaultUserId,
             10,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entities);
+            Arg.Any<CancellationToken>())
+            .Returns(entities);
 
         // Act
         var result = await _tools.GetTopEntities(topK: 10);
@@ -358,12 +358,12 @@ public class GraphTraversalToolsTests
             }
         };
 
-        _mockGraphService.Setup(g => g.FindRelatedMemoriesAsync(
+        _mockGraphService.FindRelatedMemoriesAsync(
             sourceMemoryId,
             2,
             10,
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(relatedMemories);
+            Arg.Any<CancellationToken>())
+            .Returns(relatedMemories);
 
         // Act
         var result = await _tools.FindRelatedMemories(sourceMemoryId.ToString());
@@ -422,11 +422,11 @@ public class GraphTraversalToolsTests
             }
         };
 
-        _mockGraphService.Setup(g => g.ExtractSubgraphAsync(
-            It.IsAny<IReadOnlyList<Guid>>(),
-            It.IsAny<SubgraphOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(subgraph);
+        _mockGraphService.ExtractSubgraphAsync(
+            Arg.Any<IReadOnlyList<Guid>>(),
+            Arg.Any<SubgraphOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(subgraph);
 
         // Act
         var result = await _tools.ExtractSubgraph(memoryId.ToString());
@@ -468,11 +468,11 @@ public class GraphTraversalToolsTests
             Statistics = new SubgraphStatistics()
         };
 
-        _mockGraphService.Setup(g => g.ExtractSubgraphAsync(
-            It.Is<IReadOnlyList<Guid>>(ids => ids.Count == 2),
-            It.IsAny<SubgraphOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(subgraph);
+        _mockGraphService.ExtractSubgraphAsync(
+            Arg.Is<IReadOnlyList<Guid>>(ids => ids.Count == 2),
+            Arg.Any<SubgraphOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(subgraph);
 
         // Act
         var result = await _tools.ExtractSubgraph($"{id1}, {id2}");

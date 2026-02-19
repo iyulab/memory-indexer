@@ -1,7 +1,7 @@
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Summarization;
@@ -11,14 +11,14 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Summarization;
 /// </summary>
 public class RollingSummaryManagerTests
 {
-    private readonly Mock<ISummarizationService> _summarizerMock;
+    private readonly ISummarizationService _summarizerMock;
     private readonly RollingSummaryManager _manager;
 
     public RollingSummaryManagerTests()
     {
-        _summarizerMock = new Mock<ISummarizationService>();
+        _summarizerMock = Substitute.For<ISummarizationService>();
         _manager = new RollingSummaryManager(
-            _summarizerMock.Object,
+            _summarizerMock,
             NullLogger<RollingSummaryManager>.Instance);
     }
 
@@ -96,11 +96,11 @@ public class RollingSummaryManagerTests
             SummarizedTokenCount = 30
         };
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(expectedSummary);
 
         // Add memories up to threshold
         for (int i = 0; i < 3; i++)
@@ -155,11 +155,11 @@ public class RollingSummaryManagerTests
             SummarizedTokenCount = 15
         };
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(expectedSummary);
 
         // Act - record turns
         var result1 = await _manager.RecordTurnAsync("session-1", 100);
@@ -186,11 +186,11 @@ public class RollingSummaryManagerTests
             SummarizedTokenCount = 60
         };
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(expectedSummary);
 
         // Create memory with content that exceeds token threshold (4 chars ≈ 1 token)
         var memory = new MemoryUnit
@@ -229,11 +229,11 @@ public class RollingSummaryManagerTests
             SummarizedTokenCount = 8
         };
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(expectedSummary);
 
         // Act
         var result = await _manager.ForceUpdateAsync("session-1");
@@ -281,11 +281,11 @@ public class RollingSummaryManagerTests
             SummarizedTokenCount = 15
         };
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(expectedSummary);
 
         var memory = new MemoryUnit
         {
@@ -324,11 +324,11 @@ public class RollingSummaryManagerTests
             SummarizedTokenCount = 10
         };
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(finalSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(finalSummary);
 
         // Act
         var result = await _manager.FinalizeAsync("session-1");
@@ -383,17 +383,17 @@ public class RollingSummaryManagerTests
             SummarizedTokenCount = 12
         };
 
-        _summarizerMock.Setup(s => s.SummarizeAsync(
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<SummarizationOptions>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(firstSummary);
+        _summarizerMock.SummarizeAsync(
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<SummarizationOptions>(),
+            Arg.Any<CancellationToken>())
+            .Returns(firstSummary);
 
-        _summarizerMock.Setup(s => s.IncrementalUpdateAsync(
-            It.IsAny<MemorySummary>(),
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(incrementalSummary);
+        _summarizerMock.IncrementalUpdateAsync(
+            Arg.Any<MemorySummary>(),
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<CancellationToken>())
+            .Returns(incrementalSummary);
 
         // First batch
         await _manager.RecordAsync("session-1", memory1);
@@ -404,10 +404,10 @@ public class RollingSummaryManagerTests
         var result = await _manager.ForceUpdateAsync("session-1");
 
         // Assert - incremental update was used
-        _summarizerMock.Verify(s => s.IncrementalUpdateAsync(
-            It.IsAny<MemorySummary>(),
-            It.IsAny<IEnumerable<MemoryUnit>>(),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await _summarizerMock.Received(1).IncrementalUpdateAsync(
+            Arg.Any<MemorySummary>(),
+            Arg.Any<IEnumerable<MemoryUnit>>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

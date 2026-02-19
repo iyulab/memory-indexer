@@ -1,9 +1,10 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Retrieval;
 
@@ -16,7 +17,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Retrieval;
 /// - Compressed: Summarized content for secondary items
 /// - Placeholder: Minimal reference for low-priority items
 /// </remarks>
-public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
+public sealed partial class AdaptiveContextAssembler : IAdaptiveContextAssembler
 {
     private readonly ILogger<AdaptiveContextAssembler> _logger;
 
@@ -162,9 +163,7 @@ public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
             ? 1.0f - ((float)tokensSaved / (compressionCount * 100)) // Approximate
             : 1.0f;
 
-        _logger.LogDebug(
-            "Context assembled: {MemoryCount} memories, {TokenCount} tokens, {CompressionCount} compressed in {Duration}ms",
-            memoryCount, tokenCount, compressionCount, stopwatch.ElapsedMilliseconds);
+        LogContextAssembledMemoryCountMemoriesTokenCount(_logger, memoryCount, tokenCount, compressionCount, stopwatch.ElapsedMilliseconds);
 
         return new AssembledContext
         {
@@ -284,7 +283,7 @@ public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
         return truncated + "...";
     }
 
-    private void AppendMemory(
+    private static void AppendMemory(
         StringBuilder sb,
         ScoredMemory memory,
         string content,
@@ -322,12 +321,12 @@ public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
                 Tier.Archive => "👤",
                 _ => "📌"
             };
-            sb.AppendLine($"**{tierEmoji} {memory.SourceTier}**");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"**{tierEmoji} {memory.SourceTier}**");
         }
 
         if (options.IncludeMetadata)
         {
-            sb.AppendLine($"*Type: {memory.Memory.Type}, Created: {memory.Memory.CreatedAt:g}*");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"*Type: {memory.Memory.Type}, Created: {memory.Memory.CreatedAt:g}*");
         }
 
         sb.AppendLine(content);
@@ -341,7 +340,7 @@ public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
         ContextAssemblyOptions options)
     {
         if (options.IncludeTierHeaders)
-            sb.AppendLine($"[{memory.SourceTier}]");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"[{memory.SourceTier}]");
 
         sb.AppendLine(content);
         sb.AppendLine();
@@ -353,12 +352,12 @@ public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
         string content,
         ContextAssemblyOptions options)
     {
-        sb.AppendLine($"<memory tier=\"{memory.SourceTier}\" type=\"{memory.Memory.Type}\">");
-        sb.AppendLine($"  <content>{System.Security.SecurityElement.Escape(content)}</content>");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"<memory tier=\"{memory.SourceTier}\" type=\"{memory.Memory.Type}\">");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"  <content>{System.Security.SecurityElement.Escape(content)}</content>");
         if (options.IncludeMetadata)
         {
-            sb.AppendLine($"  <created>{memory.Memory.CreatedAt:O}</created>");
-            sb.AppendLine($"  <relevance>{memory.RelevanceScore:F2}</relevance>");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"  <created>{memory.Memory.CreatedAt:O}</created>");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"  <relevance>{memory.RelevanceScore:F2}</relevance>");
         }
         sb.AppendLine("</memory>");
     }
@@ -384,4 +383,7 @@ public sealed class AdaptiveContextAssembler : IAdaptiveContextAssembler
 
         sb.AppendLine(JsonSerializer.Serialize(obj));
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Context assembled: {MemoryCount} memories, {TokenCount} tokens, {CompressionCount} compressed in {Duration}ms")]
+    private static partial void LogContextAssembledMemoryCountMemoriesTokenCount(ILogger logger, int memoryCount, int tokenCount, int compressionCount, long duration);
 }

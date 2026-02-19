@@ -25,7 +25,7 @@ namespace MemoryIndexer.Services;
 /// - Token counting for threshold detection
 /// - Idle timeout tracking
 /// </remarks>
-public sealed class BufferService : IBuffer
+public sealed partial class BufferService : IBuffer
 {
     private readonly ConcurrentDictionary<string, UserBuffer> _userBuffers = new();
     private readonly SensoryBufferOptions _options;
@@ -94,16 +94,12 @@ public sealed class BufferService : IBuffer
                 if (buffer.Items.TryDequeue(out var removed))
                 {
                     buffer.TotalTokens -= removed.TokenCount;
-                    _logger.LogDebug(
-                        "Buffer overflow for user {UserId}, removed oldest item {ItemId}",
-                        userId, removed.Id);
+                    LogBufferOverflow(_logger, userId, removed.Id);
                 }
                 else break;
             }
 
-            _logger.LogTrace(
-                "Enqueued item for user {UserId}: {Tokens} tokens, turn {Turn}",
-                userId, tokenCount, buffer.TurnCounter);
+            LogEnqueuedItem(_logger, userId, tokenCount, buffer.TurnCounter);
 
             return Task.FromResult(item);
         }
@@ -152,18 +148,14 @@ public sealed class BufferService : IBuffer
             // 1. Token threshold
             if (buffer.TotalTokens >= _options.TokenThreshold)
             {
-                _logger.LogDebug(
-                    "Token trigger for user {UserId}: {Tokens} >= {Threshold}",
-                    userId, buffer.TotalTokens, _options.TokenThreshold);
+                LogTokenTrigger(_logger, userId, buffer.TotalTokens, _options.TokenThreshold);
                 return Task.FromResult<PromotionTriggerType?>(PromotionTriggerType.TokenThreshold);
             }
 
             // 2. Turn threshold
             if (buffer.TurnCounter >= _options.TurnThreshold)
             {
-                _logger.LogDebug(
-                    "Turn trigger for user {UserId}: {Turns} >= {Threshold}",
-                    userId, buffer.TurnCounter, _options.TurnThreshold);
+                LogTurnTrigger(_logger, userId, buffer.TurnCounter, _options.TurnThreshold);
                 return Task.FromResult<PromotionTriggerType?>(PromotionTriggerType.TurnThreshold);
             }
 
@@ -171,9 +163,7 @@ public sealed class BufferService : IBuffer
             var idleDuration = DateTime.UtcNow - buffer.LastActivityTime;
             if (idleDuration >= _options.IdleTimeout)
             {
-                _logger.LogDebug(
-                    "Idle trigger for user {UserId}: {Duration} >= {Timeout}",
-                    userId, idleDuration, _options.IdleTimeout);
+                LogIdleTrigger(_logger, userId, idleDuration, _options.IdleTimeout);
                 return Task.FromResult<PromotionTriggerType?>(PromotionTriggerType.IdleTimeout);
             }
 
@@ -218,9 +208,7 @@ public sealed class BufferService : IBuffer
                 buffer.TurnCounter = 0;
             }
 
-            _logger.LogDebug(
-                "Drained {Count} items for user {UserId}, {RemainingTokens} tokens remaining",
-                drained.Count, userId, buffer.TotalTokens);
+            LogDrainedItems(_logger, drained.Count, userId, buffer.TotalTokens);
         }
 
         return Task.FromResult<IReadOnlyList<SensoryMemory>>(drained);
@@ -237,7 +225,7 @@ public sealed class BufferService : IBuffer
         }
 
         var count = buffer.Items.Count;
-        _logger.LogDebug("Cleared buffer for user {UserId}: {Count} items discarded", userId, count);
+        LogClearedBuffer(_logger, userId, count);
         return Task.FromResult(count);
     }
 
@@ -327,4 +315,25 @@ public sealed class BufferService : IBuffer
         public DateTime LastActivityTime { get; set; }
         public object Lock { get; } = new();
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Buffer overflow for user {UserId}, removed oldest item {ItemId}")]
+    private static partial void LogBufferOverflow(ILogger logger, string userId, Guid itemId);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Enqueued item for user {UserId}: {Tokens} tokens, turn {Turn}")]
+    private static partial void LogEnqueuedItem(ILogger logger, string userId, int tokens, int turn);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Token trigger for user {UserId}: {Tokens} >= {Threshold}")]
+    private static partial void LogTokenTrigger(ILogger logger, string userId, int tokens, int threshold);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Turn trigger for user {UserId}: {Turns} >= {Threshold}")]
+    private static partial void LogTurnTrigger(ILogger logger, string userId, int turns, int threshold);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Idle trigger for user {UserId}: {Duration} >= {Timeout}")]
+    private static partial void LogIdleTrigger(ILogger logger, string userId, TimeSpan duration, TimeSpan timeout);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Drained {Count} items for user {UserId}, {RemainingTokens} tokens remaining")]
+    private static partial void LogDrainedItems(ILogger logger, int count, string userId, int remainingTokens);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Cleared buffer for user {UserId}: {Count} items discarded")]
+    private static partial void LogClearedBuffer(ILogger logger, string userId, int count);
 }

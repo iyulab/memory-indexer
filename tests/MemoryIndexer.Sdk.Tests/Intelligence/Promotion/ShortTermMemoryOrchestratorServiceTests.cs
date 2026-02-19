@@ -4,26 +4,25 @@ using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Promotion;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Promotion;
 
 public class ShortTermMemoryOrchestratorServiceTests
 {
-    private readonly Mock<IShortTermMemory> _workingMemoryMock;
-    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly IShortTermMemory _workingMemoryMock;
+    private readonly IEmbeddingService _embeddingServiceMock;
     private readonly WorkingMemoryOrchestratorOptions _options;
-    private readonly IShortTermMemoryOrchestrator _orchestrator;
+    private readonly ShortTermMemoryOrchestratorService _orchestrator;
 
     public ShortTermMemoryOrchestratorServiceTests()
     {
-        _workingMemoryMock = new Mock<IShortTermMemory>();
-        _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _workingMemoryMock = Substitute.For<IShortTermMemory>();
+        _embeddingServiceMock = Substitute.For<IEmbeddingService>();
 
-        _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new float[768].AsMemory());
+        _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[768].AsMemory());
 
         _options = new WorkingMemoryOrchestratorOptions
         {
@@ -36,8 +35,8 @@ public class ShortTermMemoryOrchestratorServiceTests
         };
 
         _orchestrator = new ShortTermMemoryOrchestratorService(
-            _workingMemoryMock.Object,
-            _embeddingServiceMock.Object,
+            _workingMemoryMock,
+            _embeddingServiceMock,
             Options.Create(_options),
             NullLogger<ShortTermMemoryOrchestratorService>.Instance);
     }
@@ -226,9 +225,7 @@ public class ShortTermMemoryOrchestratorServiceTests
         result.Success.Should().BeTrue();
         result.SummaryId.Should().NotBeNull();
         // Embedding should be generated for the summary
-        _embeddingServiceMock.Verify(
-            x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.AtLeastOnce);
+        await _embeddingServiceMock.Received().GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -280,9 +277,7 @@ public class ShortTermMemoryOrchestratorServiceTests
             userId, WorkingPromotionTrigger.Manual);
 
         // Assert
-        _workingMemoryMock.Verify(
-            x => x.DemoteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
-            Times.AtLeastOnce);
+        await _workingMemoryMock.Received().DemoteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -415,11 +410,11 @@ public class ShortTermMemoryOrchestratorServiceTests
         };
     }
 
-    private IShortTermMemoryOrchestrator CreateOrchestratorWithOptions(WorkingMemoryOrchestratorOptions options)
+    private ShortTermMemoryOrchestratorService CreateOrchestratorWithOptions(WorkingMemoryOrchestratorOptions options)
     {
         return new ShortTermMemoryOrchestratorService(
-            _workingMemoryMock.Object,
-            _embeddingServiceMock.Object,
+            _workingMemoryMock,
+            _embeddingServiceMock,
             Options.Create(options),
             NullLogger<ShortTermMemoryOrchestratorService>.Instance);
     }

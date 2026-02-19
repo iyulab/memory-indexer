@@ -1,8 +1,9 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Chunking;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 
@@ -19,7 +20,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 /// 4. Create MemoryUnit per topic group
 /// 5. Promote to WorkingMemory (with eviction if at capacity)
 /// </remarks>
-public sealed class SensoryPromoterService : ISensoryPromoter
+public sealed partial class SensoryPromoterService : ISensoryPromoter
 {
     private readonly IBuffer _sensoryBuffer;
     private readonly IShortTermMemory _workingMemory;
@@ -53,20 +54,18 @@ public sealed class SensoryPromoterService : ISensoryPromoter
 
         try
         {
-            _logger.LogInformation("[PROMOTION] Starting promotion cycle for user {UserId}", userId);
+            LogPROMOTIONStartingPromotionCycleUser(_logger, userId);
 
             // Drain all items from the buffer
             var items = await _sensoryBuffer.DrainAsync(userId, cancellationToken);
 
             if (items.Count == 0)
             {
-                _logger.LogInformation("[PROMOTION] No items to promote for user {UserId}", userId);
+                LogPROMOTIONItemsPromoteUserUserId(_logger, userId);
                 return BufferPromotionResult.Empty;
             }
 
-            _logger.LogInformation(
-                "[PROMOTION] Found {Count} promotable items for user {UserId} with trigger {Trigger}",
-                items.Count, userId, trigger);
+            LogPROMOTIONFoundCountPromotableItems(_logger, items.Count, userId, trigger);
 
             var result = await PromoteItemsInternalAsync(items, trigger, cancellationToken);
 
@@ -74,22 +73,18 @@ public sealed class SensoryPromoterService : ISensoryPromoter
 
             if (result.Success)
             {
-                _logger.LogInformation(
-                    "[PROMOTION] ✅ Successfully promoted {ItemCount} items as {SegmentCount} memories. " +
-                    "Evicted: {EvictedCount}. Duration: {Duration:F2}s",
-                    result.ItemsProcessed, result.CreatedMemories.Count, result.EvictedMemories.Count,
-                    stopwatch.Elapsed.TotalSeconds);
+                LogPROMOTIONSuccessfullyPromotedItemCountItems(_logger, result.ItemsProcessed, result.CreatedMemories.Count, result.EvictedMemories.Count, stopwatch.Elapsed.TotalSeconds);
             }
             else
             {
-                _logger.LogError("[PROMOTION] ❌ Promotion failed: {Error}", result.Error);
+                LogPROMOTIONPromotionFailedError(_logger, result.Error ?? "Unknown error");
             }
 
             return result with { Duration = stopwatch.Elapsed };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[PROMOTION] ❌ Failed to promote buffer for user {UserId}", userId);
+            LogPROMOTIONFailedPromoteBufferUser(_logger, ex, userId);
             stopwatch.Stop();
             return BufferPromotionResult.Failure(ex.Message) with { Duration = stopwatch.Elapsed };
         }
@@ -117,7 +112,7 @@ public sealed class SensoryPromoterService : ISensoryPromoter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to promote {Count} items", items.Count);
+            LogFailedPromoteCountItems(_logger, ex, items.Count);
             stopwatch.Stop();
             return BufferPromotionResult.Failure(ex.Message) with { Duration = stopwatch.Elapsed };
         }
@@ -188,9 +183,7 @@ public sealed class SensoryPromoterService : ISensoryPromoter
             ];
         }
 
-        _logger.LogDebug(
-            "Created {SegmentCount} topic segments from {ItemCount} items",
-            segments.Count, items.Count);
+        LogCreatedSegmentCountTopicSegmentsItemCount(_logger, segments.Count, items.Count);
 
         // Create MemoryUnits for each topic segment
         var createdMemories = new List<MemoryUnit>();
@@ -236,9 +229,9 @@ public sealed class SensoryPromoterService : ISensoryPromoter
                     ["source"] = "buffer_promotion",
                     ["promotion_trigger"] = trigger.ToString(),
                     ["topic_label"] = segment.TopicLabel ?? "auto",
-                    ["message_count"] = segment.Messages.Count.ToString(),
-                    ["start_index"] = segment.StartIndex.ToString(),
-                    ["end_index"] = segment.EndIndex.ToString(),
+                    ["message_count"] = segment.Messages.Count.ToString(CultureInfo.InvariantCulture),
+                    ["start_index"] = segment.StartIndex.ToString(CultureInfo.InvariantCulture),
+                    ["end_index"] = segment.EndIndex.ToString(CultureInfo.InvariantCulture),
                     ["roles"] = string.Join(",", uniqueRoles) // All roles in segment
                 }
             };
@@ -247,25 +240,18 @@ public sealed class SensoryPromoterService : ISensoryPromoter
             var evicted = await _workingMemory.PromoteAsync(memory, cancellationToken);
             createdMemories.Add(memory);
 
-            _logger.LogInformation(
-                "[PROMOTION] ✅ Promoted: {Content}",
-                memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content);
+            var contentValue = memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content;
+            LogPROMOTIONPromotedContent(_logger, contentValue);
 
             if (evicted != null)
             {
                 evictedMemories.Add(evicted);
-                _logger.LogWarning(
-                    "[PROMOTION] ⚠️ Evicted memory {EvictedId} to make room for {NewId}. " +
-                    "Content: {Content}",
-                    evicted.Id, memory.Id,
-                    evicted.Content.Length > 50 ? evicted.Content[..50] + "..." : evicted.Content);
+                var evictedContent = evicted.Content.Length > 50 ? evicted.Content[..50] + "..." : evicted.Content;
+                LogPROMOTIONEvictedMemoryEvictedIdMake(_logger, evicted.Id, memory.Id, evictedContent);
             }
         }
 
-        _logger.LogInformation(
-            "Promoted {ItemCount} items as {SegmentCount} topic segments for user {UserId}. " +
-            "Created {CreatedCount} memories, evicted {EvictedCount}",
-            items.Count, segments.Count, userId, createdMemories.Count, evictedMemories.Count);
+        LogPromotedItemCountItemsSegmentCountTopic(_logger, items.Count, segments.Count, userId, createdMemories.Count, evictedMemories.Count);
 
         return new BufferPromotionResult
         {
@@ -316,4 +302,37 @@ public sealed class SensoryPromoterService : ISensoryPromoter
 
         return topics;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[PROMOTION] Starting promotion cycle for user {UserId}")]
+    private static partial void LogPROMOTIONStartingPromotionCycleUser(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[PROMOTION] No items to promote for user {UserId}")]
+    private static partial void LogPROMOTIONItemsPromoteUserUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[PROMOTION] Found {Count} promotable items for user {UserId} with trigger {Trigger}")]
+    private static partial void LogPROMOTIONFoundCountPromotableItems(ILogger logger, int count, string userId, PromotionTriggerType trigger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[PROMOTION] Successfully promoted {ItemCount} items as {SegmentCount} memories. Evicted: {EvictedCount}. Duration: {Duration:F2}s")]
+    private static partial void LogPROMOTIONSuccessfullyPromotedItemCountItems(ILogger logger, int itemCount, int segmentCount, int evictedCount, double duration);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "[PROMOTION] Promotion failed: {Error}")]
+    private static partial void LogPROMOTIONPromotionFailedError(ILogger logger, string error);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "[PROMOTION] Failed to promote buffer for user {UserId}")]
+    private static partial void LogPROMOTIONFailedPromoteBufferUser(ILogger logger, Exception ex, string userId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to promote {Count} items")]
+    private static partial void LogFailedPromoteCountItems(ILogger logger, Exception ex, int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created {SegmentCount} topic segments from {ItemCount} items")]
+    private static partial void LogCreatedSegmentCountTopicSegmentsItemCount(ILogger logger, int segmentCount, int itemCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[PROMOTION] Promoted: {Content}")]
+    private static partial void LogPROMOTIONPromotedContent(ILogger logger, string content);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[PROMOTION] Evicted memory {EvictedId} to make room for {NewId}. Content: {Content}")]
+    private static partial void LogPROMOTIONEvictedMemoryEvictedIdMake(ILogger logger, Guid evictedId, Guid newId, string content);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Promoted {ItemCount} items as {SegmentCount} topic segments for user {UserId}. Created {CreatedCount} memories, evicted {EvictedCount}")]
+    private static partial void LogPromotedItemCountItemsSegmentCountTopic(ILogger logger, int itemCount, int segmentCount, string userId, int createdCount, int evictedCount);
 }

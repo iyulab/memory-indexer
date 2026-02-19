@@ -3,7 +3,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Profile;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Profile;
@@ -14,16 +14,16 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Profile;
 /// </summary>
 public class ArchiveStoreServiceTemporalTests
 {
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<ILogger<ArchiveStoreService>> _mockLogger;
+    private readonly IEmbeddingService _mockEmbeddingService;
+    private readonly ILogger<ArchiveStoreService> _mockLogger;
     private readonly ArchiveStoreService _service;
 
     private readonly ReadOnlyMemory<float> _testEmbedding = new float[] { 0.1f, 0.2f, 0.3f, 0.4f };
 
     public ArchiveStoreServiceTemporalTests()
     {
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockLogger = new Mock<ILogger<ArchiveStoreService>>();
+        _mockEmbeddingService = Substitute.For<IEmbeddingService>();
+        _mockLogger = Substitute.For<ILogger<ArchiveStoreService>>();
 
         var options = Options.Create(new SemanticStoreOptions
         {
@@ -31,14 +31,13 @@ public class ArchiveStoreServiceTemporalTests
             MaxEntriesPerUser = 500
         });
 
-        _mockEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testEmbedding);
+        _mockEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(_testEmbedding);
 
         _service = new ArchiveStoreService(
-            _mockEmbeddingService.Object,
+            _mockEmbeddingService,
             options,
-            _mockLogger.Object);
+            _mockLogger);
     }
 
     #region GetHistoryAsync Tests

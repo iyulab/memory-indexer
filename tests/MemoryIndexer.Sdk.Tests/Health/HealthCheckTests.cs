@@ -2,7 +2,8 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Health;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Health;
@@ -15,8 +16,8 @@ public class HealthCheckTests
     public async Task BufferHealthCheck_Healthy_WhenNormalOperation()
     {
         // Arrange
-        var mockBuffer = new Mock<IBuffer>();
-        mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        var mockBuffer = Substitute.For<IBuffer>();
+        mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 5,
@@ -26,7 +27,7 @@ public class HealthCheckTests
                 TriggerSatisfied = false
             });
 
-        var healthCheck = new BufferHealthCheck(mockBuffer.Object);
+        var healthCheck = new BufferHealthCheck(mockBuffer);
         var context = new HealthCheckContext();
 
         // Act
@@ -41,8 +42,8 @@ public class HealthCheckTests
     public async Task BufferHealthCheck_Unhealthy_WhenProcessingLagCritical()
     {
         // Arrange
-        var mockBuffer = new Mock<IBuffer>();
-        mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        var mockBuffer = Substitute.For<IBuffer>();
+        mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 10,
@@ -52,7 +53,7 @@ public class HealthCheckTests
                 TriggerSatisfied = true
             });
 
-        var healthCheck = new BufferHealthCheck(mockBuffer.Object);
+        var healthCheck = new BufferHealthCheck(mockBuffer);
         var context = new HealthCheckContext();
 
         // Act
@@ -67,8 +68,8 @@ public class HealthCheckTests
     public async Task BufferHealthCheck_Unhealthy_WhenTokenAccumulationCritical()
     {
         // Arrange
-        var mockBuffer = new Mock<IBuffer>();
-        mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        var mockBuffer = Substitute.For<IBuffer>();
+        mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 50,
@@ -78,7 +79,7 @@ public class HealthCheckTests
                 TriggerSatisfied = true
             });
 
-        var healthCheck = new BufferHealthCheck(mockBuffer.Object);
+        var healthCheck = new BufferHealthCheck(mockBuffer);
         var context = new HealthCheckContext();
 
         // Act
@@ -93,8 +94,8 @@ public class HealthCheckTests
     public async Task BufferHealthCheck_Degraded_WhenApproachingLimits()
     {
         // Arrange
-        var mockBuffer = new Mock<IBuffer>();
-        mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        var mockBuffer = Substitute.For<IBuffer>();
+        mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 20,
@@ -104,7 +105,7 @@ public class HealthCheckTests
                 TriggerSatisfied = false
             });
 
-        var healthCheck = new BufferHealthCheck(mockBuffer.Object);
+        var healthCheck = new BufferHealthCheck(mockBuffer);
         var context = new HealthCheckContext();
 
         // Act
@@ -119,11 +120,11 @@ public class HealthCheckTests
     public async Task BufferHealthCheck_Unhealthy_WhenExceptionThrown()
     {
         // Arrange
-        var mockBuffer = new Mock<IBuffer>();
-        mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        var mockBuffer = Substitute.For<IBuffer>();
+        mockBuffer.GetStats(Arg.Any<string>())
             .Throws(new InvalidOperationException("Buffer error"));
 
-        var healthCheck = new BufferHealthCheck(mockBuffer.Object);
+        var healthCheck = new BufferHealthCheck(mockBuffer);
         var context = new HealthCheckContext();
 
         // Act
@@ -142,12 +143,12 @@ public class HealthCheckTests
     public async Task ShortTermMemoryHealthCheck_Healthy_WhenNormalUtilization()
     {
         // Arrange
-        var mockMemory = new Mock<IShortTermMemory>();
-        mockMemory.Setup(m => m.Count).Returns(3);
-        mockMemory.Setup(m => m.Capacity).Returns(7);
-        mockMemory.Setup(m => m.IsFull).Returns(false);
+        var mockMemory = Substitute.For<IShortTermMemory>();
+        mockMemory.Count.Returns(3);
+        mockMemory.Capacity.Returns(7);
+        mockMemory.IsFull.Returns(false);
 
-        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory.Object);
+        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory);
         var context = new HealthCheckContext();
 
         // Act
@@ -162,12 +163,12 @@ public class HealthCheckTests
     public async Task ShortTermMemoryHealthCheck_Unhealthy_WhenFull()
     {
         // Arrange
-        var mockMemory = new Mock<IShortTermMemory>();
-        mockMemory.Setup(m => m.Count).Returns(7);
-        mockMemory.Setup(m => m.Capacity).Returns(7);
-        mockMemory.Setup(m => m.IsFull).Returns(true);
+        var mockMemory = Substitute.For<IShortTermMemory>();
+        mockMemory.Count.Returns(7);
+        mockMemory.Capacity.Returns(7);
+        mockMemory.IsFull.Returns(true);
 
-        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory.Object);
+        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory);
         var context = new HealthCheckContext();
 
         // Act
@@ -182,12 +183,12 @@ public class HealthCheckTests
     public async Task ShortTermMemoryHealthCheck_Degraded_WhenHighUtilization()
     {
         // Arrange
-        var mockMemory = new Mock<IShortTermMemory>();
-        mockMemory.Setup(m => m.Count).Returns(6); // 6/7 = 85.7% (>85% warning)
-        mockMemory.Setup(m => m.Capacity).Returns(7);
-        mockMemory.Setup(m => m.IsFull).Returns(false);
+        var mockMemory = Substitute.For<IShortTermMemory>();
+        mockMemory.Count.Returns(6); // 6/7 = 85.7% (>85% warning)
+        mockMemory.Capacity.Returns(7);
+        mockMemory.IsFull.Returns(false);
 
-        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory.Object);
+        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory);
         var context = new HealthCheckContext();
 
         // Act
@@ -202,10 +203,10 @@ public class HealthCheckTests
     public async Task ShortTermMemoryHealthCheck_Unhealthy_WhenExceptionThrown()
     {
         // Arrange
-        var mockMemory = new Mock<IShortTermMemory>();
-        mockMemory.Setup(m => m.Count).Throws(new InvalidOperationException("Memory error"));
+        var mockMemory = Substitute.For<IShortTermMemory>();
+        mockMemory.Count.Throws(new InvalidOperationException("Memory error"));
 
-        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory.Object);
+        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory);
         var context = new HealthCheckContext();
 
         // Act
@@ -224,13 +225,13 @@ public class HealthCheckTests
     public async Task LongTermStoreHealthCheck_Healthy_WhenQueryFast()
     {
         // Arrange
-        var mockStore = new Mock<ILongTermStore>();
-        mockStore.Setup(s => s.GetOrCreateActiveSessionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Session { Id = Guid.NewGuid(), UserId = "__health_check_test__" });
-        mockStore.Setup(s => s.DeleteAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        var mockStore = Substitute.For<ILongTermStore>();
+        mockStore.GetOrCreateActiveSessionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new Session { Id = Guid.NewGuid(), UserId = "__health_check_test__" });
+        mockStore.DeleteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(true);
 
-        var healthCheck = new LongTermStoreHealthCheck(mockStore.Object);
+        var healthCheck = new LongTermStoreHealthCheck(mockStore);
         var context = new HealthCheckContext();
 
         // Act
@@ -245,11 +246,11 @@ public class HealthCheckTests
     public async Task LongTermStoreHealthCheck_Unhealthy_WhenExceptionThrown()
     {
         // Arrange
-        var mockStore = new Mock<ILongTermStore>();
-        mockStore.Setup(s => s.GetOrCreateActiveSessionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Database connection failed"));
+        var mockStore = Substitute.For<ILongTermStore>();
+        mockStore.GetOrCreateActiveSessionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Database connection failed"));
 
-        var healthCheck = new LongTermStoreHealthCheck(mockStore.Object);
+        var healthCheck = new LongTermStoreHealthCheck(mockStore);
         var context = new HealthCheckContext();
 
         // Act
@@ -269,14 +270,14 @@ public class HealthCheckTests
     public async Task VectorDbHealthCheck_Healthy_WhenQuerySucceeds()
     {
         // Arrange
-        var mockStore = new Mock<IMemoryStore>();
-        mockStore.Setup(s => s.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<MemorySearchResult>());
+        var mockStore = Substitute.For<IMemoryStore>();
+        mockStore.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new List<MemorySearchResult>());
 
-        var healthCheck = new VectorDbHealthCheck(mockStore.Object);
+        var healthCheck = new VectorDbHealthCheck(mockStore);
         var context = new HealthCheckContext();
 
         // Act
@@ -291,14 +292,14 @@ public class HealthCheckTests
     public async Task VectorDbHealthCheck_Unhealthy_WhenExceptionThrown()
     {
         // Arrange
-        var mockStore = new Mock<IMemoryStore>();
-        mockStore.Setup(s => s.SearchAsync(
-                It.IsAny<ReadOnlyMemory<float>>(),
-                It.IsAny<MemorySearchOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Vector DB error"));
+        var mockStore = Substitute.For<IMemoryStore>();
+        mockStore.SearchAsync(
+                Arg.Any<ReadOnlyMemory<float>>(),
+                Arg.Any<MemorySearchOptions>(),
+                Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Vector DB error"));
 
-        var healthCheck = new VectorDbHealthCheck(mockStore.Object);
+        var healthCheck = new VectorDbHealthCheck(mockStore);
         var context = new HealthCheckContext();
 
         // Act
@@ -317,11 +318,11 @@ public class HealthCheckTests
     public async Task EmbeddingServiceHealthCheck_Healthy_WhenGenerationSucceeds()
     {
         // Arrange
-        var mockService = new Mock<IEmbeddingService>();
-        mockService.Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new float[1024]);
+        var mockService = Substitute.For<IEmbeddingService>();
+        mockService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[1024]);
 
-        var healthCheck = new EmbeddingServiceHealthCheck(mockService.Object);
+        var healthCheck = new EmbeddingServiceHealthCheck(mockService);
         var context = new HealthCheckContext();
 
         // Act
@@ -336,11 +337,11 @@ public class HealthCheckTests
     public async Task EmbeddingServiceHealthCheck_Unhealthy_WhenExceptionThrown()
     {
         // Arrange
-        var mockService = new Mock<IEmbeddingService>();
-        mockService.Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Embedding service unavailable"));
+        var mockService = Substitute.For<IEmbeddingService>();
+        mockService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("Embedding service unavailable"));
 
-        var healthCheck = new EmbeddingServiceHealthCheck(mockService.Object);
+        var healthCheck = new EmbeddingServiceHealthCheck(mockService);
         var context = new HealthCheckContext();
 
         // Act
@@ -359,8 +360,8 @@ public class HealthCheckTests
     public async Task ArchiveStoreHealthCheck_Healthy_WhenNormalEntries()
     {
         // Arrange
-        var mockStore = new Mock<IArchiveStore>();
-        mockStore.Setup(s => s.GetStats(It.IsAny<string>()))
+        var mockStore = Substitute.For<IArchiveStore>();
+        mockStore.GetStats(Arg.Any<string>())
             .Returns(new SemanticStoreStats
             {
                 UserId = "__health_check_test__",
@@ -374,7 +375,7 @@ public class HealthCheckTests
                 }
             });
 
-        var healthCheck = new ArchiveStoreHealthCheck(mockStore.Object);
+        var healthCheck = new ArchiveStoreHealthCheck(mockStore);
         var context = new HealthCheckContext();
 
         // Act
@@ -389,8 +390,8 @@ public class HealthCheckTests
     public async Task ArchiveStoreHealthCheck_Unhealthy_WhenCriticalEntryCount()
     {
         // Arrange
-        var mockStore = new Mock<IArchiveStore>();
-        mockStore.Setup(s => s.GetStats(It.IsAny<string>()))
+        var mockStore = Substitute.For<IArchiveStore>();
+        mockStore.GetStats(Arg.Any<string>())
             .Returns(new SemanticStoreStats
             {
                 UserId = "__health_check_test__",
@@ -399,7 +400,7 @@ public class HealthCheckTests
                 AverageConfidence = 0.7f
             });
 
-        var healthCheck = new ArchiveStoreHealthCheck(mockStore.Object);
+        var healthCheck = new ArchiveStoreHealthCheck(mockStore);
         var context = new HealthCheckContext();
 
         // Act
@@ -414,8 +415,8 @@ public class HealthCheckTests
     public async Task ArchiveStoreHealthCheck_Degraded_WhenApproachingLimit()
     {
         // Arrange
-        var mockStore = new Mock<IArchiveStore>();
-        mockStore.Setup(s => s.GetStats(It.IsAny<string>()))
+        var mockStore = Substitute.For<IArchiveStore>();
+        mockStore.GetStats(Arg.Any<string>())
             .Returns(new SemanticStoreStats
             {
                 UserId = "__health_check_test__",
@@ -424,7 +425,7 @@ public class HealthCheckTests
                 AverageConfidence = 0.8f
             });
 
-        var healthCheck = new ArchiveStoreHealthCheck(mockStore.Object);
+        var healthCheck = new ArchiveStoreHealthCheck(mockStore);
         var context = new HealthCheckContext();
 
         // Act
@@ -439,8 +440,8 @@ public class HealthCheckTests
     public async Task ArchiveStoreHealthCheck_Degraded_WhenLowConfirmationRatio()
     {
         // Arrange
-        var mockStore = new Mock<IArchiveStore>();
-        mockStore.Setup(s => s.GetStats(It.IsAny<string>()))
+        var mockStore = Substitute.For<IArchiveStore>();
+        mockStore.GetStats(Arg.Any<string>())
             .Returns(new SemanticStoreStats
             {
                 UserId = "__health_check_test__",
@@ -449,7 +450,7 @@ public class HealthCheckTests
                 AverageConfidence = 0.6f
             });
 
-        var healthCheck = new ArchiveStoreHealthCheck(mockStore.Object);
+        var healthCheck = new ArchiveStoreHealthCheck(mockStore);
         var context = new HealthCheckContext();
 
         // Act
@@ -508,8 +509,8 @@ public class HealthCheckTests
     public async Task BufferHealthCheck_PopulatesDataCorrectly()
     {
         // Arrange
-        var mockBuffer = new Mock<IBuffer>();
-        mockBuffer.Setup(b => b.GetStats(It.IsAny<string>()))
+        var mockBuffer = Substitute.For<IBuffer>();
+        mockBuffer.GetStats(Arg.Any<string>())
             .Returns(new SensoryBufferStats
             {
                 ItemCount = 5,
@@ -519,7 +520,7 @@ public class HealthCheckTests
                 TriggerSatisfied = false
             });
 
-        var healthCheck = new BufferHealthCheck(mockBuffer.Object);
+        var healthCheck = new BufferHealthCheck(mockBuffer);
         var context = new HealthCheckContext();
 
         // Act
@@ -539,12 +540,12 @@ public class HealthCheckTests
     public async Task ShortTermMemoryHealthCheck_PopulatesDataCorrectly()
     {
         // Arrange
-        var mockMemory = new Mock<IShortTermMemory>();
-        mockMemory.Setup(m => m.Count).Returns(5);
-        mockMemory.Setup(m => m.Capacity).Returns(7);
-        mockMemory.Setup(m => m.IsFull).Returns(false);
+        var mockMemory = Substitute.For<IShortTermMemory>();
+        mockMemory.Count.Returns(5);
+        mockMemory.Capacity.Returns(7);
+        mockMemory.IsFull.Returns(false);
 
-        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory.Object);
+        var healthCheck = new ShortTermMemoryHealthCheck(mockMemory);
         var context = new HealthCheckContext();
 
         // Act

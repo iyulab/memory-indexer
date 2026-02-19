@@ -12,7 +12,9 @@ namespace MemoryIndexer.Sdk.Tests.Integration.Fixtures;
 /// The embedding model (~90MB) is loaded once and shared across all tests in the collection.
 /// </remarks>
 [CollectionDefinition(Name)]
+#pragma warning disable CA1711 // Collection — xUnit CollectionDefinition convention
 public class EmbeddingTestCollection : ICollectionFixture<SharedEmbeddingFixture>
+#pragma warning restore CA1711
 {
     /// <summary>
     /// The name of the test collection.

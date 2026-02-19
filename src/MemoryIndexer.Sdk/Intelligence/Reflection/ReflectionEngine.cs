@@ -1,9 +1,10 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Reflection;
 
@@ -17,7 +18,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Reflection;
 /// - MemInsight: Contextual memory augmentation
 /// - Zettelkasten: Atomic notes with bidirectional links
 /// </remarks>
-public sealed class ReflectionEngine : IReflectionEngine
+public sealed partial class ReflectionEngine : IReflectionEngine
 {
     private readonly IMemoryStore _memoryStore;
     private readonly ITemporalEntityStore _entityStore;
@@ -54,8 +55,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         options ??= new ReflectionOptions();
         var stopwatch = Stopwatch.StartNew();
 
-        _logger.LogDebug("Starting reflection for user {UserId} with depth {Depth}",
-            userId, options.ReflectionDepth);
+        LogStartingReflectionUserUserIdDepth(_logger, userId, options.ReflectionDepth);
 
         var result = new ReflectionResult();
 
@@ -116,7 +116,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Reflection failed for user {UserId}", userId);
+            LogReflectionFailedUserUserId(_logger, ex, userId);
             result.Success = false;
             result.Summary = $"Reflection failed: {ex.Message}";
         }
@@ -124,10 +124,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         stopwatch.Stop();
         result.Duration = stopwatch.Elapsed;
 
-        _logger.LogInformation(
-            "Reflection complete for user {UserId}: {Insights} insights, {Links} links, {Patterns} patterns in {Duration}ms",
-            userId, result.Insights.Count, result.DiscoveredLinks.Count, result.Patterns.Count,
-            stopwatch.ElapsedMilliseconds);
+        LogReflectionCompleteUserUserIdInsights(_logger, userId, result.Insights.Count, result.DiscoveredLinks.Count, result.Patterns.Count, stopwatch.ElapsedMilliseconds);
 
         return result;
     }
@@ -238,8 +235,7 @@ public sealed class ReflectionEngine : IReflectionEngine
                 insights.Add(summary);
         }
 
-        _logger.LogDebug("Generated {Count} insights from {MemoryCount} memories",
-            insights.Count, memories.Count);
+        LogGeneratedCountInsightsMemoryCountMemories(_logger, insights.Count, memories.Count);
 
         return insights.OrderByDescending(i => i.ImportanceScore).ToList();
     }
@@ -313,8 +309,7 @@ public sealed class ReflectionEngine : IReflectionEngine
             .Take(options.MaxLinks)
             .ToList();
 
-        _logger.LogDebug("Discovered {Count} links from {MemoryCount} memories",
-            uniqueLinks.Count, memories.Count);
+        LogDiscoveredCountLinksMemoryCountMemories(_logger, uniqueLinks.Count, memories.Count);
 
         return uniqueLinks;
     }
@@ -434,7 +429,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return filtered;
     }
 
-    private async Task<IReadOnlyList<MemoryInsight>> GenerateGeneralizationsAsync(
+    private static async Task<IReadOnlyList<MemoryInsight>> GenerateGeneralizationsAsync(
         IReadOnlyList<MemoryUnit> memories,
         CancellationToken cancellationToken)
     {
@@ -474,7 +469,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return insights;
     }
 
-    private async Task<IReadOnlyList<MemoryInsight>> FindConnectionsAsync(
+    private static async Task<IReadOnlyList<MemoryInsight>> FindConnectionsAsync(
         IReadOnlyList<MemoryUnit> memories,
         CancellationToken cancellationToken)
     {
@@ -521,7 +516,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return insights;
     }
 
-    private async Task<IReadOnlyList<MemoryInsight>> IdentifyTrendsAsync(
+    private static async Task<IReadOnlyList<MemoryInsight>> IdentifyTrendsAsync(
         IReadOnlyList<MemoryUnit> memories,
         CancellationToken cancellationToken)
     {
@@ -567,7 +562,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return insights;
     }
 
-    private Task<MemoryInsight?> GenerateTopicSummaryAsync(
+    private static Task<MemoryInsight?> GenerateTopicSummaryAsync(
         IReadOnlyList<MemoryUnit> memories,
         string topic,
         CancellationToken cancellationToken)
@@ -603,7 +598,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return Task.FromResult<MemoryInsight?>(insight);
     }
 
-    private async Task<IReadOnlyList<SynthesizedQuestion>> SynthesizeQuestionsFromMemoriesAsync(
+    private static async Task<IReadOnlyList<SynthesizedQuestion>> SynthesizeQuestionsFromMemoriesAsync(
         IReadOnlyList<MemoryUnit> memories,
         CancellationToken cancellationToken)
     {
@@ -642,7 +637,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return questions;
     }
 
-    private async Task<IReadOnlyList<MemoryLink>> DiscoverEntityLinksAsync(
+    private static async Task<IReadOnlyList<MemoryLink>> DiscoverEntityLinksAsync(
         IReadOnlyList<MemoryUnit> memories,
         CancellationToken cancellationToken)
     {
@@ -685,7 +680,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return links;
     }
 
-    private static IReadOnlyList<MemoryLink> DiscoverTemporalLinks(IReadOnlyList<MemoryUnit> memories)
+    private static List<MemoryLink> DiscoverTemporalLinks(IReadOnlyList<MemoryUnit> memories)
     {
         var links = new List<MemoryLink>();
         var ordered = memories.OrderBy(m => m.CreatedAt).ToList();
@@ -714,7 +709,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return links;
     }
 
-    private async Task<IReadOnlyList<MemoryLink>> DiscoverSemanticLinksAsync(
+    private static async Task<IReadOnlyList<MemoryLink>> DiscoverSemanticLinksAsync(
         IReadOnlyList<MemoryUnit> memories,
         float minSimilarity,
         CancellationToken cancellationToken)
@@ -745,7 +740,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         return links;
     }
 
-    private async Task<IReadOnlyList<MemoryPattern>> IdentifyPatternsAsync(
+    private static async Task<IReadOnlyList<MemoryPattern>> IdentifyPatternsAsync(
         IReadOnlyList<MemoryUnit> memories,
         CancellationToken cancellationToken)
     {
@@ -824,7 +819,7 @@ public sealed class ReflectionEngine : IReflectionEngine
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to store insight as memory");
+            LogFailedStoreInsightMemory(_logger, ex);
             return null;
         }
     }
@@ -832,38 +827,38 @@ public sealed class ReflectionEngine : IReflectionEngine
     private static string GenerateReflectionSummary(ReflectionResult result)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"Reflected on {result.ReflectedMemoryIds.Count} memories.");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Reflected on {result.ReflectedMemoryIds.Count} memories.");
 
         if (result.Insights.Count > 0)
-            sb.AppendLine($"Generated {result.Insights.Count} insights.");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Generated {result.Insights.Count} insights.");
 
         if (result.DiscoveredLinks.Count > 0)
-            sb.AppendLine($"Discovered {result.DiscoveredLinks.Count} memory links.");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Discovered {result.DiscoveredLinks.Count} memory links.");
 
         if (result.Patterns.Count > 0)
-            sb.AppendLine($"Identified {result.Patterns.Count} patterns.");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Identified {result.Patterns.Count} patterns.");
 
         if (result.Questions.Count > 0)
-            sb.AppendLine($"Synthesized {result.Questions.Count} questions.");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Synthesized {result.Questions.Count} questions.");
 
         if (result.CreatedMemoryIds.Count > 0)
-            sb.AppendLine($"Created {result.CreatedMemoryIds.Count} new insight memories.");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"Created {result.CreatedMemoryIds.Count} new insight memories.");
 
         return sb.ToString().TrimEnd();
     }
 
     private static string GenerateActivitySummaryText(
-        IReadOnlyList<MemoryUnit> memories,
+        List<MemoryUnit> memories,
         TimeSpan period,
-        IReadOnlyList<EntityActivity> topEntities)
+        List<EntityActivity> topEntities)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"In the last {period.TotalHours:F0} hours:");
-        sb.AppendLine($"- Created {memories.Count} memories");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"In the last {period.TotalHours:F0} hours:");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- Created {memories.Count} memories");
 
         if (topEntities.Count > 0)
         {
-            sb.AppendLine($"- Top topics: {string.Join(", ", topEntities.Take(3).Select(e => e.Entity))}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"- Top topics: {string.Join(", ", topEntities.Take(3).Select(e => e.Entity))}");
         }
 
         return sb.ToString().TrimEnd();
@@ -952,4 +947,22 @@ public sealed class ReflectionEngine : IReflectionEngine
     }
 
     #endregion
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Starting reflection for user {UserId} with depth {Depth}")]
+    private static partial void LogStartingReflectionUserUserIdDepth(ILogger logger, string userId, int depth);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Reflection failed for user {UserId}")]
+    private static partial void LogReflectionFailedUserUserId(ILogger logger, Exception ex, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Reflection complete for user {UserId}: {Insights} insights, {Links} links, {Patterns} patterns in {Duration}ms")]
+    private static partial void LogReflectionCompleteUserUserIdInsights(ILogger logger, string userId, int insights, int links, int patterns, long duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Generated {Count} insights from {MemoryCount} memories")]
+    private static partial void LogGeneratedCountInsightsMemoryCountMemories(ILogger logger, int count, int memoryCount);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Discovered {Count} links from {MemoryCount} memories")]
+    private static partial void LogDiscoveredCountLinksMemoryCountMemories(ILogger logger, int count, int memoryCount);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to store insight as memory")]
+    private static partial void LogFailedStoreInsightMemory(ILogger logger, Exception ex);
 }

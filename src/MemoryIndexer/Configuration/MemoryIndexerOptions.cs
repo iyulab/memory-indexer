@@ -91,6 +91,12 @@ public sealed class MemoryIndexerOptions
     public WorkingMemoryOptions WorkingMemory { get; set; } = new();
 
     /// <summary>
+    /// Archive promotion (Long → Archive) configuration.
+    /// Controls confidence and confirmation thresholds for knowledge crystallization.
+    /// </summary>
+    public ArchivePromotionOptions ArchivePromotion { get; set; } = new();
+
+    /// <summary>
     /// Resource limits configuration.
     /// Phase v0.6.0-γ: Resource Management.
     /// </summary>
@@ -1063,6 +1069,31 @@ public enum CompletionProvider
     /// Custom HTTP endpoint (OpenAI-compatible).
     /// </summary>
     Custom
+}
+
+/// <summary>
+/// Archive promotion (Long → Archive) configuration options.
+/// Controls thresholds for promoting Long-term memories to permanent Archive.
+/// </summary>
+/// <remarks>
+/// Archive promotion uses AND logic — both confidence and confirmation thresholds
+/// must be met before a memory is crystallized into permanent knowledge.
+/// </remarks>
+public sealed class ArchivePromotionOptions
+{
+    /// <summary>
+    /// Minimum confidence score required for archive promotion (0.0 - 1.0).
+    /// Memories below this threshold remain in Long tier.
+    /// Default: 0.8 (80% confidence).
+    /// </summary>
+    public float MinConfidenceThreshold { get; set; } = 0.8f;
+
+    /// <summary>
+    /// Minimum number of confirmations required for archive promotion.
+    /// Ensures knowledge is validated through repeated encounters.
+    /// Default: 3 confirmations.
+    /// </summary>
+    public int MinConfirmationCount { get; set; } = 3;
 }
 
 /// <summary>

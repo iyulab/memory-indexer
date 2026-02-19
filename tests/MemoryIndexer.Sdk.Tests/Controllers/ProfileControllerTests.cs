@@ -3,7 +3,8 @@ using McpServer.Controllers;
 using MemoryIndexer.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Controllers;
@@ -13,24 +14,24 @@ namespace MemoryIndexer.Sdk.Tests.Controllers;
 /// </summary>
 public class ProfileControllerTests
 {
-    private readonly Mock<IProfileSnapshotService> _mockSnapshotService;
-    private readonly Mock<IConfidenceDecayStrategy> _mockDecayStrategy;
-    private readonly Mock<IArchiveStore> _mockArchiveStore;
-    private readonly Mock<ILogger<ProfileController>> _mockLogger;
+    private readonly IProfileSnapshotService _mockSnapshotService;
+    private readonly IConfidenceDecayStrategy _mockDecayStrategy;
+    private readonly IArchiveStore _mockArchiveStore;
+    private readonly ILogger<ProfileController> _mockLogger;
     private readonly ProfileController _controller;
 
     public ProfileControllerTests()
     {
-        _mockSnapshotService = new Mock<IProfileSnapshotService>();
-        _mockDecayStrategy = new Mock<IConfidenceDecayStrategy>();
-        _mockArchiveStore = new Mock<IArchiveStore>();
-        _mockLogger = new Mock<ILogger<ProfileController>>();
+        _mockSnapshotService = Substitute.For<IProfileSnapshotService>();
+        _mockDecayStrategy = Substitute.For<IConfidenceDecayStrategy>();
+        _mockArchiveStore = Substitute.For<IArchiveStore>();
+        _mockLogger = Substitute.For<ILogger<ProfileController>>();
 
         _controller = new ProfileController(
-            _mockSnapshotService.Object,
-            _mockDecayStrategy.Object,
-            _mockArchiveStore.Object,
-            _mockLogger.Object);
+            _mockSnapshotService,
+            _mockDecayStrategy,
+            _mockArchiveStore,
+            _mockLogger);
     }
 
     #region GetProfileStats Tests
@@ -46,9 +47,9 @@ public class ProfileControllerTests
             new() { Key = "old_name", Value = "Jane", IsActive = false, Confidence = 0.7f, Category = SemanticStoreCategory.Fact }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
-        _mockDecayStrategy.Setup(d => d.NeedsReconfirmation(It.IsAny<SemanticStoreEntry>(), It.IsAny<float>()))
+        _mockArchiveStore.GetAllAsync("default", Arg.Any<CancellationToken>())
+            .Returns(facts);
+        _mockDecayStrategy.NeedsReconfirmation(Arg.Any<SemanticStoreEntry>(), Arg.Any<float>())
             .Returns(false);
 
         // Act
@@ -65,8 +66,8 @@ public class ProfileControllerTests
     public async Task GetProfileStats_WithNoFacts_ReturnsEmptyStats()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("default", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         // Act
         var result = await _controller.GetProfileStats(ct: CancellationToken.None);
@@ -88,11 +89,10 @@ public class ProfileControllerTests
             new() { Key = "hobby", Value = "Coding", IsActive = true, Confidence = 0.8f, UpdatedAt = DateTime.UtcNow }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
-        _mockDecayStrategy.SetupSequence(d => d.NeedsReconfirmation(It.IsAny<SemanticStoreEntry>(), It.IsAny<float>()))
-            .Returns(true)
-            .Returns(false);
+        _mockArchiveStore.GetAllAsync("default", Arg.Any<CancellationToken>())
+            .Returns(facts);
+        _mockDecayStrategy.NeedsReconfirmation(Arg.Any<SemanticStoreEntry>(), Arg.Any<float>())
+            .Returns(true, false);
 
         // Act
         var result = await _controller.GetProfileStats(ct: CancellationToken.None);
@@ -107,14 +107,14 @@ public class ProfileControllerTests
     public async Task GetProfileStats_WithCustomUserId_UsesProvidedUserId()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("custom-user", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("custom-user", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         // Act
         await _controller.GetProfileStats(userId: "custom-user", ct: CancellationToken.None);
 
         // Assert
-        _mockArchiveStore.Verify(a => a.GetAllAsync("custom-user", It.IsAny<CancellationToken>()), Times.Once);
+        await _mockArchiveStore.Received(1).GetAllAsync("custom-user", Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -143,8 +143,8 @@ public class ProfileControllerTests
             }
         };
 
-        _mockSnapshotService.Setup(s => s.CreateSnapshotAsync("default", "Test Snapshot", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(snapshot);
+        _mockSnapshotService.CreateSnapshotAsync("default", "Test Snapshot", Arg.Any<CancellationToken>())
+            .Returns(snapshot);
 
         var request = new CreateSnapshotRequest { Label = "Test Snapshot" };
 
@@ -172,8 +172,8 @@ public class ProfileControllerTests
             Stats = new ProfileStats()
         };
 
-        _mockSnapshotService.Setup(s => s.CreateSnapshotAsync("custom-user", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(snapshot);
+        _mockSnapshotService.CreateSnapshotAsync("custom-user", null, Arg.Any<CancellationToken>())
+            .Returns(snapshot);
 
         var request = new CreateSnapshotRequest { UserId = "custom-user" };
 
@@ -181,7 +181,7 @@ public class ProfileControllerTests
         await _controller.CreateSnapshot(request, CancellationToken.None);
 
         // Assert
-        _mockSnapshotService.Verify(s => s.CreateSnapshotAsync("custom-user", null, It.IsAny<CancellationToken>()), Times.Once);
+        await _mockSnapshotService.Received(1).CreateSnapshotAsync("custom-user", null, Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -203,8 +203,8 @@ public class ProfileControllerTests
             Stats = new ProfileStats { TotalFacts = 1 }
         };
 
-        _mockSnapshotService.Setup(s => s.GetSnapshotAsync("default", snapshotId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(snapshot);
+        _mockSnapshotService.GetSnapshotAsync("default", snapshotId, Arg.Any<CancellationToken>())
+            .Returns(snapshot);
 
         // Act
         var result = await _controller.GetSnapshot(snapshotId, ct: CancellationToken.None);
@@ -220,8 +220,8 @@ public class ProfileControllerTests
     {
         // Arrange
         var snapshotId = Guid.NewGuid();
-        _mockSnapshotService.Setup(s => s.GetSnapshotAsync("default", snapshotId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ProfileSnapshot?)null);
+        _mockSnapshotService.GetSnapshotAsync("default", snapshotId, Arg.Any<CancellationToken>())
+            .Returns((ProfileSnapshot?)null);
 
         // Act
         var result = await _controller.GetSnapshot(snapshotId, ct: CancellationToken.None);
@@ -244,8 +244,8 @@ public class ProfileControllerTests
             new() { Id = Guid.NewGuid(), UserId = "default", Label = "Snapshot 2", CreatedAt = DateTime.UtcNow.AddDays(-1), FactCount = 3 }
         };
 
-        _mockSnapshotService.Setup(s => s.ListSnapshotsAsync("default", 10, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(snapshots);
+        _mockSnapshotService.ListSnapshotsAsync("default", 10, Arg.Any<CancellationToken>())
+            .Returns(snapshots);
 
         // Act
         var result = await _controller.ListSnapshots(ct: CancellationToken.None);
@@ -261,14 +261,14 @@ public class ProfileControllerTests
     public async Task ListSnapshots_WithLimit_RespectsLimit()
     {
         // Arrange
-        _mockSnapshotService.Setup(s => s.ListSnapshotsAsync("default", 5, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ProfileSnapshotSummary>());
+        _mockSnapshotService.ListSnapshotsAsync("default", 5, Arg.Any<CancellationToken>())
+            .Returns(new List<ProfileSnapshotSummary>());
 
         // Act
         await _controller.ListSnapshots(limit: 5, ct: CancellationToken.None);
 
         // Assert
-        _mockSnapshotService.Verify(s => s.ListSnapshotsAsync("default", 5, It.IsAny<CancellationToken>()), Times.Once);
+        await _mockSnapshotService.Received(1).ListSnapshotsAsync("default", 5, Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -297,8 +297,8 @@ public class ProfileControllerTests
             }
         };
 
-        _mockSnapshotService.Setup(s => s.CompareSnapshotsAsync("default", olderId, newerId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(diff);
+        _mockSnapshotService.CompareSnapshotsAsync("default", olderId, newerId, Arg.Any<CancellationToken>())
+            .Returns(diff);
 
         var request = new CompareSnapshotsRequest { OlderSnapshotId = olderId, NewerSnapshotId = newerId };
 
@@ -318,8 +318,8 @@ public class ProfileControllerTests
     {
         // Arrange
         var olderId = Guid.NewGuid();
-        _mockSnapshotService.Setup(s => s.CompareSnapshotsAsync("default", olderId, null, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ArgumentException("Snapshot not found"));
+        _mockSnapshotService.CompareSnapshotsAsync("default", olderId, null, Arg.Any<CancellationToken>())
+            .Throws(new ArgumentException("Snapshot not found"));
 
         var request = new CompareSnapshotsRequest { OlderSnapshotId = olderId };
 
@@ -344,11 +344,11 @@ public class ProfileControllerTests
             new() { Key = "hobby", Value = "Coding", IsActive = true, Confidence = 0.8f, UpdatedAt = DateTime.UtcNow, Category = SemanticStoreCategory.Preference }
         };
 
-        _mockArchiveStore.Setup(a => a.GetAllAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(facts);
-        _mockDecayStrategy.Setup(d => d.NeedsReconfirmation(It.IsAny<SemanticStoreEntry>(), 0.5f))
-            .Returns((SemanticStoreEntry f, float _) => f.Key == "name");
-        _mockDecayStrategy.Setup(d => d.CalculateDecayedConfidence(It.IsAny<SemanticStoreEntry>(), It.IsAny<DateTime>()))
+        _mockArchiveStore.GetAllAsync("default", Arg.Any<CancellationToken>())
+            .Returns(facts);
+        _mockDecayStrategy.NeedsReconfirmation(Arg.Any<SemanticStoreEntry>(), 0.5f)
+            .Returns(callInfo => callInfo.ArgAt<SemanticStoreEntry>(0).Key == "name");
+        _mockDecayStrategy.CalculateDecayedConfidence(Arg.Any<SemanticStoreEntry>(), Arg.Any<DateTime>())
             .Returns(0.4f);
 
         // Act
@@ -365,8 +365,8 @@ public class ProfileControllerTests
     public async Task GetStaleFacts_WithCustomThreshold_UsesThreshold()
     {
         // Arrange
-        _mockArchiveStore.Setup(a => a.GetAllAsync("default", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<SemanticStoreEntry>());
+        _mockArchiveStore.GetAllAsync("default", Arg.Any<CancellationToken>())
+            .Returns(new List<SemanticStoreEntry>());
 
         // Act
         var result = await _controller.GetStaleFacts(threshold: 0.7f, ct: CancellationToken.None);
@@ -386,8 +386,8 @@ public class ProfileControllerTests
     {
         // Arrange
         var snapshotId = Guid.NewGuid();
-        _mockSnapshotService.Setup(s => s.DeleteSnapshotAsync("default", snapshotId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _mockSnapshotService.DeleteSnapshotAsync("default", snapshotId, Arg.Any<CancellationToken>())
+            .Returns(true);
 
         // Act
         var result = await _controller.DeleteSnapshot(snapshotId, ct: CancellationToken.None);
@@ -401,8 +401,8 @@ public class ProfileControllerTests
     {
         // Arrange
         var snapshotId = Guid.NewGuid();
-        _mockSnapshotService.Setup(s => s.DeleteSnapshotAsync("default", snapshotId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _mockSnapshotService.DeleteSnapshotAsync("default", snapshotId, Arg.Any<CancellationToken>())
+            .Returns(false);
 
         // Act
         var result = await _controller.DeleteSnapshot(snapshotId, ct: CancellationToken.None);

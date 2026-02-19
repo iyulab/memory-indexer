@@ -13,6 +13,8 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 [McpServerToolType]
 public class BackupRestoreTools(IMemoryExporter exporter)
 {
+    private static readonly JsonSerializerOptions s_indentedJsonOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions s_caseInsensitiveJsonOptions = new() { PropertyNameCaseInsensitive = true };
     private const string DefaultUserId = "mcp-user";
 
     /// <summary>
@@ -61,7 +63,7 @@ public class BackupRestoreTools(IMemoryExporter exporter)
             ByType = package.Statistics.ByType.ToDictionary(k => k.Key.ToString(), v => v.Value),
             ExportedAt = package.ExportedAt.ToString("O"),
             Checksum = package.Checksum,
-            JsonData = JsonSerializer.Serialize(package, new JsonSerializerOptions { WriteIndented = true }),
+            JsonData = JsonSerializer.Serialize(package, s_indentedJsonOptions),
             Message = $"Successfully exported {package.Statistics.TotalMemories} memories"
         };
     }
@@ -82,10 +84,7 @@ public class BackupRestoreTools(IMemoryExporter exporter)
         MemoryExportPackage? package;
         try
         {
-            package = JsonSerializer.Deserialize<MemoryExportPackage>(jsonData, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            package = JsonSerializer.Deserialize<MemoryExportPackage>(jsonData, s_caseInsensitiveJsonOptions);
         }
         catch (JsonException ex)
         {

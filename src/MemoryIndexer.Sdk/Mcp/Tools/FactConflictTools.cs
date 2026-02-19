@@ -231,7 +231,7 @@ public sealed class FactConflictTools(
     /// </summary>
     [McpServerTool]
     [Description("List all category-specific resolution rules.")]
-    public Task<AllCategoryRulesResult> GetAllCategoryRules()
+    public static Task<AllCategoryRulesResult> GetAllCategoryRules()
     {
         var rules = CategoryResolutionRule.Defaults.Values
             .Select(r => new CategoryRuleInfo

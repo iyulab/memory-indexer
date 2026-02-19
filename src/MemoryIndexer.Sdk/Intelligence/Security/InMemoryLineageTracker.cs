@@ -1,5 +1,6 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace MemoryIndexer.Sdk.Intelligence.Security;
 
@@ -7,7 +8,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Security;
 /// In-memory implementation of memory lineage tracking.
 /// Suitable for development and testing. For production, use a persistent store.
 /// </summary>
-public sealed class InMemoryLineageTracker : IMemoryLineageTracker
+public sealed partial class InMemoryLineageTracker : IMemoryLineageTracker
 {
     private readonly ConcurrentDictionary<Guid, List<MemoryLineageEvent>> _eventsByMemory = new();
     private readonly ConcurrentDictionary<Guid, List<MemoryRelation>> _relationsByMemory = new();
@@ -47,7 +48,7 @@ public sealed class InMemoryLineageTracker : IMemoryLineageTracker
         };
 
         AddEvent(memoryId, lineageEvent);
-        _logger.LogDebug("Recorded creation for memory {MemoryId} by user {UserId}", memoryId, userId);
+        LogRecordedCreationMemoryMemoryIdUser(_logger, memoryId, userId);
 
         return Task.CompletedTask;
     }
@@ -82,7 +83,7 @@ public sealed class InMemoryLineageTracker : IMemoryLineageTracker
         };
 
         AddEvent(memoryId, lineageEvent);
-        _logger.LogDebug("Recorded update ({ChangeType}) for memory {MemoryId} by user {UserId}", changeType, memoryId, userId);
+        LogRecordedUpdateChangeTypeMemoryMemoryId(_logger, changeType, memoryId, userId);
 
         return Task.CompletedTask;
     }
@@ -113,7 +114,7 @@ public sealed class InMemoryLineageTracker : IMemoryLineageTracker
         };
 
         AddEvent(memoryId, lineageEvent);
-        _logger.LogTrace("Recorded access ({AccessType}) for memory {MemoryId} by user {UserId}", accessType, memoryId, userId);
+        LogRecordedAccessAccessTypeMemoryMemoryId(_logger, accessType, memoryId, userId);
 
         return Task.CompletedTask;
     }
@@ -144,7 +145,7 @@ public sealed class InMemoryLineageTracker : IMemoryLineageTracker
         };
 
         AddEvent(memoryId, lineageEvent);
-        _logger.LogDebug("Recorded deletion (hard={IsHardDelete}) for memory {MemoryId} by user {UserId}", isHardDelete, memoryId, userId);
+        LogRecordedDeletionHardIsHardDeleteMemory(_logger, isHardDelete, memoryId, userId);
 
         return Task.CompletedTask;
     }
@@ -165,7 +166,7 @@ public sealed class InMemoryLineageTracker : IMemoryLineageTracker
             RelatedMemoryIds = sourceIds,
             Details = new Dictionary<string, string>
             {
-                ["sourceCount"] = sourceIds.Count.ToString()
+                ["sourceCount"] = sourceIds.Count.ToString(CultureInfo.InvariantCulture)
             }
         };
 
@@ -182,7 +183,7 @@ public sealed class InMemoryLineageTracker : IMemoryLineageTracker
             });
         }
 
-        _logger.LogDebug("Recorded merge of {SourceCount} memories into {MemoryId} by user {UserId}", sourceIds.Count, resultMemoryId, userId);
+        LogRecordedMergeSourceCountMemoriesInto(_logger, sourceIds.Count, resultMemoryId, userId);
 
         return Task.CompletedTask;
     }
@@ -275,4 +276,19 @@ public sealed class InMemoryLineageTracker : IMemoryLineageTracker
                 }
             });
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recorded creation for memory {MemoryId} by user {UserId}")]
+    private static partial void LogRecordedCreationMemoryMemoryIdUser(ILogger logger, Guid memoryId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recorded update ({ChangeType}) for memory {MemoryId} by user {UserId}")]
+    private static partial void LogRecordedUpdateChangeTypeMemoryMemoryId(ILogger logger, MemoryChangeType changeType, Guid memoryId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Trace, Message = "Recorded access ({AccessType}) for memory {MemoryId} by user {UserId}")]
+    private static partial void LogRecordedAccessAccessTypeMemoryMemoryId(ILogger logger, MemoryAccessType accessType, Guid memoryId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recorded deletion (hard={IsHardDelete}) for memory {MemoryId} by user {UserId}")]
+    private static partial void LogRecordedDeletionHardIsHardDeleteMemory(ILogger logger, bool isHardDelete, Guid memoryId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Recorded merge of {SourceCount} memories into {MemoryId} by user {UserId}")]
+    private static partial void LogRecordedMergeSourceCountMemoriesInto(ILogger logger, int sourceCount, Guid memoryId, string userId);
 }

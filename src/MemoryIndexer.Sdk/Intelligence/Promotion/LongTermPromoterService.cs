@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -21,7 +21,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 /// This represents the cognitive process where repeated, consistent
 /// episodic experiences become abstracted into semantic knowledge.
 /// </remarks>
-public sealed class LongTermPromoterService : ILongTermPromoter
+public sealed partial class LongTermPromoterService : ILongTermPromoter
 {
     private readonly IMemoryStore _memoryStore;
     private readonly ITierManager _tierManager;
@@ -91,9 +91,8 @@ public sealed class LongTermPromoterService : ILongTermPromoter
             });
         }
 
-        _logger.LogDebug(
-            "[ARCHIVE_PROMOTION] User {UserId}: {Total} Long tier memories, {Eligible} eligible for Archive",
-            userId, candidates.Count, candidates.Count(c => c.IsEligible));
+        var eligibleValue = candidates.Count(c => c.IsEligible);
+        LogARCHIVEPROMOTIONUserUserIdTotal(_logger, userId, candidates.Count, eligibleValue);
 
         return candidates;
     }
@@ -120,9 +119,7 @@ public sealed class LongTermPromoterService : ILongTermPromoter
 
             if (eligibleCandidates.Count == 0)
             {
-                _logger.LogDebug(
-                    "[ARCHIVE_PROMOTION] User {UserId}: No memories meet AND logic requirements",
-                    userId);
+                LogARCHIVEPROMOTIONUserUserIdMemories(_logger, userId);
 
                 return new ArchivePromotionResult
                 {
@@ -149,9 +146,7 @@ public sealed class LongTermPromoterService : ILongTermPromoter
                 }
             }
 
-            _logger.LogInformation(
-                "[ARCHIVE_PROMOTION] ✅ User {UserId}: Promoted {Count} memories to Archive tier (AND logic: confidence≥{Confidence}, confirms≥{Confirms})",
-                userId, promotedCount, _archiveOptions.MinConfidenceThreshold, _archiveOptions.MinConfirmationCount);
+            LogARCHIVEPROMOTIONUserUserIdPromoted(_logger, userId, promotedCount, _archiveOptions.MinConfidenceThreshold, _archiveOptions.MinConfirmationCount);
 
             return new ArchivePromotionResult
             {
@@ -164,7 +159,7 @@ public sealed class LongTermPromoterService : ILongTermPromoter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[ARCHIVE_PROMOTION] Error promoting memories for user {UserId}", userId);
+            LogARCHIVEPROMOTIONErrorPromotingMemories(_logger, ex, userId);
             return ArchivePromotionResult.Failure(ex.Message) with { Duration = sw.Elapsed };
         }
     }
@@ -224,9 +219,7 @@ public sealed class LongTermPromoterService : ILongTermPromoter
             FinalType = memory.Type
         };
 
-        _logger.LogDebug(
-            "[ARCHIVE_PROMOTION] Memory {MemoryId} promoted: Long→Archive (confidence={Confidence:F2}, confirms={Confirms})",
-            memory.Id, memory.Confidence, memory.ConfirmCount);
+        LogARCHIVEPROMOTIONMemoryMemoryIdPromoted(_logger, memory.Id, memory.Confidence, memory.ConfirmCount);
 
         return new ArchivePromotionResult
         {
@@ -256,4 +249,19 @@ public sealed class LongTermPromoterService : ILongTermPromoter
 
         return userIds;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[ARCHIVE_PROMOTION] User {UserId}: {Total} Long tier memories, {Eligible} eligible for Archive")]
+    private static partial void LogARCHIVEPROMOTIONUserUserIdTotal(ILogger logger, string userId, int total, int eligible);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[ARCHIVE_PROMOTION] User {UserId}: No memories meet AND logic requirements")]
+    private static partial void LogARCHIVEPROMOTIONUserUserIdMemories(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[ARCHIVE_PROMOTION] ✅ User {UserId}: Promoted {Count} memories to Archive tier (AND logic: confidence≥{Confidence}, confirms≥{Confirms})")]
+    private static partial void LogARCHIVEPROMOTIONUserUserIdPromoted(ILogger logger, string userId, int count, float confidence, double confirms);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "[ARCHIVE_PROMOTION] Error promoting memories for user {UserId}")]
+    private static partial void LogARCHIVEPROMOTIONErrorPromotingMemories(ILogger logger, Exception ex, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[ARCHIVE_PROMOTION] Memory {MemoryId} promoted: Long→Archive (confidence={Confidence:F2}, confirms={Confirms})")]
+    private static partial void LogARCHIVEPROMOTIONMemoryMemoryIdPromoted(ILogger logger, Guid memoryId, float confidence, double confirms);
 }

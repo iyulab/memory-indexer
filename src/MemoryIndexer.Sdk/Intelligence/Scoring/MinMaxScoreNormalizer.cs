@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.Scoring;
@@ -8,7 +8,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Scoring;
 /// Scales scores to 0-1 range linearly.
 /// Phase 21.2: Score Distribution Normalization.
 /// </summary>
-public sealed class MinMaxScoreNormalizer : IScoreNormalizer
+public sealed partial class MinMaxScoreNormalizer : IScoreNormalizer
 {
     private readonly ILogger<MinMaxScoreNormalizer> _logger;
     private NormalizationStats _stats = new() { Strategy = NormalizationStrategy.MinMax };
@@ -50,7 +50,7 @@ public sealed class MinMaxScoreNormalizer : IScoreNormalizer
                 memory.NormalizedScore = 0.5f;
             }
             _stats.NormalizedSpread = 0f;
-            _logger.LogWarning("All scores identical (spread=0), normalized to 0.5");
+            LogAllScoresIdenticalSpreadNormalized(_logger);
             return scoredMemories;
         }
 
@@ -62,11 +62,7 @@ public sealed class MinMaxScoreNormalizer : IScoreNormalizer
 
         _stats.NormalizedSpread = 1.0f; // Always 0-1 after min-max
 
-        _logger.LogDebug(
-            "MinMax normalized {Count} scores: spread {Original:F3} → {Normalized:F3}",
-            scoredMemories.Count,
-            _stats.OriginalSpread,
-            _stats.NormalizedSpread);
+        LogMinMaxNormalizedCountScoresSpread(_logger, scoredMemories.Count, _stats.OriginalSpread, _stats.NormalizedSpread);
 
         return scoredMemories.OrderByDescending(m => m.NormalizedScore).ToList();
     }
@@ -80,4 +76,10 @@ public sealed class MinMaxScoreNormalizer : IScoreNormalizer
         var variance = values.Average(v => MathF.Pow(v - mean, 2));
         return MathF.Sqrt(variance);
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "All scores identical (spread=0), normalized to 0.5")]
+    private static partial void LogAllScoresIdenticalSpreadNormalized(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "MinMax normalized {Count} scores: spread {Original:F3} → {Normalized:F3}")]
+    private static partial void LogMinMaxNormalizedCountScoresSpread(ILogger logger, int count, float original, float normalized);
 }

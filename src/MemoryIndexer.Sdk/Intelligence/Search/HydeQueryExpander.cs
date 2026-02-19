@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
@@ -102,10 +103,9 @@ public sealed partial class HydeQueryExpander : IHydeQueryExpander
     {
         var hypotheticalDoc = GenerateHypotheticalDocument(query);
 
-        _logger.LogDebug(
-            "HyDE: Query '{Query}' → Hypothetical '{Hypothetical}'",
-            query.Length > 50 ? query[..50] + "..." : query,
-            hypotheticalDoc.Length > 80 ? hypotheticalDoc[..80] + "..." : hypotheticalDoc);
+        var truncatedQuery = query.Length > 50 ? query[..50] + "..." : query;
+        var truncatedDoc = hypotheticalDoc.Length > 80 ? hypotheticalDoc[..80] + "..." : hypotheticalDoc;
+        LogHydeQueryToHypothetical(_logger, truncatedQuery, truncatedDoc);
 
         return await _embeddingService.GenerateEmbeddingAsync(hypotheticalDoc, cancellationToken);
     }
@@ -118,10 +118,8 @@ public sealed partial class HydeQueryExpander : IHydeQueryExpander
     {
         var hypotheticalDocs = GenerateMultipleHypotheticalDocuments(query, count);
 
-        _logger.LogDebug(
-            "HyDE: Generated {Count} hypothetical documents for '{Query}'",
-            hypotheticalDocs.Count,
-            query.Length > 50 ? query[..50] + "..." : query);
+        var truncatedQuery = query.Length > 50 ? query[..50] + "..." : query;
+        LogHydeGeneratedDocuments(_logger, hypotheticalDocs.Count, truncatedQuery);
 
         var embeddings = await _embeddingService.GenerateBatchEmbeddingsAsync(
             hypotheticalDocs, cancellationToken);
@@ -270,22 +268,22 @@ public sealed partial class HydeQueryExpander : IHydeQueryExpander
         var cleaned = QuestionWordPattern().Replace(lowerQuery, "").Trim();
 
         // Handle "is/are" questions
-        if (lowerQuery.StartsWith("is ") || lowerQuery.StartsWith("are "))
+        if (lowerQuery.StartsWith("is ", StringComparison.Ordinal) || lowerQuery.StartsWith("are ", StringComparison.Ordinal))
         {
             cleaned = lowerQuery[lowerQuery.IndexOf(' ')..].Trim();
-            statement.Append(char.ToUpper(cleaned[0]) + cleaned[1..]);
+            statement.Append(char.ToUpper(cleaned[0], CultureInfo.InvariantCulture) + cleaned[1..]);
             statement.Append(" is confirmed.");
         }
         // Handle "do/does" questions
-        else if (lowerQuery.StartsWith("do ") || lowerQuery.StartsWith("does "))
+        else if (lowerQuery.StartsWith("do ", StringComparison.Ordinal) || lowerQuery.StartsWith("does ", StringComparison.Ordinal))
         {
             cleaned = lowerQuery[(lowerQuery.IndexOf(' ') + 1)..].Trim();
-            statement.Append(char.ToUpper(cleaned[0]) + cleaned[1..]);
+            statement.Append(char.ToUpper(cleaned[0], CultureInfo.InvariantCulture) + cleaned[1..]);
             statement.Append('.');
         }
         // Handle "can/could/will/would" questions
-        else if (lowerQuery.StartsWith("can ") || lowerQuery.StartsWith("could ") ||
-                 lowerQuery.StartsWith("will ") || lowerQuery.StartsWith("would "))
+        else if (lowerQuery.StartsWith("can ", StringComparison.Ordinal) || lowerQuery.StartsWith("could ", StringComparison.Ordinal) ||
+                 lowerQuery.StartsWith("will ", StringComparison.Ordinal) || lowerQuery.StartsWith("would ", StringComparison.Ordinal))
         {
             cleaned = lowerQuery[(lowerQuery.IndexOf(' ') + 1)..].Trim();
             statement.Append("It is possible that ");
@@ -340,6 +338,12 @@ public sealed partial class HydeQueryExpander : IHydeQueryExpander
 
     [GeneratedRegex(@"^(?:what|who|where|when|why|how|which|is|are|do|does|did|can|could|will|would)\s+", RegexOptions.IgnoreCase)]
     private static partial Regex QuestionWordPattern();
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE: Query '{Query}' -> Hypothetical '{Hypothetical}'")]
+    private static partial void LogHydeQueryToHypothetical(ILogger logger, string query, string hypothetical);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE: Generated {Count} hypothetical documents for '{Query}'")]
+    private static partial void LogHydeGeneratedDocuments(ILogger logger, int count, string query);
 
     /// <summary>
     /// Extracted terms from query analysis.

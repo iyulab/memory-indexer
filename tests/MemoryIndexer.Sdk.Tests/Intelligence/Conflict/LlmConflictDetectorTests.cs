@@ -2,7 +2,8 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Conflict;
@@ -13,14 +14,14 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Conflict;
 /// </summary>
 public sealed class LlmConflictDetectorTests
 {
-    private readonly Mock<ITextCompletionService> _mockCompletion;
+    private readonly ITextCompletionService _mockCompletion;
     private readonly LlmConflictDetector _detector;
 
     public LlmConflictDetectorTests()
     {
-        _mockCompletion = new Mock<ITextCompletionService>();
+        _mockCompletion = Substitute.For<ITextCompletionService>();
         _detector = new LlmConflictDetector(
-            _mockCompletion.Object,
+            _mockCompletion,
             NullLogger<LlmConflictDetector>.Instance);
     }
 
@@ -40,12 +41,11 @@ public sealed class LlmConflictDetectorTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -73,12 +73,11 @@ public sealed class LlmConflictDetectorTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -104,12 +103,11 @@ public sealed class LlmConflictDetectorTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -135,12 +133,11 @@ public sealed class LlmConflictDetectorTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -166,12 +163,11 @@ public sealed class LlmConflictDetectorTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -197,12 +193,11 @@ public sealed class LlmConflictDetectorTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -231,12 +226,11 @@ public sealed class LlmConflictDetectorTests
             ```
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -256,12 +250,11 @@ public sealed class LlmConflictDetectorTests
 
         var llmResponse = "This is not valid JSON at all!";
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -280,12 +273,11 @@ public sealed class LlmConflictDetectorTests
         var newMemory = CreateMemory("test content");
         var existingMemory = CreateMemory("existing content");
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("API error"));
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("API error"));
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
@@ -325,12 +317,11 @@ public sealed class LlmConflictDetectorTests
             }
             """;
 
-        _mockCompletion
-            .Setup(c => c.CompleteAsync(
-                It.IsAny<string>(),
-                It.IsAny<TextCompletionOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(llmResponse);
+        _mockCompletion.CompleteAsync(
+                Arg.Any<string>(),
+                Arg.Any<TextCompletionOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(llmResponse);
 
         // Act
         var result = await _detector.AnalyzeAsync(newMemory, existingMemory);

@@ -57,7 +57,7 @@ public sealed class BenchmarkRunner(
     /// <summary>
     /// Output results to console and optionally to JSON file.
     /// </summary>
-    public async Task OutputResultsAsync(AggregateBenchmarkResult result, string? outputPath)
+    public static async Task OutputResultsAsync(AggregateBenchmarkResult result, string? outputPath)
     {
         Console.WriteLine();
         Console.WriteLine(new string('═', 70));
@@ -114,7 +114,7 @@ public sealed class BenchmarkRunner(
             TotalGames = games.Count,
             Wins = wins,
             Losses = games.Count - wins,
-            AvgRoundsToWin = winningGames.Any() ? winningGames.Average(g => g.RoundsPlayed) : 20,
+            AvgRoundsToWin = winningGames.Count != 0 ? winningGames.Average(g => g.RoundsPlayed) : 20,
             AvgRecallPrecision = games.Average(g => g.RecallPrecision),
             AvgTokensPerGame = games.Average(g => g.TotalTokens),
             AvgLlmMs = games.Average(g => g.TotalLlmMs),

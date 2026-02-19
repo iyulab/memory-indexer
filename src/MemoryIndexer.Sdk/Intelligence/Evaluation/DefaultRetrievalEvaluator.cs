@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Utilities;
 using Microsoft.Extensions.Logging;
@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Evaluation;
 /// Default implementation of retrieval evaluator.
 /// Uses embedding-based similarity for basic metrics, with optional LLM integration for advanced metrics.
 /// </summary>
-public sealed class DefaultRetrievalEvaluator : IRetrievalEvaluator
+public sealed partial class DefaultRetrievalEvaluator : IRetrievalEvaluator
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<DefaultRetrievalEvaluator> _logger;
@@ -153,7 +153,7 @@ public sealed class DefaultRetrievalEvaluator : IRetrievalEvaluator
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to evaluate case {CaseId}", evaluation.Id);
+                LogFailedEvaluateCaseCaseId(_logger, ex, evaluation.Id);
                 caseResults.Add(new CaseResult
                 {
                     CaseId = evaluation.Id,
@@ -418,4 +418,7 @@ public sealed class DefaultRetrievalEvaluator : IRetrievalEvaluator
         // Shuffle and combine
         return string.Join(" ", keyWords.OrderBy(_ => random.Next()));
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to evaluate case {CaseId}")]
+    private static partial void LogFailedEvaluateCaseCaseId(ILogger logger, Exception ex, string caseId);
 }

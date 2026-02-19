@@ -5,7 +5,7 @@ using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Classification;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Classification;
@@ -15,13 +15,13 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Classification;
 /// </summary>
 public class MemoryTypeBalancerTests
 {
-    private readonly Mock<IMemoryStore> _mockStore;
-    private readonly IMemoryTypeBalancer _balancer;
+    private readonly IMemoryStore _mockStore;
+    private readonly MemoryTypeBalancer _balancer;
     private readonly TypeBalancerOptions _options;
 
     public MemoryTypeBalancerTests()
     {
-        _mockStore = new Mock<IMemoryStore>();
+        _mockStore = Substitute.For<IMemoryStore>();
 
         _options = new TypeBalancerOptions
         {
@@ -45,7 +45,7 @@ public class MemoryTypeBalancerTests
         };
 
         _balancer = new MemoryTypeBalancer(
-            _mockStore.Object,
+            _mockStore,
             Options.Create(indexerOptions),
             NullLogger<MemoryTypeBalancer>.Instance);
     }
@@ -64,8 +64,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 5        // 5%
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
@@ -89,8 +89,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 5
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var boost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1");
@@ -111,8 +111,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 10
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
@@ -133,8 +133,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 0
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
@@ -153,7 +153,7 @@ public class MemoryTypeBalancerTests
         };
 
         var disabledBalancer = new MemoryTypeBalancer(
-            _mockStore.Object,
+            _mockStore,
             Options.Create(disabledOptions),
             NullLogger<MemoryTypeBalancer>.Instance);
 
@@ -163,8 +163,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Procedural] = 5
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var boost = await disabledBalancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
@@ -185,8 +185,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 10       // 10%
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var boost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1");
@@ -213,8 +213,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 5
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var distribution = await _balancer.GetTypeDistributionAsync("user1");
@@ -235,8 +235,8 @@ public class MemoryTypeBalancerTests
     public async Task GetTypeDistributionAsync_NoMemories_ReturnsEmptyDictionary()
     {
         // Arrange
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(new Dictionary<MemoryType, int>());
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(new Dictionary<MemoryType, int>());
 
         // Act
         var distribution = await _balancer.GetTypeDistributionAsync("user1");
@@ -254,8 +254,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Episodic] = 100
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var distribution = await _balancer.GetTypeDistributionAsync("user1");
@@ -281,8 +281,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 2
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(expectedCounts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(expectedCounts);
 
         // Act
         var counts = await _balancer.GetTypeCountsAsync("user1");
@@ -307,8 +307,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 2        // 2%
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var episodicBoost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1");
@@ -347,8 +347,8 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 9        // 9% (target 10%)
         };
 
-        _mockStore.Setup(s => s.GetTypeCountsAsync("user1", default))
-            .ReturnsAsync(counts);
+        _mockStore.GetTypeCountsAsync("user1", default)
+            .Returns(counts);
 
         // Act
         var allBoosts = new Dictionary<MemoryType, float>();

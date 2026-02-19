@@ -1,4 +1,4 @@
-using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
@@ -10,7 +10,7 @@ namespace MemoryIndexer.Sdk.Intelligence.SelfEditing;
 /// Implements MemGPT-style self-editing memory management.
 /// Enables LLMs to manage their own context through structured memory operations.
 /// </summary>
-public sealed class MemGPTStyleMemoryManager : ISelfEditingMemoryService
+public sealed partial class MemGPTStyleMemoryManager : ISelfEditingMemoryService
 {
     private readonly MemoryService _memoryService;
     private readonly IEmbeddingService _embeddingService;
@@ -78,8 +78,7 @@ public sealed class MemGPTStyleMemoryManager : ISelfEditingMemoryService
             UpdateTokenCount(state);
         }
 
-        _logger.LogDebug("Replaced working memory at {Location}, previous length: {PrevLen}, new length: {NewLen}",
-            location, previousContent?.Length ?? 0, newContent.Length);
+        LogReplacedWorkingMemoryLocationPrevious(_logger, location, previousContent?.Length ?? 0, newContent.Length);
 
         return Task.FromResult(new MemoryOperationResult
         {
@@ -104,8 +103,8 @@ public sealed class MemGPTStyleMemoryManager : ISelfEditingMemoryService
             metadata: metadata,
             cancellationToken: cancellationToken);
 
-        _logger.LogDebug("Archived memory {MemoryId} with {Tokens} estimated tokens",
-            storedMemory.Id, EstimateTokens(content));
+        var tokensValue = EstimateTokens(content);
+        LogArchivedMemoryMemoryIdTokensEstimated(_logger, storedMemory.Id, tokensValue);
 
         return new ArchivalInsertResult
         {
@@ -140,8 +139,7 @@ public sealed class MemGPTStyleMemoryManager : ISelfEditingMemoryService
             })
             .ToList();
 
-        _logger.LogDebug("Searched archival memory for '{Query}', found {Count} results",
-            query, results.Count);
+        LogSearchedArchivalMemoryQueryFound(_logger, query, results.Count);
 
         return results;
     }
@@ -325,8 +323,7 @@ public sealed class MemGPTStyleMemoryManager : ISelfEditingMemoryService
         result.MemoriesConsolidated = 1;
         result.Insights = insights;
 
-        _logger.LogInformation("Performed reflection for session {SessionId}, freed {Tokens} tokens",
-            sessionId, result.TokensFreed);
+        LogPerformedReflectionSessionSessionIdFreed(_logger, sessionId, result.TokensFreed);
 
         return result;
     }
@@ -501,4 +498,16 @@ public sealed class MemGPTStyleMemoryManager : ISelfEditingMemoryService
         public float AccumulatedImportance { get; set; }
         public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Replaced working memory at {Location}, previous length: {PrevLen}, new length: {NewLen}")]
+    private static partial void LogReplacedWorkingMemoryLocationPrevious(ILogger logger, string location, int prevLen, int newLen);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Archived memory {MemoryId} with {Tokens} estimated tokens")]
+    private static partial void LogArchivedMemoryMemoryIdTokensEstimated(ILogger logger, Guid memoryId, int tokens);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Searched archival memory for '{Query}', found {Count} results")]
+    private static partial void LogSearchedArchivalMemoryQueryFound(ILogger logger, string query, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Performed reflection for session {SessionId}, freed {Tokens} tokens")]
+    private static partial void LogPerformedReflectionSessionSessionIdFreed(ILogger logger, string sessionId, int tokens);
 }

@@ -4,6 +4,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Mock;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -16,7 +17,7 @@ namespace MemoryIndexer.Tests.Interfaces;
 /// </summary>
 public class IScopeManagerTests
 {
-    private static IScopeManager CreateScopeManager()
+    private static ScopeManager CreateScopeManager()
     {
         var memoryIndexerOptions = Options.Create(new MemoryIndexerOptions());
         var embeddingLogger = NullLogger<MockEmbeddingService>.Instance;
@@ -356,7 +357,7 @@ public class IScopeManagerTests
 
     #endregion
 
-    #region DetectTopicChangeAsync Tests (3 tests)
+    #region DetectTopicChangeAsync Tests (8 tests)
 
     [Fact]
     public async Task DetectTopicChangeAsync_EmptyHistory_ShouldReturnFalse()
@@ -373,18 +374,52 @@ public class IScopeManagerTests
     }
 
     [Fact]
-    public async Task DetectTopicChangeAsync_ShouldNotThrow()
+    public async Task DetectTopicChangeAsync_SingleTurn_ShouldReturnFalse()
     {
-        // Arrange
+        // Arrange - Only 1 turn in history (needs >= 2 for comparison)
         var scopeManager = CreateScopeManager();
         await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("Discussing the weather");
+        await scopeManager.RecordTurnAsync("First turn about weather");
 
         // Act
-        var act = async () => await scopeManager.DetectTopicChangeAsync("More about weather patterns");
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("More about weather");
+
+        // Assert - Not enough history for comparison
+        topicChanged.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DetectTopicChangeAsync_SameContent_ShouldReturnFalse()
+    {
+        // Arrange - Record identical content twice to build history
+        var scopeManager = CreateScopeManager();
+        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.RecordTurnAsync("Discussing the weather today");
+        await scopeManager.RecordTurnAsync("Discussing the weather today");
+
+        // Act - Same content should have high similarity → no topic change
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("Discussing the weather today");
 
         // Assert
-        await act.Should().NotThrowAsync();
+        topicChanged.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DetectTopicChangeAsync_DifferentContent_ShouldDetectTopicChange()
+    {
+        // Arrange - Build history with consistent topic
+        var scopeManager = CreateScopeManager();
+        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.RecordTurnAsync("The weather is sunny and warm");
+        await scopeManager.RecordTurnAsync("The weather is sunny and warm");
+
+        // Act - Completely different content should have low similarity
+        var topicChanged = await scopeManager.DetectTopicChangeAsync(
+            "Quantum entanglement in photonic systems with high-dimensional Hilbert spaces");
+
+        // Assert - With 768-dim random unit vectors from MockEmbeddingService,
+        // different texts should have cosine similarity near 0 (< 0.5 threshold)
+        topicChanged.Should().BeTrue();
     }
 
     [Fact]
@@ -394,12 +429,73 @@ public class IScopeManagerTests
         var scopeManager = CreateScopeManager();
         await scopeManager.InitializeAsync("user1", "session1");
         await scopeManager.RecordTurnAsync("Topic one");
+        await scopeManager.RecordTurnAsync("Topic one continued");
 
         // Act
         var topicChanged = await scopeManager.DetectTopicChangeAsync("Topic two");
 
-        // Assert - Verify it's a boolean (true or false)
+        // Assert
         Assert.IsType<bool>(topicChanged);
+    }
+
+    [Fact]
+    public async Task DetectTopicChangeAsync_ViaRecordTurn_ShouldDetectTopicTransition()
+    {
+        // Arrange - Build history with consistent topic
+        var scopeManager = CreateScopeManager();
+        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.RecordTurnAsync("The weather is sunny and warm");
+        await scopeManager.RecordTurnAsync("The weather is sunny and warm");
+
+        // Act - RecordTurnAsync calls DetectTopicChangeAsync internally
+        var resolution = await scopeManager.RecordTurnAsync(
+            "Advanced quantum computing algorithms for molecular simulation");
+
+        // Assert - Topic transition should be detected
+        resolution.BoundaryType.Should().Be(ScopeBoundaryType.Topic);
+        scopeManager.CurrentState.TopicTransitionCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DetectTopicChangeAsync_HighThreshold_ShouldAlwaysDetectChange()
+    {
+        // Arrange - Set very high threshold (almost always triggers topic change)
+        var embeddingService = new MockEmbeddingService(
+            Options.Create(new MemoryIndexerOptions()),
+            NullLogger<MockEmbeddingService>.Instance);
+        var options = Options.Create(new ScopeManagerOptions { TopicSimilarityThreshold = 0.99f });
+        var scopeManager = new ScopeManager(embeddingService, options, NullLogger<ScopeManager>.Instance);
+
+        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.RecordTurnAsync("Weather discussion");
+        await scopeManager.RecordTurnAsync("Weather discussion");
+
+        // Act - Even similar-ish content should trigger with very high threshold
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("Weather discussion topic");
+
+        // Assert - High threshold (0.99) means even slightly different content triggers change
+        topicChanged.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DetectTopicChangeAsync_SameContent_WithLowThreshold_ShouldNotChange()
+    {
+        // Arrange - Low threshold with identical content
+        var embeddingService = new MockEmbeddingService(
+            Options.Create(new MemoryIndexerOptions()),
+            NullLogger<MockEmbeddingService>.Instance);
+        var options = Options.Create(new ScopeManagerOptions { TopicSimilarityThreshold = 0.5f });
+        var scopeManager = new ScopeManager(embeddingService, options, NullLogger<ScopeManager>.Instance);
+
+        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.RecordTurnAsync("Exact same content for testing");
+        await scopeManager.RecordTurnAsync("Exact same content for testing");
+
+        // Act - Identical content → cosine similarity = 1.0 → no topic change
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("Exact same content for testing");
+
+        // Assert
+        topicChanged.Should().BeFalse();
     }
 
     #endregion

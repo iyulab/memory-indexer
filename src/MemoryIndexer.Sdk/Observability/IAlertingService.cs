@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Observability;
 
@@ -68,7 +68,7 @@ public interface IAlertingService
 /// <summary>
 /// Alert rule definition.
 /// </summary>
-public sealed class AlertRule
+public sealed partial class AlertRule
 {
     /// <summary>
     /// Rule ID.
@@ -318,7 +318,7 @@ public sealed class ConsoleNotificationChannel : INotificationChannel
 /// <summary>
 /// Log notification channel.
 /// </summary>
-public sealed class LogNotificationChannel : INotificationChannel
+public sealed partial class LogNotificationChannel : INotificationChannel
 {
     private readonly Microsoft.Extensions.Logging.ILogger _logger;
 
@@ -334,21 +334,33 @@ public sealed class LogNotificationChannel : INotificationChannel
         switch (alert.Severity)
         {
             case AlertSeverity.Critical:
-                _logger.LogCritical("[{Source}] {Title}: {Message}", alert.Source, alert.Title, alert.Message);
+                LogSourceTitleMessage(_logger, alert.Source, alert.Title, alert.Message);
                 break;
             case AlertSeverity.Error:
-                _logger.LogError("[{Source}] {Title}: {Message}", alert.Source, alert.Title, alert.Message);
+                LogSourceTitleMessage2(_logger, alert.Source, alert.Title, alert.Message);
                 break;
             case AlertSeverity.Warning:
-                _logger.LogWarning("[{Source}] {Title}: {Message}", alert.Source, alert.Title, alert.Message);
+                LogSourceTitleMessage3(_logger, alert.Source, alert.Title, alert.Message);
                 break;
             default:
-                _logger.LogInformation("[{Source}] {Title}: {Message}", alert.Source, alert.Title, alert.Message);
+                LogSourceTitleMessage4(_logger, alert.Source, alert.Title, alert.Message);
                 break;
         }
 
         return Task.FromResult(true);
     }
+
+    [LoggerMessage(Level = LogLevel.Critical, Message = "[{Source}] {Title}: {Message}")]
+    private static partial void LogSourceTitleMessage(ILogger logger, string source, object title, string message);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "[{Source}] {Title}: {Message}")]
+    private static partial void LogSourceTitleMessage2(ILogger logger, string source, object title, string message);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[{Source}] {Title}: {Message}")]
+    private static partial void LogSourceTitleMessage3(ILogger logger, string source, object title, string message);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[{Source}] {Title}: {Message}")]
+    private static partial void LogSourceTitleMessage4(ILogger logger, string source, object title, string message);
 }
 
 /// <summary>

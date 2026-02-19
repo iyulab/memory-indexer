@@ -407,7 +407,7 @@ public class SimpleMemoryServiceTests
 
     #region Helper Classes
 
-    private class MockMemoryPrimitives : IMemoryPrimitives
+    private sealed class MockMemoryPrimitives : IMemoryPrimitives
     {
         public List<MemoryUnit> EncodedMemories { get; } = new();
         public List<MemoryUnit> StoredMemories { get; } = new();
@@ -498,7 +498,7 @@ public class SimpleMemoryServiceTests
         public Task<ConfirmResult> ConfirmAsync(ConfirmRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
-    private class MockMemoryClassifier : IMemoryClassifier
+    private sealed class MockMemoryClassifier : IMemoryClassifier
     {
         public Tier Tier { get; set; } = Tier.Archive;
         public MemoryType Type { get; set; } = MemoryType.Fact;
@@ -525,7 +525,7 @@ public class SimpleMemoryServiceTests
         }
     }
 
-    private class MockScopeManager : IScopeManager
+    private sealed class MockScopeManager : IScopeManager
     {
         public ScopeState CurrentState { get; } = new ScopeState();
         public bool IsInitialized { get; private set; }
