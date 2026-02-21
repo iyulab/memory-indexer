@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Exclude nested project build artifacts (Intelligence/, Mcp/ have their own csproj) -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);**/bin/**;**/obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <Description>Memory Indexer SDK - Full-featured long-term memory management for LLM applications via MCP. Includes InMemory/SQLite storage, extensible embedding/completion interfaces, and OpenTelemetry observability.</Description>
     <PackageTags>mcp;memory;sdk;llm;ai;vector-search;semantic-search;opentelemetry;observability</PackageTags>
     <IsPackable>true</IsPackable>
