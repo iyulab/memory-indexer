@@ -1,5 +1,7 @@
 using MemoryIndexer.Models;
 
+#pragma warning disable CA1716 // Identifiers should not match keywords - 'namespace' parameter is intentional for memory namespace scoping
+
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
@@ -30,11 +32,13 @@ public interface IVirtualContextManager
     /// <param name="userId">The user ID.</param>
     /// <param name="sessionId">The session ID.</param>
     /// <param name="initialContext">Optional initial context for memory retrieval.</param>
+    /// <param name="namespace">Optional namespace for memory partitioning.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task InitializeAsync(
         string userId,
         string sessionId,
         string? initialContext = null,
+        string? @namespace = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -142,6 +146,11 @@ public sealed class VirtualContextState
     /// Current session ID.
     /// </summary>
     public string? SessionId { get; set; }
+
+    /// <summary>
+    /// Current namespace (null = no namespace partitioning).
+    /// </summary>
+    public string? Namespace { get; set; }
 
     /// <summary>
     /// Current context saturation level.

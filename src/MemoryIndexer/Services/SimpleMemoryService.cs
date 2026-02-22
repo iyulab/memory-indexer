@@ -51,7 +51,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         // Level 0: Zero-Config - create implicit session
         var sessionId = GetOrCreateImplicitSession(userId);
 
-        await RememberAsync(userId, sessionId, content, role, cancellationToken);
+        await RememberAsync(userId, sessionId, content, role, @namespace: null, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -60,6 +60,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         string sessionId,
         string content,
         string? role = null,
+        string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -114,6 +115,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         {
             UserId = userId,
             SessionId = sessionId,
+            Namespace = @namespace,
             Role = effectiveRole,  // Preserve role for episodic memories
             Content = content,
             Type = classification.Type,
@@ -134,6 +136,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         string? sessionId,
         string query,
         int limit = 10,
+        string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -151,6 +154,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         {
             UserId = userId,
             SessionId = sessionId,
+            Namespace = @namespace,
             Query = query,
             Limit = limit,
             MinScore = 0.3f
@@ -281,6 +285,41 @@ public sealed partial class SimpleMemoryService : IMemoryService
         LogDeletedSessionMemories(_logger, sessionMemories.Count);
     }
 
+    /// <inheritdoc />
+    public async Task ForgetNamespaceAsync(
+        string userId,
+        string @namespace,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(@namespace);
+
+        LogForgetNamespaceAsync(_logger, userId, @namespace);
+
+        var retrieveRequest = new RetrieveRequest
+        {
+            UserId = userId,
+            Namespace = @namespace,
+            Query = "*",
+            Limit = 10000,
+            MinScore = 0.0f
+        };
+
+        var results = await _primitives.RetrieveAsync(retrieveRequest, cancellationToken);
+
+        foreach (var result in results)
+        {
+            var deleteRequest = new DeleteRequest
+            {
+                MemoryId = result.Memory.Id,
+                HardDelete = true
+            };
+            await _primitives.DeleteAsync(deleteRequest, cancellationToken);
+        }
+
+        LogDeletedNamespaceMemories(_logger, results.Count, @namespace);
+    }
+
     #region Helper Methods
 
     /// <summary>
@@ -352,4 +391,10 @@ public sealed partial class SimpleMemoryService : IMemoryService
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Created implicit session: {SessionId} for user {UserId}")]
     private static partial void LogCreatedImplicitSession(ILogger logger, string sessionId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "ForgetNamespaceAsync: UserId={UserId}, Namespace={Namespace}")]
+    private static partial void LogForgetNamespaceAsync(ILogger logger, string userId, string @namespace);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Deleted {Count} memories for namespace {Namespace}")]
+    private static partial void LogDeletedNamespaceMemories(ILogger logger, int count, string @namespace);
 }

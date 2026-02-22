@@ -1,5 +1,7 @@
 using MemoryIndexer.Models;
 
+#pragma warning disable CA1716 // Identifiers should not match keywords - 'namespace' parameter is intentional for memory namespace scoping
+
 namespace MemoryIndexer.Interfaces;
 
 /// <summary>
@@ -55,6 +57,7 @@ public interface IMemoryService
     /// <param name="sessionId">Session identifier</param>
     /// <param name="content">Content to remember</param>
     /// <param name="role">Role of the message sender (user, assistant, system). Preserved for episodic memories.</param>
+    /// <param name="namespace">Optional namespace for memory isolation (e.g., "game:chess", "project:alpha")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Task representing the async operation</returns>
     /// <remarks>
@@ -70,6 +73,7 @@ public interface IMemoryService
         string sessionId,
         string content,
         string? role = null,
+        string? @namespace = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -80,6 +84,7 @@ public interface IMemoryService
     /// <param name="sessionId">Optional session identifier (null for user-wide recall)</param>
     /// <param name="query">Query text for semantic search</param>
     /// <param name="limit">Maximum number of memories to return (default: 10)</param>
+    /// <param name="namespace">Optional namespace filter for memory isolation (e.g., "game:chess", "project:alpha")</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>MemoryContext with scope-grouped memories</returns>
     /// <remarks>
@@ -101,6 +106,7 @@ public interface IMemoryService
         string? sessionId,
         string query,
         int limit = 10,
+        string? @namespace = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -154,5 +160,16 @@ public interface IMemoryService
     Task ForgetSessionAsync(
         string userId,
         string sessionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forgets all memories for a specific namespace within a user.
+    /// </summary>
+    /// <param name="userId">User identifier</param>
+    /// <param name="namespace">Namespace to forget</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task ForgetNamespaceAsync(
+        string userId,
+        string @namespace,
         CancellationToken cancellationToken = default);
 }

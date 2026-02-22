@@ -467,6 +467,9 @@ public class OptimizedRecallServiceTests : IDisposable
         public Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
+        public Task<int> DeleteByNamespaceAsync(string userId, string @namespace, bool hardDelete = false, CancellationToken cancellationToken = default)
+            => Task.FromResult(0);
+
         public Task<bool> UpdateAsync(MemoryUnit memory, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 

@@ -112,6 +112,11 @@ public sealed class WorkingMemoryContext
     public required string SessionId { get; init; }
 
     /// <summary>
+    /// Current namespace (null = no namespace partitioning).
+    /// </summary>
+    public string? Namespace { get; init; }
+
+    /// <summary>
     /// Current task or conversation context identifier.
     /// </summary>
     public string? TaskId { get; init; }

@@ -38,6 +38,7 @@ public sealed class MemoryTools(
         [Description("Importance score (0.0 to 1.0)")] float importance = 0.5f,
         [Description("Comma-separated tags for categorization")] string? tags = null,
         [Description("Session ID to group related memories")] string? sessionId = null,
+        [Description("Namespace for memory isolation (e.g., workspace or project ID)")] string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         // Check resource limits before storing (Phase v0.6.0-γ)
@@ -70,6 +71,7 @@ public sealed class MemoryTools(
             sessionId,
             Math.Clamp(importance, 0f, 1f),
             metadata,
+            @namespace,
             cancellationToken);
 
         // Record usage after successful store (Phase v0.6.0-γ)
@@ -103,6 +105,7 @@ public sealed class MemoryTools(
         [Description("Maximum results (1-20)")] int limit = 5,
         [Description("Filter by memory type: episodic, semantic, procedural, or fact")] string? type = null,
         [Description("Filter by session ID")] string? sessionId = null,
+        [Description("Filter by namespace")] string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         limit = Math.Clamp(limit, 1, 20);
@@ -120,6 +123,7 @@ public sealed class MemoryTools(
             sessionId,
             types,
             metadataFilter: null,
+            @namespace: @namespace,
             cancellationToken);
 
         return new RecallMemoryResult
@@ -134,7 +138,8 @@ public sealed class MemoryTools(
                 Score = r.Score,
                 Importance = r.Memory.ImportanceScore,
                 CreatedAt = r.Memory.CreatedAt,
-                AccessCount = r.Memory.AccessCount
+                AccessCount = r.Memory.AccessCount,
+                Namespace = r.Memory.Namespace
             }).ToList()
         };
     }
@@ -153,12 +158,14 @@ public sealed class MemoryTools(
         [Description("Maximum memories to return")] int limit = 50,
         [Description("Filter by memory type")] string? type = null,
         [Description("Filter by session ID")] string? sessionId = null,
+        [Description("Filter by namespace")] string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         var options = new MemoryFilterOptions
         {
             Limit = Math.Clamp(limit, 1, 100),
             SessionId = sessionId,
+            Namespace = @namespace,
             OrderBy = MemoryOrderBy.CreatedAtDesc
         };
 
@@ -183,7 +190,8 @@ public sealed class MemoryTools(
                 Score = m.ImportanceScore,
                 Importance = m.ImportanceScore,
                 CreatedAt = m.CreatedAt,
-                AccessCount = m.AccessCount
+                AccessCount = m.AccessCount,
+                Namespace = m.Namespace
             }).ToList()
         };
     }
@@ -327,6 +335,7 @@ public sealed class MemoryTools(
                 LastAccessedAt = memory.LastAccessedAt,
                 AccessCount = memory.AccessCount,
                 SessionId = memory.SessionId,
+                Namespace = memory.Namespace,
                 Topics = memory.Topics ?? [],
                 Entities = memory.Entities ?? [],
                 Metadata = memory.Metadata ?? []
@@ -452,6 +461,7 @@ public sealed class MemoryItem
     public float Importance { get; set; }
     public DateTime CreatedAt { get; set; }
     public int AccessCount { get; set; }
+    public string? Namespace { get; set; }
 }
 
 public sealed class MemoryDetail
@@ -465,6 +475,7 @@ public sealed class MemoryDetail
     public DateTime? LastAccessedAt { get; set; }
     public int AccessCount { get; set; }
     public string? SessionId { get; set; }
+    public string? Namespace { get; set; }
     public List<string> Topics { get; set; } = [];
     public List<string> Entities { get; set; } = [];
     public Dictionary<string, string> Metadata { get; set; } = [];

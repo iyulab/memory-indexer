@@ -32,6 +32,7 @@ public sealed partial class InstrumentedMemoryService
         string? sessionId = null,
         float? importance = null,
         Dictionary<string, string>? metadata = null,
+        string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         using var activity = MemoryIndexerTelemetry.StartOperation("MemoryStore", "store");
@@ -47,8 +48,12 @@ public sealed partial class InstrumentedMemoryService
             {
                 activity?.SetTag("memory.session_id", sessionId);
             }
+            if (@namespace != null)
+            {
+                activity?.SetTag("memory.namespace", @namespace);
+            }
 
-            var result = await _inner.StoreAsync(userId, content, type, sessionId, importance, metadata, cancellationToken);
+            var result = await _inner.StoreAsync(userId, content, type, sessionId, importance, metadata, @namespace, cancellationToken);
 
             sw.Stop();
             MemoryIndexerTelemetry.RecordStoreOperation(sw.Elapsed.TotalMilliseconds, 1, content.Length);
@@ -80,6 +85,7 @@ public sealed partial class InstrumentedMemoryService
         string? sessionId = null,
         MemoryType[]? types = null,
         Dictionary<string, string>? metadataFilter = null,
+        string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         using var activity = MemoryIndexerTelemetry.StartOperation("MemoryRecall", "recall");
@@ -94,6 +100,10 @@ public sealed partial class InstrumentedMemoryService
             {
                 activity?.SetTag("memory.session_id", sessionId);
             }
+            if (@namespace != null)
+            {
+                activity?.SetTag("memory.namespace", @namespace);
+            }
             if (types != null)
             {
                 activity?.SetTag("memory.type_filter", string.Join(",", types));
@@ -103,7 +113,7 @@ public sealed partial class InstrumentedMemoryService
                 activity?.SetTag("memory.metadata_filter_count", metadataFilter.Count);
             }
 
-            var results = await _inner.RecallAsync(userId, query, limit, sessionId, types, metadataFilter, cancellationToken);
+            var results = await _inner.RecallAsync(userId, query, limit, sessionId, types, metadataFilter, @namespace, cancellationToken);
 
             sw.Stop();
             var topScore = results.Count > 0 ? results[0].Score : (double?)null;

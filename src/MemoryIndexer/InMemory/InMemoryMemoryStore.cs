@@ -149,6 +149,33 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
     }
 
     /// <inheritdoc />
+    public Task<int> DeleteByNamespaceAsync(string userId, string namespaceName, bool hardDelete = false, CancellationToken cancellationToken = default)
+    {
+        var matches = _memories.Values
+            .Where(m => m.UserId == userId && m.Namespace == namespaceName && !m.IsDeleted)
+            .ToList();
+
+        var count = 0;
+        foreach (var memory in matches)
+        {
+            if (hardDelete)
+            {
+                if (_memories.TryRemove(memory.Id, out _))
+                    count++;
+            }
+            else
+            {
+                memory.IsDeleted = true;
+                memory.UpdatedAt = DateTime.UtcNow;
+                count++;
+            }
+        }
+
+        LogDeletedMemoriesForNamespace(logger, hardDelete ? "Hard" : "Soft", count, userId, namespaceName);
+        return Task.FromResult(count);
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<MemorySearchResult>> SearchAsync(
         ReadOnlyMemory<float> queryEmbedding,
         MemorySearchOptions options,
@@ -162,6 +189,9 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
 
         if (!string.IsNullOrEmpty(options.SessionId))
             query = query.Where(m => m.SessionId == options.SessionId);
+
+        if (!string.IsNullOrEmpty(options.Namespace))
+            query = query.Where(m => m.Namespace == options.Namespace);
 
         if (options.Types is { Length: > 0 })
             query = query.Where(m => options.Types.Contains(m.Type));
@@ -213,6 +243,9 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
         {
             if (!string.IsNullOrEmpty(options.SessionId))
                 query = query.Where(m => m.SessionId == options.SessionId);
+
+            if (!string.IsNullOrEmpty(options.Namespace))
+                query = query.Where(m => m.Namespace == options.Namespace);
 
             if (options.Types is { Length: > 0 })
                 query = query.Where(m => options.Types.Contains(m.Type));
@@ -305,6 +338,9 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted {Count} memories for user {UserId} session {SessionId}")]
     private static partial void LogDeletedMemoriesForSession(ILogger logger, string deleteType, int count, string userId, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted {Count} memories for user {UserId} namespace {Namespace}")]
+    private static partial void LogDeletedMemoriesForNamespace(ILogger logger, string deleteType, int count, string userId, string @namespace);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Search returned {Count} results")]
     private static partial void LogSearchResults(ILogger logger, int count);

@@ -139,6 +139,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
                 session_id TEXT,
+                namespace TEXT,
                 content TEXT NOT NULL,
                 content_hash TEXT,
                 type INTEGER NOT NULL DEFAULT 0,
@@ -171,6 +172,10 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
             CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_session ON {TableName}(user_id, session_id, created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_type ON {TableName}(user_id, type, created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_tier ON {TableName}(user_id, tier, created_at DESC);
+
+            -- Namespace indexes for namespace-scoped queries
+            CREATE INDEX IF NOT EXISTS idx_{TableName}_namespace ON {TableName}(namespace);
+            CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_namespace ON {TableName}(user_id, namespace, created_at DESC);
         ";
 
         await ExecuteNonQueryAsync(createTableSql, cancellationToken);
@@ -210,8 +215,8 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         var checkSql = $"PRAGMA table_info({TableName})";
         var hasTier = false;
         var hasScope = false;
-
         var hasRole = false;
+        var hasNamespace = false;
 
         using (var command = CreateCommand(checkSql))
         using (var reader = await command.ExecuteReaderAsync(cancellationToken))
@@ -222,6 +227,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
                 if (columnName == "tier") hasTier = true;
                 if (columnName == "scope") hasScope = true;
                 if (columnName == "role") hasRole = true;
+                if (columnName == "namespace") hasNamespace = true;
             }
         }
 
@@ -247,6 +253,13 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
             LogMigratedDatabaseAddedScopeColumn(_logger, TableName);
         }
 
+        if (!hasNamespace)
+        {
+            var alterSql = $"ALTER TABLE {TableName} ADD COLUMN namespace TEXT";
+            await ExecuteNonQueryAsync(alterSql, cancellationToken);
+            LogMigratedDatabaseAddedNamespaceColumn(_logger, TableName);
+        }
+
         // Create indexes if they don't exist
         if (!hasTier || !hasScope)
         {
@@ -254,6 +267,15 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
                 CREATE INDEX IF NOT EXISTS idx_{TableName}_tier ON {TableName}(tier);
                 CREATE INDEX IF NOT EXISTS idx_{TableName}_scope ON {TableName}(scope);
                 CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_tier ON {TableName}(user_id, tier, created_at DESC);
+            ";
+            await ExecuteNonQueryAsync(indexSql, cancellationToken);
+        }
+
+        if (!hasNamespace)
+        {
+            var indexSql = $@"
+                CREATE INDEX IF NOT EXISTS idx_{TableName}_namespace ON {TableName}(namespace);
+                CREATE INDEX IF NOT EXISTS idx_{TableName}_tenant_namespace ON {TableName}(user_id, namespace, created_at DESC);
             ";
             await ExecuteNonQueryAsync(indexSql, cancellationToken);
         }
@@ -351,11 +373,11 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
             // Role column added for multi-party conversation support
             var sql = $@"
                 INSERT OR REPLACE INTO {TableName} (
-                    id, user_id, session_id, content, content_hash, type, tier, scope, role,
+                    id, user_id, session_id, namespace, content, content_hash, type, tier, scope, role,
                     importance_score, access_count, created_at, updated_at,
                     last_accessed_at, is_deleted, topics, entities, metadata, embedding
                 ) VALUES (
-                    @id, @user_id, @session_id, @content, @content_hash, @type, @tier, @scope, @role,
+                    @id, @user_id, @session_id, @namespace, @content, @content_hash, @type, @tier, @scope, @role,
                     @importance_score, @access_count, @created_at, @updated_at,
                     @last_accessed_at, @is_deleted, @topics, @entities, @metadata, @embedding
                 )
@@ -399,11 +421,11 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
                 // Phase 49: Added tier and scope columns for 3-axis memory model
                 var sql = $@"
                     INSERT OR REPLACE INTO {TableName} (
-                        id, user_id, session_id, content, content_hash, type, tier, scope,
+                        id, user_id, session_id, namespace, content, content_hash, type, tier, scope,
                         importance_score, access_count, created_at, updated_at,
                         last_accessed_at, is_deleted, topics, entities, metadata, embedding
                     ) VALUES (
-                        @id, @user_id, @session_id, @content, @content_hash, @type, @tier, @scope,
+                        @id, @user_id, @session_id, @namespace, @content, @content_hash, @type, @tier, @scope,
                         @importance_score, @access_count, @created_at, @updated_at,
                         @last_accessed_at, @is_deleted, @topics, @entities, @metadata, @embedding
                     )
@@ -494,6 +516,11 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         if (!string.IsNullOrEmpty(options?.SessionId))
         {
             command.Parameters.AddWithValue("@session_id", options.SessionId);
+        }
+
+        if (!string.IsNullOrEmpty(options?.Namespace))
+        {
+            command.Parameters.AddWithValue("@namespace", options.Namespace);
         }
 
         // Role filter parameters for multi-party conversation support
@@ -610,6 +637,11 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
             command.Parameters.AddWithValue("@session_id", options.SessionId);
         }
 
+        if (!string.IsNullOrEmpty(options.Namespace))
+        {
+            command.Parameters.AddWithValue("@namespace", options.Namespace);
+        }
+
         // Role filter parameters for multi-party conversation support
         if (options.Roles?.Length > 0)
         {
@@ -654,6 +686,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
             UPDATE {TableName} SET
                 user_id = @user_id,
                 session_id = @session_id,
+                namespace = @namespace,
                 content = @content,
                 content_hash = @content_hash,
                 type = @type,
@@ -774,6 +807,37 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
 
         var deleteTypeValue = hardDelete ? "Hard" : "Soft";
         LogDeleteTypeDeletedCountMemoriesUser2(_logger, deleteTypeValue, rowsAffected, userId, sessionId);
+
+        return rowsAffected;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> DeleteByNamespaceAsync(string userId, string namespaceName, bool hardDelete = false, CancellationToken cancellationToken = default)
+    {
+        await EnsureCollectionExistsAsync(cancellationToken);
+
+        string sql;
+        if (hardDelete)
+        {
+            sql = $"DELETE FROM {TableName} WHERE user_id = @user_id AND namespace = @namespace";
+        }
+        else
+        {
+            sql = $"UPDATE {TableName} SET is_deleted = 1, updated_at = @updated_at WHERE user_id = @user_id AND namespace = @namespace AND is_deleted = 0";
+        }
+
+        using var command = CreateCommand(sql);
+        command.Parameters.AddWithValue("@user_id", userId);
+        command.Parameters.AddWithValue("@namespace", namespaceName);
+        if (!hardDelete)
+        {
+            command.Parameters.AddWithValue("@updated_at", DateTime.UtcNow.ToString("O"));
+        }
+
+        var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+
+        var deleteTypeValue = hardDelete ? "Hard" : "Soft";
+        LogDeleteTypeDeletedCountMemoriesNamespace(_logger, deleteTypeValue, rowsAffected, userId, namespaceName);
 
         return rowsAffected;
     }
@@ -1006,6 +1070,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         command.Parameters.AddWithValue("@id", memory.Id.ToString());
         command.Parameters.AddWithValue("@user_id", memory.UserId ?? string.Empty);
         command.Parameters.AddWithValue("@session_id", (object?)memory.SessionId ?? DBNull.Value);
+        command.Parameters.AddWithValue("@namespace", (object?)memory.Namespace ?? DBNull.Value);
         command.Parameters.AddWithValue("@content", memory.Content);
         command.Parameters.AddWithValue("@content_hash", (object?)memory.ContentHash ?? DBNull.Value);
         command.Parameters.AddWithValue("@type", (int)memory.Type);
@@ -1046,6 +1111,9 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
             SessionId = reader.IsDBNull(reader.GetOrdinal("session_id"))
                 ? null
                 : reader.GetString(reader.GetOrdinal("session_id")),
+            Namespace = reader.IsDBNull(reader.GetOrdinal("namespace"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("namespace")),
             Content = reader.GetString(reader.GetOrdinal("content")),
             ContentHash = reader.IsDBNull(reader.GetOrdinal("content_hash"))
                 ? null
@@ -1128,6 +1196,11 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         if (!string.IsNullOrEmpty(options?.SessionId))
         {
             conditions.Add("session_id = @session_id");
+        }
+
+        if (!string.IsNullOrEmpty(options?.Namespace))
+        {
+            conditions.Add("namespace = @namespace");
         }
 
         if (options?.Types?.Length > 0)
@@ -1219,6 +1292,11 @@ WITH tenant_scope AS (
             additionalConditions.Add("session_id = @session_id");
         }
 
+        if (!string.IsNullOrEmpty(options.Namespace))
+        {
+            additionalConditions.Add("namespace = @namespace");
+        }
+
         if (options.Types?.Length > 0)
         {
             var typeConditions = string.Join(" OR ", options.Types.Select(t => $"type = {(int)t}"));
@@ -1271,6 +1349,11 @@ ORDER BY created_at DESC";
         if (!string.IsNullOrEmpty(options.SessionId))
         {
             conditions.Add("session_id = @session_id");
+        }
+
+        if (!string.IsNullOrEmpty(options.Namespace))
+        {
+            conditions.Add("namespace = @namespace");
         }
 
         if (!options.IncludeDeleted)
@@ -1487,6 +1570,9 @@ ORDER BY created_at DESC";
     [LoggerMessage(Level = LogLevel.Information, Message = "Migrated database: added 'scope' column to {Table}")]
     private static partial void LogMigratedDatabaseAddedScopeColumn(ILogger logger, string table);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "Migrated database: added namespace column to {TableName}")]
+    private static partial void LogMigratedDatabaseAddedNamespaceColumn(ILogger logger, string tableName);
+
     [LoggerMessage(Level = LogLevel.Debug, Message = "FTS5 table created with tokenizer: {Tokenizer}")]
     private static partial void LogFTSTableCreatedTokenizerTokenizer(ILogger logger, string tokenizer);
 
@@ -1513,6 +1599,9 @@ ORDER BY created_at DESC";
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted {Count} memories for user {UserId} session {SessionId}")]
     private static partial void LogDeleteTypeDeletedCountMemoriesUser2(ILogger logger, string deleteType, int count, string userId, string sessionId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{DeleteType} deleted {Count} memories for user {UserId} namespace {Namespace}")]
+    private static partial void LogDeleteTypeDeletedCountMemoriesNamespace(ILogger logger, string deleteType, int count, string userId, string @namespace);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Full-text search is disabled")]
     private static partial void LogFullTextSearchDisabled(ILogger logger);
