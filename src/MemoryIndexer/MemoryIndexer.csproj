@@ -9,6 +9,12 @@
     <Title>Memory Indexer Core</Title>
     <PackageProjectUrl>https://github.com/iyulab/memory-indexer</PackageProjectUrl>
     <PackageReleaseNotes>
+v0.14.0:
+- Add Namespace dimension for sub-user memory isolation
+- Multi-workspace/multi-tenant support without userId workarounds
+- ForgetNamespaceAsync for namespace-scoped cleanup
+- Backward-compatible: null Namespace = existing behavior
+
 v0.4.0:
 - Cognitive terminology alignment (Buffer, Short-Term, Long-Term, Archive)
 - Documentation consolidation and cleanup

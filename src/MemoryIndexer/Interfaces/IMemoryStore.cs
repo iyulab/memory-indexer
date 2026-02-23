@@ -81,6 +81,16 @@ public interface IMemoryStore
     Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes all memories for a specific namespace within a user.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="namespaceName">The namespace.</param>
+    /// <param name="hardDelete">If true, permanently removes; if false, soft delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Number of memories deleted.</returns>
+    Task<int> DeleteByNamespaceAsync(string userId, string namespaceName, bool hardDelete = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Searches memories using semantic similarity.
     /// </summary>
     /// <param name="queryEmbedding">The query embedding vector.</param>
@@ -152,6 +162,11 @@ public sealed class MemorySearchOptions
     public string? SessionId { get; set; }
 
     /// <summary>
+    /// The namespace to filter by. Null means no namespace filtering.
+    /// </summary>
+    public string? Namespace { get; set; }
+
+    /// <summary>
     /// Maximum number of results to return.
     /// </summary>
     public int Limit { get; set; } = 5;
@@ -203,6 +218,11 @@ public sealed class MemoryFilterOptions
     /// The session ID to filter by.
     /// </summary>
     public string? SessionId { get; set; }
+
+    /// <summary>
+    /// The namespace to filter by. Null means no namespace filtering.
+    /// </summary>
+    public string? Namespace { get; set; }
 
     /// <summary>
     /// Memory types to include.

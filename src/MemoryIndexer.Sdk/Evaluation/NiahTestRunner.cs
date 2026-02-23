@@ -59,7 +59,7 @@ public class NiahTestRunner
                     userId,
                     sessionId,
                     segment,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
             }
             storeStopwatch.Stop();
             result.StoreLatencyMs = storeStopwatch.ElapsedMilliseconds;
@@ -72,7 +72,7 @@ public class NiahTestRunner
                 sessionId,
                 config.NeedleQuery,
                 config.RecallLimit,
-                cancellationToken);
+                cancellationToken: cancellationToken);
             recallStopwatch.Stop();
             result.RecallLatencyMs = recallStopwatch.ElapsedMilliseconds;
 
@@ -207,7 +207,7 @@ public class NiahTestRunner
                     userId,
                     sessionId,
                     segment,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
             }
             storeStopwatch.Stop();
             result.StoreLatencyMs = storeStopwatch.ElapsedMilliseconds;
@@ -230,7 +230,7 @@ public class NiahTestRunner
                             sessionId,
                             combinedQuery,
                             config.RecallLimit * config.Needles.Count, // Increase limit for multiple needles
-                            cancellationToken);
+                            cancellationToken: cancellationToken);
                         recallStopwatch.Stop();
                         totalRecallLatency = recallStopwatch.ElapsedMilliseconds;
 
@@ -275,7 +275,7 @@ public class NiahTestRunner
                                 sessionId,
                                 needle.Query,
                                 config.RecallLimit,
-                                cancellationToken);
+                                cancellationToken: cancellationToken);
                             recallStopwatch.Stop();
                             var queryLatency = recallStopwatch.ElapsedMilliseconds;
                             totalRecallLatency += queryLatency;

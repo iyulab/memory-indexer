@@ -189,6 +189,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         {
             UserId = request.UserId,
             SessionId = request.SessionId,
+            Namespace = request.Namespace,
             Content = request.Content,
             Embedding = embedding,
             Type = memoryType,
@@ -604,6 +605,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         {
             UserId = request.UserId,
             SessionId = request.SessionId,
+            Namespace = request.Namespace,
             Limit = request.Limit * candidateMultiplier, // Get extra for re-ranking/scoring
             Types = request.Types,
             MinScore = request.MinScore

@@ -189,6 +189,11 @@ public sealed class EncodeRequest
     public string? SessionId { get; init; }
 
     /// <summary>
+    /// Optional namespace for sub-user isolation.
+    /// </summary>
+    public string? Namespace { get; init; }
+
+    /// <summary>
     /// Role of the message sender (user, assistant, system).
     /// Preserved for episodic memories (T0-T2), abstracted for semantic (T3).
     /// </summary>
@@ -504,6 +509,11 @@ public sealed class RetrieveRequest
     /// Optional session ID filter.
     /// </summary>
     public string? SessionId { get; init; }
+
+    /// <summary>
+    /// Optional namespace filter.
+    /// </summary>
+    public string? Namespace { get; init; }
 
     /// <summary>
     /// Maximum results to return.

@@ -285,6 +285,7 @@ public sealed class ConflictResolutionTools
                     null, // sessionId
                     resolution.MergedItem.ImportanceScore,
                     null, // metadata
+                    @namespace: null,
                     cancellationToken);
                 result.ActionsApplied = (result.ActionsApplied ?? []).Concat(
                     [$"Created merged memory: {stored.Id}"]).ToList();

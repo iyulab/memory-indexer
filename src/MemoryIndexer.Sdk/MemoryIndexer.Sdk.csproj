@@ -14,6 +14,12 @@
     <Title>Memory Indexer SDK</Title>
     <PackageProjectUrl>https://github.com/iyulab/memory-indexer</PackageProjectUrl>
     <PackageReleaseNotes>
+v0.14.0:
+- Add Namespace dimension for sub-user memory isolation
+- SQLite schema migration (namespace column + indexes, backward-compatible)
+- MCP tools: StoreMemory/RecallMemory/GetAllMemories support namespace parameter
+- VirtualContextManager namespace-aware pageIn/consolidate/endSession
+
 v0.4.0:
 - Removed LMSupply dependency - embedding/completion services are now externally injected
 - Pure interface-based design for IEmbeddingService, ITextCompletionService, IRerankerService

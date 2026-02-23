@@ -35,6 +35,15 @@ public sealed class MemoryUnit
     public string? SessionId { get; set; }
 
     /// <summary>
+    /// Optional namespace for sub-user memory isolation.
+    /// Used in multi-workspace/multi-tenant scenarios to partition
+    /// memories within the same user (e.g., different desks, projects).
+    /// Null means no namespace partitioning (default behavior).
+    /// </summary>
+    [VectorStoreData]
+    public string? Namespace { get; set; }
+
+    /// <summary>
     /// Role of the original message sender (user, assistant, system).
     /// Preserved in T0/T1/T2 tiers, typically null for T3 (semantic).
     /// </summary>

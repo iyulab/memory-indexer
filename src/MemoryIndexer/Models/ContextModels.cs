@@ -78,6 +78,11 @@ public record ContextRequest(
 )
 {
     /// <summary>
+    /// Optional namespace for sub-user memory isolation.
+    /// </summary>
+    public string? Namespace { get; init; }
+
+    /// <summary>
     /// Create a request with default budget.
     /// </summary>
     public static ContextRequest Create(string userId, string query, string? sessionId = null)

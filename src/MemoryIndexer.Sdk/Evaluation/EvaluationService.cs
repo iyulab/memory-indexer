@@ -62,7 +62,7 @@ public class EvaluationService : IEvaluationService
             sessionId,
             "*",  // Wildcard to get general context
             100,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         var memories = context.AllMemories().ToList();
         var recalledTokens = memories.Sum(m => EstimateTokens(m.Content));
@@ -140,7 +140,7 @@ public class EvaluationService : IEvaluationService
             sessionId,
             "*",
             100,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         var memories = context.AllMemories().ToList();
 

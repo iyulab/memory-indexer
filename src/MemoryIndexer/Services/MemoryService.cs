@@ -40,6 +40,7 @@ public class MemoryService(
         string? sessionId = null,
         float? importance = null,
         Dictionary<string, string>? metadata = null,
+        string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -77,6 +78,7 @@ public class MemoryService(
             {
                 UserId = userId,
                 SessionId = sessionId,
+                Namespace = @namespace,
                 Content = content,
                 Type = type,
                 ImportanceScore = importanceScore,
@@ -114,6 +116,7 @@ public class MemoryService(
                 {
                     UserId = userId,
                     SessionId = sessionId,
+                    Namespace = @namespace,
                     Content = content,
                     Type = type,
                     ImportanceScore = importanceScore,
@@ -202,6 +205,7 @@ public class MemoryService(
         {
             UserId = userId,
             SessionId = sessionId,
+            Namespace = @namespace,
             Content = content,
             Embedding = embedding,
             Type = type,
@@ -355,6 +359,7 @@ public class MemoryService(
         string? sessionId = null,
         MemoryType[]? types = null,
         Dictionary<string, string>? metadataFilter = null,
+        string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -368,6 +373,7 @@ public class MemoryService(
         {
             UserId = userId,
             SessionId = sessionId,
+            Namespace = @namespace,
             Limit = limit * 2, // Get extra for re-ranking
             Types = types,
             MetadataFilter = metadataFilter // Phase 28

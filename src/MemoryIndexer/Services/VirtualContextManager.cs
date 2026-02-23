@@ -60,6 +60,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
         string userId,
         string sessionId,
         string? initialContext = null,
+        string? @namespace = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -69,6 +70,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
 
         _state.UserId = userId;
         _state.SessionId = sessionId;
+        _state.Namespace = @namespace;
         _state.SessionStartedAt = DateTime.UtcNow;
         _state.IsInitialized = true;
 
@@ -110,6 +112,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
         var searchOptions = new MemorySearchOptions
         {
             UserId = _state.UserId!,
+            Namespace = _state.Namespace,
             Limit = maxItems * 2, // Get extra for filtering
             MinScore = _options.MinRelevanceScore
         };
@@ -378,7 +381,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
         // Update retention scores for all session memories
         var sessionMemories = await _memoryStore.GetAllAsync(
             _state.UserId!,
-            new MemoryFilterOptions { Limit = 1000 },
+            new MemoryFilterOptions { Namespace = _state.Namespace, Limit = 1000 },
             cancellationToken);
 
         foreach (var memory in sessionMemories)
@@ -495,7 +498,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
 
         var memories = await _memoryStore.GetAllAsync(
             _state.UserId!,
-            new MemoryFilterOptions { Limit = 10000 },
+            new MemoryFilterOptions { Namespace = _state.Namespace, Limit = 10000 },
             cancellationToken);
 
         var updatedCount = 0;
@@ -542,6 +545,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             new MemoryFilterOptions
             {
                 SessionId = sessionId,
+                Namespace = _state.Namespace,
                 Limit = 10000
             },
             cancellationToken);
@@ -710,7 +714,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
     {
         var memories = await _memoryStore.GetAllAsync(
             userId,
-            new MemoryFilterOptions { Limit = 100 },
+            new MemoryFilterOptions { Namespace = _state.Namespace, Limit = 100 },
             cancellationToken);
 
         var lockedMemories = memories.Where(m => m.IsLocked).ToList();

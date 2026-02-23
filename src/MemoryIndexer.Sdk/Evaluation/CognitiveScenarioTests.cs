@@ -45,7 +45,7 @@ public class CognitiveScenarioTests
                 userId,
                 sessionId,
                 config.InitialFact,
-                cancellationToken);
+                cancellationToken: cancellationToken);
             result.InitialFactStored = true;
 
             // Phase 2: Store intervening memories (noise)
@@ -58,7 +58,7 @@ public class CognitiveScenarioTests
                     userId,
                     sessionId,
                     noise,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
             }
             result.InterveningMemoriesStored = config.InterveningMemoryCount;
 
@@ -67,7 +67,7 @@ public class CognitiveScenarioTests
                 userId,
                 sessionId,
                 config.ConflictingFact,
-                cancellationToken);
+                cancellationToken: cancellationToken);
             result.ConflictingFactStored = true;
 
             // Phase 4: Recall and check which fact is returned
@@ -76,7 +76,7 @@ public class CognitiveScenarioTests
                 sessionId,
                 config.RecallQuery,
                 config.RecallLimit,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             var recalledContents = recalled.AllMemories().Select(m => m.Content).ToList();
 
@@ -157,7 +157,7 @@ public class CognitiveScenarioTests
                     userId,
                     session1Id,
                     fact,
-                    cancellationToken);
+                    cancellationToken: cancellationToken);
             }
             result.FactsStoredInSession1 = config.UserProfileFacts.Count;
 
@@ -171,7 +171,7 @@ public class CognitiveScenarioTests
                 session2Id,  // New session
                 config.RecallQuery,
                 config.RecallLimit,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             var recalledContents = recalled.AllMemories().Select(m => m.Content).ToList();
 
