@@ -14,6 +14,11 @@ public sealed class MemoryIndexerOptions
     public const string SectionName = "MemoryIndexer";
 
     /// <summary>
+    /// Default user ID used by MCP tools and REST controllers when no explicit user ID is provided.
+    /// </summary>
+    public string DefaultUserId { get; set; } = "default";
+
+    /// <summary>
     /// Storage configuration.
     /// </summary>
     public StorageOptions Storage { get; set; } = new();

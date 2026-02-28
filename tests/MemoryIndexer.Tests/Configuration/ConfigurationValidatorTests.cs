@@ -366,4 +366,23 @@ public class ConfigurationValidatorTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyPath == "Latency.EarlyTerminationConfidence");
     }
+
+    [Fact]
+    public void DefaultUserId_DefaultValue_IsDefault()
+    {
+        var options = new MemoryIndexerOptions();
+
+        Assert.Equal("default", options.DefaultUserId);
+    }
+
+    [Fact]
+    public void DefaultUserId_CanBeOverridden()
+    {
+        var options = new MemoryIndexerOptions
+        {
+            DefaultUserId = "custom-user"
+        };
+
+        Assert.Equal("custom-user", options.DefaultUserId);
+    }
 }
