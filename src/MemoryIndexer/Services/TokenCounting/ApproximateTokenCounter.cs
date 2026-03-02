@@ -68,4 +68,20 @@ public class ApproximateTokenCounter : ITokenCounter
 
         return truncated + "...";
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Returns <c>true</c> for all models since this counter uses a model-agnostic
+    /// character-based heuristic rather than a model-specific tokenizer.
+    /// </remarks>
+    public bool SupportsModel(string modelId) => true;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Always returns <c>true</c> because this counter uses a character-based
+    /// approximation rather than a real tokenizer.
+    /// </remarks>
+#pragma warning disable CA1822 // Interface default method override — must be instance member
+    public bool IsApproximate(string modelId) => true;
+#pragma warning restore CA1822
 }

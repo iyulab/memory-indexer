@@ -52,6 +52,9 @@
     <PackageVersion Include="LMSupply.Reranker" Version="0.13.2" />
     <PackageVersion Include="LMSupply.Generator" Version="0.13.9" />
 
+    <!-- Token Counting (iyulab open source) -->
+    <PackageVersion Include="TokenMeter.Abstractions" Version="0.3.1" />
+
     <!-- Environment -->
     <PackageVersion Include="DotNetEnv" Version="3.1.1" />
 

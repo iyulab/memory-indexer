@@ -102,4 +102,35 @@ public class TokenCounterTests
         var act = () => new ApproximateTokenCounter(charsPerToken: 0);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    [Theory]
+    [InlineData("gpt-4o")]
+    [InlineData("claude-3.5-sonnet")]
+    [InlineData("")]
+    public void SupportsModel_ShouldReturnTrue_ForAnyModel(string modelId)
+    {
+        // Approximate counter is model-agnostic, supports all models
+        _counter.SupportsModel(modelId).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("gpt-4o")]
+    [InlineData("claude-3.5-sonnet")]
+    [InlineData("")]
+    public void IsApproximate_ShouldReturnTrue_ForAnyModel(string modelId)
+    {
+        // Character-based heuristic is always approximate
+        _counter.IsApproximate(modelId).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldBeAssignableToTokenMeterAbstractionsInterface()
+    {
+        // Verify that ApproximateTokenCounter can be used as TokenMeter.Abstractions.ITokenCounter
+        _counter.Should().BeAssignableTo<TokenMeter.Abstractions.ITokenCounter>();
+
+        // Core counting contract works through the base interface
+        ((TokenMeter.Abstractions.ITokenCounter)_counter).Count("Hello").Should().Be(2);
+        ((TokenMeter.Abstractions.ITokenCounter)_counter).SupportsModel("gpt-4o").Should().BeTrue();
+    }
 }

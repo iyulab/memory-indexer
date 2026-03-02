@@ -38,4 +38,11 @@
   <ItemGroup Condition="'$(Configuration)' == 'Release'">
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
+
+  <!-- Local NuGet package source for development (see ironhive-umbrella/CLAUDE.md) -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)../../local-packages')">
+    <RestoreAdditionalProjectSources>
+      $(RestoreAdditionalProjectSources);$(MSBuildThisFileDirectory)../../local-packages
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
 </Project>
