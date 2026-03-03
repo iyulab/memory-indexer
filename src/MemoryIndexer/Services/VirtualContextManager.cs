@@ -1,4 +1,6 @@
+using Flux.Abstractions;
 using MemoryIndexer.Interfaces;
+using ITextCompletionService = MemoryIndexer.Interfaces.ITextCompletionService;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

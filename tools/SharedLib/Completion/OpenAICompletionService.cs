@@ -1,5 +1,7 @@
 using System.ClientModel;
+using Flux.Abstractions;
 using MemoryIndexer.Interfaces;
+using ITextCompletionService = MemoryIndexer.Interfaces.ITextCompletionService;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using OpenAI.Chat;

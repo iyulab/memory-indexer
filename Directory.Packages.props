@@ -52,6 +52,9 @@
     <PackageVersion Include="LMSupply.Reranker" Version="0.13.2" />
     <PackageVersion Include="LMSupply.Generator" Version="0.13.9" />
 
+    <!-- Flux Abstractions (iyulab open source) -->
+    <PackageVersion Include="Flux.Abstractions" Version="0.9.3" />
+
     <!-- Token Counting (iyulab open source) -->
     <PackageVersion Include="TokenMeter.Abstractions" Version="0.3.1" />
 
@@ -59,7 +62,7 @@
     <PackageVersion Include="DotNetEnv" Version="3.1.1" />
 
     <!-- OpenAI -->
-    <PackageVersion Include="OpenAI" Version="2.9.0" />
+    <PackageVersion Include="OpenAI" Version="2.9.1" />
 
     <!-- ASP.NET Core -->
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />

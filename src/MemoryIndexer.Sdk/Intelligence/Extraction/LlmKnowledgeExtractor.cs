@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
+using Flux.Abstractions;
 using System.Text.Json.Serialization;
 using MemoryIndexer.Interfaces;
+using ITextCompletionService = MemoryIndexer.Interfaces.ITextCompletionService;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.Extraction;

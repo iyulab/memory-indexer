@@ -1,4 +1,6 @@
+using Flux.Abstractions;
 using MemoryIndexer.Interfaces;
+using ITextCompletionService = MemoryIndexer.Interfaces.ITextCompletionService;
 using MemoryIndexer.Sdk.Intelligence.Extraction;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
