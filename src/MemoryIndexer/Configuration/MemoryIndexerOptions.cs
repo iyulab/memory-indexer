@@ -465,17 +465,8 @@ public enum EmbeddingProvider
     Ollama,
 
     /// <summary>
-    /// OpenAI API.
-    /// </summary>
-    OpenAI,
-
-    /// <summary>
-    /// Azure OpenAI Service.
-    /// </summary>
-    AzureOpenAI,
-
-    /// <summary>
-    /// Custom HTTP endpoint (OpenAI-compatible).
+    /// Custom externally-configured provider (OpenAI, Azure, Anthropic, etc.).
+    /// Register your own IEmbeddingService implementation via DI.
     /// </summary>
     Custom
 }
@@ -1061,17 +1052,8 @@ public enum CompletionProvider
     Ollama,
 
     /// <summary>
-    /// OpenAI API.
-    /// </summary>
-    OpenAI,
-
-    /// <summary>
-    /// Azure OpenAI Service.
-    /// </summary>
-    AzureOpenAI,
-
-    /// <summary>
-    /// Custom HTTP endpoint (OpenAI-compatible).
+    /// Custom externally-configured provider (OpenAI, Azure, Anthropic, etc.).
+    /// Register your own ITextCompletionService implementation via DI.
     /// </summary>
     Custom
 }

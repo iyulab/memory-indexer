@@ -159,16 +159,15 @@ public sealed class ConfigurationValidator : IConfigurationValidator
             });
         }
 
-        // API key validation for cloud providers
-        if ((options.Provider == EmbeddingProvider.OpenAI ||
-             options.Provider == EmbeddingProvider.AzureOpenAI) &&
+        // API key validation for custom (externally-configured) providers
+        if (options.Provider == EmbeddingProvider.Custom &&
             string.IsNullOrWhiteSpace(options.ApiKey))
         {
             result.Warnings.Add(new ConfigurationWarning
             {
                 PropertyPath = "Embedding.ApiKey",
-                Message = "API key not configured for cloud embedding provider",
-                Suggestion = "Set API key for OpenAI/AzureOpenAI providers"
+                Message = "API key not configured for custom embedding provider",
+                Suggestion = "Set API key if your provider requires authentication"
             });
         }
     }

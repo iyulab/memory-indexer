@@ -91,14 +91,14 @@ public class ConfigurationValidatorTests
     }
 
     [Fact]
-    public void Validate_OpenAIWithoutApiKey_ShouldReturnWarning()
+    public void Validate_CustomProviderWithoutApiKey_ShouldReturnWarning()
     {
         // Arrange
         var options = new MemoryIndexerOptions
         {
             Embedding = new EmbeddingOptions
             {
-                Provider = EmbeddingProvider.OpenAI,
+                Provider = EmbeddingProvider.Custom,
                 ApiKey = null
             }
         };
