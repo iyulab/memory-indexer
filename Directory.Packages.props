@@ -4,33 +4,33 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- MCP SDK -->
-    <PackageVersion Include="ModelContextProtocol" Version="1.1.0" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.1.0" />
+    <PackageVersion Include="ModelContextProtocol" Version="1.2.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
     <!-- Microsoft Extensions (.NET 10) -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.3" />
     <!-- Vector Data -->
-    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.5.0" />
     <!-- Database -->
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.6" />
     <!-- Numerics -->
-    <PackageVersion Include="System.Numerics.Tensors" Version="10.0.5" />
+    <PackageVersion Include="System.Numerics.Tensors" Version="10.0.6" />
     <!-- Build -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.103" />
     <!-- Testing -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
@@ -39,29 +39,29 @@
     <!-- Benchmarking -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
     <!-- LMSupply (iyulab-rnd open source) -->
-    <PackageVersion Include="LMSupply.Embedder" Version="0.25.0" />
+    <PackageVersion Include="LMSupply.Embedder" Version="0.32.0" />
     <PackageVersion Include="LMSupply.Reranker" Version="0.13.2" />
-    <PackageVersion Include="LMSupply.Generator" Version="0.25.0" />
+    <PackageVersion Include="LMSupply.Generator" Version="0.32.0" />
     <!-- Flux Abstractions (iyulab open source) -->
-    <PackageVersion Include="Flux.Abstractions" Version="0.10.12" />
+    <PackageVersion Include="Flux.Abstractions" Version="0.13.2" />
     <!-- Token Counting (iyulab open source) -->
     <PackageVersion Include="TokenMeter.Abstractions" Version="0.3.1" />
     <!-- Environment -->
     <PackageVersion Include="DotNetEnv" Version="3.1.1" />
     <!-- OpenAI -->
-    <PackageVersion Include="OpenAI" Version="2.9.1" />
+    <PackageVersion Include="OpenAI" Version="2.10.0" />
     <!-- ASP.NET Core -->
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />
-    <PackageVersion Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.5" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.5" />
+    <PackageVersion Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.6" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
     <PackageVersion Include="Microsoft.OpenApi" Version="3.3.1" />
     <!-- OpenTelemetry Observability -->
-    <PackageVersion Include="OpenTelemetry" Version="1.15.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
+    <PackageVersion Include="OpenTelemetry" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.15.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.2" />
     <!-- Health Checks -->
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.3" />
   </ItemGroup>
