@@ -65,7 +65,7 @@ public sealed class MemoryUnit
     /// Vector embedding of the content for semantic search.
     /// Dimensions based on BGE-M3 (1024) or configurable.
     /// </summary>
-    [VectorStoreVector(Dimensions: 1024)]
+    [VectorStoreVector(1024)]
     public ReadOnlyMemory<float>? Embedding { get; set; }
 
     /// <summary>

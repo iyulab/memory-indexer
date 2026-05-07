@@ -1,0 +1,68 @@
+using System.Reflection;
+using System.Text.RegularExpressions;
+using McpServer.Controllers;
+using MemoryIndexer.Sdk.Services;
+using Microsoft.Extensions.Logging;
+using Xunit;
+
+namespace MemoryIndexer.Sdk.Tests;
+
+// Operator log pipelines (grep / Loki / Elastic) and international support require
+// English-only log messages. Korean tokens land as opaque tokens in Latin-tokenized
+// indexes and require UTF-8-aware regex from operators. See CLAUDE.md logging conventions.
+public class LogLanguageConventionTests
+{
+    private static readonly Regex HangulRegex = new(@"[가-힣ᄀ-ᇿ㄰-㆏]");
+
+    public static IEnumerable<object[]> MemoryIndexerSdkAssemblyTypes()
+    {
+        var assembly = typeof(MemoryPromotionBackgroundService).Assembly;
+        foreach (var type in assembly.GetTypes().Where(t => !t.IsCompilerGenerated()))
+        {
+            yield return new object[] { type };
+        }
+    }
+
+    public static IEnumerable<object[]> McpServerAssemblyTypes()
+    {
+        var assembly = typeof(MemoryController).Assembly;
+        foreach (var type in assembly.GetTypes().Where(t => !t.IsCompilerGenerated()))
+        {
+            yield return new object[] { type };
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(MemoryIndexerSdkAssemblyTypes))]
+    public void MemoryIndexerSdk_LoggerMessageAttributes_HaveAsciiOnlyMessages(Type type)
+    {
+        AssertNoHangul(type);
+    }
+
+    [Theory]
+    [MemberData(nameof(McpServerAssemblyTypes))]
+    public void McpServer_LoggerMessageAttributes_HaveAsciiOnlyMessages(Type type)
+    {
+        AssertNoHangul(type);
+    }
+
+    private static void AssertNoHangul(Type type)
+    {
+        var offenders = type
+            .GetMethods(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Select(m => (Method: m, Attr: m.GetCustomAttribute<LoggerMessageAttribute>()))
+            .Where(x => x.Attr is not null && !string.IsNullOrEmpty(x.Attr.Message) && HangulRegex.IsMatch(x.Attr.Message))
+            .Select(x => $"  {type.Name}.{x.Method.Name}: {x.Attr!.Message}")
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            "Found Korean text in [LoggerMessage] attributes — log messages must be English-only:\n"
+            + string.Join("\n", offenders));
+    }
+}
+
+internal static class TypeReflectionExtensions
+{
+    public static bool IsCompilerGenerated(this Type type)
+        => type.GetCustomAttribute<System.Runtime.CompilerServices.CompilerGeneratedAttribute>() is not null;
+}
