@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using MemoryIndexer.Interfaces;
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Options;
+using MemoryIndexer.Configuration;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
 
@@ -11,9 +13,9 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 [McpServerToolType]
 public sealed class FactConflictTools(
     IFactValidator factValidator,
-    IArchiveStore archiveStore)
+    IArchiveStore archiveStore,
+    IOptions<MemoryIndexerOptions> options)
 {
-    private const string DefaultUserId = "default";
 
     /// <summary>
     /// Validate a fact against existing facts.
@@ -31,7 +33,7 @@ public sealed class FactConflictTools(
         [Description("Confidence score (0-1, default: 0.9)")] float confidence = 0.9f,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
 
         // Parse category
         if (!Enum.TryParse<FactCategory>(category, true, out var factCategory))
@@ -90,7 +92,7 @@ public sealed class FactConflictTools(
         [Description("User ID (default: 'default')")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
 
         var history = await archiveStore.GetHistoryAsync(userId, key, cancellationToken);
 
@@ -127,7 +129,7 @@ public sealed class FactConflictTools(
         [Description("User ID (default: 'default')")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
 
         if (!DateTime.TryParse(asOfDate, out var date))
         {
@@ -171,7 +173,7 @@ public sealed class FactConflictTools(
         [Description("User ID (default: 'default')")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
 
         var updatedEntry = await archiveStore.ArchiveAndUpdateAsync(userId, key, newValue, cancellationToken);
 

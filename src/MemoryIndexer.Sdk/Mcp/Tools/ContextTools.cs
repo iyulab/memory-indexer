@@ -3,6 +3,8 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services.ContextStrategies;
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Options;
+using MemoryIndexer.Configuration;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
 
@@ -11,9 +13,8 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 /// Phase v0.9.0: Context Budget API.
 /// </summary>
 [McpServerToolType]
-public sealed class ContextTools(IContextBuilder contextBuilder)
+public sealed class ContextTools(IContextBuilder contextBuilder, IOptions<MemoryIndexerOptions> options)
 {
-    private const string DefaultUserId = "default";
 
     /// <summary>
     /// Build context using a token-budget-aware strategy.
@@ -29,7 +30,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder)
         [Description("User ID (default: 'default')")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
         totalTokens = Math.Clamp(totalTokens, 100, 16000);
 
         var request = new ContextRequest(
@@ -79,7 +80,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder)
         [Description("User ID (default: 'default')")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
         maxTokens = Math.Clamp(maxTokens, 50, 8000);
 
         var items = await contextBuilder.GetRecentTurnsAsync(userId, sessionId, maxTokens, cancellationToken);
@@ -111,7 +112,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder)
         [Description("User ID (default: 'default')")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
         maxTokens = Math.Clamp(maxTokens, 50, 8000);
 
         var items = await contextBuilder.GetSessionContextAsync(userId, sessionId, maxTokens, cancellationToken);
@@ -143,7 +144,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder)
         [Description("User ID (default: 'default')")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
         maxTokens = Math.Clamp(maxTokens, 50, 4000);
 
         var items = await contextBuilder.GetUserFactsAsync(userId, maxTokens, cancellationToken);

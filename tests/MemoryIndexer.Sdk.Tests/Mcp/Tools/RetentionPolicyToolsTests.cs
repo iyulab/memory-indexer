@@ -1,6 +1,8 @@
 using FluentAssertions;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Mcp.Tools;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -22,7 +24,7 @@ public class RetentionPolicyToolsTests
         _mockRetentionService = Substitute.For<IRetentionPolicyService>();
         _mockPolicy = Substitute.For<IRetentionPolicy>();
         _mockRetentionService.Policy.Returns(_mockPolicy);
-        _tools = new RetentionPolicyTools(_mockRetentionService);
+        _tools = new RetentionPolicyTools(_mockRetentionService, Options.Create(new MemoryIndexerOptions()));
     }
 
     #region PreviewCleanup Tests
@@ -75,18 +77,18 @@ public class RetentionPolicyToolsTests
     }
 
     [Fact]
-    public async Task PreviewCleanup_WithDefaultUserId_ShouldUseMcpUser()
+    public async Task PreviewCleanup_WithDefaultUserId_ShouldUseOptionsDefaultUserId()
     {
         // Arrange
         var preview = new RetentionPreview
         {
-            UserId = "mcp-user",
+            UserId = "default",
             TotalEntries = 0,
             ByCategory = new Dictionary<SemanticStoreCategory, CategoryPreview>(),
             CleanupDecisions = []
         };
 
-        _mockRetentionService.PreviewCleanupAsync("mcp-user", Arg.Any<CancellationToken>())
+        _mockRetentionService.PreviewCleanupAsync("default", Arg.Any<CancellationToken>())
             .Returns(preview);
 
         // Act
@@ -94,7 +96,7 @@ public class RetentionPolicyToolsTests
 
         // Assert
         result.Success.Should().BeTrue();
-        await _mockRetentionService.Received(1).PreviewCleanupAsync("mcp-user", Arg.Any<CancellationToken>());
+        await _mockRetentionService.Received(1).PreviewCleanupAsync("default", Arg.Any<CancellationToken>());
     }
 
     [Fact]

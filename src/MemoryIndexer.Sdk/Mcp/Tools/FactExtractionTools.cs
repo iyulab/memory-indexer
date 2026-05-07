@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using MemoryIndexer.Interfaces;
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Options;
+using MemoryIndexer.Configuration;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
 
@@ -9,9 +11,8 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 /// Phase v0.9.1: Intelligent Fact Extraction.
 /// </summary>
 [McpServerToolType]
-public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter)
+public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IOptions<MemoryIndexerOptions> options)
 {
-    private const string DefaultUserId = "default";
 
     /// <summary>
     /// Extract facts from conversational content.
@@ -26,7 +27,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter)
         [Description("Speaker role: user, assistant, system")] string? role = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
 
         var context = new FactExtractionContext
         {
@@ -78,7 +79,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter)
         [Description("Filter by category: Identity, Preference, Relationship, Location, Skill, Goal, Health, Professional, General")] string? category = null,
         CancellationToken cancellationToken = default)
     {
-        userId ??= DefaultUserId;
+        userId ??= options.Value.DefaultUserId;
 
         FactCategory? categoryFilter = null;
         if (!string.IsNullOrEmpty(category) &&

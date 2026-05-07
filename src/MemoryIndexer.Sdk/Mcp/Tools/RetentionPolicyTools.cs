@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using MemoryIndexer.Interfaces;
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Options;
+using MemoryIndexer.Configuration;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
 
@@ -9,9 +11,8 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 /// Phase v0.11.0: Retention Policy Engine.
 /// </summary>
 [McpServerToolType]
-public class RetentionPolicyTools(IRetentionPolicyService retentionService)
+public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOptions<MemoryIndexerOptions> options)
 {
-    private const string DefaultUserId = "mcp-user";
 
     /// <summary>
     /// Preview what would be cleaned up by the retention policy.
@@ -22,7 +23,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService)
         [Description("User ID to preview cleanup for (default: mcp-user)")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var targetUserId = userId ?? DefaultUserId;
+        var targetUserId = userId ?? options.Value.DefaultUserId;
 
         try
         {
@@ -79,7 +80,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService)
         [Description("If true, only report what would be done without making changes")] bool dryRun = true,
         CancellationToken cancellationToken = default)
     {
-        var targetUserId = userId ?? DefaultUserId;
+        var targetUserId = userId ?? options.Value.DefaultUserId;
 
         try
         {
@@ -188,7 +189,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService)
         [Description("User ID (default: mcp-user)")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var targetUserId = userId ?? DefaultUserId;
+        var targetUserId = userId ?? options.Value.DefaultUserId;
 
         // Get the archive store to retrieve the entry
         // Note: This is a workaround since we only have IRetentionPolicyService

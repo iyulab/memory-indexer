@@ -1,6 +1,8 @@
 using System.ComponentModel;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
@@ -19,14 +21,16 @@ public sealed class KnowledgeGraphTools
     private static readonly Dictionary<string, KnowledgeGraph> GraphCache = new();
     private static readonly object CacheLock = new();
 
-    private const string DefaultUserId = "default";
+    private readonly string _defaultUserId;
 
     public KnowledgeGraphTools(
         IKnowledgeGraphService knowledgeGraphService,
-        IMemoryStore memoryStore)
+        IMemoryStore memoryStore,
+        IOptions<MemoryIndexerOptions> options)
     {
         _knowledgeGraphService = knowledgeGraphService;
         _memoryStore = memoryStore;
+        _defaultUserId = options.Value.DefaultUserId;
     }
 
     /// <summary>
@@ -116,7 +120,7 @@ public sealed class KnowledgeGraphTools
         [Description("User ID (optional, defaults to 'default')")] string? userId = null,
         [Description("Rebuild graph even if it exists")] bool rebuildIfExists = false)
     {
-        var uid = userId ?? DefaultUserId;
+        var uid = userId ?? _defaultUserId;
 
         lock (CacheLock)
         {
@@ -187,7 +191,7 @@ public sealed class KnowledgeGraphTools
         [Description("User ID (optional)")] string? userId = null,
         [Description("Maximum results to return")] int maxResults = 10)
     {
-        var uid = userId ?? DefaultUserId;
+        var uid = userId ?? _defaultUserId;
 
         KnowledgeGraph? graph;
         lock (CacheLock)
@@ -254,10 +258,10 @@ public sealed class KnowledgeGraphTools
     /// <param name="userId">User ID whose graph to analyze.</param>
     /// <returns>Graph statistics including entity and relation counts by type.</returns>
     [McpServerTool, Description("Get statistics about the knowledge graph")]
-    public static Task<GraphStatsResult> GetGraphStats(
+    public Task<GraphStatsResult> GetGraphStats(
         [Description("User ID (optional)")] string? userId = null)
     {
-        var uid = userId ?? DefaultUserId;
+        var uid = userId ?? _defaultUserId;
 
         KnowledgeGraph? graph;
         lock (CacheLock)
@@ -300,10 +304,10 @@ public sealed class KnowledgeGraphTools
     /// <param name="userId">User ID whose graph to clear.</param>
     /// <returns>Result of the clear operation.</returns>
     [McpServerTool, Description("Clear the cached knowledge graph")]
-    public static Task<ClearGraphResult> ClearKnowledgeGraph(
+    public Task<ClearGraphResult> ClearKnowledgeGraph(
         [Description("User ID (optional)")] string? userId = null)
     {
-        var uid = userId ?? DefaultUserId;
+        var uid = userId ?? _defaultUserId;
 
         bool removed;
         lock (CacheLock)

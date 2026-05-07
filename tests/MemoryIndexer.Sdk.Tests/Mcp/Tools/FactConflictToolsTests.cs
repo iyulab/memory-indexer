@@ -1,6 +1,8 @@
 using FluentAssertions;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Mcp.Tools;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
@@ -20,7 +22,7 @@ public class FactConflictToolsTests
     {
         _mockValidator = Substitute.For<IFactValidator>();
         _mockArchiveStore = Substitute.For<IArchiveStore>();
-        _tools = new FactConflictTools(_mockValidator, _mockArchiveStore);
+        _tools = new FactConflictTools(_mockValidator, _mockArchiveStore, Options.Create(new MemoryIndexerOptions()));
     }
 
     #region ValidateFact Tests

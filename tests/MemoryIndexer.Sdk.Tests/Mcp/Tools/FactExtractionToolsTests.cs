@@ -1,6 +1,8 @@
 using FluentAssertions;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Mcp.Tools;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
@@ -18,7 +20,7 @@ public class FactExtractionToolsTests
     public FactExtractionToolsTests()
     {
         _mockPromoter = Substitute.For<IFastTrackPromoter>();
-        _tools = new FactExtractionTools(_mockPromoter);
+        _tools = new FactExtractionTools(_mockPromoter, Options.Create(new MemoryIndexerOptions()));
     }
 
     #region ExtractFacts Tests

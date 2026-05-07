@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 // Use SDK types explicitly to avoid conflicts with core abstractions
@@ -20,17 +22,18 @@ public sealed class ConflictResolutionTools
     private readonly MemoryService _memoryService;
     private readonly IContradictionDetector _contradictionDetector;
     private readonly IContradictionResolver _contradictionResolver;
-
-    private const string DefaultUserId = "default";
+    private readonly string _defaultUserId;
 
     public ConflictResolutionTools(
         MemoryService memoryService,
         IContradictionDetector contradictionDetector,
-        IContradictionResolver contradictionResolver)
+        IContradictionResolver contradictionResolver,
+        IOptions<MemoryIndexerOptions> options)
     {
         _memoryService = memoryService;
         _contradictionDetector = contradictionDetector;
         _contradictionResolver = contradictionResolver;
+        _defaultUserId = options.Value.DefaultUserId;
     }
 
     /// <summary>
@@ -54,7 +57,7 @@ public sealed class ConflictResolutionTools
     {
         // Find related memories first
         var existingMemories = await _memoryService.RecallAsync(
-            DefaultUserId,
+            _defaultUserId,
             content,
             Math.Clamp(limit, 1, 100),
             cancellationToken: cancellationToken);
@@ -73,7 +76,7 @@ public sealed class ConflictResolutionTools
         var newMemory = new MemoryUnit
         {
             Id = Guid.NewGuid(),
-            UserId = DefaultUserId,
+            UserId = _defaultUserId,
             Content = content,
             Type = MemoryType.Episodic,
             CreatedAt = DateTime.UtcNow
@@ -147,7 +150,7 @@ public sealed class ConflictResolutionTools
         var newMemory = new MemoryUnit
         {
             Id = Guid.NewGuid(),
-            UserId = DefaultUserId,
+            UserId = _defaultUserId,
             Content = newContent,
             Type = MemoryType.Episodic,
             CreatedAt = DateTime.UtcNow
@@ -210,7 +213,7 @@ public sealed class ConflictResolutionTools
     {
         // Find related memories
         var existingMemories = await _memoryService.RecallAsync(
-            DefaultUserId, content, 50, cancellationToken: cancellationToken);
+            _defaultUserId, content, 50, cancellationToken: cancellationToken);
 
         if (existingMemories.Count == 0)
         {
@@ -226,7 +229,7 @@ public sealed class ConflictResolutionTools
         var newMemory = new MemoryUnit
         {
             Id = Guid.NewGuid(),
-            UserId = DefaultUserId,
+            UserId = _defaultUserId,
             Content = content,
             Type = MemoryType.Episodic,
             CreatedAt = DateTime.UtcNow
@@ -279,7 +282,7 @@ public sealed class ConflictResolutionTools
             if (resolution.MergedItem != null)
             {
                 var stored = await _memoryService.StoreAsync(
-                    DefaultUserId,
+                    _defaultUserId,
                     resolution.MergedItem.Content,
                     resolution.MergedItem.Type,
                     null, // sessionId

@@ -1,7 +1,9 @@
 using FluentAssertions;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Mcp.Tools;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
@@ -19,7 +21,7 @@ public class ContextToolsTests
     public ContextToolsTests()
     {
         _mockContextBuilder = Substitute.For<IContextBuilder>();
-        _tools = new ContextTools(_mockContextBuilder);
+        _tools = new ContextTools(_mockContextBuilder, Options.Create(new MemoryIndexerOptions()));
     }
 
     #region ContextBuild Tests

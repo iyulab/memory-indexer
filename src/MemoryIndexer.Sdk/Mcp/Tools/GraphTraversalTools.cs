@@ -1,6 +1,8 @@
 using System.ComponentModel;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
@@ -15,17 +17,18 @@ public sealed class GraphTraversalTools
     private readonly IMemoryGraphService _graphService;
     private readonly IImportancePropagator _importancePropagator;
     private readonly ICommunityDetector _communityDetector;
-
-    private const string DefaultUserId = "default";
+    private readonly string _defaultUserId;
 
     public GraphTraversalTools(
         IMemoryGraphService graphService,
         IImportancePropagator importancePropagator,
-        ICommunityDetector communityDetector)
+        ICommunityDetector communityDetector,
+        IOptions<MemoryIndexerOptions> options)
     {
         _graphService = graphService;
         _importancePropagator = importancePropagator;
         _communityDetector = communityDetector;
+        _defaultUserId = options.Value.DefaultUserId;
     }
 
     #region Community Detection
@@ -52,7 +55,7 @@ public sealed class GraphTraversalTools
         };
 
         var result = await _communityDetector.DetectCommunitiesAsync(
-            DefaultUserId, options, cancellationToken);
+            _defaultUserId, options, cancellationToken);
 
         // Build community info from CommunitySizes dictionary
         var communities = result.CommunitySizes.Select(kv => new CommunityInfo
@@ -86,7 +89,7 @@ public sealed class GraphTraversalTools
         CancellationToken cancellationToken = default)
     {
         var memories = await _communityDetector.GetCommunityMemoriesAsync(
-            communityId, DefaultUserId, cancellationToken);
+            communityId, _defaultUserId, cancellationToken);
 
         return new GetCommunityMemoriesToolResult
         {
@@ -119,7 +122,7 @@ public sealed class GraphTraversalTools
         CancellationToken cancellationToken = default)
     {
         var summary = await _communityDetector.GetCommunitySummaryAsync(
-            communityId, DefaultUserId, cancellationToken);
+            communityId, _defaultUserId, cancellationToken);
 
         return new CommunitySummaryToolResult
         {
@@ -163,7 +166,7 @@ public sealed class GraphTraversalTools
         };
 
         var result = await _importancePropagator.ComputeImportanceAsync(
-            DefaultUserId, options, cancellationToken);
+            _defaultUserId, options, cancellationToken);
 
         // Get top 10 entities from the score dictionary
         var topEntities = result.EntityScores
@@ -202,7 +205,7 @@ public sealed class GraphTraversalTools
         CancellationToken cancellationToken = default)
     {
         var score = await _importancePropagator.GetEntityImportanceAsync(
-            entityName, DefaultUserId, cancellationToken);
+            entityName, _defaultUserId, cancellationToken);
 
         return new GetEntityImportanceToolResult
         {
@@ -229,7 +232,7 @@ public sealed class GraphTraversalTools
         CancellationToken cancellationToken = default)
     {
         var entities = await _importancePropagator.GetTopEntitiesAsync(
-            DefaultUserId, Math.Clamp(topK, 1, 100), cancellationToken);
+            _defaultUserId, Math.Clamp(topK, 1, 100), cancellationToken);
 
         return new GetTopEntitiesToolResult
         {

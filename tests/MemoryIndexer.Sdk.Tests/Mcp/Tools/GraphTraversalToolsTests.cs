@@ -1,7 +1,9 @@
 using FluentAssertions;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Mcp.Tools;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
@@ -28,7 +30,8 @@ public class GraphTraversalToolsTests
         _tools = new GraphTraversalTools(
             _mockGraphService,
             _mockImportancePropagator,
-            _mockCommunityDetector);
+            _mockCommunityDetector,
+            Options.Create(new MemoryIndexerOptions()));
     }
 
     #region DetectCommunities Tests

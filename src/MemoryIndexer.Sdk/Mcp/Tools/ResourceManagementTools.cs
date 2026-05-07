@@ -2,6 +2,8 @@ using System.ComponentModel;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Options;
+using MemoryIndexer.Configuration;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
 
@@ -12,9 +14,9 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 [McpServerToolType]
 public class ResourceManagementTools(
     IResourceLimitEnforcer enforcer,
-    IUsageTracker usageTracker)
+    IUsageTracker usageTracker,
+    IOptions<MemoryIndexerOptions> options)
 {
-    private const string DefaultUserId = "mcp-user";
 
     /// <summary>
     /// Get current resource usage for a user.
@@ -25,7 +27,7 @@ public class ResourceManagementTools(
         [Description("User ID to get usage for (optional, defaults to current user)")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var targetUserId = userId ?? DefaultUserId;
+        var targetUserId = userId ?? options.Value.DefaultUserId;
         var usage = await enforcer.GetUsageAsync(targetUserId, cancellationToken);
         var limits = enforcer.GetLimits(targetUserId);
 
@@ -54,7 +56,7 @@ public class ResourceManagementTools(
     public LimitsResult GetLimits(
         [Description("User ID to get limits for (optional, defaults to current user)")] string? userId = null)
     {
-        var targetUserId = userId ?? DefaultUserId;
+        var targetUserId = userId ?? options.Value.DefaultUserId;
         var limits = enforcer.GetLimits(targetUserId);
 
         return new LimitsResult
@@ -82,7 +84,7 @@ public class ResourceManagementTools(
         [Description("User ID to check (optional, defaults to current user)")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var targetUserId = userId ?? DefaultUserId;
+        var targetUserId = userId ?? options.Value.DefaultUserId;
         var result = await enforcer.CanStoreAsync(targetUserId, estimatedSizeBytes, cancellationToken);
 
         return new EnforcementCheckResult
@@ -112,7 +114,7 @@ public class ResourceManagementTools(
         [Description("User ID to check (optional, defaults to current user)")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var targetUserId = userId ?? DefaultUserId;
+        var targetUserId = userId ?? options.Value.DefaultUserId;
         var result = await enforcer.CanStoreBatchAsync(targetUserId, count, estimatedTotalSizeBytes, cancellationToken);
 
         return new EnforcementCheckResult
@@ -193,7 +195,7 @@ public class ResourceManagementTools(
         [Description("User ID to refresh (optional, defaults to current user)")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var targetUserId = userId ?? DefaultUserId;
+        var targetUserId = userId ?? options.Value.DefaultUserId;
         await usageTracker.RefreshFromStoreAsync(targetUserId, cancellationToken);
         var usage = usageTracker.GetUsage(targetUserId);
 

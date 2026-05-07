@@ -1,8 +1,10 @@
 using System.ComponentModel;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Intelligence.Retrieval;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
@@ -17,17 +19,18 @@ public sealed class AdaptiveRetrievalTools
     private readonly MemoryService _memoryService;
     private readonly IQueryIntentClassifier _queryIntentClassifier;
     private readonly TieredMemoryRetriever _tieredRetriever;
-
-    private const string DefaultUserId = "default";
+    private readonly string _defaultUserId;
 
     public AdaptiveRetrievalTools(
         MemoryService memoryService,
         IQueryIntentClassifier queryIntentClassifier,
-        TieredMemoryRetriever tieredRetriever)
+        TieredMemoryRetriever tieredRetriever,
+        IOptions<MemoryIndexerOptions> options)
     {
         _memoryService = memoryService;
         _queryIntentClassifier = queryIntentClassifier;
         _tieredRetriever = tieredRetriever;
+        _defaultUserId = options.Value.DefaultUserId;
     }
 
     /// <summary>
@@ -85,7 +88,7 @@ public sealed class AdaptiveRetrievalTools
         var request = new TieredRetrievalRequest
         {
             Query = query,
-            UserId = DefaultUserId,
+            UserId = _defaultUserId,
             SessionId = sessionId,
             ConversationContext = context,
             MaxResults = Math.Clamp(maxResults, 1, 50),
@@ -166,7 +169,7 @@ public sealed class AdaptiveRetrievalTools
         var request = new TieredRetrievalRequest
         {
             Query = query,
-            UserId = DefaultUserId,
+            UserId = _defaultUserId,
             SessionId = sessionId,
             MaxResults = Math.Clamp(maxResults, 1, 50),
             PrecomputedIntent = precomputedIntent,

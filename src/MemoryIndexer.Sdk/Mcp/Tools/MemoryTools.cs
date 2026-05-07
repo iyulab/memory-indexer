@@ -4,6 +4,8 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Options;
+using MemoryIndexer.Configuration;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
 
@@ -16,9 +18,9 @@ public sealed class MemoryTools(
     IMemoryStore memoryStore,
     IMemoryPrimitives memoryPrimitives,
     IResourceLimitEnforcer? resourceEnforcer = null,
-    IUsageTracker? usageTracker = null)
+    IUsageTracker? usageTracker = null,
+    IOptions<MemoryIndexerOptions> indexerOptions = null!)
 {
-    private const string DefaultUserId = "default";
 
     /// <summary>
     /// Stores new content in long-term memory with semantic indexing.
@@ -45,7 +47,7 @@ public sealed class MemoryTools(
         if (resourceEnforcer != null)
         {
             var estimatedSize = content.Length * 2; // UTF-16 estimate
-            var enforcementResult = await resourceEnforcer.CanStoreAsync(DefaultUserId, estimatedSize, cancellationToken);
+            var enforcementResult = await resourceEnforcer.CanStoreAsync(indexerOptions.Value.DefaultUserId, estimatedSize, cancellationToken);
             if (!enforcementResult.IsAllowed)
             {
                 return new StoreMemoryResult
@@ -65,7 +67,7 @@ public sealed class MemoryTools(
         }
 
         var memory = await memoryService.StoreAsync(
-            DefaultUserId,
+            indexerOptions.Value.DefaultUserId,
             content,
             memoryType,
             sessionId,
@@ -78,7 +80,7 @@ public sealed class MemoryTools(
         if (usageTracker != null)
         {
             var storedSize = (content.Length * 2) + (memory.Embedding?.Length * 4 ?? 0) + 200;
-            usageTracker.RecordStore(DefaultUserId, storedSize, memory.Tier, memory.Type);
+            usageTracker.RecordStore(indexerOptions.Value.DefaultUserId, storedSize, memory.Tier, memory.Type);
         }
 
         return new StoreMemoryResult
@@ -117,7 +119,7 @@ public sealed class MemoryTools(
         }
 
         var results = await memoryService.RecallAsync(
-            DefaultUserId,
+            indexerOptions.Value.DefaultUserId,
             query,
             limit,
             sessionId,
@@ -174,8 +176,8 @@ public sealed class MemoryTools(
             options.Types = [ParseMemoryType(type)];
         }
 
-        var memories = await memoryService.GetAllAsync(DefaultUserId, options, cancellationToken);
-        var count = await memoryStore.GetCountAsync(DefaultUserId, cancellationToken);
+        var memories = await memoryService.GetAllAsync(indexerOptions.Value.DefaultUserId, options, cancellationToken);
+        var count = await memoryStore.GetCountAsync(indexerOptions.Value.DefaultUserId, cancellationToken);
 
         return new GetAllMemoriesResult
         {
@@ -277,7 +279,7 @@ public sealed class MemoryTools(
         {
             var size = (memoryForTracking.Content?.Length * 2 ?? 0) +
                        (memoryForTracking.Embedding?.Length * 4 ?? 0) + 200;
-            usageTracker.RecordDelete(DefaultUserId, size, memoryForTracking.Tier, memoryForTracking.Type);
+            usageTracker.RecordDelete(indexerOptions.Value.DefaultUserId, size, memoryForTracking.Tier, memoryForTracking.Type);
         }
 
         return new DeleteMemoryResult

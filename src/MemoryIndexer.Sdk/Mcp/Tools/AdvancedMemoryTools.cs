@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
@@ -6,6 +7,7 @@ using MemoryIndexer.Sdk.Intelligence.Deduplication;
 using MemoryIndexer.Sdk.Intelligence.Search;
 using MemoryIndexer.Scoring;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
@@ -22,21 +24,22 @@ public sealed class AdvancedMemoryTools
     private readonly DuplicateDetector _duplicateDetector;
     private readonly ImportanceAnalyzer _importanceAnalyzer;
     private readonly ISummarizationService _summarizationService;
-
-    private const string DefaultUserId = "default";
+    private readonly string _defaultUserId;
 
     public AdvancedMemoryTools(
         MemoryService memoryService,
         IHybridSearchService hybridSearch,
         DuplicateDetector duplicateDetector,
         ImportanceAnalyzer importanceAnalyzer,
-        ISummarizationService summarizationService)
+        ISummarizationService summarizationService,
+        IOptions<MemoryIndexerOptions> options)
     {
         _memoryService = memoryService;
         _hybridSearch = hybridSearch;
         _duplicateDetector = duplicateDetector;
         _importanceAnalyzer = importanceAnalyzer;
         _summarizationService = summarizationService;
+        _defaultUserId = options.Value.DefaultUserId;
     }
 
     /// <summary>
@@ -66,7 +69,7 @@ public sealed class AdvancedMemoryTools
     {
         var options = new HybridSearchOptions
         {
-            UserId = DefaultUserId,
+            UserId = _defaultUserId,
             SessionId = sessionId,
             Limit = Math.Clamp(limit, 1, 20),
             DenseWeight = Math.Clamp(denseWeight, 0f, 1f),
@@ -142,7 +145,7 @@ public sealed class AdvancedMemoryTools
             memory.Content,
             new HybridSearchOptions
             {
-                UserId = DefaultUserId,
+                UserId = _defaultUserId,
                 Limit = limit + 1, // +1 to exclude self
                 MinScore = minSimilarity
             },
@@ -187,7 +190,7 @@ public sealed class AdvancedMemoryTools
     {
         var result = await _duplicateDetector.CheckForDuplicateAsync(
             content,
-            DefaultUserId,
+            _defaultUserId,
             similarityThreshold: Math.Clamp(threshold, 0.5f, 0.99f),
             contentType: null,
             lookbackWindow: null,
@@ -222,7 +225,7 @@ public sealed class AdvancedMemoryTools
         CancellationToken cancellationToken = default)
     {
         var groups = await _duplicateDetector.FindAllDuplicatesAsync(
-            DefaultUserId,
+            _defaultUserId,
             Math.Clamp(threshold, 0.5f, 0.99f),
             cancellationToken);
 
@@ -313,7 +316,7 @@ public sealed class AdvancedMemoryTools
     public async Task<RebuildIndexResult> RebuildSearchIndex(
         CancellationToken cancellationToken = default)
     {
-        await _hybridSearch.RebuildIndexAsync(DefaultUserId, cancellationToken);
+        await _hybridSearch.RebuildIndexAsync(_defaultUserId, cancellationToken);
 
         return new RebuildIndexResult
         {
@@ -347,7 +350,7 @@ public sealed class AdvancedMemoryTools
         if (string.IsNullOrWhiteSpace(query))
         {
             var allMemories = await _memoryService.GetAllAsync(
-                DefaultUserId,
+                _defaultUserId,
                 null,
                 cancellationToken);
             memories = allMemories.Take(clampedLimit).ToList();
@@ -358,7 +361,7 @@ public sealed class AdvancedMemoryTools
                 query,
                 new HybridSearchOptions
                 {
-                    UserId = DefaultUserId,
+                    UserId = _defaultUserId,
                     Limit = clampedLimit
                 },
                 cancellationToken);
@@ -411,7 +414,7 @@ public sealed class AdvancedMemoryTools
         CancellationToken cancellationToken = default)
     {
         var allMemories = await _memoryService.GetAllAsync(
-            DefaultUserId,
+            _defaultUserId,
             null,
             cancellationToken);
         var memories = allMemories.Take(100).ToList(); // Get up to 100 memories for hierarchy
@@ -466,7 +469,7 @@ public sealed class AdvancedMemoryTools
         [Description("Maximum tokens allowed")] int maxTokens = 128000,
         CancellationToken cancellationToken = default)
     {
-        var memories = await _memoryService.GetAllAsync(DefaultUserId, null, cancellationToken);
+        var memories = await _memoryService.GetAllAsync(_defaultUserId, null, cancellationToken);
         var memoryCount = memories.Count;
 
         var shouldTrigger = _summarizationService.ShouldTriggerSummarization(

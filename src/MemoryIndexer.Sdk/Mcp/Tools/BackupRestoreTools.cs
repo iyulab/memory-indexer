@@ -3,6 +3,8 @@ using System.Text.Json;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Options;
+using MemoryIndexer.Configuration;
 
 namespace MemoryIndexer.Sdk.Mcp.Tools;
 
@@ -11,11 +13,10 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 /// Phase v0.6.0-β: Memory Export/Import (Backup/Restore).
 /// </summary>
 [McpServerToolType]
-public class BackupRestoreTools(IMemoryExporter exporter)
+public class BackupRestoreTools(IMemoryExporter exporter, IOptions<MemoryIndexerOptions> indexerOptions)
 {
     private static readonly JsonSerializerOptions s_indentedJsonOptions = new() { WriteIndented = true };
     private static readonly JsonSerializerOptions s_caseInsensitiveJsonOptions = new() { PropertyNameCaseInsensitive = true };
-    private const string DefaultUserId = "mcp-user";
 
     /// <summary>
     /// Export memories to JSON format for backup.
@@ -32,7 +33,7 @@ public class BackupRestoreTools(IMemoryExporter exporter)
     {
         var options = new ExportOptions
         {
-            UserId = DefaultUserId,
+            UserId = indexerOptions.Value.DefaultUserId,
             IncludeEmbeddings = includeEmbeddings,
             IncludeMetadata = true,
             SessionId = sessionId
@@ -144,7 +145,7 @@ public class BackupRestoreTools(IMemoryExporter exporter)
     {
         var options = new ExportOptions
         {
-            UserId = DefaultUserId,
+            UserId = indexerOptions.Value.DefaultUserId,
             IncludeEmbeddings = false, // Don't need embeddings for stats
             IncludeMetadata = false,
             SessionId = sessionId
