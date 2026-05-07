@@ -23,6 +23,7 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
 ```json
 {
   "MemoryIndexer": {
+    "DefaultUserId": "default",
     "Storage": {
       "Type": "InMemory",
       "ConnectionString": "memories.db"
@@ -77,6 +78,7 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
 
 | Section | Option | Type | Default | Description |
 |---------|--------|------|---------|-------------|
+| *(root)* | **DefaultUserId** | string | `"default"` | Fallback user ID used by MCP tools and REST controllers when no explicit user ID is provided in a request. Override to isolate single-user deployments or set a meaningful default identity. |
 | **Storage** | Type | string | "InMemory" | Storage provider: `InMemory`, `SqliteVec` |
 | | ConnectionString | string | "memories.db" | Database path for SqliteVec |
 | **Embedding** | Provider | string | "Mock" | `Mock`, `External` (inject your own IEmbeddingService) |
@@ -128,6 +130,31 @@ services.AddMemoryIndexer(options =>
     options.Embedding.Dimensions = 1536;
 });
 ```
+
+### DefaultUserId
+
+`DefaultUserId` sets the fallback user identity used by MCP tools and REST controllers when a request does not include an explicit user ID. It is a top-level option on `MemoryIndexerOptions` (default: `"default"`).
+
+Configure it via the options delegate or via `appsettings.json`:
+
+```csharp
+services.AddMemoryIndexer(options =>
+{
+    options.DefaultUserId = "assistant";  // Override the fallback identity
+});
+```
+
+```json
+{
+  "MemoryIndexer": {
+    "DefaultUserId": "assistant"
+  }
+}
+```
+
+This setting was previously a private hardcoded constant inside individual MCP tool classes. It is now centralized in `MemoryIndexerOptions` so all SDK consumers share a single configurable default. Consumers who relied on the implicit `"default"` value do not need to change anything — the default is preserved.
+
+---
 
 ### Configuration Validation
 
