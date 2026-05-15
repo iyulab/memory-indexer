@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
-using ITextCompletionService = MemoryIndexer.Interfaces.ITextCompletionService;
+using ITextCompletionService = Flux.Abstractions.ITextCompletionService;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

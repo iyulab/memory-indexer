@@ -2,7 +2,7 @@
 using Flux.Abstractions;
 using System.Text.Json.Serialization;
 using MemoryIndexer.Interfaces;
-using ITextCompletionService = MemoryIndexer.Interfaces.ITextCompletionService;
+using ITextCompletionService = Flux.Abstractions.ITextCompletionService;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 
