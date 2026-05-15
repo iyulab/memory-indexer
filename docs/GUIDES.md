@@ -81,7 +81,7 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
 | *(root)* | **DefaultUserId** | string | `"default"` | Fallback user ID used by MCP tools and REST controllers when no explicit user ID is provided in a request. Override to isolate single-user deployments or set a meaningful default identity. |
 | **Storage** | Type | string | "InMemory" | Storage provider: `InMemory`, `SqliteVec` |
 | | ConnectionString | string | "memories.db" | Database path for SqliteVec |
-| **Embedding** | Provider | string | "Mock" | `Mock`, `External` (inject your own IEmbeddingService) |
+| **Embedding** | Provider | string | "Mock" | `Mock`, `Ollama`, `Custom` (inject your own IEmbeddingService for `Custom`) |
 | | Dimensions | int | 1024 | Vector dimensions (must match your embedding model) |
 | **VCM.Buffer** | MaxIdleSeconds | int | 60 | Promote to Short after idle timeout |
 | | TokenThreshold | int | 500 | Promote when buffer exceeds token count |
@@ -653,7 +653,7 @@ public class ReflectionService
       "ApiKey": "${QDRANT_API_KEY}"  // From environment
     },
     "Embedding": {
-      "Provider": "OpenAI",
+      "Provider": "Custom",
       "Model": "text-embedding-3-large",
       "ApiKey": "${OPENAI_API_KEY}"
     },

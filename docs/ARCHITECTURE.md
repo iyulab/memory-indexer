@@ -202,7 +202,7 @@ Storage location based on persistence and lifespan.
 │  │  Embedding │ │  Storage   │ │  Scoring   │      │
 │  │  Service   │ │   Store    │ │  Service   │      │
 │  └────────────┘ └────────────┘ └────────────┘      │
-│  Providers: Ollama, OpenAI, Local, SQLite, Qdrant  │
+│  Providers: Ollama, Custom (OpenAI/Azure/etc.), SQLite, Qdrant  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -339,13 +339,13 @@ Registration via `AddMemoryIndexer()` extension:
 ```csharp
 // InMemory storage (default)
 services.AddMemoryIndexer(options => {
-    options.Embedding.Provider = EmbeddingProvider.Local;
+    options.Embedding.Provider = EmbeddingProvider.Mock;  // or Ollama, or inject Custom via DI
 });
 
 // Or with SQLite persistent storage
 services.AddMemoryIndexer(options => {
     options.Storage.ConnectionString = "memories.db";
-    options.Embedding.Provider = EmbeddingProvider.Local;
+    options.Embedding.Provider = EmbeddingProvider.Ollama;  // or inject Custom via DI
 }).WithSqliteVec();
 ```
 
@@ -392,7 +392,7 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
       "VectorDimensions": 1024
     },
     "Embedding": {
-      "Provider": "Mock | Local | Ollama | OpenAI",
+      "Provider": "Mock | Ollama | Custom",
       "Model": "bge-m3",
       "Dimensions": 1024
     },
