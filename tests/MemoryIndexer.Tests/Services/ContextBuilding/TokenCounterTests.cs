@@ -124,13 +124,13 @@ public class TokenCounterTests
     }
 
     [Fact]
-    public void ShouldBeAssignableToTokenMeterAbstractionsInterface()
+    public void ImplementsITokenCounterInterface()
     {
-        // Verify that ApproximateTokenCounter can be used as TokenMeter.Abstractions.ITokenCounter
-        _counter.Should().BeAssignableTo<TokenMeter.Abstractions.ITokenCounter>();
+        // Verify that ApproximateTokenCounter implements MemoryIndexer.Interfaces.ITokenCounter
+        _counter.Should().BeAssignableTo<MemoryIndexer.Interfaces.ITokenCounter>();
 
-        // Core counting contract works through the base interface
-        ((TokenMeter.Abstractions.ITokenCounter)_counter).Count("Hello").Should().Be(2);
-        ((TokenMeter.Abstractions.ITokenCounter)_counter).SupportsModel("gpt-4o").Should().BeTrue();
+        // Core counting contract works through the interface
+        ((MemoryIndexer.Interfaces.ITokenCounter)_counter).Count("Hello").Should().Be(2);
+        ((MemoryIndexer.Interfaces.ITokenCounter)_counter).SupportsModel("gpt-4o").Should().BeTrue();
     }
 }

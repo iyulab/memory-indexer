@@ -44,8 +44,6 @@
     <PackageVersion Include="LMSupply.Generator" Version="0.32.7" />
     <!-- Flux Abstractions (iyulab open source) -->
     <PackageVersion Include="Flux.Abstractions" Version="0.13.3" />
-    <!-- Token Counting (iyulab open source) -->
-    <PackageVersion Include="TokenMeter.Abstractions" Version="0.3.1" />
     <!-- Environment -->
     <PackageVersion Include="DotNetEnv" Version="3.2.0" />
     <!-- OpenAI -->
