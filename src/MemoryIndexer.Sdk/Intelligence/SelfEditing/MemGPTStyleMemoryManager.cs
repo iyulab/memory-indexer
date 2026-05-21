@@ -1,8 +1,10 @@
-﻿using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Configuration;
+using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using MemoryIndexer.Sdk.Intelligence.Summarization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MemoryIndexer.Sdk.Intelligence.SelfEditing;
 
@@ -16,13 +18,13 @@ public sealed partial class MemGPTStyleMemoryManager : ISelfEditingMemoryService
     private readonly IEmbeddingService _embeddingService;
     private readonly ISummarizationService _summarizationService;
     private readonly ILogger<MemGPTStyleMemoryManager> _logger;
+    private readonly string _defaultUserId;
 
     // Working memory cache per session
     private readonly Dictionary<string, WorkingMemoryState> _workingMemoryCache = [];
     private readonly object _cacheLock = new();
 
     // Configuration
-    private const string DefaultUserId = "system";
     private const int DefaultMaxTokens = 128000;
     private const float ReflectionThreshold = 10.0f; // Sum of importance scores
     private const int MaxRecentSummaries = 5;
@@ -32,11 +34,13 @@ public sealed partial class MemGPTStyleMemoryManager : ISelfEditingMemoryService
         MemoryService memoryService,
         IEmbeddingService embeddingService,
         ISummarizationService summarizationService,
+        IOptions<MemoryIndexerOptions> options,
         ILogger<MemGPTStyleMemoryManager> logger)
     {
         _memoryService = memoryService;
         _embeddingService = embeddingService;
         _summarizationService = summarizationService;
+        _defaultUserId = options.Value.DefaultUserId;
         _logger = logger;
     }
 
@@ -95,7 +99,7 @@ public sealed partial class MemGPTStyleMemoryManager : ISelfEditingMemoryService
         CancellationToken cancellationToken = default)
     {
         var storedMemory = await _memoryService.StoreAsync(
-            userId: DefaultUserId,
+            userId: _defaultUserId,
             content: content,
             type: MemoryType.Semantic, // Use Semantic for archival (long-term knowledge)
             sessionId: null,
@@ -121,7 +125,7 @@ public sealed partial class MemGPTStyleMemoryManager : ISelfEditingMemoryService
         CancellationToken cancellationToken = default)
     {
         var searchResults = await _memoryService.RecallAsync(
-            userId: DefaultUserId,
+            userId: _defaultUserId,
             query: query,
             limit: maxResults,
             cancellationToken: cancellationToken);

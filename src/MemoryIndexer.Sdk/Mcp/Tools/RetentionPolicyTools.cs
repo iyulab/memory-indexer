@@ -20,7 +20,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     [McpServerTool]
     [Description("Preview what would be cleaned up by the retention policy without actually deleting anything.")]
     public async Task<RetentionPreviewResult> PreviewCleanup(
-        [Description("User ID to preview cleanup for (default: mcp-user)")] string? userId = null,
+        [Description("User ID to preview cleanup for (default: configured default user)")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
         var targetUserId = userId ?? options.Value.DefaultUserId;
@@ -76,7 +76,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     [McpServerTool]
     [Description("Apply retention policy to archive or delete old/low-confidence entries. Use dryRun=true to preview without changes.")]
     public async Task<RetentionApplyResult> ApplyRetentionPolicy(
-        [Description("User ID to apply policy to (default: mcp-user)")] string? userId = null,
+        [Description("User ID to apply policy to (default: configured default user)")] string? userId = null,
         [Description("If true, only report what would be done without making changes")] bool dryRun = true,
         CancellationToken cancellationToken = default)
     {
@@ -186,7 +186,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     [Description("Evaluate the retention decision for a specific entry by key.")]
     public async Task<RetentionEvaluateResult> EvaluateRetention(
         [Description("The key of the entry to evaluate")] string key,
-        [Description("User ID (default: mcp-user)")] string? userId = null,
+        [Description("User ID (default: configured default user)")] string? userId = null,
         CancellationToken cancellationToken = default)
     {
         var targetUserId = userId ?? options.Value.DefaultUserId;

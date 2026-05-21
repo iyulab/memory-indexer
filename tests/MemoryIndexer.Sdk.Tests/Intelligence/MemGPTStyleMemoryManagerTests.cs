@@ -108,10 +108,12 @@ public class MemGPTStyleMemoryManagerTests
             null!, // IMemoryConflictResolver (optional, null is valid)
             optionsMock);
 
+        var managerOptions = Options.Create(new MemoryIndexerOptions());
         _manager = new MemGPTStyleMemoryManager(
             _memoryServiceMock,
             _embeddingServiceMock,
             _summarizationServiceMock,
+            managerOptions,
             NullLogger<MemGPTStyleMemoryManager>.Instance);
     }
 
