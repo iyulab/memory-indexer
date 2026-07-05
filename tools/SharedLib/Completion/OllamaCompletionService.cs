@@ -1,9 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Flux.Abstractions;
 using MemoryIndexer.Interfaces;
-using ITextCompletionService = Flux.Abstractions.ITextCompletionService;
 using Microsoft.Extensions.Logging;
 
 namespace SharedLib.Completion;

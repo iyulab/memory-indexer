@@ -17,6 +17,8 @@
   <ItemGroup>
     <!-- ASP.NET Core Web SDK includes all hosting/config dependencies -->
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <!-- transitive Microsoft.OpenApi 2.4.1 is vulnerable (GHSA-v5pm-xwqc-g5wc); promote to patched pin -->
+    <PackageReference Include="Microsoft.OpenApi" />
     <!-- Swagger -->
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>

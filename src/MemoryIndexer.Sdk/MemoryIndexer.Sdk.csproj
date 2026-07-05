@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Exclude nested project build artifacts (Intelligence/, Mcp/ have their own csproj) -->
+    <!-- Exclude stale build artifacts under nested folders -->
     <DefaultItemExcludes>$(DefaultItemExcludes);**/bin/**;**/obj/**</DefaultItemExcludes>
   </PropertyGroup>
 

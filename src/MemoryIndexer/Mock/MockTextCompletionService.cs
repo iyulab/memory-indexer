@@ -1,6 +1,5 @@
-using Flux.Abstractions;
+
 using MemoryIndexer.Interfaces;
-using ITextCompletionService = Flux.Abstractions.ITextCompletionService;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Mock;

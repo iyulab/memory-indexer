@@ -32,6 +32,8 @@
     </PackageReference>
     <!-- LMSupply embedding for integration tests (iyulab open source) -->
     <PackageReference Include="LMSupply.Embedder" />
+    <!-- transitive Microsoft.OpenApi 2.4.1 is vulnerable (GHSA-v5pm-xwqc-g5wc); promote to patched pin -->
+    <PackageReference Include="Microsoft.OpenApi" />
   </ItemGroup>
 
 </Project>
