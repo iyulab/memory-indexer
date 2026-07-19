@@ -25,6 +25,10 @@
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.6.0" />
     <!-- Database -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.8" />
+    <!-- Explicit lift: Microsoft.Data.Sqlite 10.0.8 pulls SQLitePCLRaw 2.1.11
+         (NU1903 high, GHSA-2m69-gcr7-jv3q); upstream 2.1.12 stable landed 2026-07-09.
+         Direct reference in MemoryIndexer.Sdk so the >= 2.1.12 floor propagates to consumers. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
     <!-- Numerics -->
     <PackageVersion Include="System.Numerics.Tensors" Version="10.0.8" />
     <!-- Build -->

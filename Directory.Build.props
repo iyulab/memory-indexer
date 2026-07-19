@@ -11,11 +11,6 @@
     <NoWarn>$(NoWarn);NU5104;CS9107;IDE0011;IDE0040;IDE0044;CA1720</NoWarn>
   </PropertyGroup>
 
-  <!-- SQLitePCLRaw 2.1.11 has no patched release yet; suppress until upstream ships a fix (same as ironhive) -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
-  </ItemGroup>
-
   <PropertyGroup>
     <Authors>iyulab</Authors>
     <Company>iyulab</Company>
@@ -26,7 +21,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.16.0</Version>
+    <Version>0.16.1</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- PackageReadmeFile is set per project where README exists -->
     <IsPackable>false</IsPackable> <!-- Default: only SDK is packable -->
