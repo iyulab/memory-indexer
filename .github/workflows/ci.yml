@@ -37,6 +37,11 @@ jobs:
     - name: Run Core Tests
       run: dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity normal
 
+    # No continue-on-error: a failing SDK test fails this job, exactly as the core suite above.
+    # The step carried `continue-on-error: true` from the commit that introduced this workflow,
+    # which made SDK failures invisible in a green run. The category filter already excludes the
+    # tests that need a local model, a GPU host, or heavy fixtures, so what remains has no reason
+    # to be treated as advisory — measured at 2056 passed / 0 failed under this exact filter.
     - name: Run SDK Tests (excluding LocalModel and Heavy)
       run: |
         dotnet test tests/MemoryIndexer.Sdk.Tests \
@@ -44,4 +49,3 @@ jobs:
           --configuration Release \
           --verbosity normal \
           --filter "Category!=LocalModel&Category!=Heavy&Category!=GpuStack"
-      continue-on-error: true
