@@ -2,6 +2,13 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.16.1]
+
+**Gap notice — not a release entry.** Releases from v0.7.0 through v0.16.1 were published without
+being recorded here. Reconstructing them now would mean describing changes from memory rather than
+from a record, so the gap is marked instead of filled: for anything in that range, read the commit
+history. Entries resume from the next release.
+
 ## [v0.6.0] - 2026-01-09
 
 ### Production Readiness Release
