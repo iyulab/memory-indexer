@@ -37,7 +37,18 @@ else
 /// </summary>
 static async Task RunStdioServer(string[] args)
 {
-    var builder = Host.CreateApplicationBuilder(args);
+    // MCP clients (e.g. Claude Desktop) launch this executable with an arbitrary working
+    // directory - not necessarily the executable's own directory. Host.CreateApplicationBuilder
+    // resolves appsettings.json relative to Directory.GetCurrentDirectory() by default, so an
+    // unrelated launcher cwd makes it silently miss the bundled config and fall back to
+    // EmbeddingOptions/CompletionOptions' hardcoded class defaults instead. Anchor the content
+    // root to the executable's own directory so the bundled appsettings.json/.Production.json
+    // are always found regardless of who launched the process or from where.
+    var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+    {
+        Args = args,
+        ContentRootPath = AppContext.BaseDirectory
+    });
 
     // Configure logging to stderr (stdout is reserved for MCP communication)
     builder.Logging.ClearProviders();
@@ -60,7 +71,7 @@ static async Task RunStdioServer(string[] args)
             options.ServerInfo = new()
             {
                 Name = "memory-indexer",
-                Version = "0.1.0"
+                Version = GetServerVersion()
             };
             options.ServerInstructions = GetServerInstructions();
         })
@@ -77,7 +88,13 @@ static async Task RunStdioServer(string[] args)
 /// </summary>
 static async Task RunHttpServer(string[] args, int port)
 {
-    var builder = WebApplication.CreateBuilder(args);
+    // Same launcher-cwd concern as the stdio path - anchor the content root to the executable's
+    // own directory so appsettings.json/.Production.json resolve regardless of caller cwd.
+    var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+    {
+        Args = args,
+        ContentRootPath = AppContext.BaseDirectory
+    });
 
     // Configure logging
     builder.Logging.ClearProviders();
@@ -103,7 +120,7 @@ static async Task RunHttpServer(string[] args, int port)
             options.ServerInfo = new()
             {
                 Name = "memory-indexer",
-                Version = "0.3.0"
+                Version = GetServerVersion()
             };
             options.ServerInstructions = GetServerInstructions();
         })
@@ -185,7 +202,7 @@ static async Task RunHttpServer(string[] args, int port)
     app.MapGet("/", () => Results.Ok(new
     {
         name = "Memory Indexer MCP Server",
-        version = "0.3.0",
+        version = GetServerVersion(),
         transport = "HTTP/SSE",
         endpoints = new
         {
@@ -216,6 +233,13 @@ static async Task RunHttpServer(string[] args, int port)
 
     await app.RunAsync();
 }
+
+/// <summary>
+/// Gets the server version from assembly metadata, so serverInfo.Version tracks the package
+/// version instead of drifting from a hardcoded literal.
+/// </summary>
+static string GetServerVersion() =>
+    System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
 
 /// <summary>
 /// Gets the server instructions for MCP clients.

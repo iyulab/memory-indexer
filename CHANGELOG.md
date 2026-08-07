@@ -2,6 +2,41 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.16.2] - 2026-08-07
+
+### Fixed
+- `RunStdioServer`/`RunHttpServer` (`tools/McpServer`) now anchor the Generic Host content root to
+  `AppContext.BaseDirectory` instead of the process's ambient working directory. MCP clients launch
+  this executable with an arbitrary cwd (not necessarily its own directory), which previously made
+  `appsettings.json`/`appsettings.Production.json` silently go unfound and fall back to the
+  hardcoded `EmbeddingProvider.Ollama`/`CompletionProvider.Mock` class defaults regardless of what
+  the bundled config declared.
+- `tools/McpServer/appsettings.json`'s `Embedding.Provider` was `"Local"`, a value the
+  `EmbeddingProvider` enum has not had since the 0.16.0 provider-architecture change — the server
+  crashed with `FormatException` on every `Development`-environment start. Corrected to `"Mock"`.
+  Fixed the same stale value in `samples/appsettings.mcp-server.json`,
+  `samples/appsettings.sdk-embedded.json`.
+- `claude_desktop_config.example.json` and the README's "As MCP Server" section pointed to a
+  nonexistent project path / an unpublished `MemoryIndexer.Mcp` dotnet-tool package. Replaced with
+  the build-from-source steps that actually work today.
+- `serverInfo.Version` (stdio + HTTP transports) and the HTTP `/` info endpoint's `version` field
+  were hardcoded literals (`"0.1.0"`/`"0.3.0"`) that had drifted from the package version since
+  introduction. Now read from assembly metadata.
+
+### Added
+- `MockEmbeddingService` and `MockTextCompletionService` log an explicit `Warning` on construction
+  noting that their output is non-semantic/placeholder and unsuitable for production, so a Mock
+  provider silently active in a real deployment is now observable instead of a surprise.
+- The `NotSupportedException` thrown for an unimplemented `Embedding`/`Completion` provider now
+  names the fix (register a real service, or set the provider to `Mock` for local development)
+  instead of only stating the requirement.
+
+### Removed
+- `samples/WebApiClient` — not wired into `MemoryIndexer.slnx`, referenced from nowhere else in the
+  repo, failed to restore (`NU1903` on a vulnerable transitive `Microsoft.OpenApi`), and its
+  `Program.cs` referenced `EmbeddingProvider.Local`, which does not compile against the current
+  enum. Dead since the 0.16.0 provider-architecture change.
+
 ## [v0.16.1]
 
 **Gap notice — not a release entry.** Releases from v0.7.0 through v0.16.1 were published without

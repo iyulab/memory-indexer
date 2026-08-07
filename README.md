@@ -109,19 +109,35 @@ Tier Promotion Pipeline (Atkinson-Shiffrin + Tulving):
 
 ### As MCP Server
 
+No packaged CLI tool is published yet; build the server from source:
+
 ```bash
-dotnet tool install -g MemoryIndexer.Mcp
+git clone https://github.com/iyulab/memory-indexer
+dotnet publish memory-indexer/tools/McpServer -c Release -r <rid> --self-contained
 ```
+
+Replace `<rid>` with your platform's runtime identifier (`win-x64`, `linux-x64`, `osx-arm64`, ...).
 
 Configure Claude Desktop (`%APPDATA%\Claude\claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
     "memory-indexer": {
-      "command": "memory-indexer-mcp"
+      "command": "<path-to-repo>/tools/McpServer/bin/Release/net10.0/<rid>/publish/memory-indexer.exe",
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
     }
   }
 }
+```
+
+`DOTNET_ENVIRONMENT=Development` selects `appsettings.json`, whose bundled `Mock`
+embedding/completion providers let the server start with no configuration for local use; they
+return deterministic, non-semantic placeholder results (a startup warning is logged). Without it,
+the server loads `appsettings.Production.json`, which requires you to register your own
+`IEmbeddingService` / `ITextCompletionService` (see [As SDK](#as-sdk)) for real search relevance —
+otherwise startup fails fast with an actionable error.
 ```
 
 ### As SDK

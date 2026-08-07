@@ -20,6 +20,7 @@ public sealed partial class MockEmbeddingService : IEmbeddingService
     {
         _logger = logger;
         _dimensions = options.Value.Embedding.Dimensions;
+        LogMockEmbeddingServiceActive(_logger);
     }
 
     /// <inheritdoc />
@@ -80,6 +81,9 @@ public sealed partial class MockEmbeddingService : IEmbeddingService
 
         return embedding;
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "MockEmbeddingService is active - embeddings are non-semantic random vectors derived from a content hash, not suitable for meaningful search relevance. Configure a real IEmbeddingService for production use.")]
+    private static partial void LogMockEmbeddingServiceActive(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Generating mock embedding for text of length {Length}")]
     private static partial void LogGeneratingMockEmbedding(ILogger logger, int length);
