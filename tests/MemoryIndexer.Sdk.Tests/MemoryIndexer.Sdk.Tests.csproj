@@ -12,14 +12,20 @@
        had accumulated in files that literally never compiled while the flag was on. All fixed;
        this project now always compiles as part of the normal build, so future regressions of that
        kind are caught at compile time instead of silently rotting behind the flag again.
-       Separately, the "fast" (multilingual-e5-small) catalog default measures lower on 5 fixed
-       semantic-quality thresholds tuned for the old "all-MiniLM-L6-v2" model than that model did —
-       an E5 instruction-prefix ("query: "/"passage: ") fix was hypothesized and empirically
-       disproven (prefix shifted similarity by <0.01, not the cause). Those 5 tests are Skip-tagged
-       with a pointer to claudedocs/memory-indexer/issues/ISSUE-memory-indexer-20260824-010000-
-       heavy-quality-thresholds-need-recalibration.md rather than left red — this is orthogonal to
-       compilation and does not need the flag back. All 5 carry the Heavy trait, so CI's
-       Category!=Heavy filter was never affected either way.
+       Separately, the "fast" (multilingual-e5-small) catalog default initially measured lower than
+       the old "all-MiniLM-L6-v2" model on 8 fixed semantic-quality thresholds. An E5
+       instruction-prefix ("query: "/"passage: ") fix was hypothesized and empirically disproven
+       (prefix shifted similarity by <0.01, not the cause). cycle-303 root-caused and fixed 7 of the
+       8: 3 via model-agnostic redesign (relative ordering / self-referential query instead of fixed
+       cosine thresholds), 2 via a "fast"-specific similarity-hub finding (some short sentences score
+       anomalously high average similarity across unrelated queries — recall@K widening plus a
+       grounded, documented threshold recalibration), and 2 via recall@K widening alone (the correct
+       memory was already being fetched, just past the old cutoff). The 1 remaining Skip
+       (ComprehensiveQualityComparison_BaselineVsEnhanced) traces to a real, deterministic bug in
+       QueryExpander's SynonymMap ("code"->"program" breaks the "code reviews" compound noun),
+       production code out of scope for a test-only cycle — pointer:
+       claudedocs/memory-indexer/issues/ISSUE-memory-indexer-20260824-010000-heavy-quality-thresholds-need-recalibration.md.
+       That one test carries the Heavy trait, so CI's Category!=Heavy filter is unaffected either way.
        To opt out of building this project entirely (e.g. a machine without ONNX Runtime support),
        SKIP_ONNX_TESTS can still be set externally via `-p:DefineConstants=SKIP_ONNX_TESTS` — no
        PropertyGroup here defines it by default anymore. -->
