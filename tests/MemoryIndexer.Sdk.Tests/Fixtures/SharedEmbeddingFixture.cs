@@ -69,7 +69,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
     /// <summary>
     /// Gets the model ID.
     /// </summary>
-    public static string ModelId => "all-MiniLM-L6-v2";
+    public static string ModelId => "fast";
 
     public async Task InitializeAsync()
     {
@@ -160,7 +160,10 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
     /// When not defined, if ONNX initialization fails at runtime, tests will fail
     /// with a clear error message.
     /// </remarks>
-    public static void EnsureAvailable()
+    // CA1822: only the SKIP_ONNX_TESTS branch is instance-data-free; the real (non-skip) branch
+    // below needs instance state (IsAvailable/_initializationError), so this can't be static.
+#pragma warning disable CA1822
+    public void EnsureAvailable()
     {
 #if SKIP_ONNX_TESTS
         // This branch should never execute because all test classes
@@ -177,6 +180,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
         }
 #endif
     }
+#pragma warning restore CA1822
 
 #if !SKIP_ONNX_TESTS
     /// <summary>

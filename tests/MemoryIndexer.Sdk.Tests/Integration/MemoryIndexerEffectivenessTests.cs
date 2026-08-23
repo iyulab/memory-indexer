@@ -3,7 +3,7 @@ using System.Text;
 using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
-using MemoryIndexer.Integration.Tests.Fixtures;
+using MemoryIndexer.Sdk.Tests.Integration.Fixtures;
 using MemoryIndexer.InMemory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -41,7 +41,7 @@ public class MemoryIndexerEffectivenessTests
         _output = output;
         _memoryStore = new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance);
 
-        _output.WriteLine($"Using shared embedding service: {_fixture.ModelId}, Dimensions: {_fixture.Dimensions}");
+        _output.WriteLine($"Using shared embedding service: {SharedEmbeddingFixture.ModelId}, Dimensions: {SharedEmbeddingFixture.Dimensions}");
     }
 
     #region Conversation Length Metrics Tests

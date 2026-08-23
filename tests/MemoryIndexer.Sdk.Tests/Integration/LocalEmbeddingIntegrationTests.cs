@@ -3,7 +3,7 @@ using FluentAssertions;
 using LMSupply.Embedder;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
-using MemoryIndexer.Integration.Tests.Fixtures;
+using MemoryIndexer.Sdk.Tests.Integration.Fixtures;
 using MemoryIndexer.InMemory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -36,7 +36,7 @@ public class LocalEmbeddingIntegrationTests
         _output = output;
         _memoryStore = new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance);
 
-        _output.WriteLine($"Using shared embedding model: {_fixture.ModelId}, Dimensions: {_fixture.Dimensions}");
+        _output.WriteLine($"Using shared embedding model: {SharedEmbeddingFixture.ModelId}, Dimensions: {SharedEmbeddingFixture.Dimensions}");
     }
 
     [Fact]

@@ -6,7 +6,17 @@
 
   </PropertyGroup>
 
-  <!-- Define constant for skipping ONNX-dependent tests until LMSupply/ONNX supports .NET 10 -->
+  <!-- ONNX Runtime + LMSupply.Embedder run fine on .NET 10 in practice (verified 2026-08-24:
+       7 of 9 tests in LocalEmbeddingIntegrationTests pass end to end once the model ID is
+       updated for the current catalog — the "all-MiniLM-L6-v2" ID this suite used to load
+       predates a catalog change and no longer resolves; "fast" does). This flag's remaining
+       justification is NOT a runtime incompatibility: the 2 still-failing tests assert
+       semantic-retrieval-quality thresholds tuned for the old model, and the current "fast"
+       (multilingual-e5-small) embeddings don't hold those same thresholds without instruction
+       prefixes ("query: "/"passage: ", per that model's card) that this integration doesn't add.
+       Un-skipping needs that investigated and the affected assertions fixed or replaced with
+       model-agnostic ones (dimensions, determinism, distinctness) rather than fixed similarity
+       thresholds. -->
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);SKIP_ONNX_TESTS</DefineConstants>
   </PropertyGroup>
