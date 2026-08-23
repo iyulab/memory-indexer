@@ -43,8 +43,8 @@
     <!-- Benchmarking -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
     <!-- LMSupply (iyulab-rnd open source) -->
-    <PackageVersion Include="LMSupply.Embedder" Version="0.34.17" />
-    <PackageVersion Include="LMSupply.Generator" Version="0.34.17" />
+    <PackageVersion Include="LMSupply.Embedder" Version="0.42.1" />
+    <PackageVersion Include="LMSupply.Generator" Version="0.42.1" />
     <!-- Environment -->
     <PackageVersion Include="DotNetEnv" Version="3.2.0" />
     <!-- OpenAI -->

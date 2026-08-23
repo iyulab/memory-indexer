@@ -2,6 +2,12 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.16.3] - 2026-08-23
+
+### Changed
+- `LMSupply.Embedder`/`.Generator` dependencies raised `0.34.17` → `0.42.1` (dependency-freshness
+  gate, no MemoryIndexer API surface change).
+
 ## [v0.16.2] - 2026-08-07
 
 ### Fixed
