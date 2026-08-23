@@ -1,4 +1,5 @@
 #if !SKIP_ONNX_TESTS
+using System.Globalization;
 using System.Text;
 using FluentAssertions;
 using MemoryIndexer.Interfaces;
@@ -17,8 +18,8 @@ namespace MemoryIndexer.Sdk.Tests.Integration;
 /// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
 /// <remarks>
-/// These tests are skipped when SKIP_ONNX_TESTS is defined due to ONNX Runtime
-/// native binary incompatibility with .NET 10.
+/// These tests are skipped when SKIP_ONNX_TESTS is defined — see that flag's definition in
+/// MemoryIndexer.Sdk.Tests.csproj for the current reason (not a runtime incompatibility).
 /// </remarks>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
@@ -28,7 +29,7 @@ public class MemoryIndexerEffectivenessTests
 {
     private readonly ITestOutputHelper _output;
     private readonly SharedEmbeddingFixture _fixture;
-    private readonly IMemoryStore _memoryStore;
+    private readonly InMemoryMemoryStore _memoryStore;
 
     // Simulated LLM context window sizes
     private const int SmallContextWindow = 4096;    // ~3K words
@@ -581,7 +582,7 @@ public class MemoryIndexerEffectivenessTests
         report.AppendLine("│ TEST METHODOLOGY                                                                         │");
         report.AppendLine("├──────────────────────────────────────────────────────────────────────────────────────────┤");
         report.AppendLine("│                                                                                          │");
-        report.AppendLine("│  Embedding Model: all-MiniLM-L6-v2 (384 dimensions, local ONNX)                          │");
+        report.AppendLine(CultureInfo.InvariantCulture, $"│  Embedding Model: {SharedEmbeddingFixture.ModelId} ({SharedEmbeddingFixture.Dimensions} dimensions, local ONNX)");
         report.AppendLine("│  Storage: InMemoryMemoryStore with cosine similarity search                              │");
         report.AppendLine("│  Context Window Simulation: 4,096 tokens (GPT-3.5 equivalent)                            │");
         report.AppendLine("│                                                                                          │");
@@ -656,6 +657,7 @@ public class MemoryIndexerEffectivenessTests
         {
             var template = templates[i % templates.Length];
             var content = string.Format(
+                CultureInfo.InvariantCulture,
                 template.Item2,
                 names[random.Next(names.Length)],
                 companies[random.Next(companies.Length)],
@@ -749,7 +751,7 @@ public class MemoryIndexerEffectivenessTests
         return (float)found / expectedKeywords.Length;
     }
 
-    private async Task<float> EvaluateRecallScoreAsync(ContextOnlyMemory? without, MemoryIndexerSimulation? with)
+    private static async Task<float> EvaluateRecallScoreAsync(ContextOnlyMemory? without, MemoryIndexerSimulation? with)
     {
         var testQueries = new[]
         {

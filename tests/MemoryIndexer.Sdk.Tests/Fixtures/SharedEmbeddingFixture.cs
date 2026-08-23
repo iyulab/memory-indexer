@@ -7,6 +7,7 @@ using Xunit;
 
 #if !SKIP_ONNX_TESTS
 using LMSupply.Embedder;
+using MemoryIndexer.Sdk.Intelligence.Caching;
 #endif
 
 namespace MemoryIndexer.Sdk.Tests.Integration.Fixtures;
@@ -19,8 +20,9 @@ namespace MemoryIndexer.Sdk.Tests.Integration.Fixtures;
 /// The embedding model (~90MB) is loaded once and shared across all tests in the collection.
 /// This reduces total test time from ~3+ minutes to ~30 seconds.
 ///
-/// When SKIP_ONNX_TESTS is defined, the fixture will not load the ONNX model to avoid
-/// native binary incompatibility issues with .NET 10 (ONNX Runtime crash).
+/// When SKIP_ONNX_TESTS is defined, the fixture will not load the ONNX model — see that flag's
+/// definition in MemoryIndexer.Sdk.Tests.csproj for the current reason (not a runtime
+/// incompatibility; ONNX Runtime + LMSupply.Embedder run fine on .NET 10).
 /// </remarks>
 public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
 {
@@ -81,8 +83,8 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
 
 #if SKIP_ONNX_TESTS
             InitializationFailed = true;
-            _initializationError = "ONNX tests are skipped due to native binary incompatibility with .NET 10. " +
-                                   "The SKIP_ONNX_TESTS compile constant is defined.";
+            _initializationError = "SKIP_ONNX_TESTS is defined — see that flag's definition in " +
+                                   "MemoryIndexer.Sdk.Tests.csproj for the current reason.";
             IsAvailable = false;
             _initialized = true;
             return;
@@ -92,8 +94,14 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
                 // Load the shared embedding model using LMSupply directly
                 EmbeddingModel = await LocalEmbedder.LoadAsync(ModelId);
 
-                // Create shared embedding service using LMSupply wrapper
-                EmbeddingService = new LMSupplyEmbeddingServiceWrapper(EmbeddingModel);
+                // Create shared embedding service using LMSupply wrapper, decorated with the SDK's
+                // real LRU cache (not a raw wrapper) so caching-behavior tests exercise caching.
+                var rawService = new LMSupplyEmbeddingServiceWrapper(EmbeddingModel);
+                EmbeddingService = new CachedEmbeddingService(
+                    rawService,
+                    profiler: null,
+                    NullLogger<CachedEmbeddingService>.Instance,
+                    CreateOptions());
 
                 IsAvailable = true;
                 _initialized = true;
@@ -101,8 +109,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
             catch (Exception ex)
             {
                 InitializationFailed = true;
-                _initializationError = $"Failed to initialize ONNX embedding model: {ex.Message}. " +
-                                      "This is likely due to ONNX Runtime native binary incompatibility with the current .NET version.";
+                _initializationError = $"Failed to initialize ONNX embedding model: {ex.Message}.";
                 IsAvailable = false;
                 _initialized = true;
             }
@@ -175,8 +182,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
         if (!IsAvailable)
         {
             throw new InvalidOperationException(_initializationError ??
-                "ONNX embedding fixture is not available. " +
-                "Check if ONNX Runtime is compatible with the current .NET version.");
+                "ONNX embedding fixture is not available.");
         }
 #endif
     }
@@ -201,7 +207,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
             string text,
             CancellationToken cancellationToken = default)
         {
-            var result = await _model.EmbedAsync(text);
+            var result = await _model.EmbedAsync(text, cancellationToken);
             return result;
         }
 
@@ -214,7 +220,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
 
             foreach (var text in textList)
             {
-                var embedding = await _model.EmbedAsync(text);
+                var embedding = await _model.EmbedAsync(text, cancellationToken);
                 results.Add(embedding);
             }
 

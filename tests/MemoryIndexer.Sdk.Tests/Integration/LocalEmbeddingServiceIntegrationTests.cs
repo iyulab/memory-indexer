@@ -1,4 +1,5 @@
 #if !SKIP_ONNX_TESTS
+using System.Globalization;
 using FluentAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -16,8 +17,8 @@ namespace MemoryIndexer.Sdk.Tests.Integration;
 /// Uses shared embedding fixture for efficient resource usage.
 /// </summary>
 /// <remarks>
-/// These tests are skipped when SKIP_ONNX_TESTS is defined due to ONNX Runtime
-/// native binary incompatibility with .NET 10.
+/// These tests are skipped when SKIP_ONNX_TESTS is defined — see that flag's definition in
+/// MemoryIndexer.Sdk.Tests.csproj for the current reason (not a runtime incompatibility).
 /// </remarks>
 [Trait("Category", "Integration")]
 [Trait("Category", "Heavy")]
@@ -27,7 +28,7 @@ public class LocalEmbeddingServiceIntegrationTests
 {
     private readonly ITestOutputHelper _output;
     private readonly SharedEmbeddingFixture _fixture;
-    private readonly IMemoryStore _memoryStore;
+    private readonly InMemoryMemoryStore _memoryStore;
 
     public LocalEmbeddingServiceIntegrationTests(SharedEmbeddingFixture fixture, ITestOutputHelper output)
     {
@@ -45,7 +46,7 @@ public class LocalEmbeddingServiceIntegrationTests
 
         // Assert
         _fixture.EmbeddingService.Should().NotBeNull();
-        _fixture.EmbeddingService!.Dimensions.Should().Be(384);
+        _fixture.EmbeddingService!.Dimensions.Should().Be(SharedEmbeddingFixture.Dimensions);
 
         _output.WriteLine($"EmbeddingService resolved: {_fixture.EmbeddingService.GetType().Name}");
         _output.WriteLine($"Dimensions: {_fixture.EmbeddingService.Dimensions}");
@@ -65,11 +66,11 @@ public class LocalEmbeddingServiceIntegrationTests
         var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(text);
 
         // Assert
-        embedding.Length.Should().Be(384);
+        embedding.Length.Should().Be(SharedEmbeddingFixture.Dimensions);
         embedding.Span.ToArray().Count(v => Math.Abs(v) > 0.0001f).Should().BeGreaterThan(100);
 
         _output.WriteLine($"Generated embedding with {embedding.Length} dimensions");
-        _output.WriteLine($"First 5 values: [{string.Join(", ", embedding.Span.ToArray().Take(5).Select(v => v.ToString("F4")))}]");
+        _output.WriteLine($"First 5 values: [{string.Join(", ", embedding.Span.ToArray().Take(5).Select(v => v.ToString("F4", CultureInfo.InvariantCulture)))}]");
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public class LocalEmbeddingServiceIntegrationTests
         embeddings.Should().HaveCount(3);
         foreach (var embedding in embeddings)
         {
-            embedding.Length.Should().Be(384);
+            embedding.Length.Should().Be(SharedEmbeddingFixture.Dimensions);
         }
 
         _output.WriteLine($"Generated {embeddings.Count} batch embeddings");
@@ -216,11 +217,11 @@ public class LocalEmbeddingServiceIntegrationTests
         _fixture.EnsureAvailable();
 
         // The configured model is all-MiniLM-L6-v2 with 384 dimensions
-        _fixture.EmbeddingService!.Dimensions.Should().Be(384);
+        _fixture.EmbeddingService!.Dimensions.Should().Be(SharedEmbeddingFixture.Dimensions);
 
         // Verify actual embedding matches expected dimensions
         var embedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync("Test");
-        embedding.Length.Should().Be(384);
+        embedding.Length.Should().Be(SharedEmbeddingFixture.Dimensions);
 
         _output.WriteLine($"Model all-MiniLM-L6-v2: {embedding.Length} dimensions (expected 384)");
     }
