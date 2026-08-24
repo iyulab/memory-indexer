@@ -27,7 +27,11 @@ public sealed class QueryExpander : IQueryExpander
         // Technology terms
         ["feature"] = ["functionality", "capability", "component", "module"],
         ["bug"] = ["issue", "error", "problem", "defect"],
-        ["code"] = ["program", "script", "implementation", "software"],
+        // "code" deliberately has no entry: GenerateQueryVariants does a literal single-word
+        // substring replace (see below), and every one of "code"'s synonyms breaks the common
+        // compound noun "code review(s)" into a phrase that no longer matches memories about it
+        // ("code reviews" -> "program reviews") — a confirmed, deterministic regression, not a
+        // model-tuning issue. See claudedocs/memory-indexer/issues/ISSUE-memory-indexer-20260824-010000-heavy-quality-thresholds-need-recalibration.md.
         ["tech"] = ["technology", "technical", "stack", "framework"],
 
         // Team/People terms

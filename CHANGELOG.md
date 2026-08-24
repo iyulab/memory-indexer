@@ -2,6 +2,18 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.16.4] - 2026-08-24
+
+### Fixed
+- `QueryExpander.GenerateQueryVariants` no longer expands `"code"` via `SynonymMap`. Every
+  configured synonym (`program`/`script`/`implementation`/`software`) corrupted the compound noun
+  "code review(s)" when substituted in — e.g. `"When are code reviews?"` became `"When are program
+  reviews?"`, which no longer semantically matches stored memories about code reviews. Confirmed
+  deterministic (5/5 identical repeat runs) and isolated to this single mapping — no other query in
+  this package's own test corpus references "code", so removing it carries no observed recall
+  cost elsewhere. `ExpandQuery` (additive term expansion, not destructive substitution) is
+  similarly unaffected by other entries and needed no change.
+
 ## [v0.16.3] - 2026-08-23
 
 ### Changed

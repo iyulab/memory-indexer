@@ -397,13 +397,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         mostRecent.RecencyScore.Should().BeGreaterThan(oldest.RecencyScore);
     }
 
-    [Fact(Skip = "Deterministic regression (5/5 identical runs, not variance/noise): query expansion's " +
-        "\"code\"->\"program\" synonym substitution turns \"When are code reviews?\" into \"When are " +
-        "program reviews?\", which no longer matches the stored \"code review meeting\" memory (100%->0% " +
-        "recall on that one query, dragging the 8-query average below the 90%-of-baseline bar). Root cause " +
-        "is in QueryExpander.GenerateQueryVariants's SynonymMap, not this test or the embedding model — " +
-        "out of scope for a test-only cycle, see " +
-        "claudedocs/memory-indexer/issues/ISSUE-memory-indexer-20260824-010000-heavy-quality-thresholds-need-recalibration.md")]
+    [Fact]
     public async Task ComprehensiveQualityComparison_BaselineVsEnhanced()
     {
         _output.WriteLine("=== Comprehensive Quality Comparison ===\n");
