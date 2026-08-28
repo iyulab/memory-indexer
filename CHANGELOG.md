@@ -2,6 +2,18 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.16.6] - 2026-08-28
+
+### Changed
+- Updated `ModelContextProtocol`/`ModelContextProtocol.AspNetCore` to 2.2.0 (previously 1.3.0).
+  No public API changes — verified no usage of the capabilities the 2.0 protocol revision
+  deprecated (roots, sampling, logging) or `DiscoverResult.ServerInfo`. This is the only package
+  in the ecosystem running the MCP HTTP server transport, whose `Stateless` default flips to
+  `true` in 2.0; live-tested the HTTP endpoint post-update (initialize/tools-list/tools-call
+  round-trip) with no regression — the transport carries no session-affine state here.
+- Removed the `NU5104` suppression — it existed because `ModelContextProtocol` had no stable
+  release; 2.2.0 is stable, so the suppression no longer applies to anything.
+
 ## [v0.16.5] - 2026-08-24
 
 ### Changed

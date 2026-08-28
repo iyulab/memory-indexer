@@ -7,8 +7,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <!-- NU5104: MCP prerelease dependency, CS/IDE: existing code style suppressions, CA1720: intentional domain names (Short/Long/Object) in SPO triples and memory tiers -->
-    <NoWarn>$(NoWarn);NU5104;CS9107;IDE0011;IDE0040;IDE0044;CA1720</NoWarn>
+    <!-- CS/IDE: existing code style suppressions, CA1720: intentional domain names (Short/Long/Object) in SPO triples and memory tiers -->
+    <NoWarn>$(NoWarn);CS9107;IDE0011;IDE0040;IDE0044;CA1720</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.16.5</Version>
+    <Version>0.16.6</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- PackageReadmeFile is set per project where README exists -->
     <IsPackable>false</IsPackable> <!-- Default: only SDK is packable -->
