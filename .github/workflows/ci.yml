@@ -35,7 +35,7 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Run Core Tests
-      run: dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity normal
+      run: dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity normal --blame-hang --blame-hang-timeout 5m
 
     # No continue-on-error: a failing SDK test fails this job, exactly as the core suite above.
     # The step carried `continue-on-error: true` from the commit that introduced this workflow,
@@ -48,4 +48,5 @@ jobs:
           --no-build \
           --configuration Release \
           --verbosity normal \
-          --filter "Category!=LocalModel&Category!=Heavy&Category!=GpuStack"
+          --filter "Category!=LocalModel&Category!=Heavy&Category!=GpuStack" \
+          --blame-hang --blame-hang-timeout 5m
