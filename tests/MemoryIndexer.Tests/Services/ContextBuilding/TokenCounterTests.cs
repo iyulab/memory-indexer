@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MemoryIndexer.Services.TokenCounting;
 using Xunit;
 

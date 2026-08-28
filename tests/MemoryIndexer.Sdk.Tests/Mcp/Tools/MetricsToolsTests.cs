@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MemoryIndexer.Sdk.Mcp.Tools;
 using MemoryIndexer.Sdk.Observability;
 using NSubstitute;

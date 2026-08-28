@@ -1,5 +1,5 @@
 #if !SKIP_ONNX_TESTS
-using FluentAssertions;
+using AwesomeAssertions;
 using LMSupply.Embedder;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;

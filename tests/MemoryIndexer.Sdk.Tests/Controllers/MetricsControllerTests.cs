@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using McpServer.Controllers;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;

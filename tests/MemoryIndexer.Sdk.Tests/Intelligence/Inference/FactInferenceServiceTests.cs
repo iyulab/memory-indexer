@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Inference;
 using Microsoft.Extensions.Logging;

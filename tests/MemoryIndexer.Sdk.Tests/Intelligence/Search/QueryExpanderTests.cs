@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MemoryIndexer.Sdk.Intelligence.Search;
 using Xunit;
 

@@ -1,7 +1,7 @@
 #if !SKIP_ONNX_TESTS
 using System.Globalization;
 using System.Text;
-using FluentAssertions;
+using AwesomeAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Tests.Integration.Fixtures;
