@@ -2,6 +2,19 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.16.7] - 2026-08-29
+
+### Fixed
+- Removed `QueryExpander`'s internal `ContextExpansionMap` — a phrase-to-associated-terms table
+  (`"team members"` -> `Mike, Sarah`, `"tech stack"` -> `React, Node, MongoDB, GraphQL`, etc.)
+  whose entries turned out to be a test fixture's demo vocabulary, hardcoded into the shipped SDK.
+  This kind of phrase-level context association is inherently user-specific (a consumer's actual
+  team members, tech stack, or pets) and cannot be generalized into a static table the way
+  `SynonymMap`'s general-English word synonyms can — no replacement mapping is added. Not a
+  public API change (the field was private); `ExpandQuery`/`GenerateQueryVariants` keep their
+  existing signatures and word-level synonym behavior unchanged. Verified no regression against
+  `QueryExpanderTests` and the integration quality-comparison benchmark.
+
 ## [v0.16.6] - 2026-08-28
 
 ### Changed

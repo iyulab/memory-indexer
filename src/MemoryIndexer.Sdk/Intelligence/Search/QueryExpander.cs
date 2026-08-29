@@ -48,19 +48,6 @@ public sealed class QueryExpander : IQueryExpander
         ["meeting"] = ["call", "standup", "sync", "discussion"]
     };
 
-    private static readonly IReadOnlyDictionary<string, string[]> ContextExpansionMap = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
-    {
-        // Question pattern -> related contexts
-        ["building"] = ["developing", "implementing", "creating", "working on"],
-        ["features"] = ["workout", "nutrition", "sleep", "tracking", "logging", "functionality"],
-        ["team members"] = ["Mike", "Sarah", "colleague", "collaborator", "working with"],
-        ["future plans"] = ["planning", "will add", "next", "upcoming", "roadmap", "social", "AI"],
-        ["tech stack"] = ["React", "Node", "MongoDB", "GraphQL", "framework", "library"],
-        ["dietary"] = ["vegetarian", "allergic", "food", "eat", "diet"],
-        ["pet"] = ["dog", "cat", "animal", "Max", "companion"],
-        ["programming"] = ["code", "development", "software", "language", "Rust", "Python"],
-    };
-
     /// <inheritdoc />
     public string ExpandQuery(string query)
     {
@@ -83,19 +70,6 @@ public sealed class QueryExpander : IQueryExpander
                 foreach (var synonym in synonyms.Take(3)) // Limit to avoid over-expansion
                 {
                     expandedTerms.Add(synonym);
-                }
-            }
-        }
-
-        // Check for contextual patterns
-        var lowerQuery = query.ToLowerInvariant();
-        foreach (var (pattern, expansions) in ContextExpansionMap)
-        {
-            if (lowerQuery.Contains(pattern))
-            {
-                foreach (var expansion in expansions.Take(4))
-                {
-                    expandedTerms.Add(expansion);
                 }
             }
         }
@@ -123,22 +97,6 @@ public sealed class QueryExpander : IQueryExpander
                 if (variant != query && !variants.Contains(variant))
                 {
                     variants.Add(variant);
-                    if (variants.Count >= maxVariants)
-                        break;
-                }
-            }
-        }
-
-        // Add contextual variant if pattern matches
-        var lowerQuery = query.ToLowerInvariant();
-        foreach (var (pattern, expansions) in ContextExpansionMap)
-        {
-            if (lowerQuery.Contains(pattern) && expansions.Length > 0)
-            {
-                var contextVariant = $"{query} {expansions[0]}";
-                if (!variants.Contains(contextVariant))
-                {
-                    variants.Add(contextVariant);
                     if (variants.Count >= maxVariants)
                         break;
                 }
