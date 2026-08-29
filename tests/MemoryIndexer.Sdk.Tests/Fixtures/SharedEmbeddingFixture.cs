@@ -73,7 +73,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
     /// </summary>
     public static string ModelId => "fast";
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _initLock.WaitAsync();
         try
@@ -121,7 +121,7 @@ public sealed class SharedEmbeddingFixture : IAsyncLifetime, IDisposable
         }
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
 #if !SKIP_ONNX_TESTS
         if (EmbeddingModel != null)

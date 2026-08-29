@@ -71,7 +71,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(5));
 
         // Act
-        var results = await _service.RecallAsync(userId, query, tier, limit: 5);
+        var results = await _service.RecallAsync(userId, query, tier, limit: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, _mockEmbedding.CallCount);
@@ -90,7 +90,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(3));
 
         // Act
-        await _service.RecallAsync(userId, query, tier);
+        await _service.RecallAsync(userId, query, tier, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, _mockProfiler.RecordLatencyCallCount);
@@ -115,7 +115,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(results);
 
         // Act
-        var memories = await _service.RecallAsync(userId, query, tier, limit: 3);
+        var memories = await _service.RecallAsync(userId, query, tier, limit: 3, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, memories.Count); // Limited by requested limit
@@ -136,7 +136,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(results);
 
         // Act
-        var memories = await _service.RecallAsync(userId, query, tier, limit: 5);
+        var memories = await _service.RecallAsync(userId, query, tier, limit: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(5, memories.Count);
@@ -171,7 +171,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(results);
 
         // Act
-        var memories = await service.RecallAsync("user1", "query", "Working", limit: 5);
+        var memories = await service.RecallAsync("user1", "query", "Working", limit: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(5, memories.Count);
@@ -195,7 +195,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(results);
 
         // Act
-        var memories = await _service.RecallAsync(userId, query, tier, limit: 2);
+        var memories = await _service.RecallAsync(userId, query, tier, limit: 2, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, memories.Count);
@@ -211,7 +211,7 @@ public class OptimizedRecallServiceTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.RecallAsync("user1", "query", "Working"));
+            () => _service.RecallAsync("user1", "query", "Working", cancellationToken: TestContext.Current.CancellationToken));
 
         // Latency should still be recorded
         Assert.Equal(1, _mockProfiler.RecordLatencyCallCount);
@@ -240,7 +240,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(3));
 
         // Act
-        var results = await service.BatchRecallAsync("user1", queries, "Working");
+        var results = await service.BatchRecallAsync("user1", queries, "Working", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -255,7 +255,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(3));
 
         // Act
-        var results = await _service.BatchRecallAsync("user1", queries, "Working");
+        var results = await _service.BatchRecallAsync("user1", queries, "Working", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(results);
@@ -270,7 +270,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(3));
 
         // Act
-        var results = await _service.BatchRecallAsync("user1", queries, "Working", limit: 3);
+        var results = await _service.BatchRecallAsync("user1", queries, "Working", limit: 3, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(5, results.Count);
@@ -289,7 +289,7 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(2));
 
         // Act
-        var results = await _service.BatchRecallAsync("user1", queries, "Working");
+        var results = await _service.BatchRecallAsync("user1", queries, "Working", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(25, results.Count);
@@ -309,11 +309,11 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(5));
 
         // Act - First call
-        var firstResult = await _service.RecallAsync(userId, query, tier, limit: 5);
+        var firstResult = await _service.RecallAsync(userId, query, tier, limit: 5, cancellationToken: TestContext.Current.CancellationToken);
         var firstCallCount = _mockStore.SearchCallCount;
 
         // Act - Second call (should hit cache)
-        var secondResult = await _service.RecallAsync(userId, query, tier, limit: 5);
+        var secondResult = await _service.RecallAsync(userId, query, tier, limit: 5, cancellationToken: TestContext.Current.CancellationToken);
         var secondCallCount = _mockStore.SearchCallCount;
 
         // Assert
@@ -333,8 +333,8 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(5));
 
         // Act
-        await _service.RecallAsync(userId, "query1", tier, limit: 5);
-        await _service.RecallAsync(userId, "query2", tier, limit: 5);
+        await _service.RecallAsync(userId, "query1", tier, limit: 5, cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RecallAsync(userId, "query2", tier, limit: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Both should hit the store
         Assert.Equal(2, _mockStore.SearchCallCount);
@@ -351,8 +351,8 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(10));
 
         // Act
-        await _service.RecallAsync(userId, query, tier, limit: 5);
-        await _service.RecallAsync(userId, query, tier, limit: 10);
+        await _service.RecallAsync(userId, query, tier, limit: 5, cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RecallAsync(userId, query, tier, limit: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Both should hit the store (different cache keys)
         Assert.Equal(2, _mockStore.SearchCallCount);
@@ -382,11 +382,11 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockStore.SetSearchResults(CreateMemorySearchResults(3));
 
         // Act - First call (cache miss)
-        await _service.RecallAsync(userId, query, tier, limit: 3);
+        await _service.RecallAsync(userId, query, tier, limit: 3, cancellationToken: TestContext.Current.CancellationToken);
         // Second call (cache hit)
-        await _service.RecallAsync(userId, query, tier, limit: 3);
+        await _service.RecallAsync(userId, query, tier, limit: 3, cancellationToken: TestContext.Current.CancellationToken);
         // Third call (cache hit)
-        await _service.RecallAsync(userId, query, tier, limit: 3);
+        await _service.RecallAsync(userId, query, tier, limit: 3, cancellationToken: TestContext.Current.CancellationToken);
 
         var stats = _service.GetCacheStatistics();
 

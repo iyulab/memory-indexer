@@ -24,7 +24,7 @@ public class RegexPiiDetectorTests
         var text = "Contact me at john.doe@example.com or support@company.org";
 
         // Act
-        var result = await _detector.DetectAsync(text);
+        var result = await _detector.DetectAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Count >= 2);
@@ -38,7 +38,7 @@ public class RegexPiiDetectorTests
         var text = "Email: test@domain.com";
 
         // Act
-        var result = await _detector.DetectAsync(text, 0.9f);
+        var result = await _detector.DetectAsync(text, 0.9f, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == PiiType.Email && e.Text == "test@domain.com");
@@ -55,7 +55,7 @@ public class RegexPiiDetectorTests
         var text = "SSN: 123-45-6789 or 987654321";
 
         // Act
-        var result = await _detector.DetectAsync(text);
+        var result = await _detector.DetectAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == PiiType.Ssn);
@@ -68,7 +68,7 @@ public class RegexPiiDetectorTests
         var text = "Invalid: 000-12-3456";
 
         // Act
-        var result = await _detector.DetectAsync(text, 0.8f);
+        var result = await _detector.DetectAsync(text, 0.8f, TestContext.Current.CancellationToken);
 
         // Assert - should have lower confidence for invalid SSN
         var ssn = result.FirstOrDefault(e => e.Type == PiiType.Ssn && e.Text.Contains("000"));
@@ -89,7 +89,7 @@ public class RegexPiiDetectorTests
         var text = "Card: 4111111111111111";
 
         // Act
-        var result = await _detector.DetectAsync(text);
+        var result = await _detector.DetectAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == PiiType.CreditCard);
@@ -102,7 +102,7 @@ public class RegexPiiDetectorTests
         var text = "Card: 4532015112830366";
 
         // Act
-        var result = await _detector.DetectAsync(text, 0.8f);
+        var result = await _detector.DetectAsync(text, 0.8f, TestContext.Current.CancellationToken);
 
         // Assert
         var card = result.FirstOrDefault(e => e.Type == PiiType.CreditCard);
@@ -120,7 +120,7 @@ public class RegexPiiDetectorTests
         var text = "Call (555) 123-4567 or 800-555-1234";
 
         // Act
-        var result = await _detector.DetectAsync(text);
+        var result = await _detector.DetectAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == PiiType.PhoneNumber);
@@ -133,7 +133,7 @@ public class RegexPiiDetectorTests
         var text = "International: +1-555-123-4567";
 
         // Act
-        var result = await _detector.DetectAsync(text);
+        var result = await _detector.DetectAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == PiiType.PhoneNumber);
@@ -150,7 +150,7 @@ public class RegexPiiDetectorTests
         var text = "Server IP: 192.168.1.100";
 
         // Act
-        var result = await _detector.DetectAsync(text);
+        var result = await _detector.DetectAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == PiiType.IpAddress);
@@ -163,7 +163,7 @@ public class RegexPiiDetectorTests
         var text = "Invalid: 999.999.999.999";
 
         // Act
-        var result = await _detector.DetectAsync(text, 0.8f);
+        var result = await _detector.DetectAsync(text, 0.8f, TestContext.Current.CancellationToken);
 
         // Assert - Should not detect as valid IP with high confidence
         var ip = result.FirstOrDefault(e => e.Type == PiiType.IpAddress && e.Text == "999.999.999.999");
@@ -181,7 +181,7 @@ public class RegexPiiDetectorTests
         var text = "Email: test@example.com, Phone: 555-123-4567";
 
         // Act
-        var result = await _detector.RedactAsync(text);
+        var result = await _detector.RedactAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.WasRedacted);
@@ -201,7 +201,7 @@ public class RegexPiiDetectorTests
         };
 
         // Act
-        var result = await _detector.RedactAsync(text, options);
+        var result = await _detector.RedactAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.WasRedacted);
@@ -219,7 +219,7 @@ public class RegexPiiDetectorTests
         };
 
         // Act
-        var result = await _detector.RedactAsync(text, options);
+        var result = await _detector.RedactAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.WasRedacted);
@@ -237,7 +237,7 @@ public class RegexPiiDetectorTests
         };
 
         // Act
-        var result = await _detector.RedactAsync(text, options);
+        var result = await _detector.RedactAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.WasRedacted);
@@ -256,7 +256,7 @@ public class RegexPiiDetectorTests
         var text = "My email is user@example.com";
 
         // Act
-        var result = await _detector.ContainsPiiAsync(text);
+        var result = await _detector.ContainsPiiAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result);
@@ -269,7 +269,7 @@ public class RegexPiiDetectorTests
         var text = "This is a normal text without any personal information.";
 
         // Act
-        var result = await _detector.ContainsPiiAsync(text, 0.8f);
+        var result = await _detector.ContainsPiiAsync(text, 0.8f, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result);
@@ -283,7 +283,7 @@ public class RegexPiiDetectorTests
     public async Task DetectAsync_EmptyText_ReturnsEmpty()
     {
         // Act
-        var result = await _detector.DetectAsync("");
+        var result = await _detector.DetectAsync("", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -293,7 +293,7 @@ public class RegexPiiDetectorTests
     public async Task DetectAsync_NullText_ReturnsEmpty()
     {
         // Act
-        var result = await _detector.DetectAsync(null!);
+        var result = await _detector.DetectAsync(null!, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -306,7 +306,7 @@ public class RegexPiiDetectorTests
         var text = "Contact John Smith at john@example.com, SSN: 123-45-6789, Card: 4111111111111111";
 
         // Act
-        var result = await _detector.DetectAsync(text);
+        var result = await _detector.DetectAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Count >= 3);
@@ -322,7 +322,7 @@ public class RegexPiiDetectorTests
         var text = "Email test@test.com";
 
         // Act
-        var result = await _detector.DetectAsync(text);
+        var result = await _detector.DetectAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Should not have overlapping entities for same text
         var emails = result.Where(e => e.Type == PiiType.Email).ToList();

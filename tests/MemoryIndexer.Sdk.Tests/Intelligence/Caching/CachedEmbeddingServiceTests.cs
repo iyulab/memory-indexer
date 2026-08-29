@@ -54,7 +54,7 @@ public class CachedEmbeddingServiceTests
         const string text = "test text";
 
         // Act
-        var embedding = await _cachedService.GenerateEmbeddingAsync(text);
+        var embedding = await _cachedService.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, _mockService.CallCount);
@@ -68,8 +68,8 @@ public class CachedEmbeddingServiceTests
         const string text = "test text";
 
         // Act
-        var embedding1 = await _cachedService.GenerateEmbeddingAsync(text);
-        var embedding2 = await _cachedService.GenerateEmbeddingAsync(text);
+        var embedding1 = await _cachedService.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
+        var embedding2 = await _cachedService.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, _mockService.CallCount); // Only called once
@@ -84,8 +84,8 @@ public class CachedEmbeddingServiceTests
         const string text2 = "second text";
 
         // Act
-        await _cachedService.GenerateEmbeddingAsync(text1);
-        await _cachedService.GenerateEmbeddingAsync(text2);
+        await _cachedService.GenerateEmbeddingAsync(text1, TestContext.Current.CancellationToken);
+        await _cachedService.GenerateEmbeddingAsync(text2, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, _mockService.CallCount);
@@ -108,8 +108,8 @@ public class CachedEmbeddingServiceTests
         const string text = "test text";
 
         // Act
-        await service.GenerateEmbeddingAsync(text);
-        await service.GenerateEmbeddingAsync(text);
+        await service.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
+        await service.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, _mockService.CallCount); // Called twice
@@ -136,21 +136,21 @@ public class CachedEmbeddingServiceTests
             Options.Create(options));
 
         // Act - Fill cache with text1 and text2
-        await service.GenerateEmbeddingAsync("text1"); // Cache: [text1], Calls: 1
-        await service.GenerateEmbeddingAsync("text2"); // Cache: [text2, text1], Calls: 2
+        await service.GenerateEmbeddingAsync("text1", TestContext.Current.CancellationToken); // Cache: [text1], Calls: 1
+        await service.GenerateEmbeddingAsync("text2", TestContext.Current.CancellationToken); // Cache: [text2, text1], Calls: 2
         Assert.Equal(2, mockService.CallCount);
 
         // Act - Add text3, should evict text1 (LRU)
-        await service.GenerateEmbeddingAsync("text3"); // Cache: [text3, text2], text1 evicted, Calls: 3
+        await service.GenerateEmbeddingAsync("text3", TestContext.Current.CancellationToken); // Cache: [text3, text2], text1 evicted, Calls: 3
         Assert.Equal(3, mockService.CallCount);
 
         // Act - Access text2 and text3 (both should be in cache)
-        await service.GenerateEmbeddingAsync("text2"); // In cache, Calls: 3
-        await service.GenerateEmbeddingAsync("text3"); // In cache, Calls: 3
+        await service.GenerateEmbeddingAsync("text2", TestContext.Current.CancellationToken); // In cache, Calls: 3
+        await service.GenerateEmbeddingAsync("text3", TestContext.Current.CancellationToken); // In cache, Calls: 3
         Assert.Equal(3, mockService.CallCount);
 
         // Act - Access text1 (was evicted, should regenerate)
-        await service.GenerateEmbeddingAsync("text1"); // Not in cache, Calls: 4
+        await service.GenerateEmbeddingAsync("text1", TestContext.Current.CancellationToken); // Not in cache, Calls: 4
         Assert.Equal(4, mockService.CallCount);
     }
 
@@ -174,15 +174,15 @@ public class CachedEmbeddingServiceTests
             Options.Create(options));
 
         // Act
-        await service.GenerateEmbeddingAsync("text1"); // Cache: [text1]
-        await service.GenerateEmbeddingAsync("text2"); // Cache: [text2, text1]
-        await service.GenerateEmbeddingAsync("text1"); // Cache: [text1, text2] (text1 moved to front)
-        await service.GenerateEmbeddingAsync("text3"); // Cache: [text3, text1] (text2 evicted)
+        await service.GenerateEmbeddingAsync("text1", TestContext.Current.CancellationToken); // Cache: [text1]
+        await service.GenerateEmbeddingAsync("text2", TestContext.Current.CancellationToken); // Cache: [text2, text1]
+        await service.GenerateEmbeddingAsync("text1", TestContext.Current.CancellationToken); // Cache: [text1, text2] (text1 moved to front)
+        await service.GenerateEmbeddingAsync("text3", TestContext.Current.CancellationToken); // Cache: [text3, text1] (text2 evicted)
 
         _mockService.CallCount = 0;
 
-        await service.GenerateEmbeddingAsync("text1"); // Should use cache
-        await service.GenerateEmbeddingAsync("text2"); // Should call inner (evicted)
+        await service.GenerateEmbeddingAsync("text1", TestContext.Current.CancellationToken); // Should use cache
+        await service.GenerateEmbeddingAsync("text2", TestContext.Current.CancellationToken); // Should call inner (evicted)
 
         // Assert
         Assert.Equal(1, _mockService.CallCount); // Only text2 was regenerated
@@ -195,7 +195,7 @@ public class CachedEmbeddingServiceTests
         var texts = new[] { "text1", "text2", "text3" };
 
         // Act
-        var embeddings = await _cachedService.GenerateBatchEmbeddingsAsync(texts);
+        var embeddings = await _cachedService.GenerateBatchEmbeddingsAsync(texts, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, _mockService.BatchCallCount);
@@ -211,14 +211,14 @@ public class CachedEmbeddingServiceTests
         // Pre-populate cache
         foreach (var text in texts)
         {
-            await _cachedService.GenerateEmbeddingAsync(text);
+            await _cachedService.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
         }
 
         _mockService.CallCount = 0;
         _mockService.BatchCallCount = 0;
 
         // Act
-        var embeddings = await _cachedService.GenerateBatchEmbeddingsAsync(texts);
+        var embeddings = await _cachedService.GenerateBatchEmbeddingsAsync(texts, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, _mockService.CallCount);
@@ -233,14 +233,14 @@ public class CachedEmbeddingServiceTests
         var texts = new[] { "text1", "text2", "text3" };
 
         // Pre-cache text1 and text2
-        await _cachedService.GenerateEmbeddingAsync("text1");
-        await _cachedService.GenerateEmbeddingAsync("text2");
+        await _cachedService.GenerateEmbeddingAsync("text1", TestContext.Current.CancellationToken);
+        await _cachedService.GenerateEmbeddingAsync("text2", TestContext.Current.CancellationToken);
 
         _mockService.CallCount = 0;
         _mockService.BatchCallCount = 0;
 
         // Act
-        var embeddings = await _cachedService.GenerateBatchEmbeddingsAsync(texts);
+        var embeddings = await _cachedService.GenerateBatchEmbeddingsAsync(texts, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, _mockService.CallCount); // No single calls
@@ -271,8 +271,8 @@ public class CachedEmbeddingServiceTests
         var texts = new[] { "text1", "text2" };
 
         // Act
-        await service.GenerateBatchEmbeddingsAsync(texts);
-        await service.GenerateBatchEmbeddingsAsync(texts);
+        await service.GenerateBatchEmbeddingsAsync(texts, TestContext.Current.CancellationToken);
+        await service.GenerateBatchEmbeddingsAsync(texts, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, _mockService.BatchCallCount); // Called twice

@@ -49,7 +49,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.Contradiction, result.ConflictType);
@@ -81,7 +81,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.Duplicate, result.ConflictType);
@@ -111,7 +111,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.Refinement, result.ConflictType);
@@ -141,7 +141,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.Update, result.ConflictType);
@@ -171,7 +171,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.Temporal, result.ConflictType);
@@ -201,7 +201,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.None, result.ConflictType);
@@ -234,7 +234,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.Duplicate, result.ConflictType);
@@ -258,7 +258,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.None, result.ConflictType);
@@ -281,7 +281,7 @@ public sealed class LlmConflictDetectorTests
             .Throws(new InvalidOperationException("API error"));
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ConflictType.None, result.ConflictType);
@@ -325,7 +325,7 @@ public sealed class LlmConflictDetectorTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _detector.AnalyzeAsync(newMemory, existingMemory);
+        var result = await _detector.AnalyzeAsync(newMemory, existingMemory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(expectedAction, result.RecommendedAction);

@@ -62,7 +62,7 @@ public class RetentionPolicyToolsTests
             .Returns(preview);
 
         // Act
-        var result = await _tools.PreviewCleanup("user1");
+        var result = await _tools.PreviewCleanup("user1", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -92,7 +92,7 @@ public class RetentionPolicyToolsTests
             .Returns(preview);
 
         // Act
-        var result = await _tools.PreviewCleanup();
+        var result = await _tools.PreviewCleanup(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -107,7 +107,7 @@ public class RetentionPolicyToolsTests
             .Throws(new InvalidOperationException("Database error"));
 
         // Act
-        var result = await _tools.PreviewCleanup("user1");
+        var result = await _tools.PreviewCleanup("user1", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -136,7 +136,7 @@ public class RetentionPolicyToolsTests
             .Returns(applyResult);
 
         // Act
-        var result = await _tools.ApplyRetentionPolicy("user1", dryRun: true);
+        var result = await _tools.ApplyRetentionPolicy("user1", dryRun: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -163,7 +163,7 @@ public class RetentionPolicyToolsTests
             .Returns(applyResult);
 
         // Act
-        var result = await _tools.ApplyRetentionPolicy("user1", dryRun: false);
+        var result = await _tools.ApplyRetentionPolicy("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -187,7 +187,7 @@ public class RetentionPolicyToolsTests
             .Returns(applyResult);
 
         // Act
-        var result = await _tools.ApplyRetentionPolicy("user1");
+        var result = await _tools.ApplyRetentionPolicy("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -313,7 +313,7 @@ public class RetentionPolicyToolsTests
             .Returns(preview);
 
         // Act
-        var result = await _tools.EvaluateRetention("test-key", "user1");
+        var result = await _tools.EvaluateRetention("test-key", "user1", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -338,7 +338,7 @@ public class RetentionPolicyToolsTests
             .Returns(preview);
 
         // Act
-        var result = await _tools.EvaluateRetention("missing-key", "user1");
+        var result = await _tools.EvaluateRetention("missing-key", "user1", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();

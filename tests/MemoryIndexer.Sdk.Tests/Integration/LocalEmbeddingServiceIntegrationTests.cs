@@ -7,7 +7,6 @@ using MemoryIndexer.Sdk.Tests.Integration.Fixtures;
 using MemoryIndexer.InMemory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace MemoryIndexer.Sdk.Tests.Integration;
 
@@ -63,7 +62,7 @@ public class LocalEmbeddingServiceIntegrationTests
         var text = "This is a test sentence for embedding generation via DI.";
 
         // Act
-        var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(text);
+        var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
 
         // Assert
         embedding.Length.Should().Be(SharedEmbeddingFixture.Dimensions);
@@ -87,7 +86,7 @@ public class LocalEmbeddingServiceIntegrationTests
         };
 
         // Act
-        var embeddings = await _fixture.EmbeddingService!.GenerateBatchEmbeddingsAsync(texts);
+        var embeddings = await _fixture.EmbeddingService!.GenerateBatchEmbeddingsAsync(texts, TestContext.Current.CancellationToken);
 
         // Assert
         embeddings.Should().HaveCount(3);
@@ -109,13 +108,13 @@ public class LocalEmbeddingServiceIntegrationTests
 
         // Act - First call (generates embedding)
         var sw1 = System.Diagnostics.Stopwatch.StartNew();
-        var embedding1 = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(text);
+        var embedding1 = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
         sw1.Stop();
         var firstCallTime = sw1.ElapsedMilliseconds;
 
         // Second call (should use cache)
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var embedding2 = await _fixture.EmbeddingService.GenerateEmbeddingAsync(text);
+        var embedding2 = await _fixture.EmbeddingService.GenerateEmbeddingAsync(text, TestContext.Current.CancellationToken);
         sw2.Stop();
         var secondCallTime = sw2.ElapsedMilliseconds;
 
@@ -148,7 +147,7 @@ public class LocalEmbeddingServiceIntegrationTests
         _output.WriteLine("Storing memories...");
         foreach (var content in memories)
         {
-            var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(content);
+            var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(content, TestContext.Current.CancellationToken);
             var memory = new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -157,17 +156,15 @@ public class LocalEmbeddingServiceIntegrationTests
                 SessionId = "test-session",
                 Embedding = embedding
             };
-            await _memoryStore.StoreAsync(memory);
+            await _memoryStore.StoreAsync(memory, TestContext.Current.CancellationToken);
         }
 
         // Query
         var queryText = "How do I build web applications?";
         _output.WriteLine($"\nQuerying: '{queryText}'");
 
-        var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(queryText);
-        var results = await _memoryStore.SearchAsync(
-            queryEmbedding,
-            new MemorySearchOptions { Limit = 3, UserId = "test-user" });
+        var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(queryText, TestContext.Current.CancellationToken);
+        var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions { Limit = 3, UserId = "test-user" }, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().NotBeEmpty();
@@ -193,9 +190,9 @@ public class LocalEmbeddingServiceIntegrationTests
         var unrelatedText = "The weather forecast shows sunny skies tomorrow.";
 
         // Act
-        var baseEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(baseText);
-        var similarEmbedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync(similarText);
-        var unrelatedEmbedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync(unrelatedText);
+        var baseEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(baseText, TestContext.Current.CancellationToken);
+        var similarEmbedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync(similarText, TestContext.Current.CancellationToken);
+        var unrelatedEmbedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync(unrelatedText, TestContext.Current.CancellationToken);
 
         var similarScore = CosineSimilarity(baseEmbedding.Span, similarEmbedding.Span);
         var unrelatedScore = CosineSimilarity(baseEmbedding.Span, unrelatedEmbedding.Span);
@@ -220,7 +217,7 @@ public class LocalEmbeddingServiceIntegrationTests
         _fixture.EmbeddingService!.Dimensions.Should().Be(SharedEmbeddingFixture.Dimensions);
 
         // Verify actual embedding matches expected dimensions
-        var embedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync("Test");
+        var embedding = await _fixture.EmbeddingService.GenerateEmbeddingAsync("Test", TestContext.Current.CancellationToken);
         embedding.Length.Should().Be(SharedEmbeddingFixture.Dimensions);
 
         _output.WriteLine($"Model all-MiniLM-L6-v2: {embedding.Length} dimensions (expected 384)");

@@ -162,7 +162,7 @@ public class LoCoMoEvaluatorTests
             .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -208,7 +208,7 @@ public class LoCoMoEvaluatorTests
             .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -247,7 +247,7 @@ public class LoCoMoEvaluatorTests
             .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.MeanReciprocalRank.Should().BeApproximately(1f / 3f, 0.01f, "MRR should be 1/3 for relevant at position 3");
@@ -279,7 +279,7 @@ public class LoCoMoEvaluatorTests
             .Returns(new List<MemorySearchResult>());
 
         // Act
-        await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         await mockMemoryStore.Received(1).SearchAsync(
@@ -340,7 +340,7 @@ public class LoCoMoEvaluatorTests
             });
 
         // Act
-        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user");
+        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -398,7 +398,7 @@ public class LoCoMoEvaluatorTests
             .Returns(new List<MemorySearchResult>());
 
         // Act
-        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user");
+        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.ByQueryType.Should().ContainKey(LoCoMoQueryType.SingleHop);
@@ -439,7 +439,7 @@ public class LoCoMoEvaluatorTests
             .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.NDCG.Should().Be(1.0f, "NDCG should be 1.0 for perfect ranking");
@@ -479,7 +479,7 @@ public class LoCoMoEvaluatorTests
             .Returns(new List<MemorySearchResult>());
 
         // Act
-        await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, userId);
+        await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, userId, TestContext.Current.CancellationToken);
 
         // Assert - Verify that UserId is passed to search
         await mockMemoryStore.Received(1).SearchAsync(
@@ -524,7 +524,7 @@ public class LoCoMoEvaluatorTests
             });
 
         // Act
-        await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, userId);
+        await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, userId, TestContext.Current.CancellationToken);
 
         // Assert
         capturedMemories.Should().HaveCount(1);
@@ -564,7 +564,7 @@ public class LoCoMoEvaluatorTests
             .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.Precision.Should().BeApproximately(0.5f, 0.01f);
@@ -599,7 +599,7 @@ public class LoCoMoEvaluatorTests
             .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.F1Score.Should().Be(0f);
@@ -647,7 +647,7 @@ public class LoCoMoEvaluatorTests
             .Returns(searchResults);
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert - When content matches expected answer, coverage should be 1.0 (identical embeddings)
         result.AnswerCoverage.Should().BeGreaterThan(0f, "identical content should have coverage of 1.0");
@@ -674,7 +674,7 @@ public class LoCoMoEvaluatorTests
             .Returns(new List<MemorySearchResult>());
 
         // Act
-        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user");
+        var result = await _evaluator.EvaluateQueryAsync(mockMemoryStore, testQuery, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.AnswerCoverage.Should().Be(0f);
@@ -712,7 +712,7 @@ public class LoCoMoEvaluatorTests
             .Throws(new InvalidOperationException("Search failed"));
 
         // Act
-        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user");
+        var result = await _evaluator.EvaluateAsync(mockMemoryStore, testSuite, "test-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.FailedQueries.Should().Be(1);

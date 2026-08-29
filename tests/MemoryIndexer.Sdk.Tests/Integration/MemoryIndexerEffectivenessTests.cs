@@ -8,7 +8,6 @@ using MemoryIndexer.Sdk.Tests.Integration.Fixtures;
 using MemoryIndexer.InMemory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace MemoryIndexer.Sdk.Tests.Integration;
 
@@ -223,7 +222,7 @@ public class MemoryIndexerEffectivenessTests
         // Store in memory indexer
         foreach (var (role, content) in sessionMessages)
         {
-            var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(content);
+            var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(content, TestContext.Current.CancellationToken);
             await _memoryStore.StoreAsync(new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -231,7 +230,7 @@ public class MemoryIndexerEffectivenessTests
                 UserId = "alex",
                 SessionId = "session-001",
                 Embedding = embedding
-            });
+            }, TestContext.Current.CancellationToken);
         }
 
         // Test queries
@@ -260,12 +259,12 @@ public class MemoryIndexerEffectivenessTests
             var withoutScore = EvaluateKeywordPresence(recentContext, expected);
 
             // With memory: semantic search
-            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query);
+            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query, TestContext.Current.CancellationToken);
             var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions
             {
                 UserId = "alex",
                 Limit = 3
-            });
+            }, TestContext.Current.CancellationToken);
             var memoryContext = string.Join(" ", results.Select(r => r.Memory.Content));
             var withScore = EvaluateKeywordPresence(memoryContext, expected);
 
@@ -378,12 +377,12 @@ public class MemoryIndexerEffectivenessTests
             var withoutScore = EvaluateKeywordPresence(currentContext, expected);
 
             // With memory: semantic search across all sessions
-            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query);
+            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query, TestContext.Current.CancellationToken);
             var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions
             {
                 UserId = "user-001",
                 Limit = 5
-            });
+            }, TestContext.Current.CancellationToken);
             var memoryContext = string.Join(" ", results.Select(r => r.Memory.Content));
             var withScore = EvaluateKeywordPresence(memoryContext, expected);
 
@@ -470,7 +469,7 @@ public class MemoryIndexerEffectivenessTests
         {
             foreach (var message in messages)
             {
-                var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(message);
+                var embedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(message, TestContext.Current.CancellationToken);
                 await _memoryStore.StoreAsync(new MemoryUnit
                 {
                     Id = Guid.NewGuid(),
@@ -479,7 +478,7 @@ public class MemoryIndexerEffectivenessTests
                     SessionId = "session-mixed",
                     Embedding = embedding,
                     Metadata = new Dictionary<string, string> { ["topic"] = topic }
-                });
+                }, TestContext.Current.CancellationToken);
                 messageIndex++;
             }
         }
@@ -511,12 +510,12 @@ public class MemoryIndexerEffectivenessTests
             var withoutScore = EvaluateKeywordPresence(recentContext, expected);
 
             // With memory: semantic search finds relevant topic
-            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query);
+            var queryEmbedding = await _fixture.EmbeddingService!.GenerateEmbeddingAsync(query, TestContext.Current.CancellationToken);
             var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions
             {
                 UserId = "multi-topic-user",
                 Limit = 3
-            });
+            }, TestContext.Current.CancellationToken);
             var memoryContext = string.Join(" ", results.Select(r => r.Memory.Content));
             var withScore = EvaluateKeywordPresence(memoryContext, expected);
 

@@ -39,7 +39,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.ShouldSummarize);
@@ -65,7 +65,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -91,7 +91,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -117,7 +117,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -142,7 +142,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -168,7 +168,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -193,7 +193,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -218,7 +218,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -244,7 +244,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -269,7 +269,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldSummarize);
@@ -294,7 +294,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.TargetTokenCount);
@@ -320,7 +320,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.SummarizationRatio > 0);
@@ -415,7 +415,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await customTrigger.EvaluateAsync(context);
+        var result = await customTrigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert - 55% is above custom medium threshold of 40%
         Assert.True(result.ShouldSummarize);
@@ -439,7 +439,7 @@ public class ThresholdBasedTriggerTests
         };
 
         // Act
-        var result = await _trigger.EvaluateAsync(context);
+        var result = await _trigger.EvaluateAsync(context, TestContext.Current.CancellationToken);
 
         // Assert - Explanation should contain info about both conditions
         Assert.Contains("token", result.Explanation.ToLowerInvariant());

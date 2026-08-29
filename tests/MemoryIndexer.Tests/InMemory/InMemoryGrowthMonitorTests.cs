@@ -31,7 +31,7 @@ public sealed class InMemoryGrowthMonitorTests
     public async Task GetGrowthMetricsAsync_ShouldReturnInitialMetrics()
     {
         // Act
-        var metrics = await _monitor.GetGrowthMetricsAsync("user1");
+        var metrics = await _monitor.GetGrowthMetricsAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(metrics);
@@ -52,11 +52,11 @@ public sealed class InMemoryGrowthMonitorTests
         var userId = "user1";
 
         // Act
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
 
-        var metrics = await _monitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _monitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, metrics.MemoriesStoredThisRound);
@@ -72,11 +72,11 @@ public sealed class InMemoryGrowthMonitorTests
         var userId = "user1";
 
         // Act
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: true, "Low importance");
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: true, "Duplicate topic");
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: true, "Low importance", cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: true, "Duplicate topic", cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
 
-        var metrics = await _monitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _monitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, metrics.MemoriesStoredThisRound);
@@ -95,10 +95,10 @@ public sealed class InMemoryGrowthMonitorTests
         // Act - Store 5 memories (exceeds 4.0 threshold)
         for (int i = 0; i < 5; i++)
         {
-            await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
+            await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
         }
 
-        var metrics = await _monitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _monitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(5, metrics.MemoriesStoredThisRound);
@@ -113,16 +113,16 @@ public sealed class InMemoryGrowthMonitorTests
         var userId = "user1";
 
         // Act - Round 1
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: true, "Low importance");
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: true, "Low importance", cancellationToken: TestContext.Current.CancellationToken);
 
-        var metricsRound1 = await _monitor.GetGrowthMetricsAsync(userId);
+        var metricsRound1 = await _monitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
 
         // End round 1
-        await _monitor.EndRoundAsync(userId);
+        await _monitor.EndRoundAsync(userId, TestContext.Current.CancellationToken);
 
-        var metricsRound2 = await _monitor.GetGrowthMetricsAsync(userId);
+        var metricsRound2 = await _monitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, metricsRound1.CurrentRound);
@@ -142,20 +142,20 @@ public sealed class InMemoryGrowthMonitorTests
         var userId = "user1";
 
         // Act - Round 1: 3 memories
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.EndRoundAsync(userId);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.EndRoundAsync(userId, TestContext.Current.CancellationToken);
 
         // Round 2: 5 memories
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(userId, filtered: false);
-        await _monitor.EndRoundAsync(userId);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(userId, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.EndRoundAsync(userId, TestContext.Current.CancellationToken);
 
-        var metrics = await _monitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _monitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, metrics.CurrentRound);
@@ -170,16 +170,16 @@ public sealed class InMemoryGrowthMonitorTests
         var user2 = "user2";
 
         // Act
-        await _monitor.RecordMemoryStorageAsync(user1, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(user1, filtered: false);
+        await _monitor.RecordMemoryStorageAsync(user1, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(user1, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
 
-        await _monitor.RecordMemoryStorageAsync(user2, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(user2, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(user2, filtered: false);
-        await _monitor.RecordMemoryStorageAsync(user2, filtered: false);
+        await _monitor.RecordMemoryStorageAsync(user2, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(user2, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(user2, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _monitor.RecordMemoryStorageAsync(user2, filtered: false, cancellationToken: TestContext.Current.CancellationToken);
 
-        var metrics1 = await _monitor.GetGrowthMetricsAsync(user1);
-        var metrics2 = await _monitor.GetGrowthMetricsAsync(user2);
+        var metrics1 = await _monitor.GetGrowthMetricsAsync(user1, TestContext.Current.CancellationToken);
+        var metrics2 = await _monitor.GetGrowthMetricsAsync(user2, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, metrics1.MemoriesStoredThisRound);

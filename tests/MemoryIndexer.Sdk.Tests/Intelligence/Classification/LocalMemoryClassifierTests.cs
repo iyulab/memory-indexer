@@ -34,7 +34,7 @@ public class LocalMemoryClassifierTests
     public async Task ClassifyAsync_ProceduralContent_ReturnsProceduralType(string content)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Type.Should().Be(MemoryType.Procedural, $"content should be classified as Procedural: {content}");
@@ -50,8 +50,8 @@ public class LocalMemoryClassifierTests
         var withoutTool = "The app shows data in the interface";
 
         // Act
-        var withToolResult = await _classifier.ClassifyAsync(withTool);
-        var withoutToolResult = await _classifier.ClassifyAsync(withoutTool);
+        var withToolResult = await _classifier.ClassifyAsync(withTool, cancellationToken: TestContext.Current.CancellationToken);
+        var withoutToolResult = await _classifier.ClassifyAsync(withoutTool, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         withToolResult.TypeConfidences.Should().ContainKey(MemoryType.Procedural);
@@ -71,7 +71,7 @@ public class LocalMemoryClassifierTests
     public async Task ClassifyAsync_SemanticContent_ReturnsSemanticType(string content)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Type.Should().Be(MemoryType.Semantic);
@@ -87,8 +87,8 @@ public class LocalMemoryClassifierTests
         var nonDefinition = "REST provides good performance";
 
         // Act
-        var definitionResult = await _classifier.ClassifyAsync(definition);
-        var nonDefinitionResult = await _classifier.ClassifyAsync(nonDefinition);
+        var definitionResult = await _classifier.ClassifyAsync(definition, cancellationToken: TestContext.Current.CancellationToken);
+        var nonDefinitionResult = await _classifier.ClassifyAsync(nonDefinition, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         definitionResult.TypeConfidences[MemoryType.Semantic].Should()
@@ -107,7 +107,7 @@ public class LocalMemoryClassifierTests
     public async Task ClassifyAsync_EpisodicContent_ReturnsEpisodicType(string content)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Type.Should().Be(MemoryType.Episodic);
@@ -123,8 +123,8 @@ public class LocalMemoryClassifierTests
         var withoutMarkers = "I debugged the issue in the codebase";
 
         // Act
-        var withMarkersResult = await _classifier.ClassifyAsync(withMarkers);
-        var withoutMarkersResult = await _classifier.ClassifyAsync(withoutMarkers);
+        var withMarkersResult = await _classifier.ClassifyAsync(withMarkers, cancellationToken: TestContext.Current.CancellationToken);
+        var withoutMarkersResult = await _classifier.ClassifyAsync(withoutMarkers, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         withMarkersResult.TypeConfidences[MemoryType.Episodic].Should()
@@ -143,7 +143,7 @@ public class LocalMemoryClassifierTests
     public async Task ClassifyAsync_FactContent_ReturnsFactType(string content)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Type.Should().Be(MemoryType.Fact);
@@ -162,7 +162,7 @@ public class LocalMemoryClassifierTests
         var content = "I always use TypeScript for my projects";
 
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Type.Should().Be(MemoryType.Procedural, "primary type should be the highest scoring");
@@ -177,7 +177,7 @@ public class LocalMemoryClassifierTests
         var content = "Docker is a containerization platform. I always use it for deployment because it provides isolation.";
 
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.TypeConfidences[MemoryType.Semantic].Should().BeGreaterThan(0.3f, "should detect semantic definition");
@@ -195,7 +195,7 @@ public class LocalMemoryClassifierTests
         var content = "How to install Docker: First, download the installer. Then, run the installation wizard.";
 
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Type.Should().Be(MemoryType.Procedural);
@@ -217,7 +217,7 @@ public class LocalMemoryClassifierTests
         var content = "This is a test message";
 
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.TypeConfidences.Should().NotBeNull();
@@ -241,8 +241,8 @@ public class LocalMemoryClassifierTests
         var lowConfidenceContent = "Something happened";
 
         // Act
-        var highResult = await _classifier.ClassifyAsync(highConfidenceContent);
-        var lowResult = await _classifier.ClassifyAsync(lowConfidenceContent);
+        var highResult = await _classifier.ClassifyAsync(highConfidenceContent, cancellationToken: TestContext.Current.CancellationToken);
+        var lowResult = await _classifier.ClassifyAsync(lowConfidenceContent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         highResult.Confidence.Should().BeGreaterThan(lowResult.Confidence);
@@ -260,7 +260,7 @@ public class LocalMemoryClassifierTests
         var factContent = "My favorite color is blue";
 
         // Act
-        var result = await _classifier.ClassifyAsync(factContent);
+        var result = await _classifier.ClassifyAsync(factContent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Type.Should().Be(MemoryType.Fact);
@@ -275,7 +275,7 @@ public class LocalMemoryClassifierTests
         var content = $"The theory is defined as {words}";
 
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Type.Should().Be(MemoryType.Semantic);
@@ -291,8 +291,8 @@ public class LocalMemoryClassifierTests
         var longProcedural = $"How to deploy: {words}";
 
         // Act
-        var shortResult = await _classifier.ClassifyAsync(shortProcedural);
-        var longResult = await _classifier.ClassifyAsync(longProcedural);
+        var shortResult = await _classifier.ClassifyAsync(shortProcedural, cancellationToken: TestContext.Current.CancellationToken);
+        var longResult = await _classifier.ClassifyAsync(longProcedural, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         shortResult.Type.Should().Be(MemoryType.Procedural);
@@ -309,7 +309,7 @@ public class LocalMemoryClassifierTests
         var shortEpisodic = "I saw that earlier";
 
         // Act
-        var result = await _classifier.ClassifyAsync(shortEpisodic);
+        var result = await _classifier.ClassifyAsync(shortEpisodic, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Tier.Should().Be(Tier.Short);
@@ -328,7 +328,7 @@ public class LocalMemoryClassifierTests
     public async Task ClassifyAsync_TransientContent_ReturnsTransient(string content)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(content);
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.ShouldPersist.Should().BeFalse();
@@ -347,8 +347,8 @@ public class LocalMemoryClassifierTests
         var general = "The weather is nice";
 
         // Act
-        var factResult = await _classifier.ClassifyAsync(fact);
-        var generalResult = await _classifier.ClassifyAsync(general);
+        var factResult = await _classifier.ClassifyAsync(fact, cancellationToken: TestContext.Current.CancellationToken);
+        var generalResult = await _classifier.ClassifyAsync(general, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         factResult.Importance.Should().BeGreaterThan(generalResult.Importance);
@@ -363,8 +363,8 @@ public class LocalMemoryClassifierTests
         var longContent = "Docker is a containerization platform that provides isolation, portability, and consistency across environments. It packages applications with their dependencies.";
 
         // Act
-        var shortResult = await _classifier.ClassifyAsync(shortContent);
-        var longResult = await _classifier.ClassifyAsync(longContent);
+        var shortResult = await _classifier.ClassifyAsync(shortContent, cancellationToken: TestContext.Current.CancellationToken);
+        var longResult = await _classifier.ClassifyAsync(longContent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         longResult.Importance.Should().BeGreaterThan(shortResult.Importance);
@@ -378,7 +378,7 @@ public class LocalMemoryClassifierTests
     public async Task ClassifyAsync_EmptyContent_ReturnsTransient()
     {
         // Act
-        var result = await _classifier.ClassifyAsync("");
+        var result = await _classifier.ClassifyAsync("", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -389,7 +389,7 @@ public class LocalMemoryClassifierTests
     public async Task ClassifyAsync_NullContent_ReturnsTransient()
     {
         // Act
-        var result = await _classifier.ClassifyAsync(null!);
+        var result = await _classifier.ClassifyAsync(null!, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -413,7 +413,7 @@ public class LocalMemoryClassifierTests
         };
 
         // Act
-        var results = await _classifier.ClassifyBatchAsync(contents);
+        var results = await _classifier.ClassifyBatchAsync(contents, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(4);

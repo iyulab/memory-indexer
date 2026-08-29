@@ -370,7 +370,7 @@ public class InMemoryUsageTrackerTests
             .Returns(memories);
 
         // Act
-        await _tracker.RefreshFromStoreAsync("user1");
+        await _tracker.RefreshFromStoreAsync("user1", TestContext.Current.CancellationToken);
         var usage = _tracker.GetUsage("user1");
 
         // Assert

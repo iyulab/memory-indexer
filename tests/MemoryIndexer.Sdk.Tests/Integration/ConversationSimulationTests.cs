@@ -6,7 +6,6 @@ using MemoryIndexer.Models;
 using MemoryIndexer.InMemory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace MemoryIndexer.Sdk.Tests.Integration;
 
@@ -38,7 +37,7 @@ public class ConversationSimulationTests : IAsyncLifetime
         _output = output;
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _output.WriteLine("=== Initializing Conversation Simulation Tests ===");
         _output.WriteLine("Loading embedding model (fast)...");
@@ -50,12 +49,13 @@ public class ConversationSimulationTests : IAsyncLifetime
         _output.WriteLine("");
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_model != null)
         {
             await _model.DisposeAsync();
         }
+        GC.SuppressFinalize(this);
     }
 
     #region Short-Term Memory Tests (Single Session)
@@ -260,7 +260,7 @@ public class ConversationSimulationTests : IAsyncLifetime
             UserId = UserId,
             SessionId = Session1,
             CreatedAt = DateTime.UtcNow.AddDays(-30), // 30 days ago
-            Embedding = await _model!.EmbedAsync("My favorite color is blue.")
+            Embedding = await _model!.EmbedAsync("My favorite color is blue.", TestContext.Current.CancellationToken)
         };
 
         var recentMemory = new MemoryUnit
@@ -270,19 +270,19 @@ public class ConversationSimulationTests : IAsyncLifetime
             UserId = UserId,
             SessionId = Session2,
             CreatedAt = DateTime.UtcNow.AddDays(-1), // 1 day ago
-            Embedding = await _model!.EmbedAsync("Actually, I've changed my mind - my favorite color is now green.")
+            Embedding = await _model!.EmbedAsync("Actually, I've changed my mind - my favorite color is now green.", TestContext.Current.CancellationToken)
         };
 
-        await _memoryStore!.StoreAsync(oldMemory);
-        await _memoryStore!.StoreAsync(recentMemory);
+        await _memoryStore!.StoreAsync(oldMemory, TestContext.Current.CancellationToken);
+        await _memoryStore!.StoreAsync(recentMemory, TestContext.Current.CancellationToken);
 
         // Query about favorite color
-        var queryEmbedding = await _model!.EmbedAsync("What is my favorite color?");
+        var queryEmbedding = await _model!.EmbedAsync("What is my favorite color?", TestContext.Current.CancellationToken);
         var results = await _memoryStore!.SearchAsync(queryEmbedding, new MemorySearchOptions
         {
             UserId = UserId,
             Limit = 2
-        });
+        }, TestContext.Current.CancellationToken);
 
         _output.WriteLine("Testing temporal relevance:");
         _output.WriteLine($"Query: \"What is my favorite color?\"\n");

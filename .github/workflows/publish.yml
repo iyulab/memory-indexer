@@ -68,8 +68,8 @@ jobs:
 
     - name: Run CI-safe Tests
       run: |
-        dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity minimal --blame-hang --blame-hang-timeout 5m
-        dotnet test tests/MemoryIndexer.Sdk.Tests --no-build --configuration Release --verbosity minimal --filter "Category!=LocalModel&Category!=Heavy&Category!=GpuStack" --blame-hang --blame-hang-timeout 5m
+        dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity minimal --hangdump --hangdump-timeout 5m
+        dotnet test tests/MemoryIndexer.Sdk.Tests --no-build --configuration Release --verbosity minimal --filter-not-trait "Category=LocalModel" --filter-not-trait "Category=Heavy" --filter-not-trait "Category=GpuStack" --hangdump --hangdump-timeout 5m
 
     - name: Pack Packages
       if: steps.version_check.outputs.changed == 'true' || github.event.inputs.force_publish == 'true'

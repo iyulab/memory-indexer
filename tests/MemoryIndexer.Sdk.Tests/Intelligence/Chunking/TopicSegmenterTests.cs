@@ -39,7 +39,7 @@ public class TopicSegmenterTests
         };
 
         // Act
-        var segments = await segmenter.SegmentConversationAsync(messages);
+        var segments = await segmenter.SegmentConversationAsync(messages, TestContext.Current.CancellationToken);
 
         // Assert
         segments.Should().HaveCount(1);
@@ -66,7 +66,7 @@ public class TopicSegmenterTests
         };
 
         // Act
-        var segments = await segmenter.SegmentConversationAsync(messages);
+        var segments = await segmenter.SegmentConversationAsync(messages, TestContext.Current.CancellationToken);
 
         // Assert
         segments.Should().HaveCount(1);
@@ -93,7 +93,7 @@ public class TopicSegmenterTests
         };
 
         // Act
-        var segments = await segmenter.SegmentConversationAsync(messages);
+        var segments = await segmenter.SegmentConversationAsync(messages, TestContext.Current.CancellationToken);
 
         // Assert
         segments.Should().HaveCount(1);

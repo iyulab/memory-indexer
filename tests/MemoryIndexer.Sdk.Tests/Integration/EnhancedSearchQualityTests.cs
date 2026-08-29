@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace MemoryIndexer.Sdk.Tests.Integration;
 
@@ -44,7 +43,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         _output = output;
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         _output.WriteLine("=== Initializing Enhanced Search Quality Tests ===");
 
@@ -113,7 +112,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         await Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_embeddingModel != null)
         {
@@ -127,6 +126,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         {
             _serviceProvider?.Dispose();
         }
+        GC.SuppressFinalize(this);
     }
 
     [Fact]
@@ -304,7 +304,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         await StoreMemoriesAsync(memories, "test-user");
 
         // Index documents in BM25 for hybrid search
-        var allMemories = await _memoryStore.GetAllAsync("test-user");
+        var allMemories = await _memoryStore.GetAllAsync("test-user", cancellationToken: TestContext.Current.CancellationToken);
         foreach (var memory in allMemories)
         {
             _hybridSearch.IndexDocument(memory.Id, memory.Content);
@@ -320,7 +320,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         {
             UserId = "test-user",
             Limit = 5
-        });
+        }, TestContext.Current.CancellationToken);
 
         _output.WriteLine("Hybrid Search Results:");
         foreach (var result in hybridResults)
@@ -352,7 +352,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
 
         foreach (var (content, created) in memories)
         {
-            var embedding = await _embeddingService.GenerateEmbeddingAsync(content);
+            var embedding = await _embeddingService.GenerateEmbeddingAsync(content, TestContext.Current.CancellationToken);
             var memory = new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -363,12 +363,12 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
                 CreatedAt = created,
                 LastAccessedAt = created
             };
-            await _memoryStore.StoreAsync(memory);
+            await _memoryStore.StoreAsync(memory, TestContext.Current.CancellationToken);
         }
 
         // Calculate scores for each memory
-        var allMemories = await _memoryStore.GetAllAsync("test-user");
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync("What is my favorite color?");
+        var allMemories = await _memoryStore.GetAllAsync("test-user", cancellationToken: TestContext.Current.CancellationToken);
+        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync("What is my favorite color?", TestContext.Current.CancellationToken);
 
         _output.WriteLine("Memory Scores (Recency + Relevance):");
         var scoredMemories = allMemories

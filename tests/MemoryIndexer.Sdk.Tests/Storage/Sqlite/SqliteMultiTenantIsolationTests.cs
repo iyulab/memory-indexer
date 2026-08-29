@@ -35,7 +35,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
         _testDbPath = Path.Combine(Path.GetTempPath(), $"test_multitenant_{Guid.NewGuid():N}.db");
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         var options = new SqliteOptions
         {
@@ -53,13 +53,14 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
         await SeedTestDataAsync();
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await _store.DisposeAsync();
 
         TryDeleteFile(_testDbPath);
         TryDeleteFile($"{_testDbPath}-wal");
         TryDeleteFile($"{_testDbPath}-shm");
+        GC.SuppressFinalize(this);
     }
 
     private static void TryDeleteFile(string path)
@@ -119,7 +120,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
         };
 
         // Act
-        var results = await _store.SearchAsync(queryEmbedding, options);
+        var results = await _store.SearchAsync(queryEmbedding, options, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().NotBeEmpty();
@@ -144,8 +145,8 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
         var tenant2Options = new MemorySearchOptions { UserId = Tenant2, Limit = 100, MinScore = 0 };
 
         // Act
-        var tenant1Results = await _store.SearchAsync(queryEmbedding, tenant1Options);
-        var tenant2Results = await _store.SearchAsync(queryEmbedding, tenant2Options);
+        var tenant1Results = await _store.SearchAsync(queryEmbedding, tenant1Options, TestContext.Current.CancellationToken);
+        var tenant2Results = await _store.SearchAsync(queryEmbedding, tenant2Options, TestContext.Current.CancellationToken);
 
         // Assert - Tenant 1 should only see technical content
         tenant1Results.Should().AllSatisfy(r => r.Memory.UserId.Should().Be(Tenant1));
@@ -167,9 +168,9 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
     public async Task GetAllAsync_WithUserId_ShouldOnlyReturnTenantData()
     {
         // Arrange & Act
-        var tenant1Memories = await _store.GetAllAsync(Tenant1);
-        var tenant2Memories = await _store.GetAllAsync(Tenant2);
-        var tenant3Memories = await _store.GetAllAsync(Tenant3);
+        var tenant1Memories = await _store.GetAllAsync(Tenant1, cancellationToken: TestContext.Current.CancellationToken);
+        var tenant2Memories = await _store.GetAllAsync(Tenant2, cancellationToken: TestContext.Current.CancellationToken);
+        var tenant3Memories = await _store.GetAllAsync(Tenant3, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         tenant1Memories.Should().HaveCount(3);
@@ -186,9 +187,9 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
     public async Task GetCountAsync_ShouldReturnCorrectCountPerTenant()
     {
         // Act
-        var tenant1Count = await _store.GetCountAsync(Tenant1);
-        var tenant2Count = await _store.GetCountAsync(Tenant2);
-        var tenant3Count = await _store.GetCountAsync(Tenant3);
+        var tenant1Count = await _store.GetCountAsync(Tenant1, TestContext.Current.CancellationToken);
+        var tenant2Count = await _store.GetCountAsync(Tenant2, TestContext.Current.CancellationToken);
+        var tenant3Count = await _store.GetCountAsync(Tenant3, TestContext.Current.CancellationToken);
 
         // Assert
         tenant1Count.Should().Be(3);
@@ -200,7 +201,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
     public async Task GetCountAsync_NonexistentTenant_ShouldReturnZero()
     {
         // Act
-        var count = await _store.GetCountAsync("nonexistent-tenant");
+        var count = await _store.GetCountAsync("nonexistent-tenant", TestContext.Current.CancellationToken);
 
         // Assert
         count.Should().Be(0);
@@ -219,7 +220,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
 
         // Tenant 1 searches for anything - should NOT see Tenant 2/3 sensitive data
         var tenant1Options = new MemorySearchOptions { UserId = Tenant1, Limit = 100, MinScore = 0 };
-        var tenant1Results = await _store.SearchAsync(queryEmbedding, tenant1Options);
+        var tenant1Results = await _store.SearchAsync(queryEmbedding, tenant1Options, TestContext.Current.CancellationToken);
 
         // Assert no sensitive data leakage
         var tenant1Contents = string.Join(" ", tenant1Results.Select(r => r.Memory.Content));
@@ -234,8 +235,8 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
     {
         // Add session-specific data for both tenants
         var session1 = "session-shared-name";
-        await _store.StoreAsync(CreateMemory(Tenant1, "Tenant1 session data", MemoryType.Episodic, session1));
-        await _store.StoreAsync(CreateMemory(Tenant2, "Tenant2 session data", MemoryType.Episodic, session1));
+        await _store.StoreAsync(CreateMemory(Tenant1, "Tenant1 session data", MemoryType.Episodic, session1), TestContext.Current.CancellationToken);
+        await _store.StoreAsync(CreateMemory(Tenant2, "Tenant2 session data", MemoryType.Episodic, session1), TestContext.Current.CancellationToken);
 
         var queryEmbedding = new float[384];
 
@@ -248,7 +249,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
             MinScore = 0
         };
 
-        var results = await _store.SearchAsync(queryEmbedding, options);
+        var results = await _store.SearchAsync(queryEmbedding, options, TestContext.Current.CancellationToken);
 
         // Should only see Tenant 1's data despite same session name
         results.Should().AllSatisfy(r => r.Memory.UserId.Should().Be(Tenant1));
@@ -270,7 +271,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
             MinScore = 0
         };
 
-        var results = await _store.SearchAsync(queryEmbedding, options);
+        var results = await _store.SearchAsync(queryEmbedding, options, TestContext.Current.CancellationToken);
 
         // Should only see Tenant 1's Semantic memories
         results.Should().AllSatisfy(r =>
@@ -301,7 +302,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
             MinScore = 0
         };
 
-        var results = await _store.SearchAsync(queryEmbedding, options);
+        var results = await _store.SearchAsync(queryEmbedding, options, TestContext.Current.CancellationToken);
 
         // Verify count matches expected tenant data
         results.Count.Should().BeLessThanOrEqualTo(3, "Tenant1 only has 3 memories");
@@ -313,7 +314,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
     {
         // Add time-specific data
         var recentMemory = CreateMemory(Tenant1, "Recent tenant1 data", MemoryType.Episodic);
-        await _store.StoreAsync(recentMemory);
+        await _store.StoreAsync(recentMemory, TestContext.Current.CancellationToken);
 
         var queryEmbedding = new float[384];
 
@@ -325,7 +326,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
             MinScore = 0
         };
 
-        var results = await _store.SearchAsync(queryEmbedding, options);
+        var results = await _store.SearchAsync(queryEmbedding, options, TestContext.Current.CancellationToken);
 
         // Should only see recent Tenant 1 data
         results.Should().AllSatisfy(r => r.Memory.UserId.Should().Be(Tenant1));
@@ -348,7 +349,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
             MinScore = 0
         };
 
-        var results = await _store.SearchAsync(queryEmbedding, options);
+        var results = await _store.SearchAsync(queryEmbedding, options, TestContext.Current.CancellationToken);
 
         results.Should().BeEmpty();
     }
@@ -358,18 +359,18 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
     {
         // Store a memory for Tenant 1
         var memory = CreateMemory(Tenant1, "Memory to delete", MemoryType.Episodic);
-        await _store.StoreAsync(memory);
+        await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         // Delete it
-        var deleted = await _store.DeleteAsync(memory.Id, hardDelete: true);
+        var deleted = await _store.DeleteAsync(memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
         deleted.Should().BeTrue();
 
         // Verify Tenant 1's count decreased
-        var tenant1Memories = await _store.GetAllAsync(Tenant1);
+        var tenant1Memories = await _store.GetAllAsync(Tenant1, cancellationToken: TestContext.Current.CancellationToken);
         tenant1Memories.Should().NotContain(m => m.Id == memory.Id);
 
         // Verify Tenant 2's data is unaffected
-        var tenant2Count = await _store.GetCountAsync(Tenant2);
+        var tenant2Count = await _store.GetCountAsync(Tenant2, TestContext.Current.CancellationToken);
         tenant2Count.Should().Be(3, "Tenant 2's data should be unaffected by Tenant 1's delete");
     }
 
@@ -377,21 +378,21 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
     public async Task UpdateAsync_ShouldOnlyModifyOwnTenant()
     {
         // Get Tenant 1's first memory
-        var tenant1Memories = await _store.GetAllAsync(Tenant1);
+        var tenant1Memories = await _store.GetAllAsync(Tenant1, cancellationToken: TestContext.Current.CancellationToken);
         var memoryToUpdate = tenant1Memories[0];
 
         // Update it
         memoryToUpdate.Content = "Updated content for Tenant 1";
-        var updated = await _store.UpdateAsync(memoryToUpdate);
+        var updated = await _store.UpdateAsync(memoryToUpdate, TestContext.Current.CancellationToken);
         updated.Should().BeTrue();
 
         // Verify update worked for Tenant 1
-        var updatedMemory = await _store.GetByIdAsync(memoryToUpdate.Id);
+        var updatedMemory = await _store.GetByIdAsync(memoryToUpdate.Id, TestContext.Current.CancellationToken);
         updatedMemory!.Content.Should().Be("Updated content for Tenant 1");
         updatedMemory.UserId.Should().Be(Tenant1);
 
         // Verify Tenant 2's data is completely unaffected
-        var tenant2Memories = await _store.GetAllAsync(Tenant2);
+        var tenant2Memories = await _store.GetAllAsync(Tenant2, cancellationToken: TestContext.Current.CancellationToken);
         tenant2Memories.Should().AllSatisfy(m =>
             m.Content.Should().NotContain("Updated content"));
     }

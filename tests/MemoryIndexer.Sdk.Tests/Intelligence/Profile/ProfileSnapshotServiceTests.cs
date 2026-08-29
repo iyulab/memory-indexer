@@ -49,7 +49,7 @@ public class ProfileSnapshotServiceTests
             .Returns(facts);
 
         // Act
-        var snapshot = await _service.CreateSnapshotAsync("user1", "Test snapshot");
+        var snapshot = await _service.CreateSnapshotAsync("user1", "Test snapshot", TestContext.Current.CancellationToken);
 
         // Assert
         snapshot.Should().NotBeNull();
@@ -73,7 +73,7 @@ public class ProfileSnapshotServiceTests
             .Returns(facts);
 
         // Act
-        var snapshot = await _service.CreateSnapshotAsync("user1");
+        var snapshot = await _service.CreateSnapshotAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         snapshot.Stats.TotalFacts.Should().Be(2);
@@ -94,10 +94,10 @@ public class ProfileSnapshotServiceTests
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(new List<SemanticStoreEntry>());
 
-        var created = await _service.CreateSnapshotAsync("user1");
+        var created = await _service.CreateSnapshotAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var retrieved = await _service.GetSnapshotAsync("user1", created.Id);
+        var retrieved = await _service.GetSnapshotAsync("user1", created.Id, TestContext.Current.CancellationToken);
 
         // Assert
         retrieved.Should().NotBeNull();
@@ -108,7 +108,7 @@ public class ProfileSnapshotServiceTests
     public async Task GetSnapshotAsync_NonExistent_ShouldReturnNull()
     {
         // Act
-        var snapshot = await _service.GetSnapshotAsync("user1", Guid.NewGuid());
+        var snapshot = await _service.GetSnapshotAsync("user1", Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         snapshot.Should().BeNull();
@@ -125,11 +125,11 @@ public class ProfileSnapshotServiceTests
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(new List<SemanticStoreEntry>());
 
-        await _service.CreateSnapshotAsync("user1", "Snapshot 1");
-        await _service.CreateSnapshotAsync("user1", "Snapshot 2");
+        await _service.CreateSnapshotAsync("user1", "Snapshot 1", TestContext.Current.CancellationToken);
+        await _service.CreateSnapshotAsync("user1", "Snapshot 2", TestContext.Current.CancellationToken);
 
         // Act
-        var snapshots = await _service.ListSnapshotsAsync("user1");
+        var snapshots = await _service.ListSnapshotsAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         snapshots.Should().HaveCount(2);
@@ -144,11 +144,11 @@ public class ProfileSnapshotServiceTests
 
         for (int i = 0; i < 5; i++)
         {
-            await _service.CreateSnapshotAsync("user1", $"Snapshot {i}");
+            await _service.CreateSnapshotAsync("user1", $"Snapshot {i}", TestContext.Current.CancellationToken);
         }
 
         // Act
-        var snapshots = await _service.ListSnapshotsAsync("user1", limit: 3);
+        var snapshots = await _service.ListSnapshotsAsync("user1", limit: 3, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         snapshots.Should().HaveCount(3);
@@ -161,12 +161,12 @@ public class ProfileSnapshotServiceTests
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(new List<SemanticStoreEntry>());
 
-        await _service.CreateSnapshotAsync("user1", "First");
-        await Task.Delay(10);
-        await _service.CreateSnapshotAsync("user1", "Second");
+        await _service.CreateSnapshotAsync("user1", "First", TestContext.Current.CancellationToken);
+        await Task.Delay(10, TestContext.Current.CancellationToken);
+        await _service.CreateSnapshotAsync("user1", "Second", TestContext.Current.CancellationToken);
 
         // Act
-        var snapshots = await _service.ListSnapshotsAsync("user1");
+        var snapshots = await _service.ListSnapshotsAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         snapshots.Should().HaveCount(2);
@@ -196,13 +196,13 @@ public class ProfileSnapshotServiceTests
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(olderFacts, newerFacts);
 
-        var olderSnapshot = await _service.CreateSnapshotAsync("user1");
+        var olderSnapshot = await _service.CreateSnapshotAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(newerFacts);
 
         // Act
-        var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id);
+        var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         diff.HasChanges.Should().BeTrue();
@@ -229,13 +229,13 @@ public class ProfileSnapshotServiceTests
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(olderFacts, newerFacts);
 
-        var olderSnapshot = await _service.CreateSnapshotAsync("user1");
+        var olderSnapshot = await _service.CreateSnapshotAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(newerFacts);
 
         // Act
-        var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id);
+        var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         diff.HasChanges.Should().BeTrue();
@@ -261,13 +261,13 @@ public class ProfileSnapshotServiceTests
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(olderFacts, newerFacts);
 
-        var olderSnapshot = await _service.CreateSnapshotAsync("user1");
+        var olderSnapshot = await _service.CreateSnapshotAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(newerFacts);
 
         // Act
-        var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id);
+        var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         diff.HasChanges.Should().BeTrue();
@@ -289,10 +289,10 @@ public class ProfileSnapshotServiceTests
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(facts);
 
-        var olderSnapshot = await _service.CreateSnapshotAsync("user1");
+        var olderSnapshot = await _service.CreateSnapshotAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id);
+        var diff = await _service.CompareSnapshotsAsync("user1", olderSnapshot.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         diff.HasChanges.Should().BeFalse();
@@ -312,15 +312,15 @@ public class ProfileSnapshotServiceTests
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Returns(new List<SemanticStoreEntry>());
 
-        var snapshot = await _service.CreateSnapshotAsync("user1");
+        var snapshot = await _service.CreateSnapshotAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var deleted = await _service.DeleteSnapshotAsync("user1", snapshot.Id);
+        var deleted = await _service.DeleteSnapshotAsync("user1", snapshot.Id, TestContext.Current.CancellationToken);
 
         // Assert
         deleted.Should().BeTrue();
 
-        var retrieved = await _service.GetSnapshotAsync("user1", snapshot.Id);
+        var retrieved = await _service.GetSnapshotAsync("user1", snapshot.Id, TestContext.Current.CancellationToken);
         retrieved.Should().BeNull();
     }
 
@@ -328,7 +328,7 @@ public class ProfileSnapshotServiceTests
     public async Task DeleteSnapshotAsync_NonExistent_ShouldReturnFalse()
     {
         // Act
-        var deleted = await _service.DeleteSnapshotAsync("user1", Guid.NewGuid());
+        var deleted = await _service.DeleteSnapshotAsync("user1", Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         deleted.Should().BeFalse();

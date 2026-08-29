@@ -42,7 +42,7 @@ public class FactConflictToolsTests
             .Returns(FactConflictAnalysis.Valid());
 
         // Act
-        var result = await _tools.ValidateFact("User's name is John", "Identity");
+        var result = await _tools.ValidateFact("User's name is John", "Identity", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -72,7 +72,7 @@ public class FactConflictToolsTests
             .Returns(FactConflictAnalysis.Duplicate(existingFact));
 
         // Act
-        var result = await _tools.ValidateFact("User's name is John", "Identity");
+        var result = await _tools.ValidateFact("User's name is John", "Identity", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -96,7 +96,7 @@ public class FactConflictToolsTests
             .Returns(FactConflictAnalysis.Valid());
 
         // Act
-        await _tools.ValidateFact("Test fact", "General", userId: "custom-user");
+        await _tools.ValidateFact("Test fact", "General", userId: "custom-user", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         await _mockArchiveStore.Received(1).GetAllAsync("custom-user", Arg.Any<CancellationToken>());
@@ -117,7 +117,7 @@ public class FactConflictToolsTests
             .Returns(FactConflictAnalysis.Valid());
 
         // Act
-        await _tools.ValidateFact("Test", "InvalidCategory");
+        await _tools.ValidateFact("Test", "InvalidCategory", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         await _mockValidator.Received(1).ValidateAsync(
@@ -145,7 +145,7 @@ public class FactConflictToolsTests
             .Returns(history);
 
         // Act
-        var result = await _tools.GetFactHistory("key", userId: "user1");
+        var result = await _tools.GetFactHistory("key", userId: "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -163,7 +163,7 @@ public class FactConflictToolsTests
             .Returns(new List<SemanticStoreEntry>());
 
         // Act
-        var result = await _tools.GetFactHistory("nonexistent", userId: "user1");
+        var result = await _tools.GetFactHistory("nonexistent", userId: "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -188,7 +188,7 @@ public class FactConflictToolsTests
             .Returns(facts);
 
         // Act
-        var result = await _tools.GetFactsValidAt("2024-01-15", userId: "user1");
+        var result = await _tools.GetFactsValidAt("2024-01-15", userId: "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -200,7 +200,7 @@ public class FactConflictToolsTests
     public async Task GetFactsValidAt_WithInvalidDate_ShouldReturnError()
     {
         // Act
-        var result = await _tools.GetFactsValidAt("invalid-date");
+        var result = await _tools.GetFactsValidAt("invalid-date", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -227,7 +227,7 @@ public class FactConflictToolsTests
             .Returns(updatedEntry);
 
         // Act
-        var result = await _tools.ArchiveAndUpdateFact("key", "new value", userId: "user1");
+        var result = await _tools.ArchiveAndUpdateFact("key", "new value", userId: "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -244,7 +244,7 @@ public class FactConflictToolsTests
             .Returns((SemanticStoreEntry?)null);
 
         // Act
-        var result = await _tools.ArchiveAndUpdateFact("nonexistent", "value", userId: "user1");
+        var result = await _tools.ArchiveAndUpdateFact("nonexistent", "value", userId: "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();

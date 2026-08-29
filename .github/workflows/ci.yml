@@ -35,18 +35,28 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Run Core Tests
-      run: dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity normal --blame-hang --blame-hang-timeout 5m
+      # --hangdump/--hangdump-timeout is MTP's equivalent of VSTest's --blame-hang.
+      run: dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity normal --hangdump --hangdump-timeout 5m
 
     # No continue-on-error: a failing SDK test fails this job, exactly as the core suite above.
     # The step carried `continue-on-error: true` from the commit that introduced this workflow,
     # which made SDK failures invisible in a green run. The category filter already excludes the
     # tests that need a local model, a GPU host, or heavy fixtures, so what remains has no reason
-    # to be treated as advisory — measured at 2056 passed / 0 failed under this exact filter.
+    # to be treated as advisory — measured at 2056 passed / 0 failed under this exact filter at
+    # the time (test count has since grown, see the xUnit v3 migration note below for a current
+    # measurement of the same exclusion).
     - name: Run SDK Tests (excluding LocalModel and Heavy)
+      # xUnit v3/MTP has no VSTest-style single-expression --filter; each excluded trait value
+      # gets its own --filter-not-trait (repeated flags AND together, confirmed empirically:
+      # --list-tests under this exact combination discovers 2063 of 2105 total, matching
+      # unfiltered-run-minus-42-Heavy/LocalModel-tagged-tests exactly, 0 leaked through).
+      # --hangdump/--hangdump-timeout is MTP's equivalent of --blame-hang.
       run: |
         dotnet test tests/MemoryIndexer.Sdk.Tests \
           --no-build \
           --configuration Release \
           --verbosity normal \
-          --filter "Category!=LocalModel&Category!=Heavy&Category!=GpuStack" \
-          --blame-hang --blame-hang-timeout 5m
+          --filter-not-trait "Category=LocalModel" \
+          --filter-not-trait "Category=Heavy" \
+          --filter-not-trait "Category=GpuStack" \
+          --hangdump --hangdump-timeout 5m

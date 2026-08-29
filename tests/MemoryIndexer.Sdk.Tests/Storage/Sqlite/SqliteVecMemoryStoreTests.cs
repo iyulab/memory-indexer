@@ -30,7 +30,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         _testDbPath = Path.Combine(Path.GetTempPath(), $"test_memories_{Guid.NewGuid():N}.db");
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         var options = new SqliteOptions
         {
@@ -48,7 +48,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         await Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await _store.DisposeAsync();
 
@@ -56,6 +56,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         TryDeleteFile(_testDbPath);
         TryDeleteFile($"{_testDbPath}-wal");
         TryDeleteFile($"{_testDbPath}-shm");
+        GC.SuppressFinalize(this);
     }
 
     private static void TryDeleteFile(string path)
@@ -82,7 +83,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var memory = CreateTestMemory();
 
         // Act
-        var result = await _store.StoreAsync(memory);
+        var result = await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -98,7 +99,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         memory.Id = Guid.Empty;
 
         // Act
-        var result = await _store.StoreAsync(memory);
+        var result = await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         // Assert
         result.Id.Should().NotBe(Guid.Empty);
@@ -108,10 +109,10 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task GetByIdAsync_ExistingMemory_ShouldReturnMemory()
     {
         // Arrange
-        var memory = await _store.StoreAsync(CreateTestMemory());
+        var memory = await _store.StoreAsync(CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.GetByIdAsync(memory.Id);
+        var result = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -124,7 +125,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task GetByIdAsync_NonExistingMemory_ShouldReturnNull()
     {
         // Act
-        var result = await _store.GetByIdAsync(Guid.NewGuid());
+        var result = await _store.GetByIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
@@ -134,17 +135,17 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task UpdateAsync_ExistingMemory_ShouldUpdate()
     {
         // Arrange
-        var memory = await _store.StoreAsync(CreateTestMemory());
+        var memory = await _store.StoreAsync(CreateTestMemory(), TestContext.Current.CancellationToken);
         memory.Content = "Updated content";
         memory.ImportanceScore = 0.9f;
 
         // Act
-        var result = await _store.UpdateAsync(memory);
+        var result = await _store.UpdateAsync(memory, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var updated = await _store.GetByIdAsync(memory.Id);
+        var updated = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         updated!.Content.Should().Be("Updated content");
         updated.ImportanceScore.Should().BeApproximately(0.9f, 0.01f);
     }
@@ -157,7 +158,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         memory.Id = Guid.NewGuid();
 
         // Act
-        var result = await _store.UpdateAsync(memory);
+        var result = await _store.UpdateAsync(memory, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeFalse();
@@ -167,15 +168,15 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task DeleteAsync_SoftDelete_ShouldMarkAsDeleted()
     {
         // Arrange
-        var memory = await _store.StoreAsync(CreateTestMemory());
+        var memory = await _store.StoreAsync(CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.DeleteAsync(memory.Id, hardDelete: false);
+        var result = await _store.DeleteAsync(memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var deleted = await _store.GetByIdAsync(memory.Id);
+        var deleted = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         deleted!.IsDeleted.Should().BeTrue();
     }
 
@@ -183,15 +184,15 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task DeleteAsync_HardDelete_ShouldRemoveMemory()
     {
         // Arrange
-        var memory = await _store.StoreAsync(CreateTestMemory());
+        var memory = await _store.StoreAsync(CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.DeleteAsync(memory.Id, hardDelete: true);
+        var result = await _store.DeleteAsync(memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var deleted = await _store.GetByIdAsync(memory.Id);
+        var deleted = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         deleted.Should().BeNull();
     }
 
@@ -199,7 +200,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task DeleteAsync_NonExistingMemory_ShouldReturnFalse()
     {
         // Act
-        var result = await _store.DeleteAsync(Guid.NewGuid(), hardDelete: true);
+        var result = await _store.DeleteAsync(Guid.NewGuid(), hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeFalse();
@@ -216,7 +217,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var embedding = CreateTestEmbedding(768);
         var memory = CreateTestMemory();
         memory.Embedding = embedding;
-        await _store.StoreAsync(memory);
+        await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         var options = new MemorySearchOptions
         {
@@ -225,7 +226,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         };
 
         // Act
-        var results = await _store.SearchAsync(embedding, options);
+        var results = await _store.SearchAsync(embedding, options, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -242,7 +243,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
             var memory = CreateTestMemory();
             // Use the same base embedding with slight variations to ensure high similarity
             memory.Embedding = baseEmbedding;
-            await _store.StoreAsync(memory);
+            await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
         }
 
         var options = new MemorySearchOptions
@@ -253,7 +254,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         };
 
         // Act
-        var results = await _store.SearchAsync(baseEmbedding, options);
+        var results = await _store.SearchAsync(baseEmbedding, options, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(5);
@@ -268,7 +269,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         // Store memory with completely different embedding
         var memory = CreateTestMemory();
         memory.Embedding = CreateTestEmbedding(768, seed: 999); // Different seed = different embedding
-        await _store.StoreAsync(memory);
+        await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         var options = new MemorySearchOptions
         {
@@ -278,7 +279,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         };
 
         // Act
-        var results = await _store.SearchAsync(embedding, options);
+        var results = await _store.SearchAsync(embedding, options, TestContext.Current.CancellationToken);
 
         // Assert
         // Result may be 0 or 1 depending on embedding similarity
@@ -293,11 +294,11 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
 
         var user1Memory = CreateTestMemory("user1");
         user1Memory.Embedding = embedding;
-        await _store.StoreAsync(user1Memory);
+        await _store.StoreAsync(user1Memory, TestContext.Current.CancellationToken);
 
         var user2Memory = CreateTestMemory("user2");
         user2Memory.Embedding = embedding;
-        await _store.StoreAsync(user2Memory);
+        await _store.StoreAsync(user2Memory, TestContext.Current.CancellationToken);
 
         var options = new MemorySearchOptions
         {
@@ -306,7 +307,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         };
 
         // Act
-        var results = await _store.SearchAsync(embedding, options);
+        var results = await _store.SearchAsync(embedding, options, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -323,14 +324,14 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         // Arrange
         var memory1 = CreateTestMemory();
         memory1.Content = "The quick brown fox jumps over the lazy dog";
-        await _store.StoreAsync(memory1);
+        await _store.StoreAsync(memory1, TestContext.Current.CancellationToken);
 
         var memory2 = CreateTestMemory();
         memory2.Content = "A different sentence about cats and dogs";
-        await _store.StoreAsync(memory2);
+        await _store.StoreAsync(memory2, TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _store.FullTextSearchAsync("fox", "test-user", limit: 10);
+        var results = await _store.FullTextSearchAsync("fox", "test-user", limit: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -343,14 +344,14 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         // Arrange
         var memory1 = CreateTestMemory("user1");
         memory1.Content = "Machine learning and artificial intelligence";
-        await _store.StoreAsync(memory1);
+        await _store.StoreAsync(memory1, TestContext.Current.CancellationToken);
 
         var memory2 = CreateTestMemory("user2");
         memory2.Content = "Machine learning algorithms";
-        await _store.StoreAsync(memory2);
+        await _store.StoreAsync(memory2, TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _store.FullTextSearchAsync("machine", "user1", limit: 10);
+        var results = await _store.FullTextSearchAsync("machine", "user1", limit: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -363,10 +364,10 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         // Arrange
         var memory = CreateTestMemory();
         memory.Content = "Test content about programming";
-        await _store.StoreAsync(memory);
+        await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _store.FullTextSearchAsync("nonexistent", "test-user", limit: 10);
+        var results = await _store.FullTextSearchAsync("nonexistent", "test-user", limit: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().BeEmpty();
@@ -385,16 +386,10 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var memory = CreateTestMemory();
         memory.Content = "Machine learning is a subset of artificial intelligence";
         memory.Embedding = embedding;
-        await _store.StoreAsync(memory);
+        await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _store.HybridSearchAsync(
-            "machine learning",
-            embedding,
-            "test-user",
-            limit: 10,
-            denseWeight: 0.6f,
-            sparseWeight: 0.4f);
+        var results = await _store.HybridSearchAsync("machine learning", embedding, "test-user", limit: 10, denseWeight: 0.6f, sparseWeight: 0.4f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -411,17 +406,11 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
             var memory = CreateTestMemory();
             memory.Content = $"Document number {i} about machine learning";
             memory.Embedding = CreateTestEmbedding(768, seed: i);
-            await _store.StoreAsync(memory);
+            await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
         }
 
         // Act
-        var results = await _store.HybridSearchAsync(
-            "machine learning",
-            embedding,
-            "test-user",
-            limit: 5,
-            denseWeight: 0.6f,
-            sparseWeight: 0.4f);
+        var results = await _store.HybridSearchAsync("machine learning", embedding, "test-user", limit: 5, denseWeight: 0.6f, sparseWeight: 0.4f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(5);
@@ -438,11 +427,11 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var user1Memory = CreateTestMemory("user1");
         var user2Memory = CreateTestMemory("user2");
 
-        await _store.StoreAsync(user1Memory);
-        await _store.StoreAsync(user2Memory);
+        await _store.StoreAsync(user1Memory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(user2Memory, TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _store.GetAllAsync("user1");
+        var results = await _store.GetAllAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -453,13 +442,13 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task GetAllAsync_ShouldExcludeDeletedMemories()
     {
         // Arrange
-        var memory1 = await _store.StoreAsync(CreateTestMemory("user1"));
-        var memory2 = await _store.StoreAsync(CreateTestMemory("user1"));
+        var memory1 = await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
+        var memory2 = await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
 
-        await _store.DeleteAsync(memory1.Id, hardDelete: false);
+        await _store.DeleteAsync(memory1.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _store.GetAllAsync("user1");
+        var results = await _store.GetAllAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -470,12 +459,12 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task GetCountAsync_ShouldReturnCorrectCount()
     {
         // Arrange
-        await _store.StoreAsync(CreateTestMemory("user1"));
-        await _store.StoreAsync(CreateTestMemory("user1"));
-        await _store.StoreAsync(CreateTestMemory("user2"));
+        await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
+        await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
+        await _store.StoreAsync(CreateTestMemory("user2"), TestContext.Current.CancellationToken);
 
         // Act
-        var count = await _store.GetCountAsync("user1");
+        var count = await _store.GetCountAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         count.Should().Be(2);
@@ -485,13 +474,13 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task GetCountAsync_ShouldExcludeDeletedMemories()
     {
         // Arrange
-        var memory = await _store.StoreAsync(CreateTestMemory("user1"));
-        await _store.StoreAsync(CreateTestMemory("user1"));
+        var memory = await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
+        await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
 
-        await _store.DeleteAsync(memory.Id, hardDelete: false);
+        await _store.DeleteAsync(memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var count = await _store.GetCountAsync("user1");
+        var count = await _store.GetCountAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         count.Should().Be(1);
@@ -510,15 +499,15 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var systemMemory = CreateTestMemory("user1");
         systemMemory.Role = "system";
 
-        await _store.StoreAsync(userMemory);
-        await _store.StoreAsync(assistantMemory);
-        await _store.StoreAsync(systemMemory);
+        await _store.StoreAsync(userMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(assistantMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(systemMemory, TestContext.Current.CancellationToken);
 
         // Act - Filter by user role only
         var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
         {
             Roles = ["user"]
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -538,15 +527,15 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var systemMemory = CreateTestMemory("user1");
         systemMemory.Role = "system";
 
-        await _store.StoreAsync(userMemory);
-        await _store.StoreAsync(assistantMemory);
-        await _store.StoreAsync(systemMemory);
+        await _store.StoreAsync(userMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(assistantMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(systemMemory, TestContext.Current.CancellationToken);
 
         // Act - Filter by user and assistant roles
         var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
         {
             Roles = ["user", "assistant"]
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(2);
@@ -567,8 +556,8 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         assistantMemory.Role = "assistant";
         assistantMemory.Embedding = embedding;
 
-        await _store.StoreAsync(userMemory);
-        await _store.StoreAsync(assistantMemory);
+        await _store.StoreAsync(userMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(assistantMemory, TestContext.Current.CancellationToken);
 
         // Act - Search with user role filter
         var results = await _store.SearchAsync(embedding, new MemorySearchOptions
@@ -576,7 +565,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
             UserId = "user1",
             Limit = 10,
             Roles = ["user"]
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -596,8 +585,8 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         memory.Entities = new List<string> { "GPT-4", "Claude", "Anthropic" };
 
         // Act
-        var stored = await _store.StoreAsync(memory);
-        var retrieved = await _store.GetByIdAsync(stored.Id);
+        var stored = await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
+        var retrieved = await _store.GetByIdAsync(stored.Id, TestContext.Current.CancellationToken);
 
         // Assert
         retrieved!.Topics.Should().BeEquivalentTo(["AI", "Machine Learning", "NLP"]);
@@ -617,8 +606,8 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         };
 
         // Act
-        var stored = await _store.StoreAsync(memory);
-        var retrieved = await _store.GetByIdAsync(stored.Id);
+        var stored = await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
+        var retrieved = await _store.GetByIdAsync(stored.Id, TestContext.Current.CancellationToken);
 
         // Assert
         retrieved!.Metadata.Should().ContainKey("source");
@@ -643,7 +632,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
             var memory = CreateTestMemory();
             memory.Content = $"Concurrent memory {i}";
             memory.Embedding = embedding;
-            tasks.Add(_store.StoreAsync(memory));
+            tasks.Add(_store.StoreAsync(memory, TestContext.Current.CancellationToken));
         }
 
         var results = await Task.WhenAll(tasks);
@@ -658,7 +647,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     {
         // Arrange
         var embedding = CreateTestEmbedding(768);
-        var storedMemory = await _store.StoreAsync(CreateTestMemory());
+        var storedMemory = await _store.StoreAsync(CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
         var readTasks = Enumerable.Range(0, 20)
@@ -689,7 +678,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
             Task.WhenAll(searchTasks));
 
         // Assert - no exceptions means success
-        var count = await _store.GetCountAsync("test-user");
+        var count = await _store.GetCountAsync("test-user", TestContext.Current.CancellationToken);
         count.Should().BeGreaterThanOrEqualTo(11); // Original + 10 writes
     }
 

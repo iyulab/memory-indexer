@@ -50,7 +50,7 @@ public class SemanticOperationDeciderTests
             .Returns(Array.Empty<MemorySearchResult>());
 
         // Act
-        var decision = await _decider.DecideAsync(content, userId);
+        var decision = await _decider.DecideAsync(content, userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryOperation.Add, decision.Operation);
@@ -67,7 +67,7 @@ public class SemanticOperationDeciderTests
         var options = new DecisionOptions { MinimumImportance = 0.5f };
 
         // Act
-        var decision = await _decider.DecideAsync(content, userId, options);
+        var decision = await _decider.DecideAsync(content, userId, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryOperation.Noop, decision.Operation);
@@ -92,7 +92,7 @@ public class SemanticOperationDeciderTests
             .Returns(new[] { CreateSearchResult(existingMemory, 0.90f) });
 
         // Act
-        var decision = await _decider.DecideAsync(content, userId, new DecisionOptions { DuplicateThreshold = 0.85f });
+        var decision = await _decider.DecideAsync(content, userId, new DecisionOptions { DuplicateThreshold = 0.85f }, TestContext.Current.CancellationToken);
 
         // Assert - When new content is shorter than existing and has no new info, return Noop
         Assert.Equal(MemoryOperation.Noop, decision.Operation);
@@ -116,7 +116,7 @@ public class SemanticOperationDeciderTests
             .Returns(new[] { CreateSearchResult(existingMemory, 0.88f) });
 
         // Act
-        var decision = await _decider.DecideAsync(content, userId, new DecisionOptions { DuplicateThreshold = 0.85f });
+        var decision = await _decider.DecideAsync(content, userId, new DecisionOptions { DuplicateThreshold = 0.85f }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryOperation.Update, decision.Operation);
@@ -153,7 +153,7 @@ public class SemanticOperationDeciderTests
             DuplicateThreshold = 0.85f,
             RelatedThreshold = 0.70f,
             DetectContradictions = false
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert - With same embeddings (sim=1.0), new content has additional info, so Update
         Assert.Equal(MemoryOperation.Update, decision.Operation);
@@ -206,7 +206,7 @@ public class SemanticOperationDeciderTests
             DuplicateThreshold = 0.85f,
             RelatedThreshold = 0.70f,
             DetectContradictions = true
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(decision.ContradictionDetected);
@@ -230,7 +230,7 @@ public class SemanticOperationDeciderTests
             .Returns(Array.Empty<MemorySearchResult>());
 
         // Act
-        var decision = await _decider.DecideAsync(content, userId);
+        var decision = await _decider.DecideAsync(content, userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("database", decision.Topics);
@@ -255,7 +255,7 @@ public class SemanticOperationDeciderTests
             .Returns(Array.Empty<MemorySearchResult>());
 
         // Act
-        var decision = await _decider.DecideAsync(content, userId);
+        var decision = await _decider.DecideAsync(content, userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryType.Procedural, decision.SuggestedType);
@@ -281,7 +281,7 @@ public class SemanticOperationDeciderTests
             .Returns(Array.Empty<MemorySearchResult>());
 
         // Act
-        var decisions = await _decider.DecideBatchAsync(contents, userId);
+        var decisions = await _decider.DecideBatchAsync(contents, userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, decisions.Count);
@@ -306,7 +306,7 @@ public class SemanticOperationDeciderTests
         var options = new DecisionOptions { SessionId = sessionId };
 
         // Act
-        await _decider.DecideAsync(content, userId, options);
+        await _decider.DecideAsync(content, userId, options, TestContext.Current.CancellationToken);
 
         // Assert - Verify search was called with correct session scope
         await _memoryStore.Received(1).SearchAsync(
@@ -332,7 +332,7 @@ public class SemanticOperationDeciderTests
         var options = new DecisionOptions { PreferredType = MemoryType.Fact };
 
         // Act
-        var decision = await _decider.DecideAsync(content, userId, options);
+        var decision = await _decider.DecideAsync(content, userId, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryType.Fact, decision.SuggestedType);
@@ -360,7 +360,7 @@ public class SemanticOperationDeciderTests
             DuplicateThreshold = 0.85f,
             RelatedThreshold = 0.70f,
             DetectContradictions = false
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryOperation.Update, decision.Operation);
@@ -397,7 +397,7 @@ public class SemanticOperationDeciderTests
             RelatedThreshold = 0.70f,
             DetectContradictions = false,
             MinimumImportance = 0.1f
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert - With single related memory and lower importance, should add as distinct
         Assert.Equal(MemoryOperation.Add, decision.Operation);

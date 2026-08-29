@@ -1,9 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- xUnit v3 test projects are stand-alone executables (BD-20260829-xunit-v3-pilot) -->
+    <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- NETSDK1151: this project became an Exe under MTP and references McpServer.csproj, which
+         is SelfContained=true for its own standalone distribution — the two don't need to be
+         runnable as a pair from the same output folder, only the assembly reference matters here.
+         See learn.microsoft.com/dotnet/core/compatibility/sdk/5.0/referencing-executable-generates-error -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <!-- SKIP_ONNX_TESTS removed 2026-08-24 (cycle-301): ONNX Runtime + LMSupply.Embedder run fine on
@@ -37,18 +45,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit" />
+    <!-- xUnit v3 pilot rollout: xunit replaced with xunit.v3, no Microsoft.NET.Test.Sdk (not
+         required under Microsoft.Testing.Platform), coverlet.collector dropped (unused: CI never
+         invoked collect against it). xunit.runner.visualstudio kept for IDE Test Explorer discovery. -->
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- MTP equivalent of the ecosystem's VSTest blame-hang convention (BD-20260828-07) -->
+    <PackageReference Include="Microsoft.Testing.Extensions.HangDump" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="AwesomeAssertions" />
-    <PackageReference Include="coverlet.collector">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <!-- LMSupply embedding for integration tests (iyulab open source) -->
     <PackageReference Include="LMSupply.Embedder" />
     <!-- transitive Microsoft.OpenApi 2.4.1 is vulnerable (GHSA-v5pm-xwqc-g5wc); promote to patched pin -->

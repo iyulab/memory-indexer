@@ -70,7 +70,7 @@ public class MemorySelfCorrectorTests
         // Arrange - default mock returns empty
 
         // Act
-        var result = await _corrector.AnalyzeMemoriesAsync("test_user");
+        var result = await _corrector.AnalyzeMemoriesAsync("test_user", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -107,7 +107,7 @@ public class MemorySelfCorrectorTests
             .Returns(memories);
 
         // Act
-        var result = await _corrector.AnalyzeMemoriesAsync("test_user");
+        var result = await _corrector.AnalyzeMemoriesAsync("test_user", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -135,7 +135,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.DetectContradictionsAsync(memories);
+        var result = await _corrector.DetectContradictionsAsync(memories, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -164,7 +164,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.DetectContradictionsAsync(memories);
+        var result = await _corrector.DetectContradictionsAsync(memories, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -192,7 +192,7 @@ public class MemorySelfCorrectorTests
             .Returns(memories);
 
         // Act
-        var result = await _corrector.IdentifyOutdatedMemoriesAsync("test_user");
+        var result = await _corrector.IdentifyOutdatedMemoriesAsync("test_user", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -227,7 +227,7 @@ public class MemorySelfCorrectorTests
             .Returns(memories);
 
         // Act
-        var result = await _corrector.IdentifyOutdatedMemoriesAsync("test_user");
+        var result = await _corrector.IdentifyOutdatedMemoriesAsync("test_user", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -254,7 +254,7 @@ public class MemorySelfCorrectorTests
             .Returns(memories);
 
         // Act
-        var result = await _corrector.TrackEvidenceGapsAsync("test_user", "authentication details");
+        var result = await _corrector.TrackEvidenceGapsAsync("test_user", "authentication details", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -279,7 +279,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.ApplyCorrectionsAsync(corrections);
+        var result = await _corrector.ApplyCorrectionsAsync(corrections, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -292,7 +292,7 @@ public class MemorySelfCorrectorTests
         var corrections = new List<MemoryCorrection>();
 
         // Act
-        var result = await _corrector.ApplyCorrectionsAsync(corrections);
+        var result = await _corrector.ApplyCorrectionsAsync(corrections, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -327,9 +327,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.ResolveContradictionAsync(
-            contradiction,
-            ResolutionStrategy.KeepNewest);
+        var result = await _corrector.ResolveContradictionAsync(contradiction, ResolutionStrategy.KeepNewest, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -364,7 +362,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.UpdateConfidenceScoresAsync("test_user", options);
+        var result = await _corrector.UpdateConfidenceScoresAsync("test_user", options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -374,7 +372,7 @@ public class MemorySelfCorrectorTests
     public async Task GetCorrectionHistoryAsync_ShouldReturnHistory()
     {
         // Act
-        var result = await _corrector.GetCorrectionHistoryAsync("test_user");
+        var result = await _corrector.GetCorrectionHistoryAsync("test_user", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -410,7 +408,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.AnalyzeMemoriesAsync("test_user", options);
+        var result = await _corrector.AnalyzeMemoriesAsync("test_user", options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -443,9 +441,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.ResolveContradictionAsync(
-            contradiction,
-            ResolutionStrategy.KeepHigherConfidence);
+        var result = await _corrector.ResolveContradictionAsync(contradiction, ResolutionStrategy.KeepHigherConfidence, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -470,7 +466,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.ApplyCorrectionsAsync(corrections);
+        var result = await _corrector.ApplyCorrectionsAsync(corrections, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

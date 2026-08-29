@@ -49,7 +49,7 @@ public class ContextToolsTests
             .Returns(bundle);
 
         // Act
-        var result = await _tools.ContextBuild("test query", 2000, "Balanced");
+        var result = await _tools.ContextBuild("test query", 2000, "Balanced", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -81,7 +81,7 @@ public class ContextToolsTests
             .Returns(bundle);
 
         // Act
-        var result = await _tools.ContextBuild("test query", 2000, "RecentHeavy");
+        var result = await _tools.ContextBuild("test query", 2000, "RecentHeavy", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -104,7 +104,7 @@ public class ContextToolsTests
             .Returns(bundle);
 
         // Act - request way too many tokens
-        var result = await _tools.ContextBuild("test", 999999, "Balanced");
+        var result = await _tools.ContextBuild("test", 999999, "Balanced", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -134,7 +134,7 @@ public class ContextToolsTests
             .Returns(items);
 
         // Act
-        var result = await _tools.GetRecentConversation(1000, "session1");
+        var result = await _tools.GetRecentConversation(1000, "session1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -156,7 +156,7 @@ public class ContextToolsTests
             .Returns(new List<ContextItem>());
 
         // Act
-        var result = await _tools.GetRecentConversation(50000, "session1");
+        var result = await _tools.GetRecentConversation(50000, "session1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -183,7 +183,7 @@ public class ContextToolsTests
             .Returns(items);
 
         // Act
-        var result = await _tools.GetSessionContext("game-session-1", 1000);
+        var result = await _tools.GetSessionContext("game-session-1", 1000, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -213,7 +213,7 @@ public class ContextToolsTests
             .Returns(items);
 
         // Act
-        var result = await _tools.GetUserFacts(500);
+        var result = await _tools.GetUserFacts(500, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -235,7 +235,7 @@ public class ContextToolsTests
             .Returns(new List<ContextItem>());
 
         // Act
-        var result = await _tools.GetUserFacts(10000);
+        var result = await _tools.GetUserFacts(10000, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -287,7 +287,7 @@ public class ContextToolsTests
             .Returns(bundle);
 
         // Act
-        var result = await _tools.ContextBuild("query", 1000, "Balanced", "my-session");
+        var result = await _tools.ContextBuild("query", 1000, "Balanced", "my-session", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -309,7 +309,7 @@ public class ContextToolsTests
             .Returns(bundle);
 
         // Act
-        var result = await _tools.ContextBuild("query", 1000, "Balanced", null, "custom-user");
+        var result = await _tools.ContextBuild("query", 1000, "Balanced", null, "custom-user", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();

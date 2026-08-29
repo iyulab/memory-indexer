@@ -37,7 +37,7 @@ public sealed class SleepBasedConsolidatorTests
         var options = new ConsolidationOptions { UserId = null };
 
         // Act
-        var result = await _sut.ConsolidateAsync(options);
+        var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -53,7 +53,7 @@ public sealed class SleepBasedConsolidatorTests
             .Returns([]);
 
         // Act
-        var result = await _sut.ConsolidateAsync(options);
+        var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -79,7 +79,7 @@ public sealed class SleepBasedConsolidatorTests
             .Returns(new float[1024]);
 
         // Act
-        var result = await _sut.ConsolidateAsync(options);
+        var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -113,7 +113,7 @@ public sealed class SleepBasedConsolidatorTests
             .Returns([oldMemory]);
 
         // Act
-        var result = await _sut.ConsolidateAsync(options);
+        var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -132,7 +132,7 @@ public sealed class SleepBasedConsolidatorTests
         var memories = CreateTestMemories(2);
 
         // Act
-        var result = await _sut.GenerateReflectionsAsync(memories);
+        var result = await _sut.GenerateReflectionsAsync(memories, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -153,7 +153,7 @@ public sealed class SleepBasedConsolidatorTests
             .Returns(new float[1024]);
 
         // Act
-        var result = await _sut.GenerateReflectionsAsync(memories);
+        var result = await _sut.GenerateReflectionsAsync(memories, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(result);
@@ -175,7 +175,7 @@ public sealed class SleepBasedConsolidatorTests
             .Returns(new float[1024]);
 
         // Act
-        var result = await _sut.GenerateReflectionsAsync(memories);
+        var result = await _sut.GenerateReflectionsAsync(memories, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(result);
@@ -203,7 +203,7 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         // Act
-        var results = await _sut.ApplyForgettingCurveAsync([memory]);
+        var results = await _sut.ApplyForgettingCurveAsync([memory], TestContext.Current.CancellationToken);
 
         // Assert
         var result = results.Single();
@@ -226,7 +226,7 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         // Act
-        var results = await _sut.ApplyForgettingCurveAsync([memory]);
+        var results = await _sut.ApplyForgettingCurveAsync([memory], TestContext.Current.CancellationToken);
 
         // Assert
         var result = results.Single();
@@ -258,7 +258,7 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         // Act
-        var results = await _sut.ApplyForgettingCurveAsync([lowAccessMemory, highAccessMemory]);
+        var results = await _sut.ApplyForgettingCurveAsync([lowAccessMemory, highAccessMemory], TestContext.Current.CancellationToken);
 
         // Assert
         var lowAccessResult = results.First(r => r.MemoryId == lowAccessMemory.Id);
@@ -284,7 +284,7 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         // Act
-        var results = await _sut.ApplyForgettingCurveAsync([memory]);
+        var results = await _sut.ApplyForgettingCurveAsync([memory], TestContext.Current.CancellationToken);
 
         // Assert
         var result = results.Single();
@@ -307,7 +307,7 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         // Act
-        var result = await _sut.IdentifyMergeCandidatesAsync([memory]);
+        var result = await _sut.IdentifyMergeCandidatesAsync([memory], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -329,7 +329,7 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         // Act
-        var result = await _sut.IdentifyMergeCandidatesAsync(memories, 0.85f);
+        var result = await _sut.IdentifyMergeCandidatesAsync(memories, 0.85f, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(result);
@@ -354,7 +354,7 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         // Act
-        var result = await _sut.IdentifyMergeCandidatesAsync(memories, 0.85f);
+        var result = await _sut.IdentifyMergeCandidatesAsync(memories, 0.85f, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -373,7 +373,7 @@ public sealed class SleepBasedConsolidatorTests
         };
 
         // Act
-        var result = await _sut.IdentifyMergeCandidatesAsync(memories, 0.99f);
+        var result = await _sut.IdentifyMergeCandidatesAsync(memories, 0.99f, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(result);

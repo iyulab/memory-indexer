@@ -22,16 +22,20 @@ public class JsonMemoryExporterTests : IAsyncLifetime
     private InMemoryMemoryStore _memoryStore = null!;
     private JsonMemoryExporter _exporter = null!;
 
-    public Task InitializeAsync()
+    public ValueTask InitializeAsync()
     {
         _memoryStore = new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance);
         _exporter = new JsonMemoryExporter(
             _memoryStore,
             NullLogger<JsonMemoryExporter>.Instance);
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
-    public Task DisposeAsync() => Task.CompletedTask;
+    public ValueTask DisposeAsync()
+    {
+        GC.SuppressFinalize(this);
+        return ValueTask.CompletedTask;
+    }
 
     [Fact]
     public async Task ExportAsync_EmptyStore_ReturnsEmptyPackage()
@@ -40,7 +44,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var options = new ExportOptions { UserId = "test-user" };
 
         // Act
-        var package = await _exporter.ExportAsync(options);
+        var package = await _exporter.ExportAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(package);
@@ -54,14 +58,14 @@ public class JsonMemoryExporterTests : IAsyncLifetime
     {
         // Arrange
         const string userId = "test-user";
-        await _memoryStore.StoreAsync(CreateMemory(userId, "Memory 1"));
-        await _memoryStore.StoreAsync(CreateMemory(userId, "Memory 2"));
-        await _memoryStore.StoreAsync(CreateMemory(userId, "Memory 3"));
+        await _memoryStore.StoreAsync(CreateMemory(userId, "Memory 1"), TestContext.Current.CancellationToken);
+        await _memoryStore.StoreAsync(CreateMemory(userId, "Memory 2"), TestContext.Current.CancellationToken);
+        await _memoryStore.StoreAsync(CreateMemory(userId, "Memory 3"), TestContext.Current.CancellationToken);
 
         var options = new ExportOptions { UserId = userId };
 
         // Act
-        var package = await _exporter.ExportAsync(options);
+        var package = await _exporter.ExportAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, package.Statistics.TotalMemories);
@@ -79,12 +83,12 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var oldMemory = CreateMemory(userId, "Old memory");
         oldMemory.CreatedAt = oldTime;
         oldMemory.UpdatedAt = oldTime;
-        await _memoryStore.StoreAsync(oldMemory);
+        await _memoryStore.StoreAsync(oldMemory, TestContext.Current.CancellationToken);
         
         var newMemory = CreateMemory(userId, "New memory");
         newMemory.CreatedAt = newTime;
         newMemory.UpdatedAt = newTime;
-        await _memoryStore.StoreAsync(newMemory);
+        await _memoryStore.StoreAsync(newMemory, TestContext.Current.CancellationToken);
 
         var options = new ExportOptions
         {
@@ -93,7 +97,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         };
 
         // Act
-        var package = await _exporter.ExportAsync(options);
+        var package = await _exporter.ExportAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(package.Memories);
@@ -107,7 +111,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         const string userId = "test-user";
         var memory = CreateMemory(userId, "Test content");
         memory.Embedding = new float[] { 0.1f, 0.2f, 0.3f };
-        await _memoryStore.StoreAsync(memory);
+        await _memoryStore.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         var options = new ExportOptions
         {
@@ -116,7 +120,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         };
 
         // Act
-        var package = await _exporter.ExportAsync(options);
+        var package = await _exporter.ExportAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(package.Memories);
@@ -138,7 +142,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var options = new ImportOptions { PreserveIds = true };
 
         // Act
-        var result = await _exporter.ImportAsync(package, options);
+        var result = await _exporter.ImportAsync(package, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -153,7 +157,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         // Arrange
         const string userId = "test-user";
         var existingMemory = CreateMemory(userId, "Existing content");
-        await _memoryStore.StoreAsync(existingMemory);
+        await _memoryStore.StoreAsync(existingMemory, TestContext.Current.CancellationToken);
 
         var package = new MemoryExportPackage
         {
@@ -174,7 +178,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         };
 
         // Act
-        var result = await _exporter.ImportAsync(package, options);
+        var result = await _exporter.ImportAsync(package, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -189,7 +193,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         // Arrange
         const string userId = "test-user";
         var existingMemory = CreateMemory(userId, "Existing content");
-        await _memoryStore.StoreAsync(existingMemory);
+        await _memoryStore.StoreAsync(existingMemory, TestContext.Current.CancellationToken);
 
         var package = new MemoryExportPackage
         {
@@ -210,7 +214,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         };
 
         // Act
-        var result = await _exporter.ImportAsync(package, options);
+        var result = await _exporter.ImportAsync(package, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -218,7 +222,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         Assert.Equal(1, result.ReplacedCount);
 
         // Verify content was replaced
-        var updated = await _memoryStore.GetByIdAsync(existingMemory.Id);
+        var updated = await _memoryStore.GetByIdAsync(existingMemory.Id, TestContext.Current.CancellationToken);
         Assert.Equal("New content", updated?.Content);
     }
 
@@ -242,7 +246,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var options = new ImportOptions { PreserveIds = false };
 
         // Act
-        var result = await _exporter.ImportAsync(package, options);
+        var result = await _exporter.ImportAsync(package, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -256,13 +260,13 @@ public class JsonMemoryExporterTests : IAsyncLifetime
     {
         // Arrange
         const string userId = "test-user";
-        await _memoryStore.StoreAsync(CreateMemory(userId, "Stream test"));
+        await _memoryStore.StoreAsync(CreateMemory(userId, "Stream test"), TestContext.Current.CancellationToken);
 
         var options = new ExportOptions { UserId = userId };
         using var stream = new MemoryStream();
 
         // Act
-        var stats = await _exporter.ExportToStreamAsync(stream, options);
+        var stats = await _exporter.ExportToStreamAsync(stream, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, stats.TotalMemories);
@@ -283,13 +287,13 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         };
 
         using var stream = new MemoryStream();
-        await System.Text.Json.JsonSerializer.SerializeAsync(stream, package, s_camelCaseJsonOptions);
+        await System.Text.Json.JsonSerializer.SerializeAsync(stream, package, s_camelCaseJsonOptions, TestContext.Current.CancellationToken);
         stream.Position = 0;
 
         var options = new ImportOptions { PreserveIds = false };
 
         // Act
-        var result = await _exporter.ImportFromStreamAsync(stream, options);
+        var result = await _exporter.ImportFromStreamAsync(stream, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -301,14 +305,14 @@ public class JsonMemoryExporterTests : IAsyncLifetime
     {
         // Arrange
         const string userId = "test-user";
-        await _memoryStore.StoreAsync(CreateMemory(userId, "Episodic", type: MemoryType.Episodic, tier: Tier.Short));
-        await _memoryStore.StoreAsync(CreateMemory(userId, "Semantic", type: MemoryType.Semantic, tier: Tier.Long));
-        await _memoryStore.StoreAsync(CreateMemory(userId, "Fact", type: MemoryType.Fact, tier: Tier.Long));
+        await _memoryStore.StoreAsync(CreateMemory(userId, "Episodic", type: MemoryType.Episodic, tier: Tier.Short), TestContext.Current.CancellationToken);
+        await _memoryStore.StoreAsync(CreateMemory(userId, "Semantic", type: MemoryType.Semantic, tier: Tier.Long), TestContext.Current.CancellationToken);
+        await _memoryStore.StoreAsync(CreateMemory(userId, "Fact", type: MemoryType.Fact, tier: Tier.Long), TestContext.Current.CancellationToken);
 
         var options = new ExportOptions { UserId = userId };
 
         // Act
-        var package = await _exporter.ExportAsync(options);
+        var package = await _exporter.ExportAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, package.Statistics.TotalMemories);

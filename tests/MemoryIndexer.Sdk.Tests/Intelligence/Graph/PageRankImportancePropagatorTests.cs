@@ -34,7 +34,7 @@ public class PageRankImportancePropagatorTests
             .Returns(new List<EntityTriple>());
 
         // Act
-        var result = await _propagator.ComputeImportanceAsync("user1");
+        var result = await _propagator.ComputeImportanceAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, result.EntityCount);
@@ -85,7 +85,7 @@ public class PageRankImportancePropagatorTests
             .Returns(new List<EntityTriple>());
 
         // Act
-        var result = await _propagator.ComputeImportanceAsync("user1");
+        var result = await _propagator.ComputeImportanceAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, result.EntityCount);
@@ -116,7 +116,7 @@ public class PageRankImportancePropagatorTests
             .Returns(new List<EntityTriple>());
 
         // Act
-        var result = await _propagator.ComputeImportanceAsync("user1");
+        var result = await _propagator.ComputeImportanceAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert: Hub should have higher score than spokes
         var hubScore = result.EntityScores["Hub"];
@@ -148,10 +148,10 @@ public class PageRankImportancePropagatorTests
         _entityStoreMock.GetByObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new List<EntityTriple>());
 
-        await _propagator.ComputeImportanceAsync("user1");
+        await _propagator.ComputeImportanceAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var score = await _propagator.GetEntityImportanceAsync("Alice", "user1");
+        var score = await _propagator.GetEntityImportanceAsync("Alice", "user1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(score);
@@ -176,10 +176,10 @@ public class PageRankImportancePropagatorTests
         _entityStoreMock.GetByObjectAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new List<EntityTriple>());
 
-        await _propagator.ComputeImportanceAsync("user1");
+        await _propagator.ComputeImportanceAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var topEntities = await _propagator.GetTopEntitiesAsync("user1", 2);
+        var topEntities = await _propagator.GetTopEntitiesAsync("user1", 2, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, topEntities.Count);
@@ -211,7 +211,7 @@ public class PageRankImportancePropagatorTests
         {
             MaxIterations = 100,
             ConvergenceThreshold = 1e-6f
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Converged || result.Iterations >= 1);

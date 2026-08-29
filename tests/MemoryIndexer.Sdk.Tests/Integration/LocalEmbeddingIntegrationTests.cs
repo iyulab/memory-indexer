@@ -8,7 +8,6 @@ using MemoryIndexer.Sdk.Tests.Integration.Fixtures;
 using MemoryIndexer.InMemory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace MemoryIndexer.Sdk.Tests.Integration;
 
@@ -50,7 +49,7 @@ public class LocalEmbeddingIntegrationTests
         var text = "This is a test sentence for embedding generation.";
 
         // Act
-        var embedding = await _fixture.EmbeddingModel!.EmbedAsync(text);
+        var embedding = await _fixture.EmbeddingModel!.EmbedAsync(text, TestContext.Current.CancellationToken);
 
         // Assert
         embedding.Should().NotBeNull();
@@ -78,7 +77,7 @@ public class LocalEmbeddingIntegrationTests
         };
 
         // Act
-        var embeddings = await _fixture.EmbeddingModel!.EmbedAsync(texts);
+        var embeddings = await _fixture.EmbeddingModel!.EmbedAsync(texts, TestContext.Current.CancellationToken);
 
         // Assert
         embeddings.Should().HaveCount(4);
@@ -100,9 +99,9 @@ public class LocalEmbeddingIntegrationTests
         var unrelatedText = "The weather forecast predicts rain tomorrow.";
 
         // Act
-        var baseEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(baseText);
-        var similarEmbedding = await _fixture.EmbeddingModel.EmbedAsync(similarText);
-        var unrelatedEmbedding = await _fixture.EmbeddingModel.EmbedAsync(unrelatedText);
+        var baseEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(baseText, TestContext.Current.CancellationToken);
+        var similarEmbedding = await _fixture.EmbeddingModel.EmbedAsync(similarText, TestContext.Current.CancellationToken);
+        var unrelatedEmbedding = await _fixture.EmbeddingModel.EmbedAsync(unrelatedText, TestContext.Current.CancellationToken);
 
         var similarScore = LocalEmbedder.CosineSimilarity(baseEmbedding, similarEmbedding);
         var unrelatedScore = LocalEmbedder.CosineSimilarity(baseEmbedding, unrelatedEmbedding);
@@ -138,7 +137,7 @@ public class LocalEmbeddingIntegrationTests
 
         foreach (var content in memories)
         {
-            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content);
+            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content, TestContext.Current.CancellationToken);
             var memory = new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -147,7 +146,7 @@ public class LocalEmbeddingIntegrationTests
                 SessionId = "test-session",
                 Embedding = embedding
             };
-            await _memoryStore.StoreAsync(memory);
+            await _memoryStore.StoreAsync(memory, TestContext.Current.CancellationToken);
             storedIds.Add(memory.Id);
             _output.WriteLine($"  Stored: {content[..Math.Min(50, content.Length)]}...");
         }
@@ -164,13 +163,13 @@ public class LocalEmbeddingIntegrationTests
         var queryText = memories[2]; // "REST APIs use HTTP methods like GET, POST, PUT, and DELETE."
         _output.WriteLine($"\nQuerying with the stored memory's own content: '{queryText}'");
 
-        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(queryText);
+        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(queryText, TestContext.Current.CancellationToken);
         var searchOptions = new MemorySearchOptions
         {
             Limit = 3,
             UserId = "test-user"
         };
-        var results = await _memoryStore.SearchAsync(queryEmbedding, searchOptions);
+        var results = await _memoryStore.SearchAsync(queryEmbedding, searchOptions, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().NotBeEmpty();
@@ -205,7 +204,7 @@ public class LocalEmbeddingIntegrationTests
 
         foreach (var content in memories)
         {
-            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content);
+            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content, TestContext.Current.CancellationToken);
             var memory = new MemoryUnit
             {
                 Id = Guid.NewGuid(),
@@ -213,7 +212,7 @@ public class LocalEmbeddingIntegrationTests
                 UserId = "test-user",
                 Embedding = embedding
             };
-            await _memoryStore.StoreAsync(memory);
+            await _memoryStore.StoreAsync(memory, TestContext.Current.CancellationToken);
         }
 
         // Test multiple queries
@@ -226,10 +225,8 @@ public class LocalEmbeddingIntegrationTests
 
         foreach (var (query, expectedKeywords) in queries)
         {
-            var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(query);
-            var results = await _memoryStore.SearchAsync(
-                queryEmbedding,
-                new MemorySearchOptions { Limit = 2, UserId = "test-user" });
+            var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(query, TestContext.Current.CancellationToken);
+            var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions { Limit = 2, UserId = "test-user" }, TestContext.Current.CancellationToken);
 
             _output.WriteLine($"\nQuery: '{query}'");
             foreach (var result in results)
@@ -253,7 +250,7 @@ public class LocalEmbeddingIntegrationTests
 
         // Arrange - Store a base memory
         var originalContent = "Machine learning is a subset of artificial intelligence.";
-        var originalEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(originalContent);
+        var originalEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(originalContent, TestContext.Current.CancellationToken);
 
         var originalMemory = new MemoryUnit
         {
@@ -262,7 +259,7 @@ public class LocalEmbeddingIntegrationTests
             UserId = "test-user",
             Embedding = originalEmbedding
         };
-        await _memoryStore.StoreAsync(originalMemory);
+        await _memoryStore.StoreAsync(originalMemory, TestContext.Current.CancellationToken);
 
         // Test variations
         var variations = new[]
@@ -289,7 +286,7 @@ public class LocalEmbeddingIntegrationTests
 
         foreach (var (text, expectedSimilar) in variations)
         {
-            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(text);
+            var embedding = await _fixture.EmbeddingModel!.EmbedAsync(text, TestContext.Current.CancellationToken);
             var similarity = LocalEmbedder.CosineSimilarity(originalEmbedding, embedding);
 
             _output.WriteLine($"  [{similarity:F4}] {(expectedSimilar ? "SIMILAR" : "DIFFERENT")} - '{text}'");
@@ -309,7 +306,7 @@ public class LocalEmbeddingIntegrationTests
 
         // Arrange - Store initial memory
         var initialContent = "Python is great for scripting.";
-        var initialEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(initialContent);
+        var initialEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(initialContent, TestContext.Current.CancellationToken);
 
         var memory = new MemoryUnit
         {
@@ -318,21 +315,19 @@ public class LocalEmbeddingIntegrationTests
             UserId = "test-user",
             Embedding = initialEmbedding
         };
-        await _memoryStore.StoreAsync(memory);
+        await _memoryStore.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         // Act - Update content and re-embed
         var updatedContent = "Python is excellent for machine learning and data science.";
-        var updatedEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(updatedContent);
+        var updatedEmbedding = await _fixture.EmbeddingModel!.EmbedAsync(updatedContent, TestContext.Current.CancellationToken);
 
         memory.Content = updatedContent;
         memory.Embedding = updatedEmbedding;
-        await _memoryStore.UpdateAsync(memory);
+        await _memoryStore.UpdateAsync(memory, TestContext.Current.CancellationToken);
 
         // Assert - Search should find the updated content
-        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync("What is good for data science?");
-        var results = await _memoryStore.SearchAsync(
-            queryEmbedding,
-            new MemorySearchOptions { Limit = 1, UserId = "test-user" });
+        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync("What is good for data science?", TestContext.Current.CancellationToken);
+        var results = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions { Limit = 1, UserId = "test-user" }, TestContext.Current.CancellationToken);
 
         results.Should().HaveCount(1);
         results[0].Memory.Content.Should().Be(updatedContent);
@@ -355,14 +350,14 @@ public class LocalEmbeddingIntegrationTests
         var individualEmbeddings = new List<float[]>();
         foreach (var text in texts)
         {
-            individualEmbeddings.Add(await _fixture.EmbeddingModel!.EmbedAsync(text));
+            individualEmbeddings.Add(await _fixture.EmbeddingModel!.EmbedAsync(text, TestContext.Current.CancellationToken));
         }
         sw1.Stop();
         var individualTime = sw1.ElapsedMilliseconds;
 
         // Act - Batch embeddings
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var batchEmbeddings = await _fixture.EmbeddingModel!.EmbedAsync(texts);
+        var batchEmbeddings = await _fixture.EmbeddingModel!.EmbedAsync(texts, TestContext.Current.CancellationToken);
         sw2.Stop();
         var batchTime = sw2.ElapsedMilliseconds;
 
@@ -390,7 +385,7 @@ public class LocalEmbeddingIntegrationTests
 
         // 1. Store
         var content = "Kubernetes is a container orchestration platform.";
-        var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content);
+        var embedding = await _fixture.EmbeddingModel!.EmbedAsync(content, TestContext.Current.CancellationToken);
         var memory = new MemoryUnit
         {
             Id = Guid.NewGuid(),
@@ -400,44 +395,42 @@ public class LocalEmbeddingIntegrationTests
             Embedding = embedding
         };
 
-        await _memoryStore.StoreAsync(memory);
+        await _memoryStore.StoreAsync(memory, TestContext.Current.CancellationToken);
         _output.WriteLine($"1. Stored: {memory.Id}");
 
         // 2. Search
-        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync("container orchestration");
-        var searchResults = await _memoryStore.SearchAsync(
-            queryEmbedding,
-            new MemorySearchOptions { UserId = "workflow-user", Limit = 1 });
+        var queryEmbedding = await _fixture.EmbeddingModel!.EmbedAsync("container orchestration", TestContext.Current.CancellationToken);
+        var searchResults = await _memoryStore.SearchAsync(queryEmbedding, new MemorySearchOptions { UserId = "workflow-user", Limit = 1 }, TestContext.Current.CancellationToken);
 
         searchResults.Should().HaveCount(1);
         searchResults[0].Memory.Id.Should().Be(memory.Id);
         _output.WriteLine($"2. Search found: [{searchResults[0].Score:F4}]");
 
         // 3. Get by ID
-        var retrieved = await _memoryStore.GetByIdAsync(memory.Id);
+        var retrieved = await _memoryStore.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         retrieved.Should().NotBeNull();
         retrieved!.Content.Should().Be(content);
         _output.WriteLine($"3. Retrieved by ID: {retrieved.Id}");
 
         // 4. Update
         retrieved.Content = "Kubernetes (K8s) is the leading container orchestration platform.";
-        retrieved.Embedding = await _fixture.EmbeddingModel.EmbedAsync(retrieved.Content);
-        var updated = await _memoryStore.UpdateAsync(retrieved);
+        retrieved.Embedding = await _fixture.EmbeddingModel.EmbedAsync(retrieved.Content, TestContext.Current.CancellationToken);
+        var updated = await _memoryStore.UpdateAsync(retrieved, TestContext.Current.CancellationToken);
         updated.Should().BeTrue();
         _output.WriteLine($"4. Updated content");
 
         // 5. Verify update
-        var updatedMemory = await _memoryStore.GetByIdAsync(memory.Id);
+        var updatedMemory = await _memoryStore.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         updatedMemory!.Content.Should().Contain("K8s");
         _output.WriteLine($"5. Verified update: {updatedMemory.Content}");
 
         // 6. Delete
-        var deleted = await _memoryStore.DeleteAsync(memory.Id, hardDelete: true);
+        var deleted = await _memoryStore.DeleteAsync(memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
         deleted.Should().BeTrue();
         _output.WriteLine($"6. Deleted memory");
 
         // 7. Verify deletion
-        var afterDelete = await _memoryStore.GetByIdAsync(memory.Id);
+        var afterDelete = await _memoryStore.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         afterDelete.Should().BeNull();
         _output.WriteLine($"7. Verified deletion");
     }

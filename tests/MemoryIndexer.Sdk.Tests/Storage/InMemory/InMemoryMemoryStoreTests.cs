@@ -24,7 +24,7 @@ public class InMemoryMemoryStoreTests
         var memory = TestHelpers.CreateTestMemory();
 
         // Act
-        var result = await _store.StoreAsync(memory);
+        var result = await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -36,10 +36,10 @@ public class InMemoryMemoryStoreTests
     public async Task GetByIdAsync_ExistingMemory_ShouldReturnMemory()
     {
         // Arrange
-        var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory());
+        var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.GetByIdAsync(memory.Id);
+        var result = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -50,7 +50,7 @@ public class InMemoryMemoryStoreTests
     public async Task GetByIdAsync_NonExistingMemory_ShouldReturnNull()
     {
         // Act
-        var result = await _store.GetByIdAsync(Guid.NewGuid());
+        var result = await _store.GetByIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
@@ -60,16 +60,16 @@ public class InMemoryMemoryStoreTests
     public async Task UpdateAsync_ExistingMemory_ShouldUpdate()
     {
         // Arrange
-        var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory());
+        var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory(), TestContext.Current.CancellationToken);
         memory.Content = "Updated content";
 
         // Act
-        var result = await _store.UpdateAsync(memory);
+        var result = await _store.UpdateAsync(memory, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var updated = await _store.GetByIdAsync(memory.Id);
+        var updated = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         updated!.Content.Should().Be("Updated content");
     }
 
@@ -77,15 +77,15 @@ public class InMemoryMemoryStoreTests
     public async Task DeleteAsync_SoftDelete_ShouldMarkAsDeleted()
     {
         // Arrange
-        var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory());
+        var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.DeleteAsync(memory.Id, hardDelete: false);
+        var result = await _store.DeleteAsync(memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var deleted = await _store.GetByIdAsync(memory.Id);
+        var deleted = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         deleted!.IsDeleted.Should().BeTrue();
     }
 
@@ -93,15 +93,15 @@ public class InMemoryMemoryStoreTests
     public async Task DeleteAsync_HardDelete_ShouldRemoveMemory()
     {
         // Arrange
-        var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory());
+        var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.DeleteAsync(memory.Id, hardDelete: true);
+        var result = await _store.DeleteAsync(memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var deleted = await _store.GetByIdAsync(memory.Id);
+        var deleted = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
         deleted.Should().BeNull();
     }
 
@@ -111,7 +111,7 @@ public class InMemoryMemoryStoreTests
         // Arrange
         var embedding = TestHelpers.CreateTestEmbedding(768);
         var memory = TestHelpers.CreateTestMemory(embedding: embedding);
-        await _store.StoreAsync(memory);
+        await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         var options = new MemorySearchOptions
         {
@@ -120,7 +120,7 @@ public class InMemoryMemoryStoreTests
         };
 
         // Act
-        var results = await _store.SearchAsync(embedding, options);
+        var results = await _store.SearchAsync(embedding, options, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -134,11 +134,11 @@ public class InMemoryMemoryStoreTests
         var user1Memory = TestHelpers.CreateTestMemory("user1");
         var user2Memory = TestHelpers.CreateTestMemory("user2");
 
-        await _store.StoreAsync(user1Memory);
-        await _store.StoreAsync(user2Memory);
+        await _store.StoreAsync(user1Memory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(user2Memory, TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _store.GetAllAsync("user1");
+        var results = await _store.GetAllAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -149,12 +149,12 @@ public class InMemoryMemoryStoreTests
     public async Task GetCountAsync_ShouldReturnCorrectCount()
     {
         // Arrange
-        await _store.StoreAsync(TestHelpers.CreateTestMemory("user1"));
-        await _store.StoreAsync(TestHelpers.CreateTestMemory("user1"));
-        await _store.StoreAsync(TestHelpers.CreateTestMemory("user2"));
+        await _store.StoreAsync(TestHelpers.CreateTestMemory("user1"), TestContext.Current.CancellationToken);
+        await _store.StoreAsync(TestHelpers.CreateTestMemory("user1"), TestContext.Current.CancellationToken);
+        await _store.StoreAsync(TestHelpers.CreateTestMemory("user2"), TestContext.Current.CancellationToken);
 
         // Act
-        var count = await _store.GetCountAsync("user1");
+        var count = await _store.GetCountAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         count.Should().Be(2);
@@ -173,15 +173,15 @@ public class InMemoryMemoryStoreTests
         var systemMemory = TestHelpers.CreateTestMemory("user1");
         systemMemory.Role = "system";
 
-        await _store.StoreAsync(userMemory);
-        await _store.StoreAsync(assistantMemory);
-        await _store.StoreAsync(systemMemory);
+        await _store.StoreAsync(userMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(assistantMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(systemMemory, TestContext.Current.CancellationToken);
 
         // Act - Filter by user role only
         var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
         {
             Roles = ["user"]
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -201,15 +201,15 @@ public class InMemoryMemoryStoreTests
         var systemMemory = TestHelpers.CreateTestMemory("user1");
         systemMemory.Role = "system";
 
-        await _store.StoreAsync(userMemory);
-        await _store.StoreAsync(assistantMemory);
-        await _store.StoreAsync(systemMemory);
+        await _store.StoreAsync(userMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(assistantMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(systemMemory, TestContext.Current.CancellationToken);
 
         // Act - Filter by user and assistant roles
         var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
         {
             Roles = ["user", "assistant"]
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(2);
@@ -228,8 +228,8 @@ public class InMemoryMemoryStoreTests
         var assistantMemory = TestHelpers.CreateTestMemory("user1", embedding: embedding);
         assistantMemory.Role = "assistant";
 
-        await _store.StoreAsync(userMemory);
-        await _store.StoreAsync(assistantMemory);
+        await _store.StoreAsync(userMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(assistantMemory, TestContext.Current.CancellationToken);
 
         // Act - Search with user role filter
         var results = await _store.SearchAsync(embedding, new MemorySearchOptions
@@ -237,7 +237,7 @@ public class InMemoryMemoryStoreTests
             UserId = "user1",
             Limit = 10,
             Roles = ["user"]
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);
@@ -257,15 +257,15 @@ public class InMemoryMemoryStoreTests
         var participant2Memory = TestHelpers.CreateTestMemory("user1");
         participant2Memory.Role = "participant-2";
 
-        await _store.StoreAsync(moderatorMemory);
-        await _store.StoreAsync(participant1Memory);
-        await _store.StoreAsync(participant2Memory);
+        await _store.StoreAsync(moderatorMemory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(participant1Memory, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(participant2Memory, TestContext.Current.CancellationToken);
 
         // Act - Filter by moderator only
         var results = await _store.GetAllAsync("user1", new MemoryFilterOptions
         {
             Roles = ["moderator"]
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCount(1);

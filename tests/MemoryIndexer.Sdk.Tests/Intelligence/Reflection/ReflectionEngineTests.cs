@@ -62,7 +62,7 @@ public class ReflectionEngineTests
         // Arrange - default mock returns empty list
 
         // Act
-        var result = await _engine.ShouldReflectAsync("test_session");
+        var result = await _engine.ShouldReflectAsync("test_session", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -93,7 +93,7 @@ public class ReflectionEngineTests
             .Returns(10f); // High importance score
 
         // Act
-        var result = await _engine.ShouldReflectAsync("test_session");
+        var result = await _engine.ShouldReflectAsync("test_session", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -106,7 +106,7 @@ public class ReflectionEngineTests
         // Arrange - default mock returns empty list
 
         // Act
-        var result = await _engine.ReflectAsync("test_session");
+        var result = await _engine.ReflectAsync("test_session", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -149,7 +149,7 @@ public class ReflectionEngineTests
             .Returns(memories);
 
         // Act
-        var result = await _engine.ReflectAsync("test_session");
+        var result = await _engine.ReflectAsync("test_session", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -163,7 +163,7 @@ public class ReflectionEngineTests
         var memories = new List<MemoryUnit>();
 
         // Act
-        var result = await _engine.GenerateInsightsAsync(memories);
+        var result = await _engine.GenerateInsightsAsync(memories, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -197,7 +197,7 @@ public class ReflectionEngineTests
         };
 
         // Act
-        var result = await _engine.GenerateInsightsAsync(memories);
+        var result = await _engine.GenerateInsightsAsync(memories, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -225,7 +225,7 @@ public class ReflectionEngineTests
             .Returns(memories);
 
         // Act
-        var result = await _engine.SynthesizeQuestionsAsync("test_session", "API design");
+        var result = await _engine.SynthesizeQuestionsAsync("test_session", "API design", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -245,7 +245,7 @@ public class ReflectionEngineTests
             });
 
         // Act
-        var result = await _engine.DiscoverLinksAsync(memoryId);
+        var result = await _engine.DiscoverLinksAsync(memoryId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -283,7 +283,7 @@ public class ReflectionEngineTests
             .Returns(relatedMemories);
 
         // Act
-        var result = await _engine.DiscoverLinksAsync(targetId);
+        var result = await _engine.DiscoverLinksAsync(targetId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -295,7 +295,7 @@ public class ReflectionEngineTests
         // Arrange - default mock returns empty list
 
         // Act
-        var result = await _engine.SummarizeActivityAsync("test_session", TimeSpan.FromHours(1));
+        var result = await _engine.SummarizeActivityAsync("test_session", TimeSpan.FromHours(1), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -331,7 +331,7 @@ public class ReflectionEngineTests
             .Returns(memories);
 
         // Act
-        var result = await _engine.SummarizeActivityAsync("test_session", TimeSpan.FromHours(1));
+        var result = await _engine.SummarizeActivityAsync("test_session", TimeSpan.FromHours(1), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -375,7 +375,7 @@ public class ReflectionEngineTests
             });
 
         // Act
-        var result = await _engine.ReflectAsync("test_session");
+        var result = await _engine.ReflectAsync("test_session", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -403,13 +403,13 @@ public class ReflectionEngineTests
             .Returns(memories);
 
         // Act - first call
-        var result1 = await _engine.ShouldReflectAsync("test_session");
+        var result1 = await _engine.ShouldReflectAsync("test_session", TestContext.Current.CancellationToken);
 
         // Perform a reflection to set last reflection time
-        await _engine.ReflectAsync("test_session");
+        await _engine.ReflectAsync("test_session", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - second call immediately after
-        var result2 = await _engine.ShouldReflectAsync("test_session");
+        var result2 = await _engine.ShouldReflectAsync("test_session", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result1);
@@ -447,7 +447,7 @@ public class ReflectionEngineTests
         };
 
         // Act
-        var result = await _engine.GenerateInsightsAsync(memories);
+        var result = await _engine.GenerateInsightsAsync(memories, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -487,7 +487,7 @@ public class ReflectionEngineTests
             .Returns(relatedMemories);
 
         // Act
-        var result = await _engine.DiscoverLinksAsync(targetId);
+        var result = await _engine.DiscoverLinksAsync(targetId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -529,7 +529,7 @@ public class ReflectionEngineTests
             .Returns(memories);
 
         // Act
-        var result = await _engine.SummarizeActivityAsync("test_session", TimeSpan.FromHours(1));
+        var result = await _engine.SummarizeActivityAsync("test_session", TimeSpan.FromHours(1), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

@@ -63,7 +63,7 @@ public class JsonProfileExporterTests
             .Returns(facts);
 
         // Act
-        var result = await _exporter.ExportAsync("user1");
+        var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -87,7 +87,7 @@ public class JsonProfileExporterTests
             .Returns(facts);
 
         // Act
-        var result = await _exporter.ExportAsync("user1");
+        var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Metadata!.Checksum.Should().NotBeNullOrEmpty();
@@ -114,7 +114,7 @@ public class JsonProfileExporterTests
         };
 
         // Act
-        var result = await _exporter.ExportAsync("user1", options);
+        var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -141,7 +141,7 @@ public class JsonProfileExporterTests
         };
 
         // Act
-        var result = await _exporter.ExportAsync("user1", options);
+        var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -170,7 +170,7 @@ public class JsonProfileExporterTests
         };
 
         // Act
-        var result = await _exporter.ExportAsync("user1", options);
+        var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -193,7 +193,7 @@ public class JsonProfileExporterTests
         var options = new ProfileExportOptions { IncludeArchived = true };
 
         // Act
-        var result = await _exporter.ExportAsync("user1", options);
+        var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -218,7 +218,7 @@ public class JsonProfileExporterTests
         var options = new ProfileExportOptions { IncludeArchived = false };
 
         // Act
-        var result = await _exporter.ExportAsync("user1", options);
+        var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -246,7 +246,7 @@ public class JsonProfileExporterTests
         };
 
         // Act
-        var result = await _exporter.ExportAsync("user1", options);
+        var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -268,7 +268,7 @@ public class JsonProfileExporterTests
             .Returns(facts);
 
         // Act
-        var result = await _exporter.ExportAsync("user1");
+        var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -299,7 +299,7 @@ public class JsonProfileExporterTests
         var options = new ProfileExportOptions { IncludeMetadata = true };
 
         // Act
-        var result = await _exporter.ExportAsync("user1", options);
+        var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -329,7 +329,7 @@ public class JsonProfileExporterTests
             .Returns(facts);
 
         // Act
-        var result = await _exporter.ExportAsync("user1");
+        var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -357,7 +357,7 @@ public class JsonProfileExporterTests
         using var stream = new MemoryStream();
 
         // Act
-        var metadata = await _exporter.ExportToStreamAsync("user1", stream);
+        var metadata = await _exporter.ExportToStreamAsync("user1", stream, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         metadata.Should().NotBeNull();
@@ -366,7 +366,7 @@ public class JsonProfileExporterTests
         // Verify stream contains valid JSON
         stream.Position = 0;
         using var reader = new StreamReader(stream);
-        var json = await reader.ReadToEndAsync();
+        var json = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
         var parseAction = () => JsonDocument.Parse(json);
         parseAction.Should().NotThrow();
     }
@@ -382,7 +382,7 @@ public class JsonProfileExporterTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _exporter.ExportToStreamAsync("user1", stream));
+            () => _exporter.ExportToStreamAsync("user1", stream, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     #endregion
@@ -416,7 +416,7 @@ public class JsonProfileExporterTests
             .Returns(facts);
 
         // Act
-        var result = await _exporter.ExportAsync("user1");
+        var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Metadata!.FactsByCategory.Should().ContainKey("Fact");

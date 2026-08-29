@@ -36,7 +36,7 @@ public class IScopeManagerTests
         var scopeManager = CreateScopeManager();
 
         // Act
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Assert
         var state = scopeManager.CurrentState;
@@ -55,7 +55,7 @@ public class IScopeManagerTests
         var scopeManager = CreateScopeManager();
 
         // Act
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Assert
         var topicId = scopeManager.GetCurrentTopicId();
@@ -68,11 +68,11 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("First turn");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("First turn", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await scopeManager.InitializeAsync("user2", "session2");
+        await scopeManager.InitializeAsync("user2", "session2", TestContext.Current.CancellationToken);
 
         // Assert
         var state = scopeManager.CurrentState;
@@ -104,7 +104,7 @@ public class IScopeManagerTests
         var before = DateTime.UtcNow;
 
         // Act
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
         var after = DateTime.UtcNow;
 
         // Assert
@@ -124,12 +124,12 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        await scopeManager.RecordTurnAsync("Turn 1");
-        await scopeManager.RecordTurnAsync("Turn 2");
-        await scopeManager.RecordTurnAsync("Turn 3");
+        await scopeManager.RecordTurnAsync("Turn 1", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Turn 2", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Turn 3", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         scopeManager.CurrentState.TurnCount.Should().Be(3);
@@ -140,10 +140,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var resolution = await scopeManager.RecordTurnAsync("Test turn");
+        var resolution = await scopeManager.RecordTurnAsync("Test turn", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         resolution.Should().NotBeNull();
@@ -158,10 +158,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var resolution = await scopeManager.RecordTurnAsync("First turn");
+        var resolution = await scopeManager.RecordTurnAsync("First turn", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         resolution.BoundaryCrossed.Should().BeTrue();
@@ -173,11 +173,11 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var resolution1 = await scopeManager.RecordTurnAsync("Talk about weather");
-        var resolution2 = await scopeManager.RecordTurnAsync("More about weather");
+        var resolution1 = await scopeManager.RecordTurnAsync("Talk about weather", cancellationToken: TestContext.Current.CancellationToken);
+        var resolution2 = await scopeManager.RecordTurnAsync("More about weather", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         resolution1.TopicId.Should().Be(resolution2.TopicId);
@@ -190,11 +190,11 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("Talk about weather");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Talk about weather", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var resolution = await scopeManager.RecordTurnAsync("Let's discuss quantum physics");
+        var resolution = await scopeManager.RecordTurnAsync("Let's discuss quantum physics", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - May or may not detect topic change with MockEmbeddingService
         resolution.TopicId.Should().NotBeNullOrEmpty();
@@ -205,10 +205,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var resolution = await scopeManager.RecordTurnAsync("User message", role: "user");
+        var resolution = await scopeManager.RecordTurnAsync("User message", role: "user", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         resolution.Should().NotBeNull();
@@ -220,11 +220,11 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
         var before = DateTime.UtcNow;
 
         // Act
-        await scopeManager.RecordTurnAsync("Test turn");
+        await scopeManager.RecordTurnAsync("Test turn", cancellationToken: TestContext.Current.CancellationToken);
         var after = DateTime.UtcNow;
 
         // Assert
@@ -239,11 +239,11 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        await scopeManager.RecordTurnAsync("Turn 1");
-        await scopeManager.RecordTurnAsync("Turn 2");
+        await scopeManager.RecordTurnAsync("Turn 1", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Turn 2", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         scopeManager.CurrentState.TopicTurnCount.Should().Be(2);
@@ -258,13 +258,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var scope = await scopeManager.ResolveScopeAsync(
-            "User's name is Alice",
-            MemoryType.Fact,
-            importance: 0.9f);
+        var scope = await scopeManager.ResolveScopeAsync("User's name is Alice", MemoryType.Fact, importance: 0.9f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         scope.Should().Be(Scope.User);
@@ -275,13 +272,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var scope = await scopeManager.ResolveScopeAsync(
-            "We discussed project requirements",
-            MemoryType.Episodic,
-            importance: 0.6f); // 0.6 < 0.7, so returns Topic
+        var scope = await scopeManager.ResolveScopeAsync("We discussed project requirements", MemoryType.Episodic, importance: 0.6f, cancellationToken: TestContext.Current.CancellationToken); // 0.6 < 0.7, so returns Topic
 
         // Assert
         scope.Should().Be(Scope.Topic);
@@ -292,13 +286,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var scope = await scopeManager.ResolveScopeAsync(
-            "yes",
-            MemoryType.Episodic,
-            importance: 0.1f);
+        var scope = await scopeManager.ResolveScopeAsync("yes", MemoryType.Episodic, importance: 0.1f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         scope.Should().Be(Scope.Turn);
@@ -309,13 +300,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var scope = await scopeManager.ResolveScopeAsync(
-            "Machine learning concepts",
-            MemoryType.Semantic,
-            importance: 0.5f); // 0.5 >= 0.5, 0.5 < 0.8, so returns Session
+        var scope = await scopeManager.ResolveScopeAsync("Machine learning concepts", MemoryType.Semantic, importance: 0.5f, cancellationToken: TestContext.Current.CancellationToken); // 0.5 >= 0.5, 0.5 < 0.8, so returns Session
 
         // Assert
         scope.Should().Be(Scope.Session);
@@ -326,13 +314,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var scope = await scopeManager.ResolveScopeAsync(
-            "How to deploy the application",
-            MemoryType.Procedural,
-            importance: 0.7f);
+        var scope = await scopeManager.ResolveScopeAsync("How to deploy the application", MemoryType.Procedural, importance: 0.7f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         scope.Should().BeOneOf(Scope.Session, Scope.User);
@@ -343,13 +328,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var scope = await scopeManager.ResolveScopeAsync(
-            "Discussing the current task",
-            MemoryType.Episodic,
-            importance: 0.5f);
+        var scope = await scopeManager.ResolveScopeAsync("Discussing the current task", MemoryType.Episodic, importance: 0.5f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         scope.Should().BeOneOf(Scope.Topic, Scope.Session);
@@ -364,10 +346,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
-        var topicChanged = await scopeManager.DetectTopicChangeAsync("First message");
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("First message", TestContext.Current.CancellationToken);
 
         // Assert
         topicChanged.Should().BeFalse();
@@ -378,11 +360,11 @@ public class IScopeManagerTests
     {
         // Arrange - Only 1 turn in history (needs >= 2 for comparison)
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("First turn about weather");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("First turn about weather", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var topicChanged = await scopeManager.DetectTopicChangeAsync("More about weather");
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("More about weather", TestContext.Current.CancellationToken);
 
         // Assert - Not enough history for comparison
         topicChanged.Should().BeFalse();
@@ -393,12 +375,12 @@ public class IScopeManagerTests
     {
         // Arrange - Record identical content twice to build history
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("Discussing the weather today");
-        await scopeManager.RecordTurnAsync("Discussing the weather today");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Discussing the weather today", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Discussing the weather today", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - Same content should have high similarity → no topic change
-        var topicChanged = await scopeManager.DetectTopicChangeAsync("Discussing the weather today");
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("Discussing the weather today", TestContext.Current.CancellationToken);
 
         // Assert
         topicChanged.Should().BeFalse();
@@ -409,13 +391,12 @@ public class IScopeManagerTests
     {
         // Arrange - Build history with consistent topic
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("The weather is sunny and warm");
-        await scopeManager.RecordTurnAsync("The weather is sunny and warm");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("The weather is sunny and warm", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("The weather is sunny and warm", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - Completely different content should have low similarity
-        var topicChanged = await scopeManager.DetectTopicChangeAsync(
-            "Quantum entanglement in photonic systems with high-dimensional Hilbert spaces");
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("Quantum entanglement in photonic systems with high-dimensional Hilbert spaces", TestContext.Current.CancellationToken);
 
         // Assert - With 768-dim random unit vectors from MockEmbeddingService,
         // different texts should have cosine similarity near 0 (< 0.5 threshold)
@@ -427,12 +408,12 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("Topic one");
-        await scopeManager.RecordTurnAsync("Topic one continued");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Topic one", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Topic one continued", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var topicChanged = await scopeManager.DetectTopicChangeAsync("Topic two");
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("Topic two", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.IsType<bool>(topicChanged);
@@ -443,13 +424,12 @@ public class IScopeManagerTests
     {
         // Arrange - Build history with consistent topic
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("The weather is sunny and warm");
-        await scopeManager.RecordTurnAsync("The weather is sunny and warm");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("The weather is sunny and warm", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("The weather is sunny and warm", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - RecordTurnAsync calls DetectTopicChangeAsync internally
-        var resolution = await scopeManager.RecordTurnAsync(
-            "Advanced quantum computing algorithms for molecular simulation");
+        var resolution = await scopeManager.RecordTurnAsync("Advanced quantum computing algorithms for molecular simulation", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Topic transition should be detected
         resolution.BoundaryType.Should().Be(ScopeBoundaryType.Topic);
@@ -466,12 +446,12 @@ public class IScopeManagerTests
         var options = Options.Create(new ScopeManagerOptions { TopicSimilarityThreshold = 0.99f });
         var scopeManager = new ScopeManager(embeddingService, options, NullLogger<ScopeManager>.Instance);
 
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("Weather discussion");
-        await scopeManager.RecordTurnAsync("Weather discussion");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Weather discussion", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Weather discussion", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - Even similar-ish content should trigger with very high threshold
-        var topicChanged = await scopeManager.DetectTopicChangeAsync("Weather discussion topic");
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("Weather discussion topic", TestContext.Current.CancellationToken);
 
         // Assert - High threshold (0.99) means even slightly different content triggers change
         topicChanged.Should().BeTrue();
@@ -487,12 +467,12 @@ public class IScopeManagerTests
         var options = Options.Create(new ScopeManagerOptions { TopicSimilarityThreshold = 0.5f });
         var scopeManager = new ScopeManager(embeddingService, options, NullLogger<ScopeManager>.Instance);
 
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("Exact same content for testing");
-        await scopeManager.RecordTurnAsync("Exact same content for testing");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Exact same content for testing", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Exact same content for testing", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - Identical content → cosine similarity = 1.0 → no topic change
-        var topicChanged = await scopeManager.DetectTopicChangeAsync("Exact same content for testing");
+        var topicChanged = await scopeManager.DetectTopicChangeAsync("Exact same content for testing", TestContext.Current.CancellationToken);
 
         // Assert
         topicChanged.Should().BeFalse();
@@ -507,7 +487,7 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
         var topicId = scopeManager.GetCurrentTopicId();
@@ -522,7 +502,7 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
 
         // Act
         var topicId1 = scopeManager.GetCurrentTopicId();
@@ -682,12 +662,12 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("Turn 1");
-        await scopeManager.RecordTurnAsync("Turn 2");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Turn 1", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Turn 2", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await scopeManager.EndSessionAsync();
+        await scopeManager.EndSessionAsync(TestContext.Current.CancellationToken);
 
         // Assert
         var state = scopeManager.CurrentState;
@@ -712,10 +692,10 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await scopeManager.RecordTurnAsync("Turn 1");
-        await scopeManager.RecordTurnAsync("Turn 2");
-        await scopeManager.RecordTurnAsync("Turn 3");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Turn 1", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Turn 2", cancellationToken: TestContext.Current.CancellationToken);
+        await scopeManager.RecordTurnAsync("Turn 3", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         var stats = scopeManager.GetStatistics();
@@ -729,9 +709,9 @@ public class IScopeManagerTests
     {
         // Arrange
         var scopeManager = CreateScopeManager();
-        await scopeManager.InitializeAsync("user1", "session1");
-        await Task.Delay(100); // Wait a bit
-        await scopeManager.RecordTurnAsync("Turn 1");
+        await scopeManager.InitializeAsync("user1", "session1", TestContext.Current.CancellationToken);
+        await Task.Delay(100, TestContext.Current.CancellationToken); // Wait a bit
+        await scopeManager.RecordTurnAsync("Turn 1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         var stats = scopeManager.GetStatistics();

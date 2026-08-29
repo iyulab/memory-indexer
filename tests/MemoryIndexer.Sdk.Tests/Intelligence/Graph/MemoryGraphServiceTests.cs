@@ -53,7 +53,7 @@ public class MemoryGraphServiceTests
         };
 
         // Act
-        var result = await _service.LinkMemoryToGraphAsync(memory, entities);
+        var result = await _service.LinkMemoryToGraphAsync(memory, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -75,7 +75,7 @@ public class MemoryGraphServiceTests
         };
 
         // Act
-        var result = await _service.LinkMemoryToGraphAsync(memory, []);
+        var result = await _service.LinkMemoryToGraphAsync(memory, [], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -135,14 +135,14 @@ public class MemoryGraphServiceTests
         };
 
         // Link both memories
-        await _service.LinkMemoryToGraphAsync(memory, entities);
-        await _service.LinkMemoryToGraphAsync(relatedMemory, relatedEntities);
+        await _service.LinkMemoryToGraphAsync(memory, entities, TestContext.Current.CancellationToken);
+        await _service.LinkMemoryToGraphAsync(relatedMemory, relatedEntities, TestContext.Current.CancellationToken);
 
         _memoryStoreMock.GetByIdAsync(relatedMemoryId, Arg.Any<CancellationToken>())
             .Returns(relatedMemory);
 
         // Act
-        var result = await _service.FindRelatedMemoriesAsync(memoryId);
+        var result = await _service.FindRelatedMemoriesAsync(memoryId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(result);
@@ -199,11 +199,11 @@ public class MemoryGraphServiceTests
             }
         };
 
-        await _service.LinkMemoryToGraphAsync(memory1, entities1);
-        await _service.LinkMemoryToGraphAsync(memory2, entities2);
+        await _service.LinkMemoryToGraphAsync(memory1, entities1, TestContext.Current.CancellationToken);
+        await _service.LinkMemoryToGraphAsync(memory2, entities2, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _service.ExtractSubgraphAsync([memoryId1, memoryId2]);
+        var result = await _service.ExtractSubgraphAsync([memoryId1, memoryId2], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

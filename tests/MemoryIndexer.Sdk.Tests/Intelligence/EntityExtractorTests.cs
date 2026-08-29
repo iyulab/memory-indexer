@@ -21,7 +21,7 @@ public class EntityExtractorTests
     public async Task ExtractEntitiesAsync_EmptyContent_ShouldReturnEmptyList()
     {
         // Act
-        var result = await _extractor.ExtractEntitiesAsync("");
+        var result = await _extractor.ExtractEntitiesAsync("", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -34,7 +34,7 @@ public class EntityExtractorTests
         var content = "Contact us at support@example.com for assistance.";
 
         // Act
-        var result = await _extractor.ExtractEntitiesAsync(content);
+        var result = await _extractor.ExtractEntitiesAsync(content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == EntityType.Email && e.Name == "support@example.com");
@@ -47,7 +47,7 @@ public class EntityExtractorTests
         var content = "Visit https://www.example.com for more information.";
 
         // Act
-        var result = await _extractor.ExtractEntitiesAsync(content);
+        var result = await _extractor.ExtractEntitiesAsync(content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == EntityType.Url && e.Name.Contains("example.com"));
@@ -60,7 +60,7 @@ public class EntityExtractorTests
         var content = "The meeting is scheduled for 2024-12-15.";
 
         // Act
-        var result = await _extractor.ExtractEntitiesAsync(content);
+        var result = await _extractor.ExtractEntitiesAsync(content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == EntityType.DateTime && e.Name == "2024-12-15");
@@ -73,7 +73,7 @@ public class EntityExtractorTests
         var content = "The total cost is $1,500.00 for the project.";
 
         // Act
-        var result = await _extractor.ExtractEntitiesAsync(content);
+        var result = await _extractor.ExtractEntitiesAsync(content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == EntityType.Numeric);
@@ -86,7 +86,7 @@ public class EntityExtractorTests
         var content = "The API uses OAuth2.0 for authentication and returns JSON responses.";
 
         // Act
-        var result = await _extractor.ExtractEntitiesAsync(content);
+        var result = await _extractor.ExtractEntitiesAsync(content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, e => e.Type == EntityType.Technical && e.Name == "API");
@@ -99,7 +99,7 @@ public class EntityExtractorTests
         var content = "Microsoft and Google are leading technology companies.";
 
         // Act
-        var result = await _extractor.ExtractEntitiesAsync(content);
+        var result = await _extractor.ExtractEntitiesAsync(content, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Count > 0, "Should extract at least one named entity");
@@ -118,7 +118,7 @@ public class EntityExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractRelationsAsync(content, entities);
+        var result = await _extractor.ExtractRelationsAsync(content, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, r => r.RelationType == "WORKS_AT");
@@ -136,7 +136,7 @@ public class EntityExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractRelationsAsync(content, entities);
+        var result = await _extractor.ExtractRelationsAsync(content, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result, r => r.RelationType == "LOCATED_IN");
@@ -154,7 +154,7 @@ public class EntityExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractRelationsAsync(content, entities);
+        var result = await _extractor.ExtractRelationsAsync(content, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Count > 0, "Should create at least one co-occurrence relation");
@@ -172,7 +172,7 @@ public class EntityExtractorTests
         };
 
         // Act
-        var graph = await _extractor.BuildGraphAsync(contents);
+        var graph = await _extractor.BuildGraphAsync(contents, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(graph);
@@ -190,7 +190,7 @@ public class EntityExtractorTests
         };
 
         // Act
-        var graph = await _extractor.BuildGraphAsync(contents);
+        var graph = await _extractor.BuildGraphAsync(contents, TestContext.Current.CancellationToken);
 
         // Assert
         var microsoftEntities = graph.Entities.Values.Count(e =>
@@ -380,7 +380,7 @@ public class EntityExtractorTests
         var content = "MICROSOFT and microsoft are the same company.";
 
         // Act
-        var result = await _extractor.ExtractEntitiesAsync(content);
+        var result = await _extractor.ExtractEntitiesAsync(content, TestContext.Current.CancellationToken);
 
         // Assert
         var microsoftEntities = result.Where(e =>

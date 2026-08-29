@@ -44,7 +44,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var result = await _service.ValidateAsync(newFact, []);
+        var result = await _service.ValidateAsync(newFact, [], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.Should().BeTrue();
@@ -76,7 +76,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var result = await _service.ValidateAsync(newFact, existingFacts);
+        var result = await _service.ValidateAsync(newFact, existingFacts, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.Should().BeFalse();
@@ -118,7 +118,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var result = await _service.ValidateAsync(newFact, existingFacts);
+        var result = await _service.ValidateAsync(newFact, existingFacts, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.RecommendedAction.Should().Be(FactConflictAction.RequireReview);
@@ -159,7 +159,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var result = await _service.ValidateAsync(newFact, existingFacts);
+        var result = await _service.ValidateAsync(newFact, existingFacts, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Preference allows update without confirmation
         result.RequiresConfirmation.Should().BeFalse();
@@ -200,7 +200,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var result = await _service.ValidateAsync(newFact, existingFacts, options);
+        var result = await _service.ValidateAsync(newFact, existingFacts, options, TestContext.Current.CancellationToken);
 
         // Assert - High confidence differential should enable auto-resolution
         // (confidence diff = 0.95 - 0.5 = 0.45, which is > 0.2)
@@ -231,7 +231,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var result = await _service.ValidateAsync(newFact, existingFacts);
+        var result = await _service.ValidateAsync(newFact, existingFacts, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Should not detect conflict with inactive entry
         result.IsValid.Should().BeTrue();
@@ -273,7 +273,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var conflicts = await _service.DetectConflictsAsync(newFact, existingFacts);
+        var conflicts = await _service.DetectConflictsAsync(newFact, existingFacts, TestContext.Current.CancellationToken);
 
         // Assert
         conflicts.Should().HaveCount(1);
@@ -313,7 +313,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var conflicts = await _service.DetectConflictsAsync(newFact, existingFacts);
+        var conflicts = await _service.DetectConflictsAsync(newFact, existingFacts, TestContext.Current.CancellationToken);
 
         // Assert - Should detect contradiction based on pattern matching
         conflicts.Should().NotBeEmpty();
@@ -347,7 +347,7 @@ public class FactValidatorServiceTests
         };
 
         // Act
-        var result = await _service.ResolveConflictAsync(conflict, strategy);
+        var result = await _service.ResolveConflictAsync(conflict, strategy, TestContext.Current.CancellationToken);
 
         // Assert
         result.Action.Should().Be(expectedAction);

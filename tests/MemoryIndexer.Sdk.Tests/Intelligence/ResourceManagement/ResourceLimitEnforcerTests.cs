@@ -60,7 +60,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act
-        var result = await _enforcer.CanStoreAsync("user1", 1000);
+        var result = await _enforcer.CanStoreAsync("user1", 1000, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsAllowed);
@@ -81,7 +81,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act
-        var result = await _enforcer.CanStoreAsync("user1", 1000);
+        var result = await _enforcer.CanStoreAsync("user1", 1000, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsAllowed);
@@ -102,7 +102,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act
-        var result = await _enforcer.CanStoreAsync("user1", 1_000_000); // Adding 1MB would exceed
+        var result = await _enforcer.CanStoreAsync("user1", 1_000_000, TestContext.Current.CancellationToken); // Adding 1MB would exceed
 
         // Assert
         Assert.False(result.IsAllowed);
@@ -140,7 +140,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act
-        var result = await enforcer.CanStoreAsync("user1", 1000);
+        var result = await enforcer.CanStoreAsync("user1", 1000, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsAllowed);
@@ -163,7 +163,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act
-        var result = await _enforcer.CanStoreBatchAsync("user1", 10, 50000);
+        var result = await _enforcer.CanStoreBatchAsync("user1", 10, 50000, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsAllowed);
@@ -182,7 +182,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act - trying to add 20
-        var result = await _enforcer.CanStoreBatchAsync("user1", 20, 50000);
+        var result = await _enforcer.CanStoreBatchAsync("user1", 20, 50000, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsAllowed);
@@ -202,7 +202,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act - trying to add 2MB total
-        var result = await _enforcer.CanStoreBatchAsync("user1", 10, 2_000_000);
+        var result = await _enforcer.CanStoreBatchAsync("user1", 10, 2_000_000, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsAllowed);
@@ -288,7 +288,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act
-        var usage = await _enforcer.GetUsageAsync("user1");
+        var usage = await _enforcer.GetUsageAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(50, usage.MemoryCount);
@@ -305,7 +305,7 @@ public class ResourceLimitEnforcerTests
                 new ResourceUsage { UserId = "user1", MemoryCount = 25, StorageSizeBytes = 250_000 });
 
         // Act
-        var usage = await _enforcer.GetUsageAsync("user1");
+        var usage = await _enforcer.GetUsageAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         await _mockUsageTracker.Received(1).RefreshFromStoreAsync("user1", Arg.Any<CancellationToken>());
@@ -329,7 +329,7 @@ public class ResourceLimitEnforcerTests
             });
 
         // Act
-        var result = await _enforcer.CanStoreAsync("user1", 100);
+        var result = await _enforcer.CanStoreAsync("user1", 100, TestContext.Current.CancellationToken);
 
         // Assert - should still allow, warnings are just for telemetry
         Assert.True(result.IsAllowed);

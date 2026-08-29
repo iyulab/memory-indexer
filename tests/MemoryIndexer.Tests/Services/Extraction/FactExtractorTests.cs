@@ -27,7 +27,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.ContextType.Should().Be(StatementContextType.Direct);
@@ -45,7 +45,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.ContextType.Should().Be(StatementContextType.Quoted);
@@ -63,7 +63,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.ContextType.Should().Be(StatementContextType.Hypothetical);
@@ -80,7 +80,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.ContextType.Should().Be(StatementContextType.Question);
@@ -101,7 +101,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Facts.Should().ContainSingle();
@@ -122,7 +122,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Facts.Should().ContainSingle();
@@ -143,7 +143,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Facts.Should().ContainSingle();
@@ -163,7 +163,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Facts.Should().ContainSingle();
@@ -187,7 +187,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Facts.Should().ContainSingle();
@@ -207,7 +207,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Facts.Should().ContainSingle();
@@ -227,7 +227,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.FastTrackFacts.Should().NotBeEmpty();
@@ -253,7 +253,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ValidateAsync(fact, []);
+        var result = await _extractor.ValidateAsync(fact, [], TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.Should().BeTrue();
@@ -283,7 +283,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ValidateAsync(fact, existingFacts);
+        var result = await _extractor.ValidateAsync(fact, existingFacts, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.Should().BeFalse();
@@ -316,7 +316,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ValidateAsync(fact, existingFacts);
+        var result = await _extractor.ValidateAsync(fact, existingFacts, TestContext.Current.CancellationToken);
 
         // Assert
         result.ConflictType.Should().Be(FactConflictType.ValueUpdate);
@@ -348,7 +348,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ValidateAsync(fact, existingFacts);
+        var result = await _extractor.ValidateAsync(fact, existingFacts, TestContext.Current.CancellationToken);
 
         // Assert
         result.RecommendedAction.Should().Be(FactConflictAction.Replace);
@@ -369,7 +369,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.HasFacts.Should().BeTrue();
@@ -387,7 +387,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.ContextType.Should().Be(StatementContextType.Quoted);
@@ -409,7 +409,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.HasFacts.Should().BeFalse();
@@ -427,7 +427,7 @@ public class FactExtractorTests
         };
 
         // Act
-        var result = await _extractor.ExtractAsync(context);
+        var result = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Facts.Count.Should().BeGreaterThanOrEqualTo(2);

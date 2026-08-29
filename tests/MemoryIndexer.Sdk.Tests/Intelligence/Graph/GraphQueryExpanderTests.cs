@@ -41,7 +41,7 @@ public class GraphQueryExpanderTests
             .Returns(new List<EntityImportance>());
 
         // Act
-        var result = await _expander.ExpandQueryAsync("", "user1");
+        var result = await _expander.ExpandQueryAsync("", "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -77,7 +77,7 @@ public class GraphQueryExpanderTests
             });
 
         // Act
-        var result = await _expander.ExpandQueryAsync(query, "user1");
+        var result = await _expander.ExpandQueryAsync(query, "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -111,7 +111,7 @@ public class GraphQueryExpanderTests
             });
 
         // Act
-        var result = await _expander.ExpandQueryAsync(query, "user1");
+        var result = await _expander.ExpandQueryAsync(query, "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result.MentionedEntities, e => e.Name == "Microsoft");
@@ -159,7 +159,7 @@ public class GraphQueryExpanderTests
         {
             MaxHops = 2,
             MinImportanceScore = 0.1f
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(result.RelatedEntities);
@@ -188,7 +188,7 @@ public class GraphQueryExpanderTests
             .Returns(new List<EntityImportance>());
 
         // Act
-        var entities = await _expander.ExtractQueryEntitiesAsync(query, "user1");
+        var entities = await _expander.ExtractQueryEntitiesAsync(query, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(entities, e => e.Name == "New York City");
@@ -207,7 +207,7 @@ public class GraphQueryExpanderTests
             });
 
         // Act
-        var entities = await _expander.ExtractQueryEntitiesAsync(query, "user1");
+        var entities = await _expander.ExtractQueryEntitiesAsync(query, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(entities, e => e.Name == "Acme");
@@ -230,7 +230,7 @@ public class GraphQueryExpanderTests
         {
             IncludeRelationshipQueries = true,
             MaxSubQueries = 10
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(subQueries);
@@ -252,7 +252,7 @@ public class GraphQueryExpanderTests
         {
             IncludeRelationshipQueries = true,
             MaxSubQueries = 10
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(subQueries, q => q.Type == SubQueryType.EntityFacts);
@@ -267,7 +267,7 @@ public class GraphQueryExpanderTests
             .Returns(new List<EntityImportance>());
 
         // Act
-        var result = await _expander.ExpandQueryAsync("test query", "user1");
+        var result = await _expander.ExpandQueryAsync("test query", "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result.Statistics);
@@ -315,7 +315,7 @@ public class GraphQueryExpanderTests
         var result = await _expander.ExpandQueryAsync(query, "user1", new QueryExpansionOptions
         {
             IncludeCommunityContext = true
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

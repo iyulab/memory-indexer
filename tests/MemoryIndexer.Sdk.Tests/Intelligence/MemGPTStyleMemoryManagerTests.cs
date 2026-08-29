@@ -136,7 +136,7 @@ public class MemGPTStyleMemoryManagerTests
         var newContent = "This is the core memory content.";
 
         // Act
-        var result = await _manager.ReplaceWorkingMemoryAsync("core", newContent);
+        var result = await _manager.ReplaceWorkingMemoryAsync("core", newContent, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -150,7 +150,7 @@ public class MemGPTStyleMemoryManagerTests
         var newContent = "This is the conversation context.";
 
         // Act
-        var result = await _manager.ReplaceWorkingMemoryAsync("context", newContent);
+        var result = await _manager.ReplaceWorkingMemoryAsync("context", newContent, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -161,7 +161,7 @@ public class MemGPTStyleMemoryManagerTests
     public async Task ReplaceWorkingMemoryAsync_InvalidLocation_ShouldFail()
     {
         // Act
-        var result = await _manager.ReplaceWorkingMemoryAsync("invalid_location", "content");
+        var result = await _manager.ReplaceWorkingMemoryAsync("invalid_location", "content", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -176,8 +176,8 @@ public class MemGPTStyleMemoryManagerTests
         var secondContent = "Second content";
 
         // Act
-        await _manager.ReplaceWorkingMemoryAsync("core", firstContent);
-        var result = await _manager.ReplaceWorkingMemoryAsync("core", secondContent);
+        await _manager.ReplaceWorkingMemoryAsync("core", firstContent, TestContext.Current.CancellationToken);
+        var result = await _manager.ReplaceWorkingMemoryAsync("core", secondContent, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -191,7 +191,7 @@ public class MemGPTStyleMemoryManagerTests
         var content = "This is archival content.";
 
         // Act
-        var result = await _manager.InsertArchivalMemoryAsync(content);
+        var result = await _manager.InsertArchivalMemoryAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -211,7 +211,7 @@ public class MemGPTStyleMemoryManagerTests
         };
 
         // Act
-        var result = await _manager.InsertArchivalMemoryAsync(content, metadata);
+        var result = await _manager.InsertArchivalMemoryAsync(content, metadata, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -221,7 +221,7 @@ public class MemGPTStyleMemoryManagerTests
     public async Task GetWorkingMemoryAsync_NewSession_ShouldReturnEmptySnapshot()
     {
         // Act
-        var snapshot = await _manager.GetWorkingMemoryAsync("new_session");
+        var snapshot = await _manager.GetWorkingMemoryAsync("new_session", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("new_session", snapshot.SessionId);
@@ -234,10 +234,10 @@ public class MemGPTStyleMemoryManagerTests
     public async Task GetWorkingMemoryAsync_AfterUpdate_ShouldReflectChanges()
     {
         // Arrange
-        await _manager.ReplaceWorkingMemoryAsync("core", "Core content");
+        await _manager.ReplaceWorkingMemoryAsync("core", "Core content", TestContext.Current.CancellationToken);
 
         // Act
-        var snapshot = await _manager.GetWorkingMemoryAsync("default");
+        var snapshot = await _manager.GetWorkingMemoryAsync("default", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Core content", snapshot.CoreMemory);
@@ -248,14 +248,14 @@ public class MemGPTStyleMemoryManagerTests
     {
         // Arrange
         var sessionId = "append_test";
-        await _manager.UpdateWorkingMemoryAsync(sessionId, "First context.");
+        await _manager.UpdateWorkingMemoryAsync(sessionId, "First context.", TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _manager.UpdateWorkingMemoryAsync(sessionId, "Second context.");
+        var result = await _manager.UpdateWorkingMemoryAsync(sessionId, "Second context.", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
-        var snapshot = await _manager.GetWorkingMemoryAsync(sessionId);
+        var snapshot = await _manager.GetWorkingMemoryAsync(sessionId, TestContext.Current.CancellationToken);
         Assert.Contains("First context", snapshot.ConversationContext);
         Assert.Contains("Second context", snapshot.ConversationContext);
     }
@@ -267,7 +267,7 @@ public class MemGPTStyleMemoryManagerTests
         var sessionId = "token_test";
 
         // Act
-        var result = await _manager.UpdateWorkingMemoryAsync(sessionId, "Some content here.");
+        var result = await _manager.UpdateWorkingMemoryAsync(sessionId, "Some content here.", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.NewTokenCount > 0);
@@ -278,10 +278,10 @@ public class MemGPTStyleMemoryManagerTests
     {
         // Arrange
         var sessionId = "reflection_test_below";
-        await _manager.UpdateWorkingMemoryAsync(sessionId, "Short content.");
+        await _manager.UpdateWorkingMemoryAsync(sessionId, "Short content.", TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _manager.ShouldTriggerReflectionAsync(sessionId);
+        var result = await _manager.ShouldTriggerReflectionAsync(sessionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.ShouldReflect);
@@ -297,12 +297,11 @@ public class MemGPTStyleMemoryManagerTests
         // Add lots of important content to exceed threshold
         for (int i = 0; i < 20; i++)
         {
-            await _manager.UpdateWorkingMemoryAsync(sessionId,
-                $"This is important critical urgent content number {i}. Remember this key information that is essential and must be prioritized. function class code");
+            await _manager.UpdateWorkingMemoryAsync(sessionId, $"This is important critical urgent content number {i}. Remember this key information that is essential and must be prioritized. function class code", TestContext.Current.CancellationToken);
         }
 
         // Act
-        var result = await _manager.ShouldTriggerReflectionAsync(sessionId);
+        var result = await _manager.ShouldTriggerReflectionAsync(sessionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.ShouldReflect);
@@ -313,10 +312,10 @@ public class MemGPTStyleMemoryManagerTests
     {
         // Arrange
         var sessionId = "perform_reflection_test";
-        await _manager.UpdateWorkingMemoryAsync(sessionId, "Content to reflect on. This is important information.");
+        await _manager.UpdateWorkingMemoryAsync(sessionId, "Content to reflect on. This is important information.", TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _manager.PerformReflectionAsync(sessionId);
+        var result = await _manager.PerformReflectionAsync(sessionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -330,7 +329,7 @@ public class MemGPTStyleMemoryManagerTests
         var sessionId = "empty_reflection_test";
 
         // Act
-        var result = await _manager.PerformReflectionAsync(sessionId);
+        var result = await _manager.PerformReflectionAsync(sessionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success);
@@ -341,11 +340,11 @@ public class MemGPTStyleMemoryManagerTests
     {
         // Arrange
         var sessionId = "importance_reset_test";
-        await _manager.UpdateWorkingMemoryAsync(sessionId, "Important content to build up importance score.");
+        await _manager.UpdateWorkingMemoryAsync(sessionId, "Important content to build up importance score.", TestContext.Current.CancellationToken);
 
         // Act
-        await _manager.PerformReflectionAsync(sessionId);
-        var check = await _manager.ShouldTriggerReflectionAsync(sessionId);
+        await _manager.PerformReflectionAsync(sessionId, TestContext.Current.CancellationToken);
+        var check = await _manager.ShouldTriggerReflectionAsync(sessionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, check.AccumulatedImportance);
@@ -356,10 +355,10 @@ public class MemGPTStyleMemoryManagerTests
     {
         // Arrange
         var sessionId = "manage_context_below";
-        await _manager.UpdateWorkingMemoryAsync(sessionId, "Short content.");
+        await _manager.UpdateWorkingMemoryAsync(sessionId, "Short content.", TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _manager.ManageContextWindowAsync(sessionId, 100000);
+        var result = await _manager.ManageContextWindowAsync(sessionId, 100000, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -373,8 +372,8 @@ public class MemGPTStyleMemoryManagerTests
         var sessionId = "manage_context_capacity";
 
         // Act
-        await _manager.ManageContextWindowAsync(sessionId, 50000);
-        var snapshot = await _manager.GetWorkingMemoryAsync(sessionId);
+        await _manager.ManageContextWindowAsync(sessionId, 50000, TestContext.Current.CancellationToken);
+        var snapshot = await _manager.GetWorkingMemoryAsync(sessionId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(50000, snapshot.MaxTokenCapacity);
@@ -388,11 +387,11 @@ public class MemGPTStyleMemoryManagerTests
         var sessionId2 = "session_2";
 
         // Act
-        await _manager.UpdateWorkingMemoryAsync(sessionId1, "Content for session 1.");
-        await _manager.UpdateWorkingMemoryAsync(sessionId2, "Different content for session 2.");
+        await _manager.UpdateWorkingMemoryAsync(sessionId1, "Content for session 1.", TestContext.Current.CancellationToken);
+        await _manager.UpdateWorkingMemoryAsync(sessionId2, "Different content for session 2.", TestContext.Current.CancellationToken);
 
-        var snapshot1 = await _manager.GetWorkingMemoryAsync(sessionId1);
-        var snapshot2 = await _manager.GetWorkingMemoryAsync(sessionId2);
+        var snapshot1 = await _manager.GetWorkingMemoryAsync(sessionId1, TestContext.Current.CancellationToken);
+        var snapshot2 = await _manager.GetWorkingMemoryAsync(sessionId2, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("session 1", snapshot1.ConversationContext);

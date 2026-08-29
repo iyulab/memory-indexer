@@ -100,7 +100,7 @@ public class AutonomousMemoryManagerTests
     public async Task HeartbeatAsync_FirstCall_ShouldReturnValidResponse()
     {
         // Act
-        var response = await _manager.HeartbeatAsync("test context");
+        var response = await _manager.HeartbeatAsync("test context", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(response);
@@ -112,7 +112,7 @@ public class AutonomousMemoryManagerTests
     public async Task HeartbeatAsync_ShouldUpdateCurrentState()
     {
         // Act
-        await _manager.HeartbeatAsync("test context");
+        await _manager.HeartbeatAsync("test context", TestContext.Current.CancellationToken);
         var state = _manager.CurrentState;
 
         // Assert
@@ -123,8 +123,8 @@ public class AutonomousMemoryManagerTests
     public async Task HeartbeatAsync_WithDifferentContexts_ShouldMaintainState()
     {
         // Act
-        var response1 = await _manager.HeartbeatAsync("context 1");
-        var response2 = await _manager.HeartbeatAsync("context 2");
+        var response1 = await _manager.HeartbeatAsync("context 1", TestContext.Current.CancellationToken);
+        var response2 = await _manager.HeartbeatAsync("context 2", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(response1);
@@ -149,7 +149,7 @@ public class AutonomousMemoryManagerTests
             .Returns([new MemorySearchResult { Memory = testMemory, Score = 0.9f }]);
 
         // Act
-        var result = await _manager.AutonomousPageInAsync("test query");
+        var result = await _manager.AutonomousPageInAsync("test query", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -167,7 +167,7 @@ public class AutonomousMemoryManagerTests
             ]);
 
         // Act
-        var result = await _manager.AutonomousPageOutAsync(500);
+        var result = await _manager.AutonomousPageOutAsync(500, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -193,7 +193,7 @@ public class AutonomousMemoryManagerTests
             .Returns(testMemories);
 
         // Act
-        var result = await _manager.OptimizeMemoryAsync();
+        var result = await _manager.OptimizeMemoryAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -207,8 +207,8 @@ public class AutonomousMemoryManagerTests
         var memoryId = Guid.NewGuid();
 
         // Act
-        await _manager.RecordAccessAsync(memoryId, MemoryAccessType.Read, "test context");
-        var stats = await _manager.GetAccessStatisticsAsync();
+        await _manager.RecordAccessAsync(memoryId, MemoryAccessType.Read, "test context", TestContext.Current.CancellationToken);
+        var stats = await _manager.GetAccessStatisticsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(stats);
@@ -222,10 +222,10 @@ public class AutonomousMemoryManagerTests
         var memoryId = Guid.NewGuid();
 
         // Act
-        await _manager.RecordAccessAsync(memoryId, MemoryAccessType.Read);
-        await _manager.RecordAccessAsync(memoryId, MemoryAccessType.Read);
-        await _manager.RecordAccessAsync(memoryId, MemoryAccessType.Write);
-        var stats = await _manager.GetAccessStatisticsAsync();
+        await _manager.RecordAccessAsync(memoryId, MemoryAccessType.Read, cancellationToken: TestContext.Current.CancellationToken);
+        await _manager.RecordAccessAsync(memoryId, MemoryAccessType.Read, cancellationToken: TestContext.Current.CancellationToken);
+        await _manager.RecordAccessAsync(memoryId, MemoryAccessType.Write, cancellationToken: TestContext.Current.CancellationToken);
+        var stats = await _manager.GetAccessStatisticsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(stats.TotalAccesses >= 3);
@@ -235,7 +235,7 @@ public class AutonomousMemoryManagerTests
     public async Task GetAccessStatisticsAsync_NoAccess_ShouldReturnEmpty()
     {
         // Act - use a new manager that hasn't recorded any access
-        var stats = await _manager.GetAccessStatisticsAsync();
+        var stats = await _manager.GetAccessStatisticsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(stats);
@@ -245,7 +245,7 @@ public class AutonomousMemoryManagerTests
     public async Task GetSuggestedOperationsAsync_ShouldReturnSuggestions()
     {
         // Act
-        var suggestions = await _manager.GetSuggestedOperationsAsync();
+        var suggestions = await _manager.GetSuggestedOperationsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(suggestions);
@@ -264,7 +264,7 @@ public class AutonomousMemoryManagerTests
         };
 
         // Act
-        var result = await _manager.RequestOperationAsync(request);
+        var result = await _manager.RequestOperationAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -283,7 +283,7 @@ public class AutonomousMemoryManagerTests
         };
 
         // Act
-        var result = await _manager.RequestOperationAsync(request);
+        var result = await _manager.RequestOperationAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -300,7 +300,7 @@ public class AutonomousMemoryManagerTests
         };
 
         // Act
-        var result = await _manager.RequestOperationAsync(request);
+        var result = await _manager.RequestOperationAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -317,7 +317,7 @@ public class AutonomousMemoryManagerTests
         };
 
         // Act
-        var result = await _manager.RequestOperationAsync(request);
+        var result = await _manager.RequestOperationAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -336,7 +336,7 @@ public class AutonomousMemoryManagerTests
         };
 
         // Act
-        var result = await _manager.RequestOperationAsync(request);
+        var result = await _manager.RequestOperationAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -358,7 +358,7 @@ public class AutonomousMemoryManagerTests
             .Returns(true);
 
         // Act
-        var result = await _manager.RequestOperationAsync(request);
+        var result = await _manager.RequestOperationAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -368,9 +368,9 @@ public class AutonomousMemoryManagerTests
     public async Task HeartbeatAsync_RepeatedCalls_ShouldTrackScheduling()
     {
         // Act
-        var response1 = await _manager.HeartbeatAsync("context");
-        await Task.Delay(100); // Small delay
-        var response2 = await _manager.HeartbeatAsync("context");
+        var response1 = await _manager.HeartbeatAsync("context", TestContext.Current.CancellationToken);
+        await Task.Delay(100, TestContext.Current.CancellationToken); // Small delay
+        var response2 = await _manager.HeartbeatAsync("context", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(response1);
@@ -386,7 +386,7 @@ public class AutonomousMemoryManagerTests
         // Arrange - default mock returns empty list
 
         // Act
-        var result = await _manager.AutonomousPageInAsync("query with no results");
+        var result = await _manager.AutonomousPageInAsync("query with no results", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);

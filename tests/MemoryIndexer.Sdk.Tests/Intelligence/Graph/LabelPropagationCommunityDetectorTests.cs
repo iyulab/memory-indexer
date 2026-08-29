@@ -37,7 +37,7 @@ public class LabelPropagationCommunityDetectorTests
             .Returns(new List<EntityTriple>());
 
         // Act
-        var result = await _detector.DetectCommunitiesAsync("user1");
+        var result = await _detector.DetectCommunitiesAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, result.CommunityCount);
@@ -68,7 +68,7 @@ public class LabelPropagationCommunityDetectorTests
             MinCommunitySize = 2,
             MaxIterations = 50,
             RandomSeed = 42
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.CommunityCount >= 1, "Should detect at least one community");
@@ -94,7 +94,7 @@ public class LabelPropagationCommunityDetectorTests
         {
             MinCommunitySize = 1,
             RandomSeed = 42
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.CommunityCount >= 1);
@@ -118,12 +118,12 @@ public class LabelPropagationCommunityDetectorTests
         {
             MinCommunitySize = 1,
             RandomSeed = 42
-        });
+        }, TestContext.Current.CancellationToken);
 
         var memoryId = Guid.NewGuid();
 
         // Act
-        var community = await _detector.AssignToCommunityAsync(memoryId, ["A", "B"]);
+        var community = await _detector.AssignToCommunityAsync(memoryId, ["A", "B"], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(community >= 0);
@@ -136,7 +136,7 @@ public class LabelPropagationCommunityDetectorTests
         var memoryId = Guid.NewGuid();
 
         // Act
-        var community = await _detector.AssignToCommunityAsync(memoryId, ["NewEntity1", "NewEntity2"]);
+        var community = await _detector.AssignToCommunityAsync(memoryId, ["NewEntity1", "NewEntity2"], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(community >= 0);
@@ -149,7 +149,7 @@ public class LabelPropagationCommunityDetectorTests
         var memoryId = Guid.NewGuid();
 
         // Act
-        var community = await _detector.AssignToCommunityAsync(memoryId, []);
+        var community = await _detector.AssignToCommunityAsync(memoryId, [], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(-1, community);
@@ -159,7 +159,7 @@ public class LabelPropagationCommunityDetectorTests
     public async Task GetCommunitySummaryAsync_NonexistentCommunity_ShouldReturnEmptySummary()
     {
         // Act
-        var summary = await _detector.GetCommunitySummaryAsync(999, "user1");
+        var summary = await _detector.GetCommunitySummaryAsync(999, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(summary);
@@ -185,7 +185,7 @@ public class LabelPropagationCommunityDetectorTests
             UseWeightedEdges = true,
             MinCommunitySize = 1,
             RandomSeed = 42
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -211,7 +211,7 @@ public class LabelPropagationCommunityDetectorTests
         {
             MinCommunitySize = 1,
             RandomSeed = 42
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         // Modularity should be defined (could be positive or negative)

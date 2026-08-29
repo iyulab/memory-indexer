@@ -30,7 +30,7 @@ public class EmbeddingServiceHealthCheckTests
             .Returns(validEmbedding);
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
@@ -49,7 +49,7 @@ public class EmbeddingServiceHealthCheckTests
             .Returns(Array.Empty<float>());
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);
@@ -67,7 +67,7 @@ public class EmbeddingServiceHealthCheckTests
             .Returns(invalidEmbedding);
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);
@@ -84,7 +84,7 @@ public class EmbeddingServiceHealthCheckTests
             .Throws(new InvalidOperationException("Service unavailable"));
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);

@@ -38,7 +38,7 @@ public sealed class RecencyWeightedResolverTests
         var similarMemories = Array.Empty<MemoryUnit>();
 
         // Act
-        var result = await _resolver.ResolveAsync(newMemory, similarMemories);
+        var result = await _resolver.ResolveAsync(newMemory, similarMemories, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryAction.Add, result.Action);
@@ -70,7 +70,7 @@ public sealed class RecencyWeightedResolverTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
+        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryAction.NoOp, result.Action);
@@ -102,7 +102,7 @@ public sealed class RecencyWeightedResolverTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
+        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryAction.Replace, result.Action);
@@ -133,7 +133,7 @@ public sealed class RecencyWeightedResolverTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
+        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryAction.Archive, result.Action);
@@ -168,7 +168,7 @@ public sealed class RecencyWeightedResolverTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
+        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory }, TestContext.Current.CancellationToken);
 
         // Assert
         // New score: 1.0 (recent) * 0.9 = 0.9
@@ -206,7 +206,7 @@ public sealed class RecencyWeightedResolverTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
+        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory }, TestContext.Current.CancellationToken);
 
         // Assert
         // New score: ~0.05 * 0.5 = ~0.025
@@ -241,7 +241,7 @@ public sealed class RecencyWeightedResolverTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
+        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory }, TestContext.Current.CancellationToken);
 
         // Assert
         // Scores very close (both ~0.7-0.75), ratio < 1.2
@@ -275,7 +275,7 @@ public sealed class RecencyWeightedResolverTests
             .Returns(llmResponse);
 
         // Act
-        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory });
+        var result = await _resolver.ResolveAsync(newMemory, new[] { existingMemory }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(MemoryAction.Merge, result.Action);

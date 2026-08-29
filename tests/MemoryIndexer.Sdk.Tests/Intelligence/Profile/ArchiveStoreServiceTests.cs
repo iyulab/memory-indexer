@@ -45,11 +45,11 @@ public class ArchiveStoreServiceTests
         var entry = CreateTestEntry("name", "John Doe");
 
         // Act
-        var isUpdate = await _profileService.SetAsync(userId, entry);
+        var isUpdate = await _profileService.SetAsync(userId, entry, TestContext.Current.CancellationToken);
 
         // Assert
         isUpdate.Should().BeFalse();
-        var retrieved = await _profileService.GetAsync(userId, "name");
+        var retrieved = await _profileService.GetAsync(userId, "name", TestContext.Current.CancellationToken);
         retrieved.Should().NotBeNull();
         retrieved!.Value.Should().Be("John Doe");
     }
@@ -59,16 +59,16 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("name", "John Doe"));
+        await _profileService.SetAsync(userId, CreateTestEntry("name", "John Doe"), TestContext.Current.CancellationToken);
 
         var updatedEntry = CreateTestEntry("name", "Jane Doe");
 
         // Act
-        var isUpdate = await _profileService.SetAsync(userId, updatedEntry);
+        var isUpdate = await _profileService.SetAsync(userId, updatedEntry, TestContext.Current.CancellationToken);
 
         // Assert
         isUpdate.Should().BeTrue();
-        var retrieved = await _profileService.GetAsync(userId, "name");
+        var retrieved = await _profileService.GetAsync(userId, "name", TestContext.Current.CancellationToken);
         retrieved!.Value.Should().Be("Jane Doe");
     }
 
@@ -80,7 +80,7 @@ public class ArchiveStoreServiceTests
         var entry = CreateTestEntry("skill", "Programming");
 
         // Act
-        await _profileService.SetAsync(userId, entry);
+        await _profileService.SetAsync(userId, entry, TestContext.Current.CancellationToken);
 
         // Assert
         await _embeddingServiceMock.Received(1).GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -94,7 +94,7 @@ public class ArchiveStoreServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _profileService.SetAsync(null!, entry));
+            () => _profileService.SetAsync(null!, entry, TestContext.Current.CancellationToken));
     }
 
     #endregion
@@ -106,10 +106,10 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("location", "New York"));
+        await _profileService.SetAsync(userId, CreateTestEntry("location", "New York"), TestContext.Current.CancellationToken);
 
         // Act
-        var entry = await _profileService.GetAsync(userId, "location");
+        var entry = await _profileService.GetAsync(userId, "location", TestContext.Current.CancellationToken);
 
         // Assert
         entry.Should().NotBeNull();
@@ -120,7 +120,7 @@ public class ArchiveStoreServiceTests
     public async Task GetAsync_NonexistentEntry_ReturnsNull()
     {
         // Act
-        var entry = await _profileService.GetAsync("user-1", "nonexistent");
+        var entry = await _profileService.GetAsync("user-1", "nonexistent", TestContext.Current.CancellationToken);
 
         // Assert
         entry.Should().BeNull();
@@ -131,14 +131,14 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("key", "value"));
-        var initialEntry = await _profileService.GetAsync(userId, "key");
+        await _profileService.SetAsync(userId, CreateTestEntry("key", "value"), TestContext.Current.CancellationToken);
+        var initialEntry = await _profileService.GetAsync(userId, "key", TestContext.Current.CancellationToken);
         var initialAccess = initialEntry!.LastAccessedAt;
 
-        await Task.Delay(10); // Small delay to ensure time difference
+        await Task.Delay(10, TestContext.Current.CancellationToken); // Small delay to ensure time difference
 
         // Act
-        var entry = await _profileService.GetAsync(userId, "key");
+        var entry = await _profileService.GetAsync(userId, "key", TestContext.Current.CancellationToken);
 
         // Assert
         entry!.LastAccessedAt.Should().BeOnOrAfter(initialAccess);
@@ -153,12 +153,12 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("low", "value", 0.3f));
-        await _profileService.SetAsync(userId, CreateTestEntry("high", "value", 0.9f));
-        await _profileService.SetAsync(userId, CreateTestEntry("medium", "value", 0.6f));
+        await _profileService.SetAsync(userId, CreateTestEntry("low", "value", 0.3f), TestContext.Current.CancellationToken);
+        await _profileService.SetAsync(userId, CreateTestEntry("high", "value", 0.9f), TestContext.Current.CancellationToken);
+        await _profileService.SetAsync(userId, CreateTestEntry("medium", "value", 0.6f), TestContext.Current.CancellationToken);
 
         // Act
-        var entries = await _profileService.GetAllAsync(userId);
+        var entries = await _profileService.GetAllAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         entries.Should().HaveCount(3);
@@ -171,7 +171,7 @@ public class ArchiveStoreServiceTests
     public async Task GetAllAsync_NoEntries_ReturnsEmpty()
     {
         // Act
-        var entries = await _profileService.GetAllAsync("user-1");
+        var entries = await _profileService.GetAllAsync("user-1", TestContext.Current.CancellationToken);
 
         // Assert
         entries.Should().BeEmpty();
@@ -186,12 +186,12 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("skill1", "Python", category: SemanticStoreCategory.Skill));
-        await _profileService.SetAsync(userId, CreateTestEntry("skill2", "C#", category: SemanticStoreCategory.Skill));
-        await _profileService.SetAsync(userId, CreateTestEntry("interest", "Music", category: SemanticStoreCategory.Interest));
+        await _profileService.SetAsync(userId, CreateTestEntry("skill1", "Python", category: SemanticStoreCategory.Skill), TestContext.Current.CancellationToken);
+        await _profileService.SetAsync(userId, CreateTestEntry("skill2", "C#", category: SemanticStoreCategory.Skill), TestContext.Current.CancellationToken);
+        await _profileService.SetAsync(userId, CreateTestEntry("interest", "Music", category: SemanticStoreCategory.Interest), TestContext.Current.CancellationToken);
 
         // Act
-        var skills = await _profileService.GetByCategoryAsync(userId, SemanticStoreCategory.Skill);
+        var skills = await _profileService.GetByCategoryAsync(userId, SemanticStoreCategory.Skill, TestContext.Current.CancellationToken);
 
         // Assert
         skills.Should().HaveCount(2);
@@ -207,10 +207,10 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("fact", "value"));
+        await _profileService.SetAsync(userId, CreateTestEntry("fact", "value"), TestContext.Current.CancellationToken);
 
         // Act
-        var entry = await _profileService.ConfirmAsync(userId, "fact");
+        var entry = await _profileService.ConfirmAsync(userId, "fact", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         entry.Should().NotBeNull();
@@ -223,10 +223,10 @@ public class ArchiveStoreServiceTests
         // Arrange
         const string userId = "user-1";
         var initialConfidence = 0.5f;
-        await _profileService.SetAsync(userId, CreateTestEntry("fact", "value", initialConfidence));
+        await _profileService.SetAsync(userId, CreateTestEntry("fact", "value", initialConfidence), TestContext.Current.CancellationToken);
 
         // Act
-        var entry = await _profileService.ConfirmAsync(userId, "fact");
+        var entry = await _profileService.ConfirmAsync(userId, "fact", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         entry!.Confidence.Should().Be(initialConfidence + _options.ConfidenceBoostPerConfirmation);
@@ -237,10 +237,10 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("fact", "value"));
+        await _profileService.SetAsync(userId, CreateTestEntry("fact", "value"), TestContext.Current.CancellationToken);
 
         // Act
-        var entry = await _profileService.ConfirmAsync(userId, "fact", "Session confirmed this");
+        var entry = await _profileService.ConfirmAsync(userId, "fact", "Session confirmed this", TestContext.Current.CancellationToken);
 
         // Assert
         entry!.Metadata.Should().ContainKey("evidence_2");
@@ -251,11 +251,11 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("fact", "value", 0.7f));
+        await _profileService.SetAsync(userId, CreateTestEntry("fact", "value", 0.7f), TestContext.Current.CancellationToken);
 
         // Act - confirm twice more (initial count is 1)
-        await _profileService.ConfirmAsync(userId, "fact");
-        var entry = await _profileService.ConfirmAsync(userId, "fact");
+        await _profileService.ConfirmAsync(userId, "fact", cancellationToken: TestContext.Current.CancellationToken);
+        var entry = await _profileService.ConfirmAsync(userId, "fact", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         entry!.ConfirmationCount.Should().Be(3);
@@ -267,7 +267,7 @@ public class ArchiveStoreServiceTests
     public async Task ConfirmAsync_NonexistentEntry_ReturnsNull()
     {
         // Act
-        var entry = await _profileService.ConfirmAsync("user-1", "nonexistent");
+        var entry = await _profileService.ConfirmAsync("user-1", "nonexistent", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         entry.Should().BeNull();
@@ -282,14 +282,14 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("key", "value"));
+        await _profileService.SetAsync(userId, CreateTestEntry("key", "value"), TestContext.Current.CancellationToken);
 
         // Act
-        var removed = await _profileService.RemoveAsync(userId, "key");
+        var removed = await _profileService.RemoveAsync(userId, "key", TestContext.Current.CancellationToken);
 
         // Assert
         removed.Should().BeTrue();
-        var entry = await _profileService.GetAsync(userId, "key");
+        var entry = await _profileService.GetAsync(userId, "key", TestContext.Current.CancellationToken);
         entry.Should().BeNull();
     }
 
@@ -297,7 +297,7 @@ public class ArchiveStoreServiceTests
     public async Task RemoveAsync_NonexistentEntry_ReturnsFalse()
     {
         // Act
-        var removed = await _profileService.RemoveAsync("user-1", "nonexistent");
+        var removed = await _profileService.RemoveAsync("user-1", "nonexistent", TestContext.Current.CancellationToken);
 
         // Assert
         removed.Should().BeFalse();
@@ -312,12 +312,12 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("programming_skill", "Python expert"));
-        await _profileService.SetAsync(userId, CreateTestEntry("hobby", "Reading books"));
-        await _profileService.SetAsync(userId, CreateTestEntry("location", "New York"));
+        await _profileService.SetAsync(userId, CreateTestEntry("programming_skill", "Python expert"), TestContext.Current.CancellationToken);
+        await _profileService.SetAsync(userId, CreateTestEntry("hobby", "Reading books"), TestContext.Current.CancellationToken);
+        await _profileService.SetAsync(userId, CreateTestEntry("location", "New York"), TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _profileService.SearchAsync(userId, "Python");
+        var results = await _profileService.SearchAsync(userId, "Python", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().NotBeEmpty();
@@ -330,11 +330,11 @@ public class ArchiveStoreServiceTests
         const string userId = "user-1";
         for (int i = 0; i < 10; i++)
         {
-            await _profileService.SetAsync(userId, CreateTestEntry($"skill_{i}", "Programming"));
+            await _profileService.SetAsync(userId, CreateTestEntry($"skill_{i}", "Programming"), TestContext.Current.CancellationToken);
         }
 
         // Act
-        var results = await _profileService.SearchAsync(userId, "Programming", limit: 5);
+        var results = await _profileService.SearchAsync(userId, "Programming", limit: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         results.Should().HaveCountLessThanOrEqualTo(5);
@@ -349,13 +349,13 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("skill1", "Python", 0.9f, SemanticStoreCategory.Skill));
-        await _profileService.SetAsync(userId, CreateTestEntry("skill2", "C#", 0.8f, SemanticStoreCategory.Skill));
-        await _profileService.SetAsync(userId, CreateTestEntry("interest", "Music", 0.7f, SemanticStoreCategory.Interest));
+        await _profileService.SetAsync(userId, CreateTestEntry("skill1", "Python", 0.9f, SemanticStoreCategory.Skill), TestContext.Current.CancellationToken);
+        await _profileService.SetAsync(userId, CreateTestEntry("skill2", "C#", 0.8f, SemanticStoreCategory.Skill), TestContext.Current.CancellationToken);
+        await _profileService.SetAsync(userId, CreateTestEntry("interest", "Music", 0.7f, SemanticStoreCategory.Interest), TestContext.Current.CancellationToken);
 
         // Confirm one entry to make it confirmed
-        await _profileService.ConfirmAsync(userId, "skill1");
-        await _profileService.ConfirmAsync(userId, "skill1");
+        await _profileService.ConfirmAsync(userId, "skill1", cancellationToken: TestContext.Current.CancellationToken);
+        await _profileService.ConfirmAsync(userId, "skill1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         var stats = _profileService.GetStats(userId);
@@ -387,7 +387,7 @@ public class ArchiveStoreServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _profileService.SetAsync(userId, CreateTestEntry("key", "value"));
+        await _profileService.SetAsync(userId, CreateTestEntry("key", "value"), TestContext.Current.CancellationToken);
 
         // Act & Assert
         _profileService.HasProfile(userId).Should().BeTrue();

@@ -44,7 +44,7 @@ public class FactInferenceServiceTests
         var facts = new List<SemanticStoreEntry>();
 
         // Act
-        var result = await _service.InferAsync(facts);
+        var result = await _service.InferAsync(facts, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty();
@@ -60,7 +60,7 @@ public class FactInferenceServiceTests
         };
 
         // Act
-        var result = await _service.InferAsync(facts);
+        var result = await _service.InferAsync(facts, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty(); // Need at least 2 facts for inference
@@ -79,7 +79,7 @@ public class FactInferenceServiceTests
         var options = new InferenceOptions { MinSourceConfidence = 0.7f };
 
         // Act
-        var result = await _service.InferAsync(facts, options);
+        var result = await _service.InferAsync(facts, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty();
@@ -117,7 +117,7 @@ public class FactInferenceServiceTests
         };
 
         // Act
-        var result = await _service.InferAsync(facts, options);
+        var result = await _service.InferAsync(facts, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeEmpty();
@@ -144,7 +144,7 @@ public class FactInferenceServiceTests
         };
 
         // Act
-        var result = await _service.InferAsync(facts, options);
+        var result = await _service.InferAsync(facts, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeEmpty();
@@ -169,7 +169,7 @@ public class FactInferenceServiceTests
         };
 
         // Act
-        var result = await _service.InferAsync(facts, options);
+        var result = await _service.InferAsync(facts, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeEmpty();
@@ -200,7 +200,7 @@ public class FactInferenceServiceTests
         };
 
         // Act
-        var result = await _service.InferAsync(facts, options);
+        var result = await _service.InferAsync(facts, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().HaveCountLessThanOrEqualTo(3);
@@ -225,7 +225,7 @@ public class FactInferenceServiceTests
             .Returns(facts);
 
         // Act
-        var result = await _service.InferForUserAsync("user1");
+        var result = await _service.InferForUserAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.UserId.Should().Be("user1");
@@ -255,7 +255,7 @@ public class FactInferenceServiceTests
         };
 
         // Act
-        var result = await _service.InferForUserAsync("user1", options);
+        var result = await _service.InferForUserAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
         result.UserId.Should().Be("user1");
@@ -317,7 +317,7 @@ public class FactInferenceServiceTests
         };
 
         // Act
-        var result = await _service.InferAsync(facts, options);
+        var result = await _service.InferAsync(facts, options, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().Contain(f => f.Type == InferenceType.Custom && f.RuleName == "TestRule");

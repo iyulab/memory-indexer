@@ -71,11 +71,10 @@ public class ContextBuilderTests
 
         _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(bufferItems);
-        _shortTermMemoryMock.GetAllAsync()
-            .Returns(Array.Empty<MemoryUnit>());
+        _shortTermMemoryMock.GetAllAsync(TestContext.Current.CancellationToken).Returns(Array.Empty<MemoryUnit>());
 
         // Act
-        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000);
+        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000, ct: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().HaveCount(2);
@@ -113,11 +112,10 @@ public class ContextBuilderTests
 
         _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(bufferItems);
-        _shortTermMemoryMock.GetAllAsync()
-            .Returns(Array.Empty<MemoryUnit>());
+        _shortTermMemoryMock.GetAllAsync(TestContext.Current.CancellationToken).Returns(Array.Empty<MemoryUnit>());
 
         // Act - only 5 tokens allowed (2 for first item fits, 22 for second doesn't fit)
-        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 5);
+        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 5, ct: TestContext.Current.CancellationToken);
 
         // Assert - only the newer (Short) item should fit
         result.Should().HaveCount(1);
@@ -150,11 +148,10 @@ public class ContextBuilderTests
 
         _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(bufferItems);
-        _shortTermMemoryMock.GetAllAsync()
-            .Returns(Array.Empty<MemoryUnit>());
+        _shortTermMemoryMock.GetAllAsync(TestContext.Current.CancellationToken).Returns(Array.Empty<MemoryUnit>());
 
         // Act
-        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000);
+        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000, ct: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().HaveCount(1);
@@ -193,11 +190,10 @@ public class ContextBuilderTests
             }
         };
 
-        _shortTermMemoryMock.GetAllAsync()
-            .Returns(shortTermItems);
+        _shortTermMemoryMock.GetAllAsync(TestContext.Current.CancellationToken).Returns(shortTermItems);
 
         // Act
-        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000);
+        var result = await _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000, ct: TestContext.Current.CancellationToken);
 
         // Assert - Only items from current session should be included
         result.Should().HaveCount(1);
@@ -229,7 +225,7 @@ public class ContextBuilderTests
             .Returns(searchResults);
 
         // Act
-        var result = await _builder.GetSemanticContextAsync(UserId, query, maxTokens: 1000);
+        var result = await _builder.GetSemanticContextAsync(UserId, query, maxTokens: 1000, ct: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().HaveCount(1);
@@ -264,7 +260,7 @@ public class ContextBuilderTests
             .Returns(searchResults);
 
         // Act
-        var result = await _builder.GetSemanticContextAsync(UserId, "query", maxTokens: 5);
+        var result = await _builder.GetSemanticContextAsync(UserId, "query", maxTokens: 5, ct: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().HaveCount(1);
@@ -284,7 +280,7 @@ public class ContextBuilderTests
         var request = new ContextRequest(UserId, SessionId, "test query", new ContextBudget(1000));
 
         // Act
-        var result = await _builder.BuildAsync(request);
+        var result = await _builder.BuildAsync(request, ct: TestContext.Current.CancellationToken);
 
         // Assert - Balanced strategy used, verify proportional allocation
         result.Should().NotBeNull();
@@ -300,7 +296,7 @@ public class ContextBuilderTests
         var request = new ContextRequest(UserId, SessionId, "test query", new ContextBudget(1000));
 
         // Act
-        var result = await _builder.BuildAsync(request, "RecentHeavy");
+        var result = await _builder.BuildAsync(request, "RecentHeavy", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -315,7 +311,7 @@ public class ContextBuilderTests
         var request = new ContextRequest(UserId, SessionId, "test query", new ContextBudget(1000));
 
         // Act
-        var result = await _builder.BuildAsync(request, "NonExistentStrategy");
+        var result = await _builder.BuildAsync(request, "NonExistentStrategy", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -336,7 +332,7 @@ public class ContextBuilderTests
         var request = new ContextRequest(UserId, SessionId, "test query", budget);
 
         // Act
-        var result = await _builder.BuildAsync(request);
+        var result = await _builder.BuildAsync(request, ct: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -374,8 +370,7 @@ public class ContextBuilderTests
 
         _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
             .Returns(bufferItems);
-        _shortTermMemoryMock.GetAllAsync()
-            .Returns(Array.Empty<MemoryUnit>());
+        _shortTermMemoryMock.GetAllAsync(TestContext.Current.CancellationToken).Returns(Array.Empty<MemoryUnit>());
         _memoryStoreMock.SearchAsync(
                 Arg.Any<ReadOnlyMemory<float>>(),
                 Arg.Any<MemorySearchOptions>(),
@@ -387,7 +382,7 @@ public class ContextBuilderTests
         var request = new ContextRequest(UserId, SessionId, "test query", new ContextBudget(1000));
 
         // Act
-        var result = await _builder.BuildAsync(request);
+        var result = await _builder.BuildAsync(request, ct: TestContext.Current.CancellationToken);
 
         // Assert
         result.Items.Should().HaveCountGreaterThan(0);
@@ -410,7 +405,7 @@ public class ContextBuilderTests
         var request = new ContextRequest(UserId, SessionId, "test", new ContextBudget(1000));
 
         // Act
-        var result = await _builder.BuildAsync(request, "MyCustom");
+        var result = await _builder.BuildAsync(request, "MyCustom", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();

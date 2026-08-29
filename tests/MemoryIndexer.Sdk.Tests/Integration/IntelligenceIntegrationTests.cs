@@ -10,7 +10,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
 
 // Explicit using for SDK types to avoid ambiguity
 using SdkContradictionType = MemoryIndexer.Sdk.Intelligence.Conflict.ContradictionType;
@@ -305,7 +304,7 @@ public class IntelligenceIntegrationTests : IDisposable
         var classifier = _serviceProvider.GetRequiredService<IQueryIntentClassifier>();
 
         // Act
-        var result = await classifier.ClassifyAsync("What is my email address?");
+        var result = await classifier.ClassifyAsync("What is my email address?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Factual);
@@ -321,7 +320,7 @@ public class IntelligenceIntegrationTests : IDisposable
         var classifier = _serviceProvider.GetRequiredService<IQueryIntentClassifier>();
 
         // Act
-        var result = await classifier.ClassifyAsync("What did we discuss yesterday?");
+        var result = await classifier.ClassifyAsync("What did we discuss yesterday?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Temporal);
@@ -336,9 +335,7 @@ public class IntelligenceIntegrationTests : IDisposable
         var classifier = _serviceProvider.GetRequiredService<IQueryIntentClassifier>();
 
         // Act
-        var result = await classifier.ClassifyAsync(
-            "Tell me more about that",
-            context: "We were discussing machine learning models");
+        var result = await classifier.ClassifyAsync("Tell me more about that", context: "We were discussing machine learning models", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Contextual);
@@ -357,11 +354,7 @@ public class IntelligenceIntegrationTests : IDisposable
         var resolver = _serviceProvider.GetRequiredService<IContradictionResolver>();
 
         // Store initial memory - using pattern that rule-based detector can recognize
-        var stored = await _memoryService.StoreAsync(
-            "test-user",
-            "User likes coffee every morning",
-            MemoryType.Fact,
-            importance: 0.8f);
+        var stored = await _memoryService.StoreAsync("test-user", "User likes coffee every morning", MemoryType.Fact, importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
 
         _output.WriteLine($"Stored initial memory: {stored.Id}");
 
@@ -375,18 +368,15 @@ public class IntelligenceIntegrationTests : IDisposable
             CreatedAt = DateTime.UtcNow,
             // Generate embedding for fair comparison
             Embedding = await _serviceProvider.GetRequiredService<IEmbeddingService>()
-                .GenerateEmbeddingAsync("User dislikes coffee in the morning")
+                .GenerateEmbeddingAsync("User dislikes coffee in the morning", TestContext.Current.CancellationToken)
         };
 
         // Act - Detect contradiction
-        var analysis = await detector.DetectMemoryContradictionAsync(
-            newMemory,
-            [stored],
-            new ContradictionDetectionOptions
+        var analysis = await detector.DetectMemoryContradictionAsync(newMemory, [stored], new ContradictionDetectionOptions
             {
                 SimilarityThreshold = 0.5f,  // Lower threshold for rule-based detection
                 MinContradictionConfidence = 0.3f
-            });
+            }, TestContext.Current.CancellationToken);
 
         _output.WriteLine($"Contradiction detected: {analysis.HasContradiction}");
         _output.WriteLine($"Type: {analysis.Type}, Confidence: {analysis.ContradictionConfidence:P0}");
@@ -403,7 +393,7 @@ public class IntelligenceIntegrationTests : IDisposable
             _output.WriteLine($"Explanation: {explanation}");
 
             // Act - Resolve
-            var resolution = await resolver.ResolveMemoryAsync(analysis, SdkResolutionStrategy.RecencyFirst);
+            var resolution = await resolver.ResolveMemoryAsync(analysis, SdkResolutionStrategy.RecencyFirst, TestContext.Current.CancellationToken);
 
             // Assert resolution
             resolution.Success.Should().BeTrue();
@@ -446,7 +436,7 @@ public class IntelligenceIntegrationTests : IDisposable
         };
 
         // Act
-        var analysis = await detector.DetectMemoryContradictionAsync(memory1, [memory2]);
+        var analysis = await detector.DetectMemoryContradictionAsync(memory1, [memory2], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         analysis.HasContradiction.Should().BeFalse();
@@ -509,14 +499,14 @@ public class IntelligenceIntegrationTests : IDisposable
 
         foreach (var (content, type, importance) in memories)
         {
-            await _memoryService.StoreAsync(userId, content, type, importance: importance);
+            await _memoryService.StoreAsync(userId, content, type, importance: importance, cancellationToken: TestContext.Current.CancellationToken);
             tokenMonitor.RecordTokenUsage(sessionId, tokenMonitor.EstimateTokens(content), "store");
         }
         _output.WriteLine($"3. Stored {memories.Length} memories");
 
         // 4. Classify query intent
         var classifier = _serviceProvider.GetRequiredService<IQueryIntentClassifier>();
-        var intentResult = await classifier.ClassifyAsync("What is my favorite programming language?");
+        var intentResult = await classifier.ClassifyAsync("What is my favorite programming language?", cancellationToken: TestContext.Current.CancellationToken);
         _output.WriteLine($"4. Query intent: {intentResult.Intent} ({intentResult.Confidence:P0})");
         // The LocalQueryIntentClassifier uses pattern matching - "my X" patterns should be Factual
         intentResult.Intent.Should().BeOneOf(QueryIntent.Factual, QueryIntent.General);
@@ -524,7 +514,7 @@ public class IntelligenceIntegrationTests : IDisposable
         // 5. Retrieve using standard memory service
         // Note: Mock embedding returns deterministic vectors that don't have semantic similarity
         // In production with real embeddings, this would return relevant results
-        var recalled = await _memoryService.RecallAsync(userId, "programming language preference");
+        var recalled = await _memoryService.RecallAsync(userId, "programming language preference", cancellationToken: TestContext.Current.CancellationToken);
         _output.WriteLine($"5. Retrieved {recalled.Count} memories via RecallAsync");
 
         // 6. Record pattern regardless of recall count (tests pattern analyzer functionality)

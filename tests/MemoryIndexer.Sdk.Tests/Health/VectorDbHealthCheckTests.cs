@@ -30,7 +30,7 @@ public class VectorDbHealthCheckTests
             .Returns(new List<MemorySearchResult>());
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
@@ -49,7 +49,7 @@ public class VectorDbHealthCheckTests
             .Throws(new InvalidOperationException("Connection failed"));
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);

@@ -57,7 +57,7 @@ public sealed class LlmKnowledgeExtractorTests
             .Returns(llmResponse);
 
         // Act
-        var facts = await _extractor.ExtractAsync(context);
+        var facts = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(facts);
@@ -105,7 +105,7 @@ public sealed class LlmKnowledgeExtractorTests
             .Returns(llmResponse);
 
         // Act
-        var facts = await _extractor.ExtractAsync(context);
+        var facts = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, facts.Count);
@@ -149,7 +149,7 @@ public sealed class LlmKnowledgeExtractorTests
             .Returns(llmResponse);
 
         // Act
-        var facts = await _extractor.ExtractAsync(context);
+        var facts = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(facts);
@@ -177,7 +177,7 @@ public sealed class LlmKnowledgeExtractorTests
             .Returns(llmResponse);
 
         // Act
-        var facts = await _extractor.ExtractAsync(context);
+        var facts = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(facts);
@@ -210,7 +210,7 @@ public sealed class LlmKnowledgeExtractorTests
             .Returns(llmResponse);
 
         // Act
-        var facts = await _extractor.ExtractAsync(context);
+        var facts = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(facts);
@@ -241,7 +241,7 @@ public sealed class LlmKnowledgeExtractorTests
             .Returns(llmResponse);
 
         // Act
-        var facts = await _extractor.ExtractAsync(context);
+        var facts = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(facts);
@@ -266,7 +266,7 @@ public sealed class LlmKnowledgeExtractorTests
             .Throws(new HttpRequestException("LLM service unavailable"));
 
         // Act
-        var facts = await _extractor.ExtractAsync(context);
+        var facts = await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(facts);
@@ -310,7 +310,7 @@ public sealed class LlmKnowledgeExtractorTests
             });
 
         // Act
-        await _extractor.ExtractAsync(context);
+        await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedOptions);
@@ -357,7 +357,7 @@ public sealed class LlmKnowledgeExtractorTests
             });
 
         // Act
-        await _extractor.ExtractAsync(context);
+        await _extractor.ExtractAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(capturedPrompt);

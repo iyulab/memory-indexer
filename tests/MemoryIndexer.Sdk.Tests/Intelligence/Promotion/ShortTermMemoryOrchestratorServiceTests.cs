@@ -51,7 +51,7 @@ public class ShortTermMemoryOrchestratorServiceTests
         var memory = CreateTestMemory(userId);
 
         // Act
-        await _orchestrator.RecordActivityAsync(userId, "session-1", memory);
+        await _orchestrator.RecordActivityAsync(userId, "session-1", memory, TestContext.Current.CancellationToken);
 
         // Assert
         var state = _orchestrator.GetState(userId);
@@ -70,7 +70,7 @@ public class ShortTermMemoryOrchestratorServiceTests
         for (int i = 0; i < 5; i++)
         {
             var memory = CreateTestMemory(userId, $"Content {i}");
-            await _orchestrator.RecordActivityAsync(userId, "session-1", memory);
+            await _orchestrator.RecordActivityAsync(userId, "session-1", memory, TestContext.Current.CancellationToken);
         }
 
         // Assert
@@ -89,7 +89,7 @@ public class ShortTermMemoryOrchestratorServiceTests
         // Act & Assert
         // ArgumentException.ThrowIfNullOrWhiteSpace throws ArgumentNullException for null
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _orchestrator.RecordActivityAsync(null!, "session-1", memory));
+            () => _orchestrator.RecordActivityAsync(null!, "session-1", memory, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _orchestrator.RecordActivityAsync("user-1", "session-1", null!));
+            () => _orchestrator.RecordActivityAsync("user-1", "session-1", null!, TestContext.Current.CancellationToken));
     }
 
     #endregion
@@ -108,7 +108,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     public async Task CheckArchivalTriggerAsync_NoState_ReturnsNull()
     {
         // Act
-        var trigger = await _orchestrator.CheckArchivalTriggerAsync("nonexistent-user");
+        var trigger = await _orchestrator.CheckArchivalTriggerAsync("nonexistent-user", TestContext.Current.CancellationToken);
 
         // Assert
         trigger.Should().BeNull();
@@ -120,10 +120,10 @@ public class ShortTermMemoryOrchestratorServiceTests
         // Arrange
         const string userId = "user-1";
         var memory = CreateTestMemory(userId, "Short content");
-        await _orchestrator.RecordActivityAsync(userId, "session-1", memory);
+        await _orchestrator.RecordActivityAsync(userId, "session-1", memory, TestContext.Current.CancellationToken);
 
         // Act
-        var trigger = await _orchestrator.CheckArchivalTriggerAsync(userId);
+        var trigger = await _orchestrator.CheckArchivalTriggerAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         trigger.Should().BeNull();
@@ -139,11 +139,11 @@ public class ShortTermMemoryOrchestratorServiceTests
         const string userId = "user-1";
         for (int i = 0; i < 3; i++)
         {
-            await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId));
+            await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId), TestContext.Current.CancellationToken);
         }
 
         // Act
-        var trigger = await orchestrator.CheckArchivalTriggerAsync(userId);
+        var trigger = await orchestrator.CheckArchivalTriggerAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         trigger.Should().Be(WorkingPromotionTrigger.TurnThreshold);
@@ -159,10 +159,10 @@ public class ShortTermMemoryOrchestratorServiceTests
         const string userId = "user-1";
         // Content with ~100 tokens (400 characters)
         var longContent = new string('a', 400);
-        await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, longContent));
+        await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, longContent), TestContext.Current.CancellationToken);
 
         // Act
-        var trigger = await orchestrator.CheckArchivalTriggerAsync(userId);
+        var trigger = await orchestrator.CheckArchivalTriggerAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         trigger.Should().Be(WorkingPromotionTrigger.TokenThreshold);
@@ -176,9 +176,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     public async Task ArchiveToSessionAsync_NoState_ReturnsEmpty()
     {
         // Act
-        var result = await _orchestrator.ArchiveToSessionAsync(
-            "nonexistent-user",
-            WorkingPromotionTrigger.Manual);
+        var result = await _orchestrator.ArchiveToSessionAsync("nonexistent-user", WorkingPromotionTrigger.Manual, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -192,13 +190,11 @@ public class ShortTermMemoryOrchestratorServiceTests
         const string userId = "user-1";
         for (int i = 0; i < 3; i++)
         {
-            await _orchestrator.RecordActivityAsync(
-                userId, "session-1", CreateTestMemory(userId, $"Content {i}"));
+            await _orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, $"Content {i}"), TestContext.Current.CancellationToken);
         }
 
         // Act
-        var result = await _orchestrator.ArchiveToSessionAsync(
-            userId, WorkingPromotionTrigger.Manual);
+        var result = await _orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -213,13 +209,11 @@ public class ShortTermMemoryOrchestratorServiceTests
         const string userId = "user-1";
         for (int i = 0; i < 3; i++)
         {
-            await _orchestrator.RecordActivityAsync(
-                userId, "session-1", CreateTestMemory(userId, $"Content {i}"));
+            await _orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, $"Content {i}"), TestContext.Current.CancellationToken);
         }
 
         // Act
-        var result = await _orchestrator.ArchiveToSessionAsync(
-            userId, WorkingPromotionTrigger.Manual, summarize: true);
+        var result = await _orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -233,12 +227,10 @@ public class ShortTermMemoryOrchestratorServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _orchestrator.RecordActivityAsync(
-            userId, "session-1", CreateTestMemory(userId));
+        await _orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _orchestrator.ArchiveToSessionAsync(
-            userId, WorkingPromotionTrigger.Manual, summarize: false);
+        var result = await _orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -250,12 +242,10 @@ public class ShortTermMemoryOrchestratorServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _orchestrator.RecordActivityAsync(
-            userId, "session-1", CreateTestMemory(userId));
+        await _orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId), TestContext.Current.CancellationToken);
 
         // Act
-        await _orchestrator.ArchiveToSessionAsync(
-            userId, WorkingPromotionTrigger.Manual);
+        await _orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         var state = _orchestrator.GetState(userId);
@@ -270,11 +260,10 @@ public class ShortTermMemoryOrchestratorServiceTests
         // Arrange
         const string userId = "user-1";
         var memory = CreateTestMemory(userId);
-        await _orchestrator.RecordActivityAsync(userId, "session-1", memory);
+        await _orchestrator.RecordActivityAsync(userId, "session-1", memory, TestContext.Current.CancellationToken);
 
         // Act
-        await _orchestrator.ArchiveToSessionAsync(
-            userId, WorkingPromotionTrigger.Manual);
+        await _orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         await _workingMemoryMock.Received().DemoteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
@@ -303,8 +292,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _orchestrator.RecordActivityAsync(
-            userId, "session-1", CreateTestMemory(userId, "Test content here"));
+        await _orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, "Test content here"), TestContext.Current.CancellationToken);
 
         // Act
         var state = _orchestrator.GetState(userId);
@@ -326,8 +314,8 @@ public class ShortTermMemoryOrchestratorServiceTests
         var orchestrator = CreateOrchestratorWithOptions(options);
 
         const string userId = "user-1";
-        await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId));
-        await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId));
+        await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId), TestContext.Current.CancellationToken);
+        await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId), TestContext.Current.CancellationToken);
 
         // Act
         var state = orchestrator.GetState(userId);
@@ -355,9 +343,9 @@ public class ShortTermMemoryOrchestratorServiceTests
     public async Task GetActiveUserIds_WithUsers_ReturnsAllUserIds()
     {
         // Arrange
-        await _orchestrator.RecordActivityAsync("user-1", "s1", CreateTestMemory("user-1"));
-        await _orchestrator.RecordActivityAsync("user-2", "s2", CreateTestMemory("user-2"));
-        await _orchestrator.RecordActivityAsync("user-3", "s3", CreateTestMemory("user-3"));
+        await _orchestrator.RecordActivityAsync("user-1", "s1", CreateTestMemory("user-1"), TestContext.Current.CancellationToken);
+        await _orchestrator.RecordActivityAsync("user-2", "s2", CreateTestMemory("user-2"), TestContext.Current.CancellationToken);
+        await _orchestrator.RecordActivityAsync("user-3", "s3", CreateTestMemory("user-3"), TestContext.Current.CancellationToken);
 
         // Act
         var userIds = _orchestrator.GetActiveUserIds();
@@ -376,7 +364,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId));
+        await _orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId), TestContext.Current.CancellationToken);
 
         // Act
         _orchestrator.ClearState(userId);

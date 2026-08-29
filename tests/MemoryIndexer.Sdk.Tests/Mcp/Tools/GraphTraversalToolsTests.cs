@@ -66,7 +66,7 @@ public class GraphTraversalToolsTests
             .Returns(detectionResult);
 
         // Act
-        var result = await _tools.DetectCommunities();
+        var result = await _tools.DetectCommunities(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -97,7 +97,7 @@ public class GraphTraversalToolsTests
             .Returns(detectionResult);
 
         // Act
-        var result = await _tools.DetectCommunities(maxIterations: 50, minCommunitySize: 5);
+        var result = await _tools.DetectCommunities(maxIterations: 50, minCommunitySize: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -139,7 +139,7 @@ public class GraphTraversalToolsTests
             .Returns(memories);
 
         // Act
-        var result = await _tools.GetCommunityMemories(communityId);
+        var result = await _tools.GetCommunityMemories(communityId, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -175,7 +175,7 @@ public class GraphTraversalToolsTests
             .Returns(summary);
 
         // Act
-        var result = await _tools.GetCommunitySummary(communityId);
+        var result = await _tools.GetCommunitySummary(communityId, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -216,7 +216,7 @@ public class GraphTraversalToolsTests
             .Returns(importanceResult);
 
         // Act
-        var result = await _tools.ComputeImportance();
+        var result = await _tools.ComputeImportance(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -248,10 +248,7 @@ public class GraphTraversalToolsTests
             .Returns(importanceResult);
 
         // Act
-        var result = await _tools.ComputeImportance(
-            dampingFactor: 0.9f,
-            maxIterations: 100,
-            tolerance: 0.00001f);
+        var result = await _tools.ComputeImportance(dampingFactor: 0.9f, maxIterations: 100, tolerance: 0.00001f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -273,7 +270,7 @@ public class GraphTraversalToolsTests
             .Returns(0.95f);
 
         // Act
-        var result = await _tools.GetEntityImportance(entityName);
+        var result = await _tools.GetEntityImportance(entityName, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -294,7 +291,7 @@ public class GraphTraversalToolsTests
             .Returns((float?)null);
 
         // Act
-        var result = await _tools.GetEntityImportance(entityName);
+        var result = await _tools.GetEntityImportance(entityName, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -324,7 +321,7 @@ public class GraphTraversalToolsTests
             .Returns(entities);
 
         // Act
-        var result = await _tools.GetTopEntities(topK: 10);
+        var result = await _tools.GetTopEntities(topK: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -369,7 +366,7 @@ public class GraphTraversalToolsTests
             .Returns(relatedMemories);
 
         // Act
-        var result = await _tools.FindRelatedMemories(sourceMemoryId.ToString());
+        var result = await _tools.FindRelatedMemories(sourceMemoryId.ToString(), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -384,7 +381,7 @@ public class GraphTraversalToolsTests
     public async Task FindRelatedMemories_WithInvalidId_ReturnsError()
     {
         // Act
-        var result = await _tools.FindRelatedMemories("not-a-valid-guid");
+        var result = await _tools.FindRelatedMemories("not-a-valid-guid", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -432,7 +429,7 @@ public class GraphTraversalToolsTests
             .Returns(subgraph);
 
         // Act
-        var result = await _tools.ExtractSubgraph(memoryId.ToString());
+        var result = await _tools.ExtractSubgraph(memoryId.ToString(), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -448,7 +445,7 @@ public class GraphTraversalToolsTests
     public async Task ExtractSubgraph_WithNoValidIds_ReturnsError()
     {
         // Act
-        var result = await _tools.ExtractSubgraph("invalid,also-invalid");
+        var result = await _tools.ExtractSubgraph("invalid,also-invalid", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -478,7 +475,7 @@ public class GraphTraversalToolsTests
             .Returns(subgraph);
 
         // Act
-        var result = await _tools.ExtractSubgraph($"{id1}, {id2}");
+        var result = await _tools.ExtractSubgraph($"{id1}, {id2}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();

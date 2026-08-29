@@ -54,10 +54,10 @@ public class ArchiveStoreServiceTemporalTests
             Version = 1
         };
 
-        await _service.SetAsync(userId, entry);
+        await _service.SetAsync(userId, entry, TestContext.Current.CancellationToken);
 
         // Act
-        var history = await _service.GetHistoryAsync(userId, "identity:user:name");
+        var history = await _service.GetHistoryAsync(userId, "identity:user:name", TestContext.Current.CancellationToken);
 
         // Assert
         history.Should().HaveCount(1);
@@ -77,11 +77,11 @@ public class ArchiveStoreServiceTemporalTests
             Version = 1
         };
 
-        await _service.SetAsync(userId, entry1);
-        await _service.ArchiveAndUpdateAsync(userId, "identity:user:name", "User's name is Mike");
+        await _service.SetAsync(userId, entry1, TestContext.Current.CancellationToken);
+        await _service.ArchiveAndUpdateAsync(userId, "identity:user:name", "User's name is Mike", TestContext.Current.CancellationToken);
 
         // Act
-        var history = await _service.GetHistoryAsync(userId, "identity:user:name");
+        var history = await _service.GetHistoryAsync(userId, "identity:user:name", TestContext.Current.CancellationToken);
 
         // Assert
         history.Should().HaveCountGreaterThanOrEqualTo(2);
@@ -93,7 +93,7 @@ public class ArchiveStoreServiceTemporalTests
     public async Task GetHistoryAsync_NonExistentKey_ShouldReturnEmpty()
     {
         // Act
-        var history = await _service.GetHistoryAsync("user1", "nonexistent:key");
+        var history = await _service.GetHistoryAsync("user1", "nonexistent:key", TestContext.Current.CancellationToken);
 
         // Assert
         history.Should().BeEmpty();
@@ -103,7 +103,7 @@ public class ArchiveStoreServiceTemporalTests
     public async Task GetHistoryAsync_NonExistentUser_ShouldReturnEmpty()
     {
         // Act
-        var history = await _service.GetHistoryAsync("nonexistent", "identity:user:name");
+        var history = await _service.GetHistoryAsync("nonexistent", "identity:user:name", TestContext.Current.CancellationToken);
 
         // Assert
         history.Should().BeEmpty();
@@ -129,10 +129,10 @@ public class ArchiveStoreServiceTemporalTests
             IsActive = true
         };
 
-        await _service.SetAsync(userId, entry);
+        await _service.SetAsync(userId, entry, TestContext.Current.CancellationToken);
 
         // Act
-        var facts = await _service.GetValidAtAsync(userId, now);
+        var facts = await _service.GetValidAtAsync(userId, now, TestContext.Current.CancellationToken);
 
         // Assert
         facts.Should().HaveCount(1);
@@ -155,10 +155,10 @@ public class ArchiveStoreServiceTemporalTests
             IsActive = false
         };
 
-        await _service.SetAsync(userId, expiredEntry);
+        await _service.SetAsync(userId, expiredEntry, TestContext.Current.CancellationToken);
 
         // Act
-        var facts = await _service.GetValidAtAsync(userId, now);
+        var facts = await _service.GetValidAtAsync(userId, now, TestContext.Current.CancellationToken);
 
         // Assert - Should not include expired fact
         facts.Should().NotContain(f => f.Value == "User lives in Seoul");
@@ -180,11 +180,11 @@ public class ArchiveStoreServiceTemporalTests
             IsActive = false
         };
 
-        await _service.SetAsync(userId, pastEntry);
+        await _service.SetAsync(userId, pastEntry, TestContext.Current.CancellationToken);
 
         // Act - Query at a date when the fact was valid
         var queryDate = now.AddDays(-45);
-        var facts = await _service.GetValidAtAsync(userId, queryDate);
+        var facts = await _service.GetValidAtAsync(userId, queryDate, TestContext.Current.CancellationToken);
 
         // Assert
         facts.Should().HaveCount(1);
@@ -195,7 +195,7 @@ public class ArchiveStoreServiceTemporalTests
     public async Task GetValidAtAsync_NonExistentUser_ShouldReturnEmpty()
     {
         // Act
-        var facts = await _service.GetValidAtAsync("nonexistent", DateTime.UtcNow);
+        var facts = await _service.GetValidAtAsync("nonexistent", DateTime.UtcNow, TestContext.Current.CancellationToken);
 
         // Assert
         facts.Should().BeEmpty();
@@ -218,13 +218,10 @@ public class ArchiveStoreServiceTemporalTests
             Version = 1
         };
 
-        await _service.SetAsync(userId, originalEntry);
+        await _service.SetAsync(userId, originalEntry, TestContext.Current.CancellationToken);
 
         // Act
-        var updatedEntry = await _service.ArchiveAndUpdateAsync(
-            userId,
-            "identity:user:name",
-            "User's name is Mike");
+        var updatedEntry = await _service.ArchiveAndUpdateAsync(userId, "identity:user:name", "User's name is Mike", TestContext.Current.CancellationToken);
 
         // Assert
         updatedEntry.Should().NotBeNull();
@@ -247,13 +244,13 @@ public class ArchiveStoreServiceTemporalTests
             Version = 1
         };
 
-        await _service.SetAsync(userId, originalEntry);
+        await _service.SetAsync(userId, originalEntry, TestContext.Current.CancellationToken);
 
         // Act
-        await _service.ArchiveAndUpdateAsync(userId, "identity:user:name", "User's name is Mike");
+        await _service.ArchiveAndUpdateAsync(userId, "identity:user:name", "User's name is Mike", TestContext.Current.CancellationToken);
 
         // Assert - Old version should be archived
-        var archivedEntry = await _service.GetAsync(userId, "identity:user:name:v1");
+        var archivedEntry = await _service.GetAsync(userId, "identity:user:name:v1", TestContext.Current.CancellationToken);
         archivedEntry.Should().NotBeNull();
         archivedEntry!.Value.Should().Be("User's name is John");
         archivedEntry.IsActive.Should().BeFalse();
@@ -264,7 +261,7 @@ public class ArchiveStoreServiceTemporalTests
     public async Task ArchiveAndUpdateAsync_NonExistentEntry_ShouldReturnNull()
     {
         // Act
-        var result = await _service.ArchiveAndUpdateAsync("user1", "nonexistent", "new value");
+        var result = await _service.ArchiveAndUpdateAsync("user1", "nonexistent", "new value", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
@@ -274,7 +271,7 @@ public class ArchiveStoreServiceTemporalTests
     public async Task ArchiveAndUpdateAsync_NonExistentUser_ShouldReturnNull()
     {
         // Act
-        var result = await _service.ArchiveAndUpdateAsync("nonexistent", "key", "value");
+        var result = await _service.ArchiveAndUpdateAsync("nonexistent", "key", "value", TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
@@ -292,13 +289,10 @@ public class ArchiveStoreServiceTemporalTests
             ConfirmationCount = 5
         };
 
-        await _service.SetAsync(userId, originalEntry);
+        await _service.SetAsync(userId, originalEntry, TestContext.Current.CancellationToken);
 
         // Act
-        var updatedEntry = await _service.ArchiveAndUpdateAsync(
-            userId,
-            "identity:user:name",
-            "User's name is Mike");
+        var updatedEntry = await _service.ArchiveAndUpdateAsync(userId, "identity:user:name", "User's name is Mike", TestContext.Current.CancellationToken);
 
         // Assert - New version should have reset confirmation count
         updatedEntry!.ConfirmationCount.Should().Be(1);

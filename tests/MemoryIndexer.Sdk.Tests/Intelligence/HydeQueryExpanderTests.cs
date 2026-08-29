@@ -168,7 +168,7 @@ public sealed class HydeQueryExpanderTests
         var query = "Who manages the deployment pipeline?";
 
         // Act
-        var embedding = await _expander.GenerateHypotheticalEmbeddingAsync(query);
+        var embedding = await _expander.GenerateHypotheticalEmbeddingAsync(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(384, embedding.Length);
@@ -182,7 +182,7 @@ public sealed class HydeQueryExpanderTests
         var query = "What features are planned for next release?";
 
         // Act
-        var embeddings = await _expander.GenerateMultipleHypotheticalEmbeddingsAsync(query, 3);
+        var embeddings = await _expander.GenerateMultipleHypotheticalEmbeddingsAsync(query, 3, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, embeddings.Count);

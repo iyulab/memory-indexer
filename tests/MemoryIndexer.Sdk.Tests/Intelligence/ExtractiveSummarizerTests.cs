@@ -59,7 +59,7 @@ public class ExtractiveSummarizerTests
         };
 
         // Act
-        var summary = await _summarizer.SummarizeAsync(memories);
+        var summary = await _summarizer.SummarizeAsync(memories, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(summary);
@@ -91,7 +91,7 @@ public class ExtractiveSummarizerTests
         };
 
         // Act
-        var summary = await _summarizer.SummarizeAsync(memories, options);
+        var summary = await _summarizer.SummarizeAsync(memories, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(summary);
@@ -112,7 +112,7 @@ public class ExtractiveSummarizerTests
         };
 
         // Act
-        var summary = await _summarizer.SummarizeAsync(memories);
+        var summary = await _summarizer.SummarizeAsync(memories, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(summary);
@@ -127,7 +127,7 @@ public class ExtractiveSummarizerTests
         var memories = new List<MemoryUnit>();
 
         // Act
-        var summary = await _summarizer.SummarizeAsync(memories);
+        var summary = await _summarizer.SummarizeAsync(memories, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(summary);
@@ -146,7 +146,7 @@ public class ExtractiveSummarizerTests
         }
 
         // Act
-        var hierarchy = await _summarizer.CreateHierarchyAsync(memories, levels: 2);
+        var hierarchy = await _summarizer.CreateHierarchyAsync(memories, levels: 2, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(hierarchy);
@@ -178,7 +178,7 @@ public class ExtractiveSummarizerTests
         };
 
         // Act
-        var updatedSummary = await _summarizer.IncrementalUpdateAsync(existingSummary, newMemories);
+        var updatedSummary = await _summarizer.IncrementalUpdateAsync(existingSummary, newMemories, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(updatedSummary);
@@ -214,7 +214,7 @@ public class ExtractiveSummarizerTests
         };
 
         // Act
-        var summary = await _summarizer.SummarizeAsync(memories);
+        var summary = await _summarizer.SummarizeAsync(memories, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(summary);
@@ -234,7 +234,7 @@ public class ExtractiveSummarizerTests
         };
 
         // Act
-        var summary = await _summarizer.SummarizeAsync(memories);
+        var summary = await _summarizer.SummarizeAsync(memories, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(summary);

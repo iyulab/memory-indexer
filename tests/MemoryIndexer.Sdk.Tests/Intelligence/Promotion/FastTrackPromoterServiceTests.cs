@@ -82,7 +82,7 @@ public class FastTrackPromoterServiceTests
             .Returns(new List<MemoryUnit>());
 
         // Act
-        var result = await _service.ProcessAsync(context);
+        var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -141,7 +141,7 @@ public class FastTrackPromoterServiceTests
             .Returns(new List<MemoryUnit>());
 
         // Act
-        var result = await _service.ProcessAsync(context);
+        var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -196,7 +196,7 @@ public class FastTrackPromoterServiceTests
             .Returns(new List<MemoryUnit>());
 
         // Act
-        var result = await _service.ProcessAsync(context);
+        var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -252,7 +252,7 @@ public class FastTrackPromoterServiceTests
             });
 
         // Act
-        var result = await _service.ProcessAsync(context);
+        var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -282,7 +282,7 @@ public class FastTrackPromoterServiceTests
             .Returns(extractionResult);
 
         // Act
-        var result = await _service.ProcessAsync(context);
+        var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -336,7 +336,7 @@ public class FastTrackPromoterServiceTests
             .Returns(new List<MemoryUnit>());
 
         // Act
-        var result = await _service.ProcessBatchAsync(items);
+        var result = await _service.ProcessBatchAsync(items, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -349,7 +349,7 @@ public class FastTrackPromoterServiceTests
     public async Task ProcessBatchAsync_WithEmptyList_ShouldReturnEmpty()
     {
         // Act
-        var result = await _service.ProcessBatchAsync([]);
+        var result = await _service.ProcessBatchAsync([], TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -395,7 +395,7 @@ public class FastTrackPromoterServiceTests
             .Returns(entries);
 
         // Act
-        var profile = await _service.GetUserProfileAsync("user1");
+        var profile = await _service.GetUserProfileAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         profile.UserId.Should().Be("user1");
@@ -424,7 +424,7 @@ public class FastTrackPromoterServiceTests
             .Returns(entries);
 
         // Act
-        var profile = await _service.GetUserProfileAsync("user1", FactCategory.Preference);
+        var profile = await _service.GetUserProfileAsync("user1", FactCategory.Preference, TestContext.Current.CancellationToken);
 
         // Assert
         profile.TotalFacts.Should().Be(1);
@@ -439,7 +439,7 @@ public class FastTrackPromoterServiceTests
             .Returns(new List<SemanticStoreEntry>());
 
         // Act
-        var profile = await _service.GetUserProfileAsync("user1");
+        var profile = await _service.GetUserProfileAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         profile.UserId.Should().Be("user1");

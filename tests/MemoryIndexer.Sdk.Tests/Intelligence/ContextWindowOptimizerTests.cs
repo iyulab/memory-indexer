@@ -94,7 +94,7 @@ public class ContextWindowOptimizerTests
         var queryEmbedding = GenerateMockEmbedding("query");
 
         // Act
-        var result = await _optimizer.ApplyMMRAsync([], queryEmbedding);
+        var result = await _optimizer.ApplyMMRAsync([], queryEmbedding, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result);
@@ -110,7 +110,7 @@ public class ContextWindowOptimizerTests
         var queryEmbedding = GenerateMockEmbedding("query");
 
         // Act
-        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 5);
+        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(5, result.Count);
@@ -126,7 +126,7 @@ public class ContextWindowOptimizerTests
         var queryEmbedding = GenerateMockEmbedding("query");
 
         // Act
-        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 10);
+        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, result.Count);
@@ -148,7 +148,7 @@ public class ContextWindowOptimizerTests
         var queryEmbedding = GenerateMockEmbedding("machine learning");
 
         // Act
-        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 3, lambda: 0.5f);
+        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 3, lambda: 0.5f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, result.Count);
@@ -161,7 +161,7 @@ public class ContextWindowOptimizerTests
         var query = "How do I implement authentication?";
 
         // Act
-        var result = await _optimizer.GenerateHyDEAsync(query);
+        var result = await _optimizer.GenerateHyDEAsync(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -185,7 +185,7 @@ public class ContextWindowOptimizerTests
         foreach (var query in queries)
         {
             // Act
-            var result = await _optimizer.GenerateHyDEAsync(query);
+            var result = await _optimizer.GenerateHyDEAsync(query, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.NotEmpty(result.HypotheticalDocument);
@@ -200,7 +200,7 @@ public class ContextWindowOptimizerTests
         var memory = CreateMemoryWithImportance(0.8f, "Original chunk content");
 
         // Act
-        var result = await _optimizer.ExpandChunkContextAsync(memory);
+        var result = await _optimizer.ExpandChunkContextAsync(memory, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(memory, result.OriginalChunk);
@@ -215,7 +215,7 @@ public class ContextWindowOptimizerTests
         var options = new ContextOptimizationOptions();
 
         // Act
-        var result = await _optimizer.OptimizeContextAsync([], options);
+        var result = await _optimizer.OptimizeContextAsync([], options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result.OptimizedMemories);
@@ -236,7 +236,7 @@ public class ContextWindowOptimizerTests
         };
 
         // Act
-        var result = await _optimizer.OptimizeContextAsync(memories, options);
+        var result = await _optimizer.OptimizeContextAsync(memories, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("LongContextReorder", result.OptimizationsApplied);
@@ -258,7 +258,7 @@ public class ContextWindowOptimizerTests
         };
 
         // Act
-        var result = await _optimizer.OptimizeContextAsync(memories, options);
+        var result = await _optimizer.OptimizeContextAsync(memories, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result.OptimizationsApplied, o => o.Contains("MMR"));
@@ -284,7 +284,7 @@ public class ContextWindowOptimizerTests
         };
 
         // Act
-        var result = await _optimizer.OptimizeContextAsync(memories, options);
+        var result = await _optimizer.OptimizeContextAsync(memories, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.MemoriesRemoved > 0);
@@ -308,7 +308,7 @@ public class ContextWindowOptimizerTests
         };
 
         // Act
-        var result = await _optimizer.OptimizeContextAsync(memories, options);
+        var result = await _optimizer.OptimizeContextAsync(memories, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("HyDE", result.OptimizationsApplied);
@@ -330,7 +330,7 @@ public class ContextWindowOptimizerTests
         };
 
         // Act
-        var result = await _optimizer.OptimizeContextAsync(memories, options);
+        var result = await _optimizer.OptimizeContextAsync(memories, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.OptimizationsApplied.Count >= 2);
@@ -365,7 +365,7 @@ public class ContextWindowOptimizerTests
         var queryEmbedding = GenerateMockEmbedding("Memory content 0");
 
         // Act with high lambda (favor relevance)
-        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 5, lambda: 0.95f);
+        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 5, lambda: 0.95f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(5, result.Count);
@@ -381,7 +381,7 @@ public class ContextWindowOptimizerTests
         var queryEmbedding = GenerateMockEmbedding("Memory content 0");
 
         // Act with low lambda (favor diversity)
-        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 5, lambda: 0.2f);
+        var result = await _optimizer.ApplyMMRAsync(memories, queryEmbedding, k: 5, lambda: 0.2f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(5, result.Count);

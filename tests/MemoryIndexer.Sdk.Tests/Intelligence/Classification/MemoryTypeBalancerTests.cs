@@ -64,11 +64,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 5        // 5%
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
+        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         // Target=0.20, Current=0.05, Deviation=0.15
@@ -89,11 +88,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 5
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1");
+        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         boost.Should().Be(0f, "overrepresented types should not get boost");
@@ -111,11 +109,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 10
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
+        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         boost.Should().Be(0f, "types at target should have zero boost");
@@ -133,11 +130,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 0
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
+        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         boost.Should().Be(0f, "should not apply balancing with insufficient data");
@@ -163,11 +159,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Procedural] = 5
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var boost = await disabledBalancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
+        var boost = await disabledBalancer.GetTypeBoostAsync(MemoryType.Procedural, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         boost.Should().Be(0f, "disabled balancer should return zero boost");
@@ -185,11 +180,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 10       // 10%
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1");
+        var boost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         // Target=0.40, Current=0.01, Deviation=0.39
@@ -213,11 +207,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 5
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var distribution = await _balancer.GetTypeDistributionAsync("user1");
+        var distribution = await _balancer.GetTypeDistributionAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         distribution.Should().HaveCount(4);
@@ -235,11 +228,10 @@ public class MemoryTypeBalancerTests
     public async Task GetTypeDistributionAsync_NoMemories_ReturnsEmptyDictionary()
     {
         // Arrange
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(new Dictionary<MemoryType, int>());
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(new Dictionary<MemoryType, int>());
 
         // Act
-        var distribution = await _balancer.GetTypeDistributionAsync("user1");
+        var distribution = await _balancer.GetTypeDistributionAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         distribution.Should().BeEmpty();
@@ -254,11 +246,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Episodic] = 100
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var distribution = await _balancer.GetTypeDistributionAsync("user1");
+        var distribution = await _balancer.GetTypeDistributionAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         distribution.Should().HaveCount(1);
@@ -281,11 +272,10 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 2
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(expectedCounts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(expectedCounts);
 
         // Act
-        var counts = await _balancer.GetTypeCountsAsync("user1");
+        var counts = await _balancer.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         counts.Should().BeEquivalentTo(expectedCounts);
@@ -307,14 +297,13 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 2        // 2%
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
-        var episodicBoost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1");
-        var semanticBoost = await _balancer.GetTypeBoostAsync(MemoryType.Semantic, "user1");
-        var proceduralBoost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1");
-        var factBoost = await _balancer.GetTypeBoostAsync(MemoryType.Fact, "user1");
+        var episodicBoost = await _balancer.GetTypeBoostAsync(MemoryType.Episodic, "user1", TestContext.Current.CancellationToken);
+        var semanticBoost = await _balancer.GetTypeBoostAsync(MemoryType.Semantic, "user1", TestContext.Current.CancellationToken);
+        var proceduralBoost = await _balancer.GetTypeBoostAsync(MemoryType.Procedural, "user1", TestContext.Current.CancellationToken);
+        var factBoost = await _balancer.GetTypeBoostAsync(MemoryType.Fact, "user1", TestContext.Current.CancellationToken);
 
         // Assert
         // Episodic: 73% vs 40% target → overrepresented → no boost
@@ -347,14 +336,13 @@ public class MemoryTypeBalancerTests
             [MemoryType.Fact] = 9        // 9% (target 10%)
         };
 
-        _mockStore.GetTypeCountsAsync("user1", default)
-            .Returns(counts);
+        _mockStore.GetTypeCountsAsync("user1", TestContext.Current.CancellationToken).Returns(counts);
 
         // Act
         var allBoosts = new Dictionary<MemoryType, float>();
         foreach (var type in Enum.GetValues<MemoryType>())
         {
-            allBoosts[type] = await _balancer.GetTypeBoostAsync(type, "user1");
+            allBoosts[type] = await _balancer.GetTypeBoostAsync(type, "user1", TestContext.Current.CancellationToken);
         }
 
         // Assert - All boosts should be minimal (< 0.1) since distribution is balanced

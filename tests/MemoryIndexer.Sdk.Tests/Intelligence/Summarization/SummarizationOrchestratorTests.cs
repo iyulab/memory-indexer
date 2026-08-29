@@ -111,7 +111,7 @@ public class SummarizationOrchestratorTests
         };
 
         // Act
-        var result = await _orchestrator.RecordMemoryAsync("session-1", memory);
+        var result = await _orchestrator.RecordMemoryAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         // Assert
         var state = _orchestrator.GetSessionState("session-1");
@@ -164,7 +164,7 @@ public class SummarizationOrchestratorTests
             .Returns(expectedSummary);
 
         // Act
-        var result = await _orchestrator.RecordMemoryAsync("session-1", memory);
+        var result = await _orchestrator.RecordMemoryAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -191,7 +191,7 @@ public class SummarizationOrchestratorTests
             .Returns(expectedEvaluation);
 
         // Act
-        var result = await _orchestrator.EvaluateTriggerAsync("session-1");
+        var result = await _orchestrator.EvaluateTriggerAsync("session-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(expectedEvaluation.ShouldSummarize, result.ShouldSummarize);
@@ -215,7 +215,7 @@ public class SummarizationOrchestratorTests
         // Pre-record a memory
         _triggerMock.EvaluateAsync(Arg.Any<SummarizationContext>(), Arg.Any<CancellationToken>())
             .Returns(new TriggerEvaluation { ShouldSummarize = false, Explanation = "No trigger" });
-        await _orchestrator.RecordMemoryAsync("session-1", memory);
+        await _orchestrator.RecordMemoryAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         var expectedSummary = new MemorySummary
         {
@@ -235,7 +235,7 @@ public class SummarizationOrchestratorTests
             .Returns(expectedSummary);
 
         // Act
-        var result = await _orchestrator.TriggerSummarizationAsync("session-1", SummarizationStrategy.Compression);
+        var result = await _orchestrator.TriggerSummarizationAsync("session-1", SummarizationStrategy.Compression, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Summarized);
@@ -263,7 +263,7 @@ public class SummarizationOrchestratorTests
                 Explanation = "Session ending"
             });
 
-        await _orchestrator.RecordMemoryAsync("session-1", memory);
+        await _orchestrator.RecordMemoryAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         var finalSummary = new MemorySummary
         {
@@ -281,7 +281,7 @@ public class SummarizationOrchestratorTests
             .Returns(finalSummary);
 
         // Act
-        var result = await _orchestrator.EndSessionAsync("session-1");
+        var result = await _orchestrator.EndSessionAsync("session-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -301,7 +301,7 @@ public class SummarizationOrchestratorTests
             .Returns(new TriggerEvaluation { ShouldSummarize = false, Explanation = "Empty session" });
 
         // Act
-        await _orchestrator.EndSessionAsync("session-1");
+        await _orchestrator.EndSessionAsync("session-1", TestContext.Current.CancellationToken);
 
         // Assert
         _triggerMock.Received(1).RegisterEvent("session-1", SessionEventType.SessionEnd, null);
@@ -329,7 +329,7 @@ public class SummarizationOrchestratorTests
         };
 
         // Act
-        var result = await _orchestrator.RecordMemoryAsync("unknown-session", memory);
+        var result = await _orchestrator.RecordMemoryAsync("unknown-session", memory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);

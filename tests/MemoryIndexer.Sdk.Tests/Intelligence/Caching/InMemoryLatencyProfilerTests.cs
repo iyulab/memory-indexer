@@ -36,8 +36,8 @@ public class InMemoryLatencyProfilerTests
         const double latencyMs = 75.5;
 
         // Act
-        await _profiler.RecordLatencyAsync(userId, tier, latencyMs);
-        var metrics = await _profiler.GetMetricsAsync(userId, tier);
+        await _profiler.RecordLatencyAsync(userId, tier, latencyMs, cancellationToken: TestContext.Current.CancellationToken);
+        var metrics = await _profiler.GetMetricsAsync(userId, tier, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(metrics);
@@ -64,9 +64,9 @@ public class InMemoryLatencyProfilerTests
         // Act
         foreach (var latency in latencies)
         {
-            await _profiler.RecordLatencyAsync(userId, tier, latency);
+            await _profiler.RecordLatencyAsync(userId, tier, latency, cancellationToken: TestContext.Current.CancellationToken);
         }
-        var metrics = await _profiler.GetMetricsAsync(userId, tier);
+        var metrics = await _profiler.GetMetricsAsync(userId, tier, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(metrics);
@@ -88,11 +88,11 @@ public class InMemoryLatencyProfilerTests
         // Create 100 measurements from 1 to 100
         for (int i = 1; i <= 100; i++)
         {
-            await _profiler.RecordLatencyAsync(userId, tier, i);
+            await _profiler.RecordLatencyAsync(userId, tier, i, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         // Act
-        var metrics = await _profiler.GetMetricsAsync(userId, tier);
+        var metrics = await _profiler.GetMetricsAsync(userId, tier, TestContext.Current.CancellationToken);
 
         // Assert
         var metric = metrics[0];
@@ -117,8 +117,8 @@ public class InMemoryLatencyProfilerTests
         };
 
         // Act
-        await _profiler.RecordLatencyAsync(userId, tier, 100.0, componentLatencies);
-        var metrics = await _profiler.GetMetricsAsync(userId, tier);
+        await _profiler.RecordLatencyAsync(userId, tier, 100.0, componentLatencies, TestContext.Current.CancellationToken);
+        var metrics = await _profiler.GetMetricsAsync(userId, tier, TestContext.Current.CancellationToken);
 
         // Assert
         var metric = metrics[0];
@@ -137,8 +137,8 @@ public class InMemoryLatencyProfilerTests
         const double overBudgetLatency = 150.0; // Budget is 100ms
 
         // Act
-        await _profiler.RecordLatencyAsync(userId, tier, overBudgetLatency);
-        var metrics = await _profiler.GetMetricsAsync(userId, tier);
+        await _profiler.RecordLatencyAsync(userId, tier, overBudgetLatency, cancellationToken: TestContext.Current.CancellationToken);
+        var metrics = await _profiler.GetMetricsAsync(userId, tier, TestContext.Current.CancellationToken);
 
         // Assert
         var metric = metrics[0];
@@ -152,18 +152,18 @@ public class InMemoryLatencyProfilerTests
         const string userId = "user1";
 
         // Act & Assert - Short-Term Memory budget is 100ms
-        await _profiler.RecordLatencyAsync(userId, "Working", 120.0);
-        var workingMetrics = await _profiler.GetMetricsAsync(userId, "Working");
+        await _profiler.RecordLatencyAsync(userId, "Working", 120.0, cancellationToken: TestContext.Current.CancellationToken);
+        var workingMetrics = await _profiler.GetMetricsAsync(userId, "Working", TestContext.Current.CancellationToken);
         Assert.Equal(1, workingMetrics[0].BudgetExceededCount);
 
         // Act & Assert - Session Memory budget is 300ms
-        await _profiler.RecordLatencyAsync(userId, "Session", 350.0);
-        var sessionMetrics = await _profiler.GetMetricsAsync(userId, "Session");
+        await _profiler.RecordLatencyAsync(userId, "Session", 350.0, cancellationToken: TestContext.Current.CancellationToken);
+        var sessionMetrics = await _profiler.GetMetricsAsync(userId, "Session", TestContext.Current.CancellationToken);
         Assert.Equal(1, sessionMetrics[0].BudgetExceededCount);
 
         // Act & Assert - User Profile budget is 500ms
-        await _profiler.RecordLatencyAsync(userId, "User", 600.0);
-        var userMetrics = await _profiler.GetMetricsAsync(userId, "User");
+        await _profiler.RecordLatencyAsync(userId, "User", 600.0, cancellationToken: TestContext.Current.CancellationToken);
+        var userMetrics = await _profiler.GetMetricsAsync(userId, "User", TestContext.Current.CancellationToken);
         Assert.Equal(1, userMetrics[0].BudgetExceededCount);
     }
 
@@ -175,14 +175,14 @@ public class InMemoryLatencyProfilerTests
         const string tier = "Working";
 
         // Record some latencies first
-        await _profiler.RecordLatencyAsync(userId, tier, 100.0);
+        await _profiler.RecordLatencyAsync(userId, tier, 100.0, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await _profiler.RecordCacheAccessAsync(userId, "Embedding", hit: true);
-        await _profiler.RecordCacheAccessAsync(userId, "Embedding", hit: true);
-        await _profiler.RecordCacheAccessAsync(userId, "Embedding", hit: false);
+        await _profiler.RecordCacheAccessAsync(userId, "Embedding", hit: true, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordCacheAccessAsync(userId, "Embedding", hit: true, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordCacheAccessAsync(userId, "Embedding", hit: false, cancellationToken: TestContext.Current.CancellationToken);
 
-        var metrics = await _profiler.GetMetricsAsync(userId, tier);
+        var metrics = await _profiler.GetMetricsAsync(userId, tier, TestContext.Current.CancellationToken);
 
         // Assert
         var metric = metrics[0];
@@ -196,12 +196,12 @@ public class InMemoryLatencyProfilerTests
     {
         // Arrange
         const string userId = "user1";
-        await _profiler.RecordLatencyAsync(userId, "Working", 50.0);
-        await _profiler.RecordLatencyAsync(userId, "Session", 200.0);
-        await _profiler.RecordLatencyAsync(userId, "User", 400.0);
+        await _profiler.RecordLatencyAsync(userId, "Working", 50.0, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordLatencyAsync(userId, "Session", 200.0, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordLatencyAsync(userId, "User", 400.0, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var metrics = await _profiler.GetMetricsAsync(userId);
+        var metrics = await _profiler.GetMetricsAsync(userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, metrics.Count);
@@ -215,11 +215,11 @@ public class InMemoryLatencyProfilerTests
     {
         // Arrange
         const string userId = "user1";
-        await _profiler.RecordLatencyAsync(userId, "Working", 50.0);
-        await _profiler.RecordLatencyAsync(userId, "Session", 200.0);
+        await _profiler.RecordLatencyAsync(userId, "Working", 50.0, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordLatencyAsync(userId, "Session", 200.0, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var metrics = await _profiler.GetMetricsAsync(userId, "Working");
+        var metrics = await _profiler.GetMetricsAsync(userId, "Working", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(metrics);
@@ -230,7 +230,7 @@ public class InMemoryLatencyProfilerTests
     public async Task GetMetricsAsync_ForNonExistentUser_ShouldReturnEmptyList()
     {
         // Act
-        var metrics = await _profiler.GetMetricsAsync("nonexistent");
+        var metrics = await _profiler.GetMetricsAsync("nonexistent", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(metrics);
@@ -241,12 +241,12 @@ public class InMemoryLatencyProfilerTests
     {
         // Arrange
         const string userId = "user1";
-        await _profiler.RecordLatencyAsync(userId, "Working", 50.0);
-        await _profiler.RecordLatencyAsync(userId, "Session", 200.0);
+        await _profiler.RecordLatencyAsync(userId, "Working", 50.0, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordLatencyAsync(userId, "Session", 200.0, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await _profiler.ResetMetricsAsync(userId);
-        var metrics = await _profiler.GetMetricsAsync(userId);
+        await _profiler.ResetMetricsAsync(userId, TestContext.Current.CancellationToken);
+        var metrics = await _profiler.GetMetricsAsync(userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(metrics);
@@ -258,14 +258,14 @@ public class InMemoryLatencyProfilerTests
         // Arrange
         const string userId = "user1";
         const string otherUser = "user2";
-        await _profiler.RecordLatencyAsync(userId, "Working", 50.0);
-        await _profiler.RecordLatencyAsync(userId, "Session", 200.0);
-        await _profiler.RecordLatencyAsync(otherUser, "Working", 100.0);
+        await _profiler.RecordLatencyAsync(userId, "Working", 50.0, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordLatencyAsync(userId, "Session", 200.0, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordLatencyAsync(otherUser, "Working", 100.0, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await _profiler.ResetMetricsAsync(userId);
-        var userMetrics = await _profiler.GetMetricsAsync(userId);
-        var otherMetrics = await _profiler.GetMetricsAsync(otherUser);
+        await _profiler.ResetMetricsAsync(userId, TestContext.Current.CancellationToken);
+        var userMetrics = await _profiler.GetMetricsAsync(userId, cancellationToken: TestContext.Current.CancellationToken);
+        var otherMetrics = await _profiler.GetMetricsAsync(otherUser, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(userMetrics);
@@ -291,11 +291,11 @@ public class InMemoryLatencyProfilerTests
         const string tier = "Working";
 
         // Act
-        await _profiler.RecordLatencyAsync(user1, tier, 50.0);
-        await _profiler.RecordLatencyAsync(user2, tier, 150.0);
+        await _profiler.RecordLatencyAsync(user1, tier, 50.0, cancellationToken: TestContext.Current.CancellationToken);
+        await _profiler.RecordLatencyAsync(user2, tier, 150.0, cancellationToken: TestContext.Current.CancellationToken);
 
-        var user1Metrics = await _profiler.GetMetricsAsync(user1, tier);
-        var user2Metrics = await _profiler.GetMetricsAsync(user2, tier);
+        var user1Metrics = await _profiler.GetMetricsAsync(user1, tier, TestContext.Current.CancellationToken);
+        var user2Metrics = await _profiler.GetMetricsAsync(user2, tier, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(user1Metrics);

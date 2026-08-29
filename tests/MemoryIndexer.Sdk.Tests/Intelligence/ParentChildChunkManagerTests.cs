@@ -55,7 +55,7 @@ public sealed class ParentChildChunkManagerTests
         var shortContent = "Short content that is less than MinContentLength.";
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(shortContent);
+        var hierarchy = await _manager.CreateHierarchyAsync(shortContent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(hierarchy.ParentChunks);
@@ -71,7 +71,7 @@ public sealed class ParentChildChunkManagerTests
         var longContent = new string('A', 2000) + " " + new string('B', 2000);
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(longContent);
+        var hierarchy = await _manager.CreateHierarchyAsync(longContent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(hierarchy.ChildChunks);
@@ -86,7 +86,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(" ", Enumerable.Range(0, 500).Select(i => $"Word{i}"));
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.All(hierarchy.ParentChunks, c => Assert.Equal(ChunkType.Parent, c.ChunkType));
@@ -100,7 +100,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(" ", Enumerable.Range(0, 500).Select(i => $"Word{i}"));
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         foreach (var child in hierarchy.ChildChunks)
@@ -123,7 +123,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(" ", Enumerable.Range(0, 500).Select(i => $"Word{i}"));
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.All(hierarchy.ChunkMap.Values, c => Assert.NotNull(c.Embedding));
@@ -136,7 +136,7 @@ public sealed class ParentChildChunkManagerTests
         var content = "This is some test content that should be preserved.";
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(content, hierarchy.OriginalContent);
@@ -150,7 +150,7 @@ public sealed class ParentChildChunkManagerTests
         var sourceId = "doc-123";
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(content, sourceId);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, sourceId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(sourceId, hierarchy.SourceId);
@@ -162,10 +162,10 @@ public sealed class ParentChildChunkManagerTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _manager.CreateHierarchyAsync(""));
+            _manager.CreateHierarchyAsync("", cancellationToken: TestContext.Current.CancellationToken));
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _manager.CreateHierarchyAsync("   "));
+            _manager.CreateHierarchyAsync("   ", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -173,10 +173,10 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence number {i} with some content"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _manager.SearchAsync("Sentence number 50", hierarchy, topK: 5);
+        var results = await _manager.SearchAsync("Sentence number 50", hierarchy, topK: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(results);
@@ -189,10 +189,10 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence number {i} with detailed content"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _manager.SearchAsync("Sentence number 50", hierarchy, topK: 5, returnParents: true);
+        var results = await _manager.SearchAsync("Sentence number 50", hierarchy, topK: 5, returnParents: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(results);
@@ -205,10 +205,10 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence number {i} with detailed content"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _manager.SearchAsync("Sentence number 50", hierarchy, topK: 5, returnParents: false);
+        var results = await _manager.SearchAsync("Sentence number 50", hierarchy, topK: 5, returnParents: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(results);
@@ -224,13 +224,13 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange - short content creates no children
         var shortContent = "Short content only.";
-        var hierarchy = await _manager.CreateHierarchyAsync(shortContent);
+        var hierarchy = await _manager.CreateHierarchyAsync(shortContent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Verify no children
         Assert.Empty(hierarchy.ChildChunks);
 
         // Act
-        var results = await _manager.SearchAsync("Short content", hierarchy, topK: 5);
+        var results = await _manager.SearchAsync("Short content", hierarchy, topK: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(results);
@@ -242,10 +242,10 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 200).Select(i => $"Sentence number {i}"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _manager.SearchAsync("Sentence", hierarchy, topK: 3);
+        var results = await _manager.SearchAsync("Sentence", hierarchy, topK: 3, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(results.Count <= 3);
@@ -256,7 +256,7 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         var child = hierarchy.ChildChunks[0];
 
@@ -274,7 +274,7 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         var parent = hierarchy.ParentChunks[0];
 
@@ -290,7 +290,7 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         var parent = hierarchy.ParentChunks[0];
 
@@ -307,7 +307,7 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         var parent = hierarchy.ParentChunks[0];
         var child = hierarchy.ChildChunks.First(c => c.ParentId == parent.Id);
@@ -325,7 +325,7 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange - short content creates single parent with no children
         var shortContent = "Short content only.";
-        var hierarchy = await _manager.CreateHierarchyAsync(shortContent);
+        var hierarchy = await _manager.CreateHierarchyAsync(shortContent, cancellationToken: TestContext.Current.CancellationToken);
 
         var parent = hierarchy.ParentChunks[0];
 
@@ -343,7 +343,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence {i}"));
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(hierarchy.ParentChunks.Count + hierarchy.ChildChunks.Count, hierarchy.TotalChunks);
@@ -354,10 +354,10 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence number {i}"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _manager.SearchAsync("Sentence", hierarchy, topK: 3, returnParents: true);
+        var results = await _manager.SearchAsync("Sentence", hierarchy, topK: 3, returnParents: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         var resultWithParent = results.FirstOrDefault(r => r.ParentChunk != null);
@@ -372,10 +372,10 @@ public sealed class ParentChildChunkManagerTests
     {
         // Arrange
         var content = string.Join(". ", Enumerable.Range(0, 100).Select(i => $"Sentence number {i}"));
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var results = await _manager.SearchAsync("Sentence", hierarchy, topK: 3, returnParents: false);
+        var results = await _manager.SearchAsync("Sentence", hierarchy, topK: 3, returnParents: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.All(results, r => Assert.Equal(r.MatchedChunk.Content, r.RetrievedContent));
@@ -388,7 +388,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(" ", Enumerable.Range(0, 500).Select(i => $"Word{i}"));
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         foreach (var chunk in hierarchy.ChunkMap.Values)
@@ -410,7 +410,7 @@ public sealed class ParentChildChunkManagerTests
         var content = string.Join(". ", Enumerable.Range(0, 200).Select(i => $"Sentence {i}"));
 
         // Act
-        var hierarchy = await _manager.CreateHierarchyAsync(content);
+        var hierarchy = await _manager.CreateHierarchyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         foreach (var parent in hierarchy.ParentChunks)

@@ -28,7 +28,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync("", entities);
+        var result = await _resolver.ResolveAsync("", entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result.Coreferences);
@@ -46,7 +46,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(result.Coreferences);
@@ -63,7 +63,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result.Coreferences);
@@ -83,7 +83,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result.Coreferences);
@@ -102,7 +102,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(result.Coreferences);
@@ -121,7 +121,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         // "his", "He", "himself" should all resolve to John
@@ -141,7 +141,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         var heCoref = result.Coreferences.FirstOrDefault(c => c.Mention.Text == "He");
@@ -164,7 +164,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         var itCoref = result.Coreferences.FirstOrDefault(c => c.Mention.Text == "It");
@@ -183,7 +183,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert - "she" should be unresolved since John is masculine
         var sheCoref = result.Coreferences.FirstOrDefault(c => c.Mention.Text == "She");
@@ -207,7 +207,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAcrossSegmentsAsync(segments, entities);
+        var result = await _resolver.ResolveAcrossSegmentsAsync(segments, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Coreferences.Count >= 2);
@@ -323,7 +323,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var mentions = await _resolver.GetAllMentionsAsync(text, entities);
+        var mentions = await _resolver.GetAllMentionsAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(mentions.Count >= 2); // At least "John" and "He" or "his"
@@ -341,7 +341,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         var himselfCoref = result.Coreferences.FirstOrDefault(c => c.Mention.Text == "himself");
@@ -360,7 +360,7 @@ public class CoreferenceResolverTests
         };
 
         // Act
-        var result = await _resolver.ResolveAsync(text, entities);
+        var result = await _resolver.ResolveAsync(text, entities, TestContext.Current.CancellationToken);
 
         // Assert
         // "They" may or may not resolve depending on number agreement

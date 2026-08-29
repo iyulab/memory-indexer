@@ -69,7 +69,7 @@ public class ProfileEvolutionToolsTests
             .Returns(inferenceResult);
 
         // Act
-        var result = await _tools.InferFacts("user1");
+        var result = await _tools.InferFacts("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -91,7 +91,7 @@ public class ProfileEvolutionToolsTests
             .Returns(new InferenceResult { UserId = "user1", InferredFacts = [] });
 
         // Act
-        var result = await _tools.InferFacts("user1", minConfidence: 0.8f, maxResults: 10);
+        var result = await _tools.InferFacts("user1", minConfidence: 0.8f, maxResults: 10, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -154,7 +154,7 @@ public class ProfileEvolutionToolsTests
             .Returns(snapshot);
 
         // Act
-        var result = await _tools.CreateProfileSnapshot("user1", "Test snapshot");
+        var result = await _tools.CreateProfileSnapshot("user1", "Test snapshot", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -183,7 +183,7 @@ public class ProfileEvolutionToolsTests
             .Returns(snapshots);
 
         // Act
-        var result = await _tools.ListProfileSnapshots("user1", 10);
+        var result = await _tools.ListProfileSnapshots("user1", 10, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -215,7 +215,7 @@ public class ProfileEvolutionToolsTests
             .Returns(diff);
 
         // Act
-        var result = await _tools.CompareSnapshots(olderId.ToString(), "user1");
+        var result = await _tools.CompareSnapshots(olderId.ToString(), "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -229,7 +229,7 @@ public class ProfileEvolutionToolsTests
     public async Task CompareSnapshots_WithInvalidGuid_ShouldReturnError()
     {
         // Act
-        var result = await _tools.CompareSnapshots("invalid-guid", "user1");
+        var result = await _tools.CompareSnapshots("invalid-guid", "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -264,7 +264,7 @@ public class ProfileEvolutionToolsTests
             _mockArchiveStore);
 
         // Act
-        var result = await toolsWithRealDecay.GetStaleFacts("user1", 0.5f);
+        var result = await toolsWithRealDecay.GetStaleFacts("user1", 0.5f, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -284,7 +284,7 @@ public class ProfileEvolutionToolsTests
             .Returns(facts);
 
         // Act
-        var result = await _tools.GetStaleFacts("user1");
+        var result = await _tools.GetStaleFacts("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -316,7 +316,7 @@ public class ProfileEvolutionToolsTests
             .Returns(false);
 
         // Act
-        var result = await _tools.CalculateDecay("test", "user1");
+        var result = await _tools.CalculateDecay("test", "user1", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -334,7 +334,7 @@ public class ProfileEvolutionToolsTests
             .Returns((SemanticStoreEntry?)null);
 
         // Act
-        var result = await _tools.CalculateDecay("nonexistent", "user1");
+        var result = await _tools.CalculateDecay("nonexistent", "user1", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -369,7 +369,7 @@ public class ProfileEvolutionToolsTests
             .Returns(exportResult);
 
         // Act
-        var result = await _tools.ExportProfile("user1");
+        var result = await _tools.ExportProfile("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -399,7 +399,7 @@ public class ProfileEvolutionToolsTests
             });
 
         // Act
-        var result = await _tools.ExportProfile("user1", includeArchived: true, includeHistory: true);
+        var result = await _tools.ExportProfile("user1", includeArchived: true, includeHistory: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -418,7 +418,7 @@ public class ProfileEvolutionToolsTests
             });
 
         // Act
-        var result = await _tools.ExportProfile("user1");
+        var result = await _tools.ExportProfile("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();

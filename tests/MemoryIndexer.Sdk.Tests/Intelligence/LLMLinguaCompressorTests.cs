@@ -47,7 +47,7 @@ public class LLMLinguaCompressorTests
     public async Task CompressAsync_EmptyText_ShouldReturnEmpty()
     {
         // Act
-        var result = await _compressor.CompressAsync("");
+        var result = await _compressor.CompressAsync("", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(string.Empty, result.CompressedText);
@@ -62,7 +62,7 @@ public class LLMLinguaCompressorTests
         var text = "The quick brown fox jumps over the lazy dog. This is a sample sentence for testing compression.";
 
         // Act
-        var result = await _compressor.CompressAsync(text);
+        var result = await _compressor.CompressAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -87,7 +87,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var result = await _compressor.CompressAsync(text, options);
+        var result = await _compressor.CompressAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -109,7 +109,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var result = await _compressor.CompressAsync(text, options);
+        var result = await _compressor.CompressAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -131,7 +131,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var result = await _compressor.CompressAsync(text, options);
+        var result = await _compressor.CompressAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -154,7 +154,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var result = await _compressor.CompressAsync(text, options);
+        var result = await _compressor.CompressAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -176,7 +176,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var result = await _compressor.CompressAsync(text, options);
+        var result = await _compressor.CompressAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -202,7 +202,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var result = await _compressor.CompressAsync(text, options);
+        var result = await _compressor.CompressAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -223,7 +223,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var result = await _compressor.CompressAsync(text, options);
+        var result = await _compressor.CompressAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("password", result.CompressedText, StringComparison.OrdinalIgnoreCase);
@@ -242,7 +242,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var results = await _compressor.CompressBatchAsync(texts);
+        var results = await _compressor.CompressBatchAsync(texts, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -284,7 +284,7 @@ public class LLMLinguaCompressorTests
         var text = "Critical error";
 
         // Act
-        var result = await _compressor.CompressAsync(text);
+        var result = await _compressor.CompressAsync(text, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -306,7 +306,7 @@ public class LLMLinguaCompressorTests
         };
 
         // Act
-        var result = await _compressor.CompressAsync(text, options);
+        var result = await _compressor.CompressAsync(text, options, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

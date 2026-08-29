@@ -28,7 +28,7 @@ public class ShortTermMemoryHealthCheckTests
         _mockWorkingMemory.IsFull.Returns(false);
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
@@ -46,7 +46,7 @@ public class ShortTermMemoryHealthCheckTests
         _mockWorkingMemory.IsFull.Returns(false);
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Degraded);
@@ -62,7 +62,7 @@ public class ShortTermMemoryHealthCheckTests
         _mockWorkingMemory.IsFull.Returns(true);
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);
@@ -76,7 +76,7 @@ public class ShortTermMemoryHealthCheckTests
         _mockWorkingMemory.Count.Throws(new InvalidOperationException("Test exception"));
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);

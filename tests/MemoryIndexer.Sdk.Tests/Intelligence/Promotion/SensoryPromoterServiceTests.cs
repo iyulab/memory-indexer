@@ -76,7 +76,7 @@ public class SensoryPromoterServiceTests
     public async Task PromoteAsync_EmptyBuffer_ReturnsEmptyResult()
     {
         // Act
-        var result = await _promoter.PromoteAsync("user-1", PromotionTriggerType.Manual);
+        var result = await _promoter.PromoteAsync("user-1", PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -91,10 +91,10 @@ public class SensoryPromoterServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _recentlyBuffer.EnqueueAsync("Hello, world!", userId);
+        await _recentlyBuffer.EnqueueAsync("Hello, world!", userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.Manual);
+        var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -112,12 +112,12 @@ public class SensoryPromoterServiceTests
         // Arrange
         const string userId = "user-1";
         // Use short content so topic segmenter creates single segment
-        await _recentlyBuffer.EnqueueAsync("First", userId);
-        await _recentlyBuffer.EnqueueAsync("Second", userId);
-        await _recentlyBuffer.EnqueueAsync("Third", userId);
+        await _recentlyBuffer.EnqueueAsync("First", userId, cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Second", userId, cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Third", userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.TurnThreshold);
+        var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.TurnThreshold, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue(because: result.Error ?? "no error");
@@ -132,11 +132,11 @@ public class SensoryPromoterServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _recentlyBuffer.EnqueueAsync("Content 1", userId);
-        await _recentlyBuffer.EnqueueAsync("Content 2", userId);
+        await _recentlyBuffer.EnqueueAsync("Content 1", userId, cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Content 2", userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await _promoter.PromoteAsync(userId, PromotionTriggerType.Manual);
+        await _promoter.PromoteAsync(userId, PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert - buffer should be empty
         _recentlyBuffer.GetCount(userId).Should().Be(0);
@@ -147,10 +147,10 @@ public class SensoryPromoterServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _recentlyBuffer.EnqueueAsync("Test content", userId);
+        await _recentlyBuffer.EnqueueAsync("Test content", userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.TokenThreshold);
+        var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.TokenThreshold, TestContext.Current.CancellationToken);
 
         // Assert
         var memory = result.CreatedMemories[0];
@@ -165,14 +165,14 @@ public class SensoryPromoterServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        await _recentlyBuffer.EnqueueAsync("Test content", userId);
+        await _recentlyBuffer.EnqueueAsync("Test content", userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.Manual);
+        var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         _workingMemory.Count.Should().Be(1);
-        var memoryInWorking = await _workingMemory.GetAsync(result.CreatedMemories[0].Id);
+        var memoryInWorking = await _workingMemory.GetAsync(result.CreatedMemories[0].Id, TestContext.Current.CancellationToken);
         memoryInWorking.Should().NotBeNull();
     }
 
@@ -184,7 +184,7 @@ public class SensoryPromoterServiceTests
     public async Task PromoteItemsAsync_EmptyList_ReturnsEmptyResult()
     {
         // Act
-        var result = await _promoter.PromoteItemsAsync([]);
+        var result = await _promoter.PromoteItemsAsync([], TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -212,7 +212,7 @@ public class SensoryPromoterServiceTests
         };
 
         // Act
-        var result = await _promoter.PromoteItemsAsync(items);
+        var result = await _promoter.PromoteItemsAsync(items, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -241,7 +241,7 @@ public class SensoryPromoterServiceTests
         };
 
         // Act
-        var result = await _promoter.PromoteItemsAsync(items);
+        var result = await _promoter.PromoteItemsAsync(items, TestContext.Current.CancellationToken);
 
         // Assert - Role should be preserved in MemoryUnit
         result.Success.Should().BeTrue();
@@ -276,7 +276,7 @@ public class SensoryPromoterServiceTests
         };
 
         // Act
-        var result = await _promoter.PromoteItemsAsync(items);
+        var result = await _promoter.PromoteItemsAsync(items, TestContext.Current.CancellationToken);
 
         // Assert - dominant role (assistant) should be stored
         result.Success.Should().BeTrue();
@@ -297,7 +297,7 @@ public class SensoryPromoterServiceTests
     public async Task CheckPendingPromotionsAsync_NoActiveUsers_ReturnsEmpty()
     {
         // Act
-        var result = await _promoter.CheckPendingPromotionsAsync();
+        var result = await _promoter.CheckPendingPromotionsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty();
@@ -307,10 +307,10 @@ public class SensoryPromoterServiceTests
     public async Task CheckPendingPromotionsAsync_BelowThreshold_ReturnsEmpty()
     {
         // Arrange
-        await _recentlyBuffer.EnqueueAsync("Short", "user-1");
+        await _recentlyBuffer.EnqueueAsync("Short", "user-1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _promoter.CheckPendingPromotionsAsync();
+        var result = await _promoter.CheckPendingPromotionsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeEmpty();
@@ -320,12 +320,12 @@ public class SensoryPromoterServiceTests
     public async Task CheckPendingPromotionsAsync_TurnThresholdMet_ReturnsUser()
     {
         // Arrange - 3 turns meets threshold
-        await _recentlyBuffer.EnqueueAsync("First", "user-1");
-        await _recentlyBuffer.EnqueueAsync("Second", "user-1");
-        await _recentlyBuffer.EnqueueAsync("Third", "user-1");
+        await _recentlyBuffer.EnqueueAsync("First", "user-1", cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Second", "user-1", cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Third", "user-1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _promoter.CheckPendingPromotionsAsync();
+        var result = await _promoter.CheckPendingPromotionsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().HaveCount(1);
@@ -338,16 +338,16 @@ public class SensoryPromoterServiceTests
     public async Task CheckPendingPromotionsAsync_MultipleUsers_ReturnsAllTriggered()
     {
         // Arrange
-        await _recentlyBuffer.EnqueueAsync("First", "user-1");
-        await _recentlyBuffer.EnqueueAsync("Second", "user-1");
-        await _recentlyBuffer.EnqueueAsync("Third", "user-1");
+        await _recentlyBuffer.EnqueueAsync("First", "user-1", cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Second", "user-1", cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Third", "user-1", cancellationToken: TestContext.Current.CancellationToken);
 
-        await _recentlyBuffer.EnqueueAsync("First", "user-2");
-        await _recentlyBuffer.EnqueueAsync("Second", "user-2");
-        await _recentlyBuffer.EnqueueAsync("Third", "user-2");
+        await _recentlyBuffer.EnqueueAsync("First", "user-2", cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Second", "user-2", cancellationToken: TestContext.Current.CancellationToken);
+        await _recentlyBuffer.EnqueueAsync("Third", "user-2", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _promoter.CheckPendingPromotionsAsync();
+        var result = await _promoter.CheckPendingPromotionsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().HaveCount(2);
@@ -379,18 +379,18 @@ public class SensoryPromoterServiceTests
         {
             Content = "Pre-existing 1",
             UserId = "user-1"
-        });
+        }, TestContext.Current.CancellationToken);
         await smallWorkingMemory.PromoteAsync(new MemoryUnit
         {
             Content = "Pre-existing 2",
             UserId = "user-1"
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Add item to buffer
-        await _recentlyBuffer.EnqueueAsync("New content", "user-1");
+        await _recentlyBuffer.EnqueueAsync("New content", "user-1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await promoter.PromoteAsync("user-1", PromotionTriggerType.Manual);
+        var result = await promoter.PromoteAsync("user-1", PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -423,10 +423,10 @@ public class SensoryPromoterServiceTests
             segmenter,
             NullLogger<SensoryPromoterService>.Instance);
 
-        await _recentlyBuffer.EnqueueAsync("Content", "user-1");
+        await _recentlyBuffer.EnqueueAsync("Content", "user-1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await promoter.PromoteAsync("user-1", PromotionTriggerType.Manual);
+        var result = await promoter.PromoteAsync("user-1", PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -441,10 +441,10 @@ public class SensoryPromoterServiceTests
     public async Task PromoteAsync_TracksDuration()
     {
         // Arrange
-        await _recentlyBuffer.EnqueueAsync("Content", "user-1");
+        await _recentlyBuffer.EnqueueAsync("Content", "user-1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _promoter.PromoteAsync("user-1", PromotionTriggerType.Manual);
+        var result = await _promoter.PromoteAsync("user-1", PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         result.Duration.Should().BeGreaterThan(TimeSpan.Zero);

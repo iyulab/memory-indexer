@@ -23,7 +23,7 @@ public class InMemoryMetricsDashboardTests
     public async Task GetHealthSummaryAsync_InitialState_ReturnsHealthy()
     {
         // Act
-        var summary = await _dashboard.GetHealthSummaryAsync();
+        var summary = await _dashboard.GetHealthSummaryAsync(TestContext.Current.CancellationToken);
 
         // Assert
         summary.Status.Should().Be(HealthStatus.Healthy);
@@ -39,7 +39,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.UpdateComponentHealth("VectorStore", HealthStatus.Degraded, "High latency");
 
         // Act
-        var summary = await _dashboard.GetHealthSummaryAsync();
+        var summary = await _dashboard.GetHealthSummaryAsync(TestContext.Current.CancellationToken);
 
         // Assert
         summary.Status.Should().Be(HealthStatus.Degraded);
@@ -53,7 +53,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.UpdateComponentHealth("EmbeddingService", HealthStatus.Unhealthy, "Service unavailable");
 
         // Act
-        var summary = await _dashboard.GetHealthSummaryAsync();
+        var summary = await _dashboard.GetHealthSummaryAsync(TestContext.Current.CancellationToken);
 
         // Assert
         summary.Status.Should().Be(HealthStatus.Unhealthy);
@@ -67,7 +67,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.AddAlert(AlertSeverity.Warning, "Test Alert", "This is a test", "TestSource");
 
         // Act
-        var summary = await _dashboard.GetHealthSummaryAsync();
+        var summary = await _dashboard.GetHealthSummaryAsync(TestContext.Current.CancellationToken);
 
         // Assert
         summary.ActiveAlerts.Should().ContainSingle();
@@ -83,9 +83,7 @@ public class InMemoryMetricsDashboardTests
     public async Task GetOperationStatisticsAsync_NoOperations_ReturnsZeros()
     {
         // Act
-        var stats = await _dashboard.GetOperationStatisticsAsync(
-            DateTimeOffset.UtcNow.AddHours(-1),
-            DateTimeOffset.UtcNow);
+        var stats = await _dashboard.GetOperationStatisticsAsync(DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, TestContext.Current.CancellationToken);
 
         // Assert
         stats.TotalOperations.Should().Be(0);
@@ -101,9 +99,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordOperation("Recall", success: false, latencyMs: 100);
 
         // Act
-        var stats = await _dashboard.GetOperationStatisticsAsync(
-            DateTimeOffset.UtcNow.AddHours(-1),
-            DateTimeOffset.UtcNow);
+        var stats = await _dashboard.GetOperationStatisticsAsync(DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, TestContext.Current.CancellationToken);
 
         // Assert
         stats.TotalOperations.Should().Be(3);
@@ -120,7 +116,7 @@ public class InMemoryMetricsDashboardTests
     public async Task GetPerformanceMetricsAsync_NoData_ReturnsZeros()
     {
         // Act
-        var metrics = await _dashboard.GetPerformanceMetricsAsync();
+        var metrics = await _dashboard.GetPerformanceMetricsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         metrics.StoreLatencyP50Ms.Should().Be(0);
@@ -138,7 +134,7 @@ public class InMemoryMetricsDashboardTests
         }
 
         // Act
-        var metrics = await _dashboard.GetPerformanceMetricsAsync();
+        var metrics = await _dashboard.GetPerformanceMetricsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         metrics.StoreLatencyP50Ms.Should().BeApproximately(50, 5);
@@ -156,7 +152,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordEmbedding(80, cacheHit: false);
 
         // Act
-        var metrics = await _dashboard.GetPerformanceMetricsAsync();
+        var metrics = await _dashboard.GetPerformanceMetricsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         metrics.EmbeddingCacheHitRate.Should().Be(0.5f);
@@ -171,7 +167,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordRecall(20, true, 0.7);
 
         // Act
-        var metrics = await _dashboard.GetPerformanceMetricsAsync();
+        var metrics = await _dashboard.GetPerformanceMetricsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         metrics.AvgSimilarityScore.Should().BeApproximately(0.8, 0.01);
@@ -185,7 +181,7 @@ public class InMemoryMetricsDashboardTests
     public async Task GetStorageStatisticsAsync_NoData_ReturnsZeros()
     {
         // Act
-        var stats = await _dashboard.GetStorageStatisticsAsync();
+        var stats = await _dashboard.GetStorageStatisticsAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         stats.TotalMemories.Should().Be(0);
@@ -201,7 +197,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordStore(20, true, 1500, "Semantic", "user2");
 
         // Act
-        var stats = await _dashboard.GetStorageStatisticsAsync();
+        var stats = await _dashboard.GetStorageStatisticsAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         stats.TotalMemories.Should().Be(3);
@@ -221,7 +217,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordStore(15, true, 2000, "Episodic", "tenant2");
 
         // Act
-        var stats = await _dashboard.GetStorageStatisticsAsync("tenant1");
+        var stats = await _dashboard.GetStorageStatisticsAsync("tenant1", TestContext.Current.CancellationToken);
 
         // Assert
         stats.MemoriesByTenant.Should().ContainKey("tenant1");
@@ -236,9 +232,7 @@ public class InMemoryMetricsDashboardTests
     public async Task GetSecurityMetricsAsync_NoEvents_ReturnsEmpty()
     {
         // Act
-        var metrics = await _dashboard.GetSecurityMetricsAsync(
-            DateTimeOffset.UtcNow.AddHours(-1),
-            DateTimeOffset.UtcNow);
+        var metrics = await _dashboard.GetSecurityMetricsAsync(DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, TestContext.Current.CancellationToken);
 
         // Assert
         metrics.PiiDetections.Should().Be(0);
@@ -255,9 +249,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordSecurityEvent("Injection", "SQLi", "High");
 
         // Act
-        var metrics = await _dashboard.GetSecurityMetricsAsync(
-            DateTimeOffset.UtcNow.AddHours(-1),
-            DateTimeOffset.UtcNow);
+        var metrics = await _dashboard.GetSecurityMetricsAsync(DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, TestContext.Current.CancellationToken);
 
         // Assert
         metrics.PiiDetections.Should().Be(2);
@@ -276,9 +268,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordSecurityEvent("PII", "Phone", "Low");
 
         // Act
-        var metrics = await _dashboard.GetSecurityMetricsAsync(
-            DateTimeOffset.UtcNow.AddHours(-1),
-            DateTimeOffset.UtcNow);
+        var metrics = await _dashboard.GetSecurityMetricsAsync(DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, TestContext.Current.CancellationToken);
 
         // Assert
         metrics.SecurityScore.Should().BeLessThan(1.0f);
@@ -292,11 +282,7 @@ public class InMemoryMetricsDashboardTests
     public async Task GetTimeSeriesAsync_NoData_ReturnsEmpty()
     {
         // Act
-        var data = await _dashboard.GetTimeSeriesAsync(
-            "test.metric",
-            DateTimeOffset.UtcNow.AddHours(-1),
-            DateTimeOffset.UtcNow,
-            TimeSpan.FromMinutes(5));
+        var data = await _dashboard.GetTimeSeriesAsync("test.metric", DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         // Assert
         data.Should().BeEmpty();
@@ -308,14 +294,10 @@ public class InMemoryMetricsDashboardTests
         // Arrange - Record some operations which will create time series data
         _dashboard.RecordOperation("Store", true, 10);
         _dashboard.RecordOperation("Store", true, 20);
-        await Task.Delay(10); // Small delay to ensure separate timestamps
+        await Task.Delay(10, TestContext.Current.CancellationToken); // Small delay to ensure separate timestamps
 
         // Act
-        var data = await _dashboard.GetTimeSeriesAsync(
-            "operation.Store.latency",
-            DateTimeOffset.UtcNow.AddMinutes(-1),
-            DateTimeOffset.UtcNow,
-            TimeSpan.FromSeconds(30));
+        var data = await _dashboard.GetTimeSeriesAsync("operation.Store.latency", DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow, TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         // Assert
         data.Should().NotBeEmpty();
@@ -332,7 +314,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.UpdateComponentHealth("VectorStore", HealthStatus.Degraded, "Slow response", 500);
 
         // Assert - verify via health summary
-        var summary = await _dashboard.GetHealthSummaryAsync();
+        var summary = await _dashboard.GetHealthSummaryAsync(TestContext.Current.CancellationToken);
         summary.Components["VectorStore"].Status.Should().Be(HealthStatus.Degraded);
         summary.Components["VectorStore"].Message.Should().Be("Slow response");
         summary.Components["VectorStore"].ResponseTimeMs.Should().Be(500);
@@ -345,7 +327,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.UpdateComponentHealth("Buffer", HealthStatus.Critical, "Buffer overflow");
 
         // Assert
-        var summary = await _dashboard.GetHealthSummaryAsync();
+        var summary = await _dashboard.GetHealthSummaryAsync(TestContext.Current.CancellationToken);
         summary.ActiveAlerts.Should().Contain(a => a.Source == "Buffer" && a.Severity == AlertSeverity.Critical);
     }
 
@@ -361,10 +343,10 @@ public class InMemoryMetricsDashboardTests
         _dashboard.BeginOperation();
 
         // Act
-        var metrics1 = await _dashboard.GetPerformanceMetricsAsync();
+        var metrics1 = await _dashboard.GetPerformanceMetricsAsync(TestContext.Current.CancellationToken);
 
         _dashboard.EndOperation();
-        var metrics2 = await _dashboard.GetPerformanceMetricsAsync();
+        var metrics2 = await _dashboard.GetPerformanceMetricsAsync(TestContext.Current.CancellationToken);
 
         // Assert
         metrics1.ActiveOperations.Should().Be(2);
@@ -382,9 +364,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordOperation("Store", true, 10);
 
         // Act
-        var stats = await _dashboard.GetOperationStatisticsAsync(
-            DateTimeOffset.UtcNow.AddHours(1),
-            DateTimeOffset.UtcNow.AddHours(2));
+        var stats = await _dashboard.GetOperationStatisticsAsync(DateTimeOffset.UtcNow.AddHours(1), DateTimeOffset.UtcNow.AddHours(2), TestContext.Current.CancellationToken);
 
         // Assert
         stats.OperationsByType.Should().BeEmpty();
@@ -397,7 +377,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.RecordStore(10, success: false, sizeBytes: 1000, "Episodic", "user1");
 
         // Assert
-        var stats = await _dashboard.GetStorageStatisticsAsync();
+        var stats = await _dashboard.GetStorageStatisticsAsync(cancellationToken: TestContext.Current.CancellationToken);
         stats.TotalMemories.Should().Be(0);
         stats.TotalSizeBytes.Should().Be(0);
     }
@@ -411,7 +391,7 @@ public class InMemoryMetricsDashboardTests
         _dashboard.AddAlert(AlertSeverity.Error, "Alert 3", "Third", "Source3");
 
         // Assert
-        var summary = await _dashboard.GetHealthSummaryAsync();
+        var summary = await _dashboard.GetHealthSummaryAsync(TestContext.Current.CancellationToken);
         summary.ActiveAlerts.Should().HaveCount(3);
         summary.ActiveAlerts[0].Title.Should().Be("Alert 1");
         summary.ActiveAlerts[2].Title.Should().Be("Alert 3");

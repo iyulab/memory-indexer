@@ -61,7 +61,7 @@ public class FactExtractionToolsTests
             .Returns(processResult);
 
         // Act
-        var result = await _tools.ExtractFacts("My name is John", "user1");
+        var result = await _tools.ExtractFacts("My name is John", "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -111,7 +111,7 @@ public class FactExtractionToolsTests
             .Returns(processResult);
 
         // Act
-        var result = await _tools.ExtractFacts("In the novel, 'My name is Lincoln'");
+        var result = await _tools.ExtractFacts("In the novel, 'My name is Lincoln'", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -140,7 +140,7 @@ public class FactExtractionToolsTests
             .Returns(processResult);
 
         // Act
-        var result = await _tools.ExtractFacts("How are you?");
+        var result = await _tools.ExtractFacts("How are you?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -163,11 +163,7 @@ public class FactExtractionToolsTests
             .Returns(processResult);
 
         // Act
-        await _tools.ExtractFacts(
-            "My name is John",
-            userId: "custom-user",
-            sessionId: "session-123",
-            role: "user");
+        await _tools.ExtractFacts("My name is John", userId: "custom-user", sessionId: "session-123", role: "user", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         await _mockPromoter.Received(1).ProcessAsync(
@@ -226,7 +222,7 @@ public class FactExtractionToolsTests
             .Returns(profile);
 
         // Act
-        var result = await _tools.GetUserProfile("user1");
+        var result = await _tools.GetUserProfile("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -264,7 +260,7 @@ public class FactExtractionToolsTests
             .Returns(profile);
 
         // Act
-        var result = await _tools.GetUserProfile("user1", "Preference");
+        var result = await _tools.GetUserProfile("user1", "Preference", TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -282,7 +278,7 @@ public class FactExtractionToolsTests
             .Returns(profile);
 
         // Act
-        var result = await _tools.GetUserProfile("user1");
+        var result = await _tools.GetUserProfile("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -301,7 +297,7 @@ public class FactExtractionToolsTests
             .Returns(profile);
 
         // Act
-        await _tools.GetUserProfile();
+        await _tools.GetUserProfile(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         await _mockPromoter.Received(1).GetUserProfileAsync("default", null, Arg.Any<CancellationToken>());

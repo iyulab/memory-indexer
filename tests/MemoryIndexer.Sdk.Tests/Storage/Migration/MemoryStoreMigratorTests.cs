@@ -46,14 +46,11 @@ public sealed class MemoryStoreMigratorTests
 
         foreach (var memory in memories)
         {
-            await source.StoreAsync(memory);
+            await source.StoreAsync(memory, TestContext.Current.CancellationToken);
         }
 
         // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [userId]);
+        var result = await _migrator.MigrateAsync(source, destination, userIds: [userId], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(MigrationStatus.Success);
@@ -62,7 +59,7 @@ public sealed class MemoryStoreMigratorTests
         result.TotalSkipped.Should().Be(0);
         result.UsersMigrated.Should().Contain(userId);
 
-        var destCount = await destination.GetCountAsync(userId);
+        var destCount = await destination.GetCountAsync(userId, TestContext.Current.CancellationToken);
         destCount.Should().Be(3);
     }
 
@@ -77,17 +74,14 @@ public sealed class MemoryStoreMigratorTests
         var memory1 = CreateTestMemory(userId, "Memory 1");
         var memory2 = CreateTestMemory(userId, "Memory 2");
 
-        await source.StoreAsync(memory1);
-        await source.StoreAsync(memory2);
+        await source.StoreAsync(memory1, TestContext.Current.CancellationToken);
+        await source.StoreAsync(memory2, TestContext.Current.CancellationToken);
 
         // Pre-populate destination with memory1
-        await destination.StoreAsync(memory1);
+        await destination.StoreAsync(memory1, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [userId]);
+        var result = await _migrator.MigrateAsync(source, destination, userIds: [userId], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(MigrationStatus.Success);
@@ -104,10 +98,7 @@ public sealed class MemoryStoreMigratorTests
         var destination = CreateInMemoryStore();
 
         // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: null);
+        var result = await _migrator.MigrateAsync(source, destination, userIds: null, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(MigrationStatus.Skipped);
@@ -122,10 +113,7 @@ public sealed class MemoryStoreMigratorTests
         var destination = CreateInMemoryStore();
 
         // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: []);
+        var result = await _migrator.MigrateAsync(source, destination, userIds: [], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(MigrationStatus.Skipped);
@@ -141,15 +129,12 @@ public sealed class MemoryStoreMigratorTests
         var user1 = "user-1";
         var user2 = "user-2";
 
-        await source.StoreAsync(CreateTestMemory(user1, "User1 Memory 1"));
-        await source.StoreAsync(CreateTestMemory(user1, "User1 Memory 2"));
-        await source.StoreAsync(CreateTestMemory(user2, "User2 Memory 1"));
+        await source.StoreAsync(CreateTestMemory(user1, "User1 Memory 1"), TestContext.Current.CancellationToken);
+        await source.StoreAsync(CreateTestMemory(user1, "User1 Memory 2"), TestContext.Current.CancellationToken);
+        await source.StoreAsync(CreateTestMemory(user2, "User2 Memory 1"), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [user1, user2]);
+        var result = await _migrator.MigrateAsync(source, destination, userIds: [user1, user2], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(MigrationStatus.Success);
@@ -169,17 +154,13 @@ public sealed class MemoryStoreMigratorTests
 
         for (var i = 0; i < 5; i++)
         {
-            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"));
+            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"), TestContext.Current.CancellationToken);
         }
 
         var progressCalls = new List<(long current, long total)>();
 
         // Act
-        await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [userId],
-            progress: (current, total) => progressCalls.Add((current, total)));
+        await _migrator.MigrateAsync(source, destination, userIds: [userId], progress: (current, total) => progressCalls.Add((current, total)), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         progressCalls.Should().NotBeEmpty();
@@ -195,15 +176,11 @@ public sealed class MemoryStoreMigratorTests
 
         for (var i = 0; i < 10; i++)
         {
-            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"));
+            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"), TestContext.Current.CancellationToken);
         }
 
         // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [userId],
-            batchSize: 3);
+        var result = await _migrator.MigrateAsync(source, destination, userIds: [userId], batchSize: 3, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(MigrationStatus.Success);
@@ -220,7 +197,7 @@ public sealed class MemoryStoreMigratorTests
 
         for (var i = 0; i < 10; i++)
         {
-            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"));
+            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"), TestContext.Current.CancellationToken);
         }
 
         using var cts = new CancellationTokenSource();
@@ -246,13 +223,10 @@ public sealed class MemoryStoreMigratorTests
         var destination = CreateInMemoryStore();
         var userId = "user-123";
 
-        await source.StoreAsync(CreateTestMemory(userId, "Memory 1"));
+        await source.StoreAsync(CreateTestMemory(userId, "Memory 1"), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [userId]);
+        var result = await _migrator.MigrateAsync(source, destination, userIds: [userId], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Duration.Should().BeGreaterThan(TimeSpan.Zero);
@@ -274,12 +248,12 @@ public sealed class MemoryStoreMigratorTests
 
         foreach (var memory in memories)
         {
-            await source.StoreAsync(memory);
-            await destination.StoreAsync(memory);
+            await source.StoreAsync(memory, TestContext.Current.CancellationToken);
+            await destination.StoreAsync(memory, TestContext.Current.CancellationToken);
         }
 
         // Act
-        var result = await _migrator.ValidateAsync(source, destination, [userId]);
+        var result = await _migrator.ValidateAsync(source, destination, [userId], TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.Should().BeTrue();
@@ -296,12 +270,12 @@ public sealed class MemoryStoreMigratorTests
         var destination = CreateInMemoryStore();
         var userId = "user-123";
 
-        await source.StoreAsync(CreateTestMemory(userId, "Memory 1"));
-        await source.StoreAsync(CreateTestMemory(userId, "Memory 2"));
-        await destination.StoreAsync(CreateTestMemory(userId, "Memory 1"));
+        await source.StoreAsync(CreateTestMemory(userId, "Memory 1"), TestContext.Current.CancellationToken);
+        await source.StoreAsync(CreateTestMemory(userId, "Memory 2"), TestContext.Current.CancellationToken);
+        await destination.StoreAsync(CreateTestMemory(userId, "Memory 1"), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _migrator.ValidateAsync(source, destination, [userId]);
+        var result = await _migrator.ValidateAsync(source, destination, [userId], TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.Should().BeFalse();
@@ -322,16 +296,16 @@ public sealed class MemoryStoreMigratorTests
 
         // User1: matching counts
         var memory1 = CreateTestMemory(user1, "Memory 1");
-        await source.StoreAsync(memory1);
-        await destination.StoreAsync(memory1);
+        await source.StoreAsync(memory1, TestContext.Current.CancellationToken);
+        await destination.StoreAsync(memory1, TestContext.Current.CancellationToken);
 
         // User2: mismatching counts
-        await source.StoreAsync(CreateTestMemory(user2, "Memory 1"));
-        await source.StoreAsync(CreateTestMemory(user2, "Memory 2"));
-        await destination.StoreAsync(CreateTestMemory(user2, "Only one"));
+        await source.StoreAsync(CreateTestMemory(user2, "Memory 1"), TestContext.Current.CancellationToken);
+        await source.StoreAsync(CreateTestMemory(user2, "Memory 2"), TestContext.Current.CancellationToken);
+        await destination.StoreAsync(CreateTestMemory(user2, "Only one"), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _migrator.ValidateAsync(source, destination, [user1, user2]);
+        var result = await _migrator.ValidateAsync(source, destination, [user1, user2], TestContext.Current.CancellationToken);
 
         // Assert
         result.IsValid.Should().BeFalse();
@@ -350,10 +324,7 @@ public sealed class MemoryStoreMigratorTests
         // Source has no memories for this user
 
         // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [userId]);
+        var result = await _migrator.MigrateAsync(source, destination, userIds: [userId], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(MigrationStatus.Success);
@@ -389,20 +360,14 @@ public sealed class MemoryStoreMigratorTests
 
         for (var i = 0; i < 5; i++)
         {
-            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"));
+            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"), TestContext.Current.CancellationToken);
         }
 
         // Act - Migrate
-        var migrateResult = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [userId]);
+        var migrateResult = await _migrator.MigrateAsync(source, destination, userIds: [userId], cancellationToken: TestContext.Current.CancellationToken);
 
         // Act - Validate
-        var validateResult = await _migrator.ValidateAsync(
-            source,
-            destination,
-            [userId]);
+        var validateResult = await _migrator.ValidateAsync(source, destination, [userId], TestContext.Current.CancellationToken);
 
         // Assert
         migrateResult.Status.Should().Be(MigrationStatus.Success);

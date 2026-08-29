@@ -64,7 +64,7 @@ public class DeduplicationServiceTests
             options);
 
         // Act
-        var result = await service.CheckForDuplicateAsync("test content", "user1");
+        var result = await service.CheckForDuplicateAsync("test content", "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsDuplicate);
@@ -79,7 +79,7 @@ public class DeduplicationServiceTests
         var content = "This is a test memory";
 
         // Act
-        var result = await _deduplicationService.CheckForDuplicateAsync(content, "user1");
+        var result = await _deduplicationService.CheckForDuplicateAsync(content, "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsDuplicate);
@@ -95,7 +95,7 @@ public class DeduplicationServiceTests
         await StoreMemoryAsync("user1", content);
 
         // Act
-        var result = await _deduplicationService.CheckForDuplicateAsync(content, "user1");
+        var result = await _deduplicationService.CheckForDuplicateAsync(content, "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - exact duplicates should have similarity >= 0.95
         if (result.SimilarityScore >= 0.95f)
@@ -115,7 +115,7 @@ public class DeduplicationServiceTests
         await StoreMemoryAsync("user1", existing);
 
         // Act
-        var result = await _deduplicationService.CheckForDuplicateAsync(similar, "user1");
+        var result = await _deduplicationService.CheckForDuplicateAsync(similar, "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - high similarity (0.85-0.94) should recommend Merge
         if (result.SimilarityScore >= 0.85f && result.SimilarityScore < 0.95f)
@@ -135,7 +135,7 @@ public class DeduplicationServiceTests
         await StoreMemoryAsync("user1", existing);
 
         // Act
-        var result = await _deduplicationService.CheckForDuplicateAsync(similar, "user1");
+        var result = await _deduplicationService.CheckForDuplicateAsync(similar, "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - medium similarity (0.75-0.84) should recommend Update
         if (result.SimilarityScore >= 0.75f && result.SimilarityScore < 0.85f)
@@ -155,7 +155,7 @@ public class DeduplicationServiceTests
         await StoreMemoryAsync("user1", existing);
 
         // Act
-        var result = await _deduplicationService.CheckForDuplicateAsync(similar, "user1");
+        var result = await _deduplicationService.CheckForDuplicateAsync(similar, "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - low similarity (0.65-0.74) should recommend AddWithRelation
         if (result.SimilarityScore >= 0.65f && result.SimilarityScore < 0.75f)
@@ -175,7 +175,7 @@ public class DeduplicationServiceTests
         await StoreMemoryAsync("user1", existing);
 
         // Act
-        var result = await _deduplicationService.CheckForDuplicateAsync(different, "user1");
+        var result = await _deduplicationService.CheckForDuplicateAsync(different, "user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - very low similarity (< 0.65) should recommend Add
         if (result.SimilarityScore < 0.65f)
@@ -192,14 +192,11 @@ public class DeduplicationServiceTests
         for (int i = 0; i < 25; i++)
         {
             await StoreMemoryAsync("user1", $"Memory number {i}");
-            await Task.Delay(10); // Ensure different timestamps
+            await Task.Delay(10, TestContext.Current.CancellationToken); // Ensure different timestamps
         }
 
         // Act - should only check last 20 memories
-        var result = await _deduplicationService.CheckForDuplicateAsync(
-            "Memory number 24",
-            "user1",
-            lookbackWindow: 20);
+        var result = await _deduplicationService.CheckForDuplicateAsync("Memory number 24", "user1", lookbackWindow: 20, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -215,10 +212,7 @@ public class DeduplicationServiceTests
 
         // Act
         var similar = "What's the capital city of France?";
-        var result = await _deduplicationService.CheckForDuplicateAsync(
-            similar,
-            "user1",
-            contentType: "QUESTION");
+        var result = await _deduplicationService.CheckForDuplicateAsync(similar, "user1", contentType: "QUESTION", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - QUESTION + QUESTION with high similarity should Skip
         if (result.SimilarityScore >= 0.90f)
@@ -235,10 +229,7 @@ public class DeduplicationServiceTests
         await StoreMemoryAsync("user1", existing);
 
         // Act - use very low threshold
-        var result = await _deduplicationService.CheckForDuplicateAsync(
-            "Different content",
-            "user1",
-            similarityThreshold: 0.1f);
+        var result = await _deduplicationService.CheckForDuplicateAsync("Different content", "user1", similarityThreshold: 0.1f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - with low threshold, even different content might be detected as duplicate
         Assert.NotNull(result);
@@ -253,7 +244,7 @@ public class DeduplicationServiceTests
         await StoreMemoryAsync("user1", content);
 
         // Act - check for user2
-        var result = await _deduplicationService.CheckForDuplicateAsync(content, "user2");
+        var result = await _deduplicationService.CheckForDuplicateAsync(content, "user2", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - should not find duplicates from different users
         Assert.False(result.IsDuplicate);

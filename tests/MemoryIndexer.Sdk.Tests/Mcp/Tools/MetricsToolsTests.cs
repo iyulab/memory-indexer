@@ -42,7 +42,7 @@ public class MetricsToolsTests
             });
 
         // Act
-        var result = await _tools.GetHealthSummary();
+        var result = await _tools.GetHealthSummary(TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -70,7 +70,7 @@ public class MetricsToolsTests
             });
 
         // Act
-        var result = await _tools.GetHealthSummary();
+        var result = await _tools.GetHealthSummary(TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -87,7 +87,7 @@ public class MetricsToolsTests
             .Throws(new InvalidOperationException("Dashboard unavailable"));
 
         // Act
-        var result = await _tools.GetHealthSummary();
+        var result = await _tools.GetHealthSummary(TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -119,7 +119,7 @@ public class MetricsToolsTests
             });
 
         // Act
-        var result = await _tools.GetOperationStats(hours: 1);
+        var result = await _tools.GetOperationStats(hours: 1, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -140,7 +140,7 @@ public class MetricsToolsTests
             .Returns(new OperationStatistics());
 
         // Act
-        var result = await _tools.GetOperationStats(hours: 12);
+        var result = await _tools.GetOperationStats(hours: 12, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -171,7 +171,7 @@ public class MetricsToolsTests
             });
 
         // Act
-        var result = await _tools.GetPerformanceMetrics();
+        var result = await _tools.GetPerformanceMetrics(TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -210,7 +210,7 @@ public class MetricsToolsTests
             });
 
         // Act
-        var result = await _tools.GetStorageStats();
+        var result = await _tools.GetStorageStats(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -230,7 +230,7 @@ public class MetricsToolsTests
             .Returns(new StorageStatistics());
 
         // Act
-        var result = await _tools.GetStorageStats(tenantId: "tenant123");
+        var result = await _tools.GetStorageStats(tenantId: "tenant123", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -260,7 +260,7 @@ public class MetricsToolsTests
             });
 
         // Act
-        var result = await _tools.GetSecurityMetrics(hours: 24);
+        var result = await _tools.GetSecurityMetrics(hours: 24, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -293,10 +293,7 @@ public class MetricsToolsTests
             });
 
         // Act
-        var result = await _tools.GetMetricTimeSeries(
-            metricName: "operation.Store.latency",
-            hours: 1,
-            intervalMinutes: 5);
+        var result = await _tools.GetMetricTimeSeries(metricName: "operation.Store.latency", hours: 1, intervalMinutes: 5, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -321,7 +318,7 @@ public class MetricsToolsTests
             .Returns(new List<TimeSeriesDataPoint>());
 
         // Act
-        var result = await _tools.GetMetricTimeSeries("unknown.metric", 1, 5);
+        var result = await _tools.GetMetricTimeSeries("unknown.metric", 1, 5, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -389,7 +386,7 @@ public class MetricsToolsTests
             });
 
         // Act
-        var result = await _tools.GetDashboardOverview();
+        var result = await _tools.GetDashboardOverview(TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -421,7 +418,7 @@ public class MetricsToolsTests
             .Throws(new InvalidOperationException("Service unavailable"));
 
         // Act
-        var result = await _tools.GetDashboardOverview();
+        var result = await _tools.GetDashboardOverview(TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -445,11 +442,11 @@ public class MetricsToolsTests
         dashboard.RecordRecall(50, true, 0.9);
 
         // Act
-        var health = await tools.GetHealthSummary();
-        var operations = await tools.GetOperationStats();
-        var performance = await tools.GetPerformanceMetrics();
-        var storage = await tools.GetStorageStats();
-        var overview = await tools.GetDashboardOverview();
+        var health = await tools.GetHealthSummary(TestContext.Current.CancellationToken);
+        var operations = await tools.GetOperationStats(cancellationToken: TestContext.Current.CancellationToken);
+        var performance = await tools.GetPerformanceMetrics(TestContext.Current.CancellationToken);
+        var storage = await tools.GetStorageStats(cancellationToken: TestContext.Current.CancellationToken);
+        var overview = await tools.GetDashboardOverview(TestContext.Current.CancellationToken);
 
         // Assert
         health.Success.Should().BeTrue();

@@ -26,7 +26,7 @@ public class AdaptiveContextAssemblerTests
         var result = CreateRetrievalResult([]);
 
         // Act
-        var context = await _assembler.AssembleAsync(result);
+        var context = await _assembler.AssembleAsync(result, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         context.MemoryCount.Should().Be(0);
@@ -45,7 +45,7 @@ public class AdaptiveContextAssemblerTests
         var result = CreateRetrievalResult(memories);
 
         // Act
-        var context = await _assembler.AssembleAsync(result);
+        var context = await _assembler.AssembleAsync(result, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         context.Content.Should().Contain("This is the complete content.");
@@ -65,7 +65,7 @@ public class AdaptiveContextAssemblerTests
         var result = CreateRetrievalResult(memories);
 
         // Act
-        var context = await _assembler.AssembleAsync(result);
+        var context = await _assembler.AssembleAsync(result, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         context.Content.Should().Contain("first sentence");
@@ -84,7 +84,7 @@ public class AdaptiveContextAssemblerTests
         var result = CreateRetrievalResult(memories);
 
         // Act
-        var context = await _assembler.AssembleAsync(result);
+        var context = await _assembler.AssembleAsync(result, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         context.Content.Should().Contain("[");
@@ -105,7 +105,7 @@ public class AdaptiveContextAssemblerTests
         var result = CreateRetrievalResult(memories);
 
         // Act
-        var context = await _assembler.AssembleAsync(result);
+        var context = await _assembler.AssembleAsync(result, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         context.MemoryCount.Should().Be(3);
@@ -126,7 +126,7 @@ public class AdaptiveContextAssemblerTests
         var options = new ContextAssemblyOptions { IncludeTierHeaders = true };
 
         // Act
-        var context = await _assembler.AssembleAsync(result, options);
+        var context = await _assembler.AssembleAsync(result, options, TestContext.Current.CancellationToken);
 
         // Assert
         context.Content.Should().Contain("Short");
@@ -146,7 +146,7 @@ public class AdaptiveContextAssemblerTests
         var options = new ContextAssemblyOptions { IncludeGraphContext = true };
 
         // Act
-        var context = await _assembler.AssembleAsync(result, options);
+        var context = await _assembler.AssembleAsync(result, options, TestContext.Current.CancellationToken);
 
         // Assert
         context.Content.Should().Contain("Knowledge Graph");
@@ -169,7 +169,7 @@ public class AdaptiveContextAssemblerTests
         };
 
         // Act
-        var context = await _assembler.AssembleAsync(result, options);
+        var context = await _assembler.AssembleAsync(result, options, TestContext.Current.CancellationToken);
 
         // Assert
         context.Content.Should().StartWith("=== Memory Context ===");
@@ -188,7 +188,7 @@ public class AdaptiveContextAssemblerTests
         var options = new ContextAssemblyOptions { MaxTokens = 500 };
 
         // Act
-        var context = await _assembler.AssembleAsync(result, options);
+        var context = await _assembler.AssembleAsync(result, options, TestContext.Current.CancellationToken);
 
         // Assert
         context.WasTruncated.Should().BeTrue();
@@ -207,7 +207,7 @@ public class AdaptiveContextAssemblerTests
         var memory = CreateMemory("Complete original content here.");
 
         // Act
-        var compressed = await _assembler.CompressAsync(memory, ContextFidelity.Full);
+        var compressed = await _assembler.CompressAsync(memory, ContextFidelity.Full, TestContext.Current.CancellationToken);
 
         // Assert
         compressed.Should().Be("Complete original content here.");
@@ -220,7 +220,7 @@ public class AdaptiveContextAssemblerTests
         var memory = CreateMemory("First sentence here. Second sentence here. Third sentence here.");
 
         // Act
-        var compressed = await _assembler.CompressAsync(memory, ContextFidelity.Compressed);
+        var compressed = await _assembler.CompressAsync(memory, ContextFidelity.Compressed, TestContext.Current.CancellationToken);
 
         // Assert
         compressed.Should().Contain("First sentence");
@@ -235,7 +235,7 @@ public class AdaptiveContextAssemblerTests
         var memory = CreateMemory("This is a long piece of content that should be reduced to a placeholder.");
 
         // Act
-        var compressed = await _assembler.CompressAsync(memory, ContextFidelity.Placeholder);
+        var compressed = await _assembler.CompressAsync(memory, ContextFidelity.Placeholder, TestContext.Current.CancellationToken);
 
         // Assert
         compressed.Should().StartWith("[");
@@ -314,7 +314,7 @@ public class AdaptiveContextAssemblerTests
         var options = new ContextAssemblyOptions { Format = format };
 
         // Act
-        var context = await _assembler.AssembleAsync(result, options);
+        var context = await _assembler.AssembleAsync(result, options, TestContext.Current.CancellationToken);
 
         // Assert
         context.Content.Should().NotBeNullOrEmpty();

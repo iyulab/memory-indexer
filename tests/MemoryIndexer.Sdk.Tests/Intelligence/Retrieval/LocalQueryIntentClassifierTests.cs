@@ -29,7 +29,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_FactualQueries_ReturnsFactualIntent(string query)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(query);
+        var result = await _classifier.ClassifyAsync(query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Factual);
@@ -50,7 +50,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_ContextualQueries_ReturnsContextualIntent(string query)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(query);
+        var result = await _classifier.ClassifyAsync(query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Contextual);
@@ -65,7 +65,7 @@ public class LocalQueryIntentClassifierTests
         var context = "We were discussing Python programming.";
 
         // Act
-        var result = await _classifier.ClassifyAsync(query, context);
+        var result = await _classifier.ClassifyAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Contextual);
@@ -86,7 +86,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_TemporalQueries_ReturnsTemporalIntent(string query)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(query);
+        var result = await _classifier.ClassifyAsync(query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Temporal);
@@ -97,7 +97,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_TemporalQuery_ExtractsTemporalReference()
     {
         // Act
-        var result = await _classifier.ClassifyAsync("What did we talk about last week?");
+        var result = await _classifier.ClassifyAsync("What did we talk about last week?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.TemporalReference.Should().Be("last week");
@@ -116,7 +116,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_RelationalQueries_ReturnsRelationalIntent(string query)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(query);
+        var result = await _classifier.ClassifyAsync(query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.Relational);
@@ -134,7 +134,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_GeneralQueries_ReturnsGeneralIntent(string query)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(query);
+        var result = await _classifier.ClassifyAsync(query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Intent.Should().Be(QueryIntent.General);
@@ -148,7 +148,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_ExtractsKeywords()
     {
         // Act
-        var result = await _classifier.ClassifyAsync("What is my favorite programming language?");
+        var result = await _classifier.ClassifyAsync("What is my favorite programming language?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Keywords.Should().Contain("favorite");
@@ -166,7 +166,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_ExtractsQuotedEntities()
     {
         // Act
-        var result = await _classifier.ClassifyAsync("What do I know about \"Machine Learning\"?");
+        var result = await _classifier.ClassifyAsync("What do I know about \"Machine Learning\"?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.EntityReferences.Should().Contain("Machine Learning");
@@ -176,7 +176,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_ExtractsCapitalizedEntities()
     {
         // Act
-        var result = await _classifier.ClassifyAsync("Tell me about Python and JavaScript");
+        var result = await _classifier.ClassifyAsync("Tell me about Python and JavaScript", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.EntityReferences.Should().Contain("Python");
@@ -196,7 +196,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_CalculatesSpecificity_WithinExpectedRange(string query, float minSpecificity, float maxSpecificity)
     {
         // Act
-        var result = await _classifier.ClassifyAsync(query);
+        var result = await _classifier.ClassifyAsync(query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Specificity.Should().BeGreaterThanOrEqualTo(minSpecificity);
@@ -211,8 +211,8 @@ public class LocalQueryIntentClassifierTests
         var quotedQuery = "Tell me about \"Machine Learning\"";
 
         // Act
-        var genericResult = await _classifier.ClassifyAsync(genericQuery);
-        var quotedResult = await _classifier.ClassifyAsync(quotedQuery);
+        var genericResult = await _classifier.ClassifyAsync(genericQuery, cancellationToken: TestContext.Current.CancellationToken);
+        var quotedResult = await _classifier.ClassifyAsync(quotedQuery, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         quotedResult.Specificity.Should().BeGreaterThan(genericResult.Specificity);
@@ -226,8 +226,8 @@ public class LocalQueryIntentClassifierTests
         var longQuery = "What is Python programming language and how is it different from JavaScript in terms of syntax and performance?";
 
         // Act
-        var shortResult = await _classifier.ClassifyAsync(shortQuery);
-        var longResult = await _classifier.ClassifyAsync(longQuery);
+        var shortResult = await _classifier.ClassifyAsync(shortQuery, cancellationToken: TestContext.Current.CancellationToken);
+        var longResult = await _classifier.ClassifyAsync(longQuery, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         longResult.Specificity.Should().BeGreaterThan(shortResult.Specificity);
@@ -241,8 +241,8 @@ public class LocalQueryIntentClassifierTests
         var entityQuery = "Tell me about Python, TypeScript, and React";
 
         // Act
-        var genericResult = await _classifier.ClassifyAsync(genericQuery);
-        var entityResult = await _classifier.ClassifyAsync(entityQuery);
+        var genericResult = await _classifier.ClassifyAsync(genericQuery, cancellationToken: TestContext.Current.CancellationToken);
+        var entityResult = await _classifier.ClassifyAsync(entityQuery, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         entityResult.Specificity.Should().BeGreaterThan(genericResult.Specificity);
@@ -256,8 +256,8 @@ public class LocalQueryIntentClassifierTests
         var questionQuery = "What is Python?";
 
         // Act
-        var statementResult = await _classifier.ClassifyAsync(statementQuery);
-        var questionResult = await _classifier.ClassifyAsync(questionQuery);
+        var statementResult = await _classifier.ClassifyAsync(statementQuery, cancellationToken: TestContext.Current.CancellationToken);
+        var questionResult = await _classifier.ClassifyAsync(questionQuery, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         questionResult.Specificity.Should().BeGreaterThan(statementResult.Specificity);
@@ -271,8 +271,8 @@ public class LocalQueryIntentClassifierTests
         var rareWords = "Tell me about polymorphism and encapsulation";
 
         // Act
-        var commonResult = await _classifier.ClassifyAsync(commonWords);
-        var rareResult = await _classifier.ClassifyAsync(rareWords);
+        var commonResult = await _classifier.ClassifyAsync(commonWords, cancellationToken: TestContext.Current.CancellationToken);
+        var rareResult = await _classifier.ClassifyAsync(rareWords, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         rareResult.Specificity.Should().BeGreaterThan(commonResult.Specificity);
@@ -285,7 +285,7 @@ public class LocalQueryIntentClassifierTests
         var query = "What is \"Machine Learning\" algorithms, \"Deep Learning\" frameworks, and how do they relate to artificial intelligence implementations?";
 
         // Act
-        var result = await _classifier.ClassifyAsync(query);
+        var result = await _classifier.ClassifyAsync(query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Specificity.Should().BeLessThanOrEqualTo(1.0f);
@@ -300,7 +300,7 @@ public class LocalQueryIntentClassifierTests
     {
         // Act & Assert (ArgumentNullException is derived from ArgumentException)
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _classifier.ClassifyAsync(null!));
+            () => _classifier.ClassifyAsync(null!, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -308,7 +308,7 @@ public class LocalQueryIntentClassifierTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
-            () => _classifier.ClassifyAsync(""));
+            () => _classifier.ClassifyAsync("", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public class LocalQueryIntentClassifierTests
         var query = "What did I say about my preferences last week?";
 
         // Act
-        var result = await _classifier.ClassifyAsync(query);
+        var result = await _classifier.ClassifyAsync(query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         // Should have a secondary intent since query matches multiple patterns
@@ -329,7 +329,7 @@ public class LocalQueryIntentClassifierTests
     public async Task ClassifyAsync_ConfidenceWithinRange()
     {
         // Act
-        var result = await _classifier.ClassifyAsync("What is my favorite color?");
+        var result = await _classifier.ClassifyAsync("What is my favorite color?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Confidence.Should().BeInRange(0f, 1f);

@@ -34,7 +34,7 @@ public class BufferHealthCheckTests
             });
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
@@ -57,7 +57,7 @@ public class BufferHealthCheckTests
             });
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Degraded);
@@ -79,7 +79,7 @@ public class BufferHealthCheckTests
             });
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);
@@ -101,7 +101,7 @@ public class BufferHealthCheckTests
             });
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Degraded);
@@ -122,7 +122,7 @@ public class BufferHealthCheckTests
             });
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);
@@ -137,7 +137,7 @@ public class BufferHealthCheckTests
             .Throws(new InvalidOperationException("Test exception"));
 
         // Act
-        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext());
+        var result = await _healthCheck.CheckHealthAsync(new HealthCheckContext(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Status.Should().Be(HealthStatus.Unhealthy);

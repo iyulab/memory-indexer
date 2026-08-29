@@ -77,10 +77,7 @@ public sealed class MemoryServicePhase221Tests
         var content = "This is a low importance memory";
 
         // Act
-        var result = await _memoryService.StoreAsync(
-            userId,
-            content,
-            importance: 0.2f); // Below 0.3 threshold
+        var result = await _memoryService.StoreAsync(userId, content, importance: 0.2f, cancellationToken: TestContext.Current.CancellationToken); // Below 0.3 threshold
 
         // Assert
         Assert.NotNull(result);
@@ -90,11 +87,11 @@ public sealed class MemoryServicePhase221Tests
         Assert.Contains("ImportanceScore", result.Metadata["Reason"]);
 
         // Verify memory was not actually stored
-        var allMemories = await _memoryStore.GetAllAsync(userId);
+        var allMemories = await _memoryStore.GetAllAsync(userId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Empty(allMemories);
 
         // Verify growth monitor tracked the filtering
-        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
         Assert.Equal(0, metrics.MemoriesStoredThisRound);
         Assert.Equal(1, metrics.MemoriesFilteredThisRound);
     }
@@ -107,10 +104,7 @@ public sealed class MemoryServicePhase221Tests
         var content = "This is a high importance memory";
 
         // Act
-        var result = await _memoryService.StoreAsync(
-            userId,
-            content,
-            importance: 0.8f); // Above 0.3 threshold
+        var result = await _memoryService.StoreAsync(userId, content, importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken); // Above 0.3 threshold
 
         // Assert
         Assert.NotNull(result);
@@ -118,11 +112,11 @@ public sealed class MemoryServicePhase221Tests
         Assert.False(result.Metadata.ContainsKey("Filtered"));
 
         // Verify memory was stored
-        var allMemories = await _memoryStore.GetAllAsync(userId);
+        var allMemories = await _memoryStore.GetAllAsync(userId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Single(allMemories);
 
         // Verify growth monitor tracked the storage
-        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
         Assert.Equal(1, metrics.MemoriesStoredThisRound);
         Assert.Equal(0, metrics.MemoriesFilteredThisRound);
     }
@@ -137,16 +131,10 @@ public sealed class MemoryServicePhase221Tests
         var content2 = $"{topic} Second explanation";
 
         // Act - Store first memory
-        var result1 = await _memoryService.StoreAsync(
-            userId,
-            content1,
-            importance: 0.8f);
+        var result1 = await _memoryService.StoreAsync(userId, content1, importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Store second memory with same topic
-        var result2 = await _memoryService.StoreAsync(
-            userId,
-            content2,
-            importance: 0.8f);
+        var result2 = await _memoryService.StoreAsync(userId, content2, importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result1);
@@ -159,11 +147,11 @@ public sealed class MemoryServicePhase221Tests
         Assert.Contains("Duplicate topic", result2.Metadata["Reason"]);
 
         // Verify only first memory was stored
-        var allMemories = await _memoryStore.GetAllAsync(userId);
+        var allMemories = await _memoryStore.GetAllAsync(userId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Single(allMemories);
 
         // Verify growth monitor tracked correctly
-        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
         Assert.Equal(1, metrics.MemoriesStoredThisRound);
         Assert.Equal(1, metrics.MemoriesFilteredThisRound);
         // Check that some filter reason containing "Duplicate topic" exists
@@ -179,8 +167,8 @@ public sealed class MemoryServicePhase221Tests
         var content2 = "Python is a programming language.";
 
         // Act
-        var result1 = await _memoryService.StoreAsync(userId, content1, importance: 0.8f);
-        var result2 = await _memoryService.StoreAsync(userId, content2, importance: 0.8f);
+        var result1 = await _memoryService.StoreAsync(userId, content1, importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
+        var result2 = await _memoryService.StoreAsync(userId, content2, importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result1.Metadata);
@@ -189,11 +177,11 @@ public sealed class MemoryServicePhase221Tests
         Assert.False(result2.Metadata.ContainsKey("Filtered"));
 
         // Verify both memories were stored
-        var allMemories = await _memoryStore.GetAllAsync(userId);
+        var allMemories = await _memoryStore.GetAllAsync(userId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(2, allMemories.Count);
 
         // Verify growth monitor tracked correctly
-        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
         Assert.Equal(2, metrics.MemoriesStoredThisRound);
         Assert.Equal(0, metrics.MemoriesFilteredThisRound);
     }
@@ -206,7 +194,7 @@ public sealed class MemoryServicePhase221Tests
         var content = "Machine learning is about teaching computers. It involves algorithms.";
 
         // Act
-        var result = await _memoryService.StoreAsync(userId, content, importance: 0.8f);
+        var result = await _memoryService.StoreAsync(userId, content, importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Topic should be extracted (first sentence)
         Assert.NotNull(result.Metadata);
@@ -222,7 +210,7 @@ public sealed class MemoryServicePhase221Tests
         var content = "This is a memory with default importance";
 
         // Act
-        var result = await _memoryService.StoreAsync(userId, content);
+        var result = await _memoryService.StoreAsync(userId, content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert - Default importance is 0.5, which is > 0.3 threshold
         Assert.Equal(0.5f, result.ImportanceScore);
@@ -230,7 +218,7 @@ public sealed class MemoryServicePhase221Tests
         Assert.False(result.Metadata.ContainsKey("Filtered"));
 
         // Verify memory was stored
-        var allMemories = await _memoryStore.GetAllAsync(userId);
+        var allMemories = await _memoryStore.GetAllAsync(userId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Single(allMemories);
     }
 
@@ -241,14 +229,14 @@ public sealed class MemoryServicePhase221Tests
         var userId = "user1";
 
         // Act - Store 3 memories, filter 2
-        await _memoryService.StoreAsync(userId, "Memory 1", importance: 0.8f);
-        await _memoryService.StoreAsync(userId, "Memory 2", importance: 0.2f); // Filtered
-        await _memoryService.StoreAsync(userId, "Memory 3", importance: 0.8f);
-        await _memoryService.StoreAsync(userId, "Memory 4", importance: 0.1f); // Filtered
-        await _memoryService.StoreAsync(userId, "Memory 5", importance: 0.9f);
+        await _memoryService.StoreAsync(userId, "Memory 1", importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
+        await _memoryService.StoreAsync(userId, "Memory 2", importance: 0.2f, cancellationToken: TestContext.Current.CancellationToken); // Filtered
+        await _memoryService.StoreAsync(userId, "Memory 3", importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
+        await _memoryService.StoreAsync(userId, "Memory 4", importance: 0.1f, cancellationToken: TestContext.Current.CancellationToken); // Filtered
+        await _memoryService.StoreAsync(userId, "Memory 5", importance: 0.9f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
         Assert.Equal(3, metrics.MemoriesStoredThisRound);
         Assert.Equal(2, metrics.MemoriesFilteredThisRound);
         Assert.False(metrics.ExceedsThreshold); // 3 < 4.0
@@ -263,11 +251,11 @@ public sealed class MemoryServicePhase221Tests
         // Act - Store 5 memories (exceeds 4.0 threshold)
         for (int i = 0; i < 5; i++)
         {
-            await _memoryService.StoreAsync(userId, $"Memory {i}", importance: 0.8f);
+            await _memoryService.StoreAsync(userId, $"Memory {i}", importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         // Assert
-        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId);
+        var metrics = await _growthMonitor.GetGrowthMetricsAsync(userId, TestContext.Current.CancellationToken);
         Assert.Equal(5, metrics.MemoriesStoredThisRound);
         Assert.True(metrics.ExceedsThreshold); // 5 > 4.0
     }
@@ -280,16 +268,16 @@ public sealed class MemoryServicePhase221Tests
         var user2 = "user2";
 
         // Act
-        await _memoryService.StoreAsync(user1, "User1 memory 1", importance: 0.8f);
-        await _memoryService.StoreAsync(user1, "User1 memory 2", importance: 0.2f); // Filtered
+        await _memoryService.StoreAsync(user1, "User1 memory 1", importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
+        await _memoryService.StoreAsync(user1, "User1 memory 2", importance: 0.2f, cancellationToken: TestContext.Current.CancellationToken); // Filtered
 
-        await _memoryService.StoreAsync(user2, "User2 memory 1", importance: 0.8f);
-        await _memoryService.StoreAsync(user2, "User2 memory 2", importance: 0.8f);
-        await _memoryService.StoreAsync(user2, "User2 memory 3", importance: 0.8f);
+        await _memoryService.StoreAsync(user2, "User2 memory 1", importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
+        await _memoryService.StoreAsync(user2, "User2 memory 2", importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
+        await _memoryService.StoreAsync(user2, "User2 memory 3", importance: 0.8f, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        var metrics1 = await _growthMonitor.GetGrowthMetricsAsync(user1);
-        var metrics2 = await _growthMonitor.GetGrowthMetricsAsync(user2);
+        var metrics1 = await _growthMonitor.GetGrowthMetricsAsync(user1, TestContext.Current.CancellationToken);
+        var metrics2 = await _growthMonitor.GetGrowthMetricsAsync(user2, TestContext.Current.CancellationToken);
 
         Assert.Equal(1, metrics1.MemoriesStoredThisRound);
         Assert.Equal(1, metrics1.MemoriesFilteredThisRound);
@@ -298,8 +286,8 @@ public sealed class MemoryServicePhase221Tests
         Assert.Equal(0, metrics2.MemoriesFilteredThisRound);
 
         // Verify actual storage
-        var user1Memories = await _memoryStore.GetAllAsync(user1);
-        var user2Memories = await _memoryStore.GetAllAsync(user2);
+        var user1Memories = await _memoryStore.GetAllAsync(user1, cancellationToken: TestContext.Current.CancellationToken);
+        var user2Memories = await _memoryStore.GetAllAsync(user2, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Single(user1Memories);
         Assert.Equal(3, user2Memories.Count);

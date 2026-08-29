@@ -61,7 +61,7 @@ public class ITierManagerTests
         var context = CreateContext(timeElapsed: TimeSpan.FromSeconds(61)); // > 60s threshold
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeTrue();
@@ -79,7 +79,7 @@ public class ITierManagerTests
         var context = CreateContext(tokenCount: 501); // > 500 threshold
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeTrue();
@@ -96,7 +96,7 @@ public class ITierManagerTests
         var context = CreateContext(turnCount: 3); // >= 3 threshold
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeTrue();
@@ -113,7 +113,7 @@ public class ITierManagerTests
         var context = CreateContext(turnCount: 1, tokenCount: 100, timeElapsed: TimeSpan.FromSeconds(10));
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeFalse();
@@ -129,7 +129,7 @@ public class ITierManagerTests
         var context = CreateContext(topicChangeDetected: true);
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeTrue();
@@ -147,7 +147,7 @@ public class ITierManagerTests
         var context = CreateContext();
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeFalse();
@@ -168,7 +168,7 @@ public class ITierManagerTests
         var context = CreateContext();
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeTrue();
@@ -192,7 +192,7 @@ public class ITierManagerTests
         var context = CreateContext();
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeFalse();
@@ -214,7 +214,7 @@ public class ITierManagerTests
         var context = CreateContext();
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeFalse();
@@ -230,7 +230,7 @@ public class ITierManagerTests
         var context = CreateContext();
 
         // Act
-        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context);
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
 
         // Assert
         recommendation.ShouldPromote.Should().BeFalse();
@@ -249,7 +249,7 @@ public class ITierManagerTests
         var context = CreateContext(timeElapsed: TimeSpan.FromSeconds(61));
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeTrue();
@@ -267,7 +267,7 @@ public class ITierManagerTests
         var context = CreateContext(tokenCount: 500);
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeTrue();
@@ -282,7 +282,7 @@ public class ITierManagerTests
         var context = CreateContext(turnCount: 3);
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeTrue();
@@ -297,7 +297,7 @@ public class ITierManagerTests
         var context = CreateContext(turnCount: 1, tokenCount: 100, timeElapsed: TimeSpan.FromSeconds(10));
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeFalse();
@@ -313,7 +313,7 @@ public class ITierManagerTests
         var context = CreateContext(turnCount: 3, tokenCount: 500, timeElapsed: TimeSpan.FromSeconds(61));
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeTrue();
@@ -328,7 +328,7 @@ public class ITierManagerTests
         var context = CreateContext(topicChangeDetected: true);
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Short, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Short, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeTrue();
@@ -344,7 +344,7 @@ public class ITierManagerTests
         var context = CreateContext(sessionEnding: true);
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Short, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Short, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeTrue();
@@ -359,7 +359,7 @@ public class ITierManagerTests
         var context = CreateContext();
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Short, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Short, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeFalse();
@@ -374,7 +374,7 @@ public class ITierManagerTests
         var context = CreateContext(sessionEnding: true);
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Long, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Long, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeTrue();
@@ -390,7 +390,7 @@ public class ITierManagerTests
         var context = CreateContext(sessionEnding: false);
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Long, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Long, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeFalse();
@@ -405,7 +405,7 @@ public class ITierManagerTests
         var context = CreateContext();
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Archive, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Archive, context, TestContext.Current.CancellationToken);
 
         // Assert
         status.IsTriggered.Should().BeFalse();
@@ -420,7 +420,7 @@ public class ITierManagerTests
         var context = CreateContext(turnCount: 5, tokenCount: 600);
 
         // Act
-        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context);
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Buffer, context, TestContext.Current.CancellationToken);
 
         // Assert
         var turnTrigger = status.AllTriggers.First(t => t.Type == PromotionTriggerType.TurnThreshold);
@@ -442,7 +442,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Buffer, Content = "Test memory" };
 
         // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.AutomaticTrigger);
+        var result = await tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.AutomaticTrigger, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -461,7 +461,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test memory" };
 
         // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Long, PromotionReason.TopicBoundary);
+        var result = await tierManager.PromoteAsync(memory, Tier.Long, PromotionReason.TopicBoundary, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -483,7 +483,7 @@ public class ITierManagerTests
         };
 
         // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.ThresholdMet);
+        var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.ThresholdMet, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -506,7 +506,7 @@ public class ITierManagerTests
         };
 
         // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.ThresholdMet);
+        var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.ThresholdMet, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -521,7 +521,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
 
         // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Buffer, PromotionReason.Manual);
+        var result = await tierManager.PromoteAsync(memory, Tier.Buffer, PromotionReason.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -537,7 +537,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
 
         // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.Manual);
+        var result = await tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -552,7 +552,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Buffer, Content = "Critical memory" };
 
         // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.Manual);
+        var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.Manual, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -570,8 +570,8 @@ public class ITierManagerTests
         var originalTimestamp = memory.UpdatedAt;
 
         // Act
-        await Task.Delay(10); // Ensure time difference
-        var result = await tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.AutomaticTrigger);
+        await Task.Delay(10, TestContext.Current.CancellationToken); // Ensure time difference
+        var result = await tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.AutomaticTrigger, TestContext.Current.CancellationToken);
 
         // Assert
         result.UpdatedMemory!.UpdatedAt.Should().BeAfter(originalTimestamp);
@@ -589,7 +589,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Long, Content = "Demote test" };
 
         // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention);
+        var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -607,7 +607,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Archive, Content = "Demote test" };
 
         // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Long, PromotionReason.CapacityEviction);
+        var result = await tierManager.DemoteAsync(memory, Tier.Long, PromotionReason.CapacityEviction, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -624,7 +624,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
 
         // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Long, PromotionReason.LowRetention);
+        var result = await tierManager.DemoteAsync(memory, Tier.Long, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -640,7 +640,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
 
         // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention);
+        var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -655,7 +655,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Archive, Content = "Evict test" };
 
         // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Buffer, PromotionReason.CapacityEviction);
+        var result = await tierManager.DemoteAsync(memory, Tier.Buffer, PromotionReason.CapacityEviction, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -672,7 +672,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Buffer, Content = "Test" };
 
         // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention);
+        var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -708,8 +708,8 @@ public class ITierManagerTests
         var memory2 = new MemoryUnit { Tier = Tier.Buffer, Content = "Test 2" };
 
         // Act
-        await tierManager.PromoteAsync(memory1, Tier.Short, PromotionReason.AutomaticTrigger);
-        await tierManager.PromoteAsync(memory2, Tier.Short, PromotionReason.AutomaticTrigger);
+        await tierManager.PromoteAsync(memory1, Tier.Short, PromotionReason.AutomaticTrigger, TestContext.Current.CancellationToken);
+        await tierManager.PromoteAsync(memory2, Tier.Short, PromotionReason.AutomaticTrigger, TestContext.Current.CancellationToken);
         var stats = tierManager.GetTierStatistics(Tier.Buffer);
 
         // Assert
@@ -724,7 +724,7 @@ public class ITierManagerTests
         var memory = new MemoryUnit { Tier = Tier.Long, Content = "Test" };
 
         // Act
-        await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention);
+        await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
         var sourceStats = tierManager.GetTierStatistics(Tier.Long); // Source tier tracks demotion (consistent with promotion tracking on source)
 
         // Assert

@@ -51,7 +51,7 @@ public class RetentionPolicyServiceTests
             .Returns(decisions);
 
         // Act
-        var preview = await _service.PreviewCleanupAsync("user1");
+        var preview = await _service.PreviewCleanupAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         preview.UserId.Should().Be("user1");
@@ -75,7 +75,7 @@ public class RetentionPolicyServiceTests
             .Returns(new List<RetentionDecision>());
 
         // Act
-        var preview = await _service.PreviewCleanupAsync("user1");
+        var preview = await _service.PreviewCleanupAsync("user1", TestContext.Current.CancellationToken);
 
         // Assert
         preview.TotalEntries.Should().Be(0);
@@ -88,9 +88,9 @@ public class RetentionPolicyServiceTests
     public async Task PreviewCleanupAsync_WithNullUserId_ShouldThrow()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.PreviewCleanupAsync(null!));
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.PreviewCleanupAsync(""));
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.PreviewCleanupAsync("  "));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.PreviewCleanupAsync(null!, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.PreviewCleanupAsync("", TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.PreviewCleanupAsync("  ", TestContext.Current.CancellationToken));
     }
 
     #endregion
@@ -118,7 +118,7 @@ public class RetentionPolicyServiceTests
             .Returns(decisions);
 
         // Act
-        var result = await _service.ApplyAsync("user1", dryRun: true);
+        var result = await _service.ApplyAsync("user1", dryRun: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -151,7 +151,7 @@ public class RetentionPolicyServiceTests
             .Returns(true);
 
         // Act
-        var result = await _service.ApplyAsync("user1", dryRun: false);
+        var result = await _service.ApplyAsync("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -183,7 +183,7 @@ public class RetentionPolicyServiceTests
             .Returns(true);
 
         // Act
-        var result = await _service.ApplyAsync("user1", dryRun: false);
+        var result = await _service.ApplyAsync("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -212,7 +212,7 @@ public class RetentionPolicyServiceTests
             .Returns(decisions);
 
         // Act
-        var result = await _service.ApplyAsync("user1", dryRun: false);
+        var result = await _service.ApplyAsync("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -253,7 +253,7 @@ public class RetentionPolicyServiceTests
             .Returns(true);
 
         // Act
-        var result = await _service.ApplyAsync("user1", dryRun: false);
+        var result = await _service.ApplyAsync("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -272,7 +272,7 @@ public class RetentionPolicyServiceTests
             .Throws(new InvalidOperationException("Database error"));
 
         // Act
-        var result = await _service.ApplyAsync("user1");
+        var result = await _service.ApplyAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();

@@ -72,7 +72,7 @@ public class RollingSummaryManagerTests
         };
 
         // Act
-        var result = await _manager.RecordAsync("session-1", memory);
+        var result = await _manager.RecordAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -111,7 +111,7 @@ public class RollingSummaryManagerTests
                 Content = $"Memory content {i}",
                 UserId = "user-1"
             };
-            var result = await _manager.RecordAsync("session-1", memory);
+            var result = await _manager.RecordAsync("session-1", memory, TestContext.Current.CancellationToken);
 
             if (i < 2)
             {
@@ -146,7 +146,7 @@ public class RollingSummaryManagerTests
             Content = "Test memory",
             UserId = "user-1"
         };
-        await _manager.RecordAsync("session-1", memory);
+        await _manager.RecordAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         var expectedSummary = new MemorySummary
         {
@@ -162,10 +162,10 @@ public class RollingSummaryManagerTests
             .Returns(expectedSummary);
 
         // Act - record turns
-        var result1 = await _manager.RecordTurnAsync("session-1", 100);
+        var result1 = await _manager.RecordTurnAsync("session-1", 100, TestContext.Current.CancellationToken);
         Assert.Null(result1); // First turn, no trigger
 
-        var result2 = await _manager.RecordTurnAsync("session-1", 100);
+        var result2 = await _manager.RecordTurnAsync("session-1", 100, TestContext.Current.CancellationToken);
         Assert.NotNull(result2); // Second turn triggers
 
         // Assert
@@ -201,7 +201,7 @@ public class RollingSummaryManagerTests
         };
 
         // Act
-        var result = await _manager.RecordAsync("session-1", memory);
+        var result = await _manager.RecordAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -220,7 +220,7 @@ public class RollingSummaryManagerTests
             Content = "Test memory",
             UserId = "user-1"
         };
-        await _manager.RecordAsync("session-1", memory);
+        await _manager.RecordAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         var expectedSummary = new MemorySummary
         {
@@ -236,7 +236,7 @@ public class RollingSummaryManagerTests
             .Returns(expectedSummary);
 
         // Act
-        var result = await _manager.ForceUpdateAsync("session-1");
+        var result = await _manager.ForceUpdateAsync("session-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Forced summary", result.Content);
@@ -251,7 +251,7 @@ public class RollingSummaryManagerTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _manager.ForceUpdateAsync("unknown-session"));
+            () => _manager.ForceUpdateAsync("unknown-session", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -293,7 +293,7 @@ public class RollingSummaryManagerTests
             Content = "Test",
             UserId = "user-1"
         };
-        await _manager.RecordAsync("session-1", memory);
+        await _manager.RecordAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         // Act
         var summary = _manager.GetCurrentSummary("session-1");
@@ -315,7 +315,7 @@ public class RollingSummaryManagerTests
             Content = "Final memory",
             UserId = "user-1"
         };
-        await _manager.RecordAsync("session-1", memory);
+        await _manager.RecordAsync("session-1", memory, TestContext.Current.CancellationToken);
 
         var finalSummary = new MemorySummary
         {
@@ -331,7 +331,7 @@ public class RollingSummaryManagerTests
             .Returns(finalSummary);
 
         // Act
-        var result = await _manager.FinalizeAsync("session-1");
+        var result = await _manager.FinalizeAsync("session-1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Final session summary", result.Content);
@@ -396,12 +396,12 @@ public class RollingSummaryManagerTests
             .Returns(incrementalSummary);
 
         // First batch
-        await _manager.RecordAsync("session-1", memory1);
-        await _manager.RecordAsync("session-1", memory2);
+        await _manager.RecordAsync("session-1", memory1, TestContext.Current.CancellationToken);
+        await _manager.RecordAsync("session-1", memory2, TestContext.Current.CancellationToken);
 
         // Second batch should use incremental update
-        await _manager.RecordAsync("session-1", memory3);
-        var result = await _manager.ForceUpdateAsync("session-1");
+        await _manager.RecordAsync("session-1", memory3, TestContext.Current.CancellationToken);
+        var result = await _manager.ForceUpdateAsync("session-1", TestContext.Current.CancellationToken);
 
         // Assert - incremental update was used
         await _summarizerMock.Received(1).IncrementalUpdateAsync(
