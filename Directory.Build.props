@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.16.7</Version>
+    <Version>0.16.8</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- PackageReadmeFile is set per project where README exists -->
     <IsPackable>false</IsPackable> <!-- Default: only SDK is packable -->
