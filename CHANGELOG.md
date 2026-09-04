@@ -2,6 +2,14 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.16.10] - 2026-09-04
+
+### Changed
+- Re-pinned `LMSupply.Embedder`/`.Generator` from `0.42.10` to `0.54.0` — patch re-consumption of
+  already-consumed sibling packages (`check-pin-drift.ps1 -Strict` flagged this as
+  threshold-exceeding drift, minor gap 12; cold-GPU-kernel-hang protection propagated to all
+  ONNX-backed lm-supply modules). No source changes.
+
 ## [v0.16.9] - 2026-09-04
 
 ### Changed
