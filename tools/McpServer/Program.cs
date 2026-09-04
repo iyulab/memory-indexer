@@ -229,6 +229,9 @@ static async Task RunHttpServer(string[] args, int port)
     Console.WriteLine($"  Swagger UI: http://localhost:{port}/swagger");
     Console.WriteLine($"  Health Check: http://localhost:{port}/health");
     Console.WriteLine();
+    Console.WriteLine("WARNING: This mode has no authentication. It binds to localhost only -");
+    Console.WriteLine("do not use it on a shared server or in a multi-tenant/multi-user environment.");
+    Console.WriteLine();
     Console.WriteLine("Press Ctrl+C to stop the server.");
 
     await app.RunAsync();
