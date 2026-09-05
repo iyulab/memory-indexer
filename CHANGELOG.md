@@ -2,6 +2,14 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.16.11] - 2026-09-05
+
+### Fixed
+- Re-pinned `LMSupply.Embedder`/`.Generator` from `0.54.0` to `0.55.0` — `0.54.0` was never actually
+  published to nuget.org for these packages (their published history jumps `0.45.0` -> `0.55.0`),
+  so `0.16.10`'s restore failed with NU1603 escalated to error and no nupkg for `0.16.10` was ever
+  produced.
+
 ## [v0.16.10] - 2026-09-04
 
 ### Changed
