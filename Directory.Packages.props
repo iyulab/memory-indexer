@@ -31,14 +31,14 @@
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <!-- Benchmarking -->
-    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <!-- LMSupply (iyulab-rnd open source) -->
     <PackageVersion Include="LMSupply.Embedder" Version="0.57.0" />
     <PackageVersion Include="LMSupply.Generator" Version="0.57.0" />
     <!-- Environment -->
     <PackageVersion Include="DotNetEnv" Version="3.2.0" />
     <!-- OpenAI -->
-    <PackageVersion Include="OpenAI" Version="2.10.0" />
+    <PackageVersion Include="OpenAI" Version="2.12.0" />
     <!-- ASP.NET Core -->
     <PackageVersion Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.8" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />

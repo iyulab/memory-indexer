@@ -6,6 +6,7 @@ All notable changes to Memory Indexer are documented here.
 
 ### Changed
 - Re-pinned sibling package(s) `LMSupply.Embedder` 0.55.4 -> 0.57.0, `LMSupply.Generator` 0.55.4 -> 0.57.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Aligned third-party pins with the rest of the ecosystem: `OpenAI` 2.10.0 -> 2.12.0 (the ecosystem floor: Microsoft.Extensions.AI.OpenAI 10.9.0 caps OpenAI below 2.13.0), `BenchmarkDotNet` 0.14.0 -> 0.15.8 (cross-submodule floor consistency). No source changes.
 
 ## [v0.16.12] - 2026-09-07
 
