@@ -1,3 +1,4 @@
+using McpServer;
 using MemoryIndexer.Sdk.Extensions;
 using MemoryIndexer.Sdk.Health;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -7,8 +8,15 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
-// Parse command-line arguments for transport mode
-var transportMode = args.Contains("--http") || args.Contains("--sse") ? "http" : "stdio";
+// Parse command-line arguments for transport mode. --sse is a deprecated alias: the server has
+// served Streamable HTTP since the ModelContextProtocol SDK 2.0 line; HTTP+SSE is a deprecated
+// transport in the MCP 2026-07-28 revision and this server never spoke it.
+var transport = McpServerTransport.Parse(args);
+if (transport.DeprecationWarning is { } deprecation)
+{
+    Console.Error.WriteLine(deprecation);
+}
+var transportMode = transport.Mode;
 var httpPort = 3001;
 
 // Check for custom port
@@ -21,9 +29,9 @@ if (portIndex >= 0 && portIndex + 1 < args.Length)
     }
 }
 
-if (transportMode == "http")
+if (transportMode == McpServerTransport.Http)
 {
-    // HTTP/SSE Transport Mode (ASP.NET Core)
+    // Streamable HTTP transport mode (ASP.NET Core)
     await RunHttpServer(args, httpPort);
 }
 else
@@ -84,7 +92,8 @@ static async Task RunStdioServer(string[] args)
 }
 
 /// <summary>
-/// Runs the MCP server with HTTP/SSE transport for web-based clients.
+/// Runs the MCP server with the Streamable HTTP transport (MCP 2026-07-28; stateless by default in
+/// the SDK 2.x line) for web-based clients.
 /// </summary>
 static async Task RunHttpServer(string[] args, int port)
 {
@@ -113,7 +122,7 @@ static async Task RunHttpServer(string[] args, int port)
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
-    // Configure MCP Server with HTTP transport
+    // Configure MCP Server with the Streamable HTTP transport
     builder.Services
         .AddMcpServer(options =>
         {
@@ -203,7 +212,7 @@ static async Task RunHttpServer(string[] args, int port)
     {
         name = "Memory Indexer MCP Server",
         version = GetServerVersion(),
-        transport = "HTTP/SSE",
+        transport = McpServerTransport.StreamableHttpLabel,
         endpoints = new
         {
             mcp = "/mcp",
@@ -217,13 +226,13 @@ static async Task RunHttpServer(string[] args, int port)
         },
         instructions = new
         {
-            mcp = "Connect to /mcp endpoint using MCP client with HTTP transport",
+            mcp = "Connect to /mcp with an MCP client that speaks Streamable HTTP (MCP 2026-07-28)",
             restApi = "Use /api/memory endpoints for REST API access (see /swagger for documentation)",
             swagger = "Visit /swagger for interactive API documentation"
         }
     }));
 
-    Console.WriteLine($"Memory Indexer MCP Server (HTTP/SSE) starting on http://localhost:{port}");
+    Console.WriteLine($"Memory Indexer MCP Server (Streamable HTTP) starting on http://localhost:{port}");
     Console.WriteLine($"  MCP Endpoint: http://localhost:{port}/mcp");
     Console.WriteLine($"  REST API: http://localhost:{port}/api/memory");
     Console.WriteLine($"  Swagger UI: http://localhost:{port}/swagger");

@@ -140,6 +140,15 @@ the server loads `appsettings.Production.json`, which requires you to register y
 otherwise startup fails fast with an actionable error.
 ```
 
+#### HTTP mode (Streamable HTTP)
+
+`memory-indexer --http [--port 3001]` serves the MCP endpoint at `/mcp` over the **Streamable HTTP**
+transport (MCP 2026-07-28), plus the REST API, Swagger and health endpoints. The SDK runs it
+**stateless by default** (no server-side session), so any Streamable HTTP client can connect without
+session affinity. `--sse` is a deprecated alias for `--http` and prints a warning: this server never
+served the HTTP+SSE transport that the 2026-07-28 revision deprecates. The mode binds to localhost and has
+no authentication - do not expose it on a shared host.
+
 ### As SDK
 
 ```bash

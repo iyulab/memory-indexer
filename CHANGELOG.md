@@ -2,6 +2,18 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.17.0] - 2026-09-08
+
+### Changed
+- MCP server (`tools/McpServer`): the HTTP mode is named for what it serves. It has run the
+  Streamable HTTP transport since the ModelContextProtocol SDK 2.0 line, while the `--sse` flag,
+  the `HTTP/SSE` labels in the startup banner and comments, and the info endpoint's
+  `transport: "HTTP/SSE"` all named the HTTP+SSE transport that the MCP 2026-07-28 revision
+  deprecates — and that this server never spoke. `--http` is the flag; `--sse` remains a
+  deprecated alias that prints a warning naming the replacement and will be removed in a future
+  release; the info endpoint now reports `transport: "streamable-http"`. README states the transport
+  and the SDK's stateless default.
+
 ## [v0.16.14] - 2026-09-08
 
 ### Changed
