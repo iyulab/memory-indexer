@@ -2,6 +2,12 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.17.3] - 2026-09-09
+
+### Changed
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.59.1 -> 0.60.0, `LMSupply.Generator` 0.59.1 -> 0.60.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Bumped `Microsoft.SourceLink.GitHub` 10.0.103 -> 10.0.112: its `Microsoft.Build.Tasks.Git` dependency 10.0.102..10.0.110 is flagged by CVE-2026-62900 (GHSA-23fw-v26w-5fgq, moderate; NuGet audit NU1902 fails the build under `TreatWarningsAsErrors`). Build-time only (`PrivateAssets=All`); no runtime surface change.
+
 ## [v0.17.2] - 2026-09-09
 
 ### Changed
