@@ -36,7 +36,7 @@ jobs:
 
     - name: Run Core Tests
       # --hangdump/--hangdump-timeout is MTP's equivalent of VSTest's --blame-hang.
-      run: dotnet test tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity normal --hangdump --hangdump-timeout 5m
+      run: dotnet test --project tests/MemoryIndexer.Tests --no-build --configuration Release --verbosity normal --hangdump --hangdump-timeout 5m
 
     # No continue-on-error: a failing SDK test fails this job, exactly as the core suite above.
     # The step carried `continue-on-error: true` from the commit that introduced this workflow,
@@ -52,7 +52,7 @@ jobs:
       # unfiltered-run-minus-42-Heavy/LocalModel-tagged-tests exactly, 0 leaked through).
       # --hangdump/--hangdump-timeout is MTP's equivalent of --blame-hang.
       run: |
-        dotnet test tests/MemoryIndexer.Sdk.Tests \
+        dotnet test --project tests/MemoryIndexer.Sdk.Tests \
           --no-build \
           --configuration Release \
           --verbosity normal \
