@@ -22,7 +22,7 @@
     <!-- Numerics -->
     <PackageVersion Include="System.Numerics.Tensors" Version="10.0.8" />
     <!-- Build -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.112" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
     <!-- Testing -->
     <!-- xUnit v3 / Microsoft.Testing.Platform — BD-20260829-xunit-v3-pilot rollout -->
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
