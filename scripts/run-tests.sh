@@ -73,9 +73,9 @@ for project in "${TEST_PROJECTS[@]}"; do
     echo "=== $name ==="
 
     if [[ -n "$FILTER" ]]; then
-        dotnet test "$project" --no-build --verbosity normal --filter "$FILTER"
+        dotnet test --project "$project" --no-build --verbosity normal --filter "$FILTER"
     else
-        dotnet test "$project" --no-build --verbosity normal -- "xunit.maxParallelThreads=$PARALLEL"
+        dotnet test --project "$project" --no-build --verbosity normal -- "xunit.maxParallelThreads=$PARALLEL"
     fi
 
     [[ $? -ne 0 ]] && FAILED+=("$name")
