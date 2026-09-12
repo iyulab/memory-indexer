@@ -114,11 +114,13 @@ public static class TestHelpers
     }
 
     /// <summary>
-    /// Generates a deterministic mock embedding based on text hash.
+    /// Generates a deterministic mock embedding based on a process-stable text hash.
+    /// Not <see cref="string.GetHashCode()"/>: .NET randomises that per process, so an embedding
+    /// seeded by it is the same only within one <c>dotnet test</c> invocation.
     /// </summary>
     public static ReadOnlyMemory<float> GenerateMockEmbedding(string text, int dimensions = 768)
     {
-        var hash = text.GetHashCode();
+        var hash = Fnv1a(text);
         var random = new Random(hash);
         var embedding = new float[dimensions];
         for (var i = 0; i < dimensions; i++)
@@ -135,6 +137,21 @@ public static class TestHelpers
             }
         }
         return embedding;
+    }
+
+    /// <summary>FNV-1a, 32-bit, over the string's code units — stable across processes, runtimes and machines.</summary>
+    private static int Fnv1a(string text)
+    {
+        unchecked
+        {
+            uint hash = 2166136261;
+            foreach (var c in text)
+            {
+                hash ^= c;
+                hash *= 16777619;
+            }
+            return (int)hash;
+        }
     }
 
     /// <summary>

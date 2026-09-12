@@ -119,7 +119,7 @@ public class MemGPTStyleMemoryManagerTests
 
     private static ReadOnlyMemory<float> GenerateMockEmbedding(string text)
     {
-        var hash = text.GetHashCode();
+        var hash = TestHash.Fnv1a(text);
         var random = new Random(hash);
         var embedding = new float[1024];
         for (var i = 0; i < embedding.Length; i++)

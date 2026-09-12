@@ -19,7 +19,7 @@ public sealed class HydeQueryExpanderTests
             {
                 var text = callInfo.ArgAt<string>(0);
     // Return a mock embedding (normalized)
-                var hash = text.GetHashCode();
+                var hash = TestHash.Fnv1a(text);
                 var embedding = new float[384];
                 for (var i = 0; i < embedding.Length; i++)
                 {
@@ -44,7 +44,7 @@ public sealed class HydeQueryExpanderTests
     var results = new List<ReadOnlyMemory<float>>();
                 foreach (var text in texts)
                 {
-                    var hash = text.GetHashCode();
+                    var hash = TestHash.Fnv1a(text);
                     var embedding = new float[384];
                     for (var i = 0; i < embedding.Length; i++)
                     {

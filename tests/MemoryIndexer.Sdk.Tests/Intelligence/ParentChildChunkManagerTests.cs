@@ -29,8 +29,8 @@ public sealed class ParentChildChunkManagerTests
 
     private static ReadOnlyMemory<float> CreateMockEmbedding(string text)
     {
-        // Create deterministic embedding based on text hash
-        var hash = text.GetHashCode();
+        // Create deterministic embedding based on a process-stable text hash (see TestHash)
+        var hash = TestHash.Fnv1a(text);
         var embedding = new float[384];
         for (var i = 0; i < embedding.Length; i++)
         {

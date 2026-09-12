@@ -28,7 +28,7 @@ public class LLMLinguaCompressorTests
 
     private static ReadOnlyMemory<float> GenerateMockEmbedding(string text)
     {
-        var hash = text.GetHashCode();
+        var hash = TestHash.Fnv1a(text);
         var random = new Random(hash);
         var embedding = new float[768];
         for (var i = 0; i < embedding.Length; i++)

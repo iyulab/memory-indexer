@@ -32,7 +32,7 @@ public class LoCoMoEvaluatorTests
 
     private static Memory<float> CreateMockEmbedding(string text)
     {
-        var random = new Random(text.GetHashCode());
+        var random = new Random(TestHash.Fnv1a(text));
         var embedding = new float[384];
         for (var i = 0; i < embedding.Length; i++)
         {

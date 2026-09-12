@@ -88,8 +88,14 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
 
     private static MemoryUnit CreateMemory(string userId, string content, MemoryType type, string? sessionId = null)
     {
+        // Content-derived, process-stable vector. The previous form filled a throwaway byte buffer
+        // and left the embedding all zeros; the seed was string.GetHashCode(), which differs per process.
         var embedding = new float[384];
-        new Random(content.GetHashCode()).NextBytes(new Span<byte>(new byte[embedding.Length * sizeof(float)]));
+        var random = new Random(TestHash.Fnv1a(content));
+        for (var i = 0; i < embedding.Length; i++)
+        {
+            embedding[i] = (float)(random.NextDouble() * 2 - 1);
+        }
 
         return new MemoryUnit
         {

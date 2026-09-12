@@ -30,8 +30,8 @@ public class ExtractiveSummarizerTests
 
     private static ReadOnlyMemory<float> GenerateMockEmbedding(string text)
     {
-        // Generate a deterministic embedding based on text hash
-        var hash = text.GetHashCode();
+        // Generate a deterministic embedding based on a process-stable text hash (see TestHash)
+        var hash = TestHash.Fnv1a(text);
         var random = new Random(hash);
         var embedding = new float[768];
         for (var i = 0; i < embedding.Length; i++)
