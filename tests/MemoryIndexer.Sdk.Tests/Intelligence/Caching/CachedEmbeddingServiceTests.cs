@@ -278,7 +278,10 @@ public class CachedEmbeddingServiceTests
         Assert.Equal(2, _mockService.BatchCallCount); // Called twice
     }
 
-    // Mock embedding service for testing
+    // Mock embedding service for testing.
+    // The vector comes from TestHash.Fnv1a, not string.GetHashCode(): .NET randomises string
+    // hash codes per process, so a double built on them is deterministic only within one test
+    // run and the cache assertions below would compare vectors from two different spaces.
     private sealed class MockEmbeddingService : IEmbeddingService
     {
         public int Dimensions { get; set; } = 1024;
@@ -293,7 +296,7 @@ public class CachedEmbeddingServiceTests
             var embedding = new float[Dimensions];
             for (int i = 0; i < Dimensions; i++)
             {
-                embedding[i] = (float)(text.GetHashCode() % 1000) / 1000f;
+                embedding[i] = (float)(TestHash.Fnv1a(text) % 1000) / 1000f;
             }
             return Task.FromResult<ReadOnlyMemory<float>>(embedding);
         }
@@ -309,7 +312,7 @@ public class CachedEmbeddingServiceTests
                 var embedding = new float[Dimensions];
                 for (int i = 0; i < Dimensions; i++)
                 {
-                    embedding[i] = (float)(text.GetHashCode() % 1000) / 1000f;
+                    embedding[i] = (float)(TestHash.Fnv1a(text) % 1000) / 1000f;
                 }
                 embeddings.Add(embedding);
             }
