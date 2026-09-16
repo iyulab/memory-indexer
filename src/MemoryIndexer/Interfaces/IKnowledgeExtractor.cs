@@ -8,7 +8,7 @@ namespace MemoryIndexer.Interfaces;
 /// </summary>
 /// <remarks>
 /// Addresses memory type imbalance by generating Semantic memories
-/// from Q&A interactions that would otherwise only create Episodic memories.
+/// from Q&amp;A interactions that would otherwise only create Episodic memories.
 ///
 /// Example:
 /// Q: "Is it a liquid?" A: "Maybe" (Subject: "the ocean")
@@ -29,7 +29,7 @@ public interface IKnowledgeExtractor
 }
 
 /// <summary>
-/// Context for knowledge extraction from Q&A exchanges.
+/// Context for knowledge extraction from Q&amp;A exchanges.
 /// </summary>
 public sealed class KnowledgeExtractionContext
 {

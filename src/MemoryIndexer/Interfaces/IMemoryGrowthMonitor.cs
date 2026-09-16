@@ -27,7 +27,7 @@ public interface IMemoryGrowthMonitor
 
     /// <summary>
     /// Marks the end of a round for growth rate calculation.
-    /// A "round" is a logical grouping of operations (e.g., one Q&A cycle).
+    /// A "round" is a logical grouping of operations (e.g., one Q&amp;A cycle).
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

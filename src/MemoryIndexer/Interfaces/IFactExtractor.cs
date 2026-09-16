@@ -8,7 +8,7 @@ namespace MemoryIndexer.Interfaces;
 /// Distinguishes direct statements from quoted/fictional context.
 /// </summary>
 /// <remarks>
-/// Unlike IKnowledgeExtractor (which handles Q&A exchanges), IFactExtractor
+/// Unlike IKnowledgeExtractor (which handles Q&amp;A exchanges), IFactExtractor
 /// analyzes direct statements like "My name is John" and determines:
 /// - Whether the statement is a direct fact or quoted/fictional
 /// - Confidence level based on linguistic markers

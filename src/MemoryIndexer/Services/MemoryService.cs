@@ -31,6 +31,7 @@ public class MemoryService(
     /// <param name="sessionId">Optional session ID.</param>
     /// <param name="importance">Optional importance score (0.0 to 1.0).</param>
     /// <param name="metadata">Optional metadata.</param>
+    /// <param name="namespace">Optional namespace for memory isolation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The stored memory.</returns>
     public async Task<MemoryUnit> StoreAsync(
@@ -350,6 +351,7 @@ public class MemoryService(
     /// <param name="sessionId">Optional session ID filter.</param>
     /// <param name="types">Optional memory type filter.</param>
     /// <param name="metadataFilter">Optional metadata filter (Phase 28).</param>
+    /// <param name="namespace">Optional namespace filter.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Relevant memories with scores.</returns>
     public async Task<IReadOnlyList<MemorySearchResult>> RecallAsync(

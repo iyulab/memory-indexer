@@ -2,6 +2,11 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.17.12] - 2026-09-17
+
+### Fixed
+- The packages now ship their XML documentation file (`MemoryIndexer`, `MemoryIndexer.Sdk`). `GenerateDocumentationFile` was never set, so every `///` doc was written but never delivered to a consumer. Generating it surfaced twelve doc comments with a raw `&` (`Q&A`, `Brin & Page`, `Deduplication & Quality`) that made the XML malformed, and five members whose `namespace` parameter had no `<param>` tag; all fixed. No code changes.
+
 ## [v0.17.11] - 2026-09-16
 
 ### Changed

@@ -21,10 +21,18 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.17.11</Version>
+    <Version>0.17.12</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- PackageReadmeFile is set per project where README exists -->
     <IsPackable>false</IsPackable> <!-- Default: only SDK is packable -->
+  </PropertyGroup>
+
+  <!-- Ship the XML documentation with the package (2026-09-17, umbrella check-xml-doc-file): without this the nupkg
+       held only the dll and none of the /// docs reached a consumer. CS1591 is muted as elsewhere in the ecosystem;
+       the doc file is the goal, not a warning per member. -->
+  <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('\src\')) OR $(MSBuildProjectDirectory.Contains('/src/'))">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <!-- Source Link + Symbol Package -->

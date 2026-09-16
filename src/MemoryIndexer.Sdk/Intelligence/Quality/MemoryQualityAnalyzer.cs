@@ -11,7 +11,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Quality;
 
 /// <summary>
 /// Analyzes memory quality using multiple metrics.
-/// Phase 20.1: Smart Deduplication & Quality Control
+/// Phase 20.1: Smart Deduplication &amp; Quality Control
 /// </summary>
 public sealed partial class MemoryQualityAnalyzer : IMemoryQualityService
 {

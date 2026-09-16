@@ -6,7 +6,7 @@ namespace MemoryIndexer.Services.ContextStrategies;
 /// Semantic-heavy context strategy prioritizing user knowledge.
 /// Allocation: 15% recent, 45% semantic, 15% episodic, 25% facts.
 ///
-/// Best for: RAG applications, Q&A systems, knowledge retrieval
+/// Best for: RAG applications, Q&amp;A systems, knowledge retrieval
 /// where finding relevant user information is more important than recency.
 /// - Semantic: User-scoped knowledge via semantic search
 /// - Facts: User-scoped facts by importance

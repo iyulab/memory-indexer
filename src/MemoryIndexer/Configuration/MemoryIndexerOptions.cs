@@ -67,7 +67,7 @@ public sealed class MemoryIndexerOptions
 
     /// <summary>
     /// Deduplication configuration.
-    /// Phase 21: Smart Deduplication & Quality Control.
+    /// Phase 21: Smart Deduplication &amp; Quality Control.
     /// </summary>
     public DeduplicationOptions Deduplication { get; set; } = new();
 
@@ -711,7 +711,7 @@ public sealed class SensoryBufferOptions
 
 /// <summary>
 /// Deduplication configuration options.
-/// Phase 21: Smart Deduplication & Quality Control.
+/// Phase 21: Smart Deduplication &amp; Quality Control.
 /// </summary>
 public sealed class DeduplicationOptions
 {

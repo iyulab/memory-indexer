@@ -30,6 +30,7 @@ public sealed class MemoryTools(
     /// <param name="importance">Importance score from 0.0 (trivial) to 1.0 (critical). Default: 0.5</param>
     /// <param name="tags">Optional comma-separated tags for categorization.</param>
     /// <param name="sessionId">Optional session ID to group related memories.</param>
+    /// <param name="namespace">Optional namespace for memory isolation (e.g. a workspace or project id).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result with the stored memory ID.</returns>
     [McpServerTool]
@@ -98,6 +99,7 @@ public sealed class MemoryTools(
     /// <param name="limit">Maximum number of results to return (1-20).</param>
     /// <param name="type">Optional filter by memory type.</param>
     /// <param name="sessionId">Optional filter by session ID.</param>
+    /// <param name="namespace">Optional filter by namespace.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of relevant memories with similarity scores.</returns>
     [McpServerTool]
@@ -152,6 +154,7 @@ public sealed class MemoryTools(
     /// <param name="limit">Maximum number of memories to return.</param>
     /// <param name="type">Optional filter by memory type.</param>
     /// <param name="sessionId">Optional filter by session ID.</param>
+    /// <param name="namespace">Optional filter by namespace.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of all matching memories.</returns>
     [McpServerTool]

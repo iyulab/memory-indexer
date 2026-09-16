@@ -4,7 +4,7 @@ namespace MemoryIndexer.Models;
 
 /// <summary>
 /// Explanation of why a memory was recalled and how it was scored.
-/// Phase 23.3: Observability & Debugging Enhancement.
+/// Phase 23.3: Observability &amp; Debugging Enhancement.
 /// </summary>
 public sealed class MemoryRecallExplanation
 {

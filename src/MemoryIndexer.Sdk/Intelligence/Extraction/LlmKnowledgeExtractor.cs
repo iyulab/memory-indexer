@@ -7,11 +7,11 @@ using Microsoft.Extensions.Logging;
 namespace MemoryIndexer.Sdk.Intelligence.Extraction;
 
 /// <summary>
-/// LLM-based knowledge extractor using prompt engineering for Q&A exchanges.
+/// LLM-based knowledge extractor using prompt engineering for Q&amp;A exchanges.
 /// Phase 25: Semantic Knowledge Extraction.
 /// </summary>
 /// <remarks>
-/// Extracts factual knowledge from conversational Q&A pairs to generate
+/// Extracts factual knowledge from conversational Q&amp;A pairs to generate
 /// Semantic memories, addressing memory type imbalance.
 ///
 /// Uses language models to:

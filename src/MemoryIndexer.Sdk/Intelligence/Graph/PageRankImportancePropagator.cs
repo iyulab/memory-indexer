@@ -11,7 +11,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Graph;
 /// Entities that are heavily connected and referenced by memories score higher.
 /// </summary>
 /// <remarks>
-/// Research basis: PageRank (Brin & Page, 1998) adapted for knowledge graphs.
+/// Research basis: PageRank (Brin &amp; Page, 1998) adapted for knowledge graphs.
 /// Key insight: Important entities are referenced by many other important entities.
 /// </remarks>
 public sealed partial class PageRankImportancePropagator : IImportancePropagator
