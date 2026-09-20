@@ -242,7 +242,11 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
 
         if (options.EnableArchival)
         {
-            var workingMemoryCutoff = DateTime.UtcNow.AddHours(-options.MaxWorkingMemoryAgeHours);
+            // Null means the age rule is off, which is what this loop did while nothing read the
+            // option - so a consumer that does not ask for it keeps demoting on importance alone.
+            var workingMemoryCutoff = options.MaxWorkingMemoryAgeHours is { } maxAgeHours
+                ? DateTime.UtcNow.AddHours(-maxAgeHours)
+                : (DateTime?)null;
 
             foreach (var memory in memories.Where(m => m.Stability <= MemoryStability.Stabilizing))
             {
@@ -250,7 +254,7 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
 
                 // Age is a second, independent reason to demote: working memory that has sat around
                 // past MaxWorkingMemoryAgeHours goes down even if it still scores well.
-                var tooOldForWorkingMemory = memory.CreatedAt < workingMemoryCutoff;
+                var tooOldForWorkingMemory = workingMemoryCutoff is { } cutoff && memory.CreatedAt < cutoff;
 
                 if (score < options.MinImportanceToRetain || tooOldForWorkingMemory)
                 {

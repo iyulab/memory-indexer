@@ -34,7 +34,10 @@ All notable changes to Memory Indexer are documented here.
   - `SummarizationOptions.FocusTopics` gives a sentence naming one of the requested topics the same
     scoring bonus the extractive summarizer already gave entities and timestamps.
   - `OptimizationOptions.MaxWorkingMemoryAgeHours` demotes working memory that has sat past the
-    limit, as a second and independent reason alongside the importance score.
+    limit, as a second and independent reason alongside the importance score. **Type `int` → `int?`,
+    default 24 → `null`** (disabled) — applying an age rule by default would start demoting
+    memories today's consumers keep. Note it applies to the same set the importance rule does
+    (stability at or below `Stabilizing`), not to a tier.
 
 ### Removed
 - **Breaking: `TextCompletionOptions.TopP`, `.FrequencyPenalty` and `.PresencePenalty`.** Nothing in

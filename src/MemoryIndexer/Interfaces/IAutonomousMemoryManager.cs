@@ -384,9 +384,16 @@ public sealed class OptimizationOptions
     public float MinImportanceToRetain { get; init; } = 0.3f;
 
     /// <summary>
-    /// Maximum age for working memory (hours).
+    /// Demote working memory older than this many hours, or <c>null</c> to demote on importance
+    /// alone. Defaults to <c>null</c>.
     /// </summary>
-    public int MaxWorkingMemoryAgeHours { get; init; } = 24;
+    /// <remarks>
+    /// Defaults to disabled rather than to the 24 the declaration used to carry: nothing read this
+    /// option before, so applying an age rule by default would start demoting memories that today's
+    /// consumers keep. Note that the rule applies to the same set the importance rule does
+    /// (stability at or below <c>Stabilizing</c>), not to a tier.
+    /// </remarks>
+    public int? MaxWorkingMemoryAgeHours { get; init; }
 }
 
 /// <summary>
