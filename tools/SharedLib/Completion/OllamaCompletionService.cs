@@ -117,7 +117,6 @@ public sealed partial class OllamaCompletionService : ITextCompletionService, ID
         {
             Temperature = options.Temperature,
             NumPredict = options.MaxTokens,
-            TopP = options.TopP,
             Stop = options.StopSequences?.ToList()
         };
     }

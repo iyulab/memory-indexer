@@ -38,15 +38,6 @@ public sealed class TextCompletionOptions
     /// <summary>Maximum tokens to generate. Default: 500.</summary>
     public int MaxTokens { get; init; } = 500;
 
-    /// <summary>Top-p nucleus sampling threshold (0.0 - 1.0).</summary>
-    public float? TopP { get; init; }
-
-    /// <summary>Frequency penalty (-2.0 to 2.0).</summary>
-    public float? FrequencyPenalty { get; init; }
-
-    /// <summary>Presence penalty (-2.0 to 2.0).</summary>
-    public float? PresencePenalty { get; init; }
-
     /// <summary>Sequences that stop generation.</summary>
     public IReadOnlyList<string>? StopSequences { get; init; }
 }

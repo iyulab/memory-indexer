@@ -100,15 +100,6 @@ public sealed partial class OpenAICompletionService : ITextCompletionService
             MaxOutputTokenCount = options.MaxTokens
         };
 
-        if (options.TopP.HasValue)
-            chatOptions.TopP = options.TopP.Value;
-
-        if (options.PresencePenalty.HasValue)
-            chatOptions.PresencePenalty = options.PresencePenalty.Value;
-
-        if (options.FrequencyPenalty.HasValue)
-            chatOptions.FrequencyPenalty = options.FrequencyPenalty.Value;
-
         if (options.StopSequences != null)
         {
             foreach (var stop in options.StopSequences)

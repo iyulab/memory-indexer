@@ -28,6 +28,12 @@ All notable changes to Memory Indexer are documented here.
     them, and it is also what the exporter did before.
 
 ### Removed
+- **Breaking: `TextCompletionOptions.TopP`, `.FrequencyPenalty` and `.PresencePenalty`.** Nothing in
+  this library ever populated them, so every `ITextCompletionService` implementation received them
+  as `null` — a completion service that dutifully mapped all three (as the `IronHive.Agent` adapter
+  and the sample services here did) was mapping values that could not arrive. `Temperature`,
+  `MaxTokens` and `StopSequences` are populated and stay. If you need sampling knobs on this port,
+  say so and they come back as fields the library actually sets.
 - **Breaking: `SecurityOptions` and `MultiTenantOptions`** (and `MemoryIndexerOptions.Security` /
   `.MultiTenant`). **None of their switches did anything.** `EnablePiiDetection`,
   `EnableInjectionDetection`, `EnableRateLimiting`, `EnableAuditLogging`, `MaxAllowedRiskLevel`,
