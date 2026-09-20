@@ -273,7 +273,7 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
             ? visitedMemories.Count - memoryIds.Count
             : 0;
 
-        var formattedContext = FormatSubgraphContext(subgraphNodes, subgraphTriples);
+        var formattedContext = FormatSubgraphContext(subgraphNodes, subgraphTriples, options.IncludeTemporalInfo);
 
         LogSubgraphExtractedMemoriesMemoriesEntities(_logger, subgraphNodes.Count, subgraphEntities.Count, subgraphTriples.Count, stopwatch.ElapsedMilliseconds);
 
@@ -413,9 +413,33 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
         return (EntityRole.Mentioned, 0.7f);
     }
 
+    /// <summary>
+    /// Renders a triple's validity window, when it has one, for
+    /// <see cref="SubgraphOptions.IncludeTemporalInfo"/>. An open-ended window prints as "from X".
+    /// </summary>
+    private static string FormatValidity(EntityTriple triple)
+    {
+        if (triple.ValidFrom is null && triple.ValidTo is null)
+        {
+            return string.Empty;
+        }
+
+        var from = triple.ValidFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var to = triple.ValidTo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        return (from, to) switch
+        {
+            (not null, not null) => $" (valid {from}–{to})",
+            (not null, null) => $" (valid from {from})",
+            (null, not null) => $" (valid until {to})",
+            _ => string.Empty,
+        };
+    }
+
     private static string FormatSubgraphContext(
         List<MemoryGraphNode> nodes,
-        List<EntityTriple> triples)
+        List<EntityTriple> triples,
+        bool includeTemporalInfo)
     {
         var sb = new StringBuilder();
 
@@ -442,7 +466,8 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
             sb.AppendLine("## Knowledge Facts");
             foreach (var triple in triples.Take(15))
             {
-                sb.AppendLine(CultureInfo.InvariantCulture, $"- {triple.Subject} → {triple.Predicate} → {triple.ObjectValue}");
+                var temporal = includeTemporalInfo ? FormatValidity(triple) : string.Empty;
+                sb.AppendLine(CultureInfo.InvariantCulture, $"- {triple.Subject} → {triple.Predicate} → {triple.ObjectValue}{temporal}");
             }
 
             if (triples.Count > 15)

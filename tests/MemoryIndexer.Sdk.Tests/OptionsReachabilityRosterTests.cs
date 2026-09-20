@@ -80,8 +80,6 @@ public class OptionsReachabilityRosterTests
         [
             "BoostFrequentlyAccessed", "ReduceForContradictions",
         ],
-        ["MemoryIndexer.Interfaces.OptimizationOptions"] = ["MaxWorkingMemoryAgeHours"],
-        ["MemoryIndexer.Interfaces.SubgraphOptions"] = ["IncludeTemporalInfo"],
         // Request fields the library populates and the consumer's ITextCompletionService
         // implementation reads - so they are read, just not inside these assemblies. The three that
         // nothing populated (TopP, FrequencyPenalty, PresencePenalty) were removed in 0.18.0.
@@ -93,7 +91,6 @@ public class OptionsReachabilityRosterTests
         [
             "EnableChunkExpansion",
         ],
-        ["MemoryIndexer.Sdk.Intelligence.Summarization.SummarizationOptions"] = ["FocusTopics"],
     };
 
     [Fact]

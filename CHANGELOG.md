@@ -27,6 +27,15 @@ All notable changes to Memory Indexer are documented here.
     purpose: an export of what the system holds about a person should carry what was inferred about
     them, and it is also what the exporter did before.
 
+### Added
+- **Three declared options now have the small implementation they described.**
+  - `SubgraphOptions.IncludeTemporalInfo` appends a triple's validity window to the formatted
+    subgraph context (`(valid 2026-01-01–2026-06-30)`, or `from`/`until` when it is open-ended).
+  - `SummarizationOptions.FocusTopics` gives a sentence naming one of the requested topics the same
+    scoring bonus the extractive summarizer already gave entities and timestamps.
+  - `OptimizationOptions.MaxWorkingMemoryAgeHours` demotes working memory that has sat past the
+    limit, as a second and independent reason alongside the importance score.
+
 ### Removed
 - **Breaking: `TextCompletionOptions.TopP`, `.FrequencyPenalty` and `.PresencePenalty`.** Nothing in
   this library ever populated them, so every `ITextCompletionService` implementation received them

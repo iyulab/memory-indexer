@@ -242,10 +242,17 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
 
         if (options.EnableArchival)
         {
+            var workingMemoryCutoff = DateTime.UtcNow.AddHours(-options.MaxWorkingMemoryAgeHours);
+
             foreach (var memory in memories.Where(m => m.Stability <= MemoryStability.Stabilizing))
             {
                 var score = _scoringService.CalculateScore(memory);
-                if (score < options.MinImportanceToRetain)
+
+                // Age is a second, independent reason to demote: working memory that has sat around
+                // past MaxWorkingMemoryAgeHours goes down even if it still scores well.
+                var tooOldForWorkingMemory = memory.CreatedAt < workingMemoryCutoff;
+
+                if (score < options.MinImportanceToRetain || tooOldForWorkingMemory)
                 {
                     await _tieredStore.DemoteAsync(memory, cancellationToken);
                     archived++;

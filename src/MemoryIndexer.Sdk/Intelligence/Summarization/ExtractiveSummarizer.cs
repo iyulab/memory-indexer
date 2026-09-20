@@ -302,6 +302,14 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
                 score += 0.1f;
             }
 
+            // 5. Focus topics - the same weight as the other keyword-presence bonuses above, so a
+            // sentence naming a requested topic ranks with one carrying an entity or a timestamp.
+            if (options.FocusTopics is { Count: > 0 } topics &&
+                topics.Any(t => sentence.Text.Contains(t, StringComparison.OrdinalIgnoreCase)))
+            {
+                score += 0.1f;
+            }
+
             sentence.Score = score;
         }
     }
