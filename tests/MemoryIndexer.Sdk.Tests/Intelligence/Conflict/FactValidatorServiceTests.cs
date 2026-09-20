@@ -427,4 +427,148 @@ public class FactValidatorServiceTests
     }
 
     #endregion
+
+    #region FactValidationOptions Tests
+
+    // Cosine similarity of these two vectors is 0.85: inside the default contradiction band [0.8, 0.95).
+    private static readonly float[] NewFactVector = [1f, 0f];
+    private static readonly float[] ExistingFactVector = [0.85f, 0.526783f];
+
+    private (UserFact NewFact, List<SemanticStoreEntry> Existing) CreateContradictionAtSimilarity085()
+    {
+        _mockEmbeddingService.GenerateEmbeddingAsync("User likes coffee", Arg.Any<CancellationToken>())
+            .Returns(new ReadOnlyMemory<float>(NewFactVector));
+
+        var newFact = new UserFact
+        {
+            Content = "User likes coffee",
+            Category = FactCategory.Preference,
+            Confidence = 0.9f
+        };
+
+        var existing = new List<SemanticStoreEntry>
+        {
+            new()
+            {
+                Key = "preference:coffee",
+                Value = "User hates coffee",
+                Category = SemanticStoreCategory.Preference,
+                Confidence = 0.8f,
+                IsActive = true,
+                Embedding = new ReadOnlyMemory<float>(ExistingFactVector)
+            }
+        };
+
+        return (newFact, existing);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_DefaultSimilarityThreshold_DetectsContradictionAtSimilarity085()
+    {
+        // Arrange
+        var (newFact, existing) = CreateContradictionAtSimilarity085();
+
+        // Act
+        var result = await _service.ValidateAsync(newFact, existing, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Conflicts.Should().ContainSingle()
+            .Which.ConflictType.Should().Be(FactConflictType.Contradiction);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_HigherSimilarityThreshold_IgnoresContradictionBelowIt()
+    {
+        // Arrange
+        var (newFact, existing) = CreateContradictionAtSimilarity085();
+        var options = new FactValidationOptions { SimilarityThreshold = 0.9f };
+
+        // Act
+        var result = await _service.ValidateAsync(newFact, existing, options, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Conflicts.Should().BeEmpty();
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ValidateAsync_LowerSimilarityThreshold_DetectsContradictionTheDefaultMisses()
+    {
+        // Arrange - cosine similarity 0.7, below the default 0.8
+        var (newFact, existing) = CreateContradictionAtSimilarity085();
+        existing[0].Embedding = new ReadOnlyMemory<float>([0.7f, 0.714143f]);
+
+        // Act
+        var atDefault = await _service.ValidateAsync(newFact, existing, cancellationToken: TestContext.Current.CancellationToken);
+        var lowered = await _service.ValidateAsync(
+            newFact, existing, new FactValidationOptions { SimilarityThreshold = 0.6f }, TestContext.Current.CancellationToken);
+
+        // Assert
+        atDefault.Conflicts.Should().BeEmpty();
+        lowered.Conflicts.Should().ContainSingle()
+            .Which.ConflictType.Should().Be(FactConflictType.Contradiction);
+    }
+
+    private static (UserFact NewFact, List<SemanticStoreEntry> Existing) CreateSpoValueUpdate()
+    {
+        var newFact = new UserFact
+        {
+            Content = "User lives in Busan",
+            Category = FactCategory.General,
+            Confidence = 0.9f,
+            Subject = "user",
+            Predicate = "lives_in"
+        };
+
+        var existing = new List<SemanticStoreEntry>
+        {
+            new()
+            {
+                Key = "fact:residence",
+                Value = "User lives in Seoul",
+                Category = SemanticStoreCategory.Fact,
+                Confidence = 0.8f,
+                IsActive = true,
+                Embedding = null,
+                Metadata = new Dictionary<string, string>
+                {
+                    ["subject"] = "user",
+                    ["predicate"] = "lives_in"
+                }
+            }
+        };
+
+        return (newFact, existing);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_DefaultUseSpoMatching_ReportsValueUpdate()
+    {
+        // Arrange
+        var (newFact, existing) = CreateSpoValueUpdate();
+
+        // Act
+        var result = await _service.ValidateAsync(newFact, existing, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Conflicts.Should().ContainSingle()
+            .Which.ConflictType.Should().Be(FactConflictType.ValueUpdate);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_UseSpoMatchingFalse_SkipsTripleMatching()
+    {
+        // Arrange
+        var (newFact, existing) = CreateSpoValueUpdate();
+        var options = new FactValidationOptions { UseSpoMatching = false };
+
+        // Act
+        var result = await _service.ValidateAsync(newFact, existing, options, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Conflicts.Should().BeEmpty();
+        result.IsValid.Should().BeTrue();
+    }
+
+    #endregion
 }

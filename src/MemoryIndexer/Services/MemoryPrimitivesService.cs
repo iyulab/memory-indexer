@@ -38,6 +38,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     private readonly IShortTermMemoryOrchestrator _orchestrator;
     private readonly SearchOptions _searchOptions;
     private readonly Configuration.WorkingMemoryOptions _workingMemoryOptions;
+    private readonly IntelligenceOptions _intelligenceOptions;
     private readonly ILogger<MemoryPrimitivesService> _logger;
 
     public MemoryPrimitivesService(
@@ -64,6 +65,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         _orchestrator = orchestrator;
         _searchOptions = options.Value.Search;
         _workingMemoryOptions = options.Value.WorkingMemory;
+        _intelligenceOptions = options.Value.Intelligence;
         _logger = logger;
     }
 
@@ -147,7 +149,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         float importanceScore = request.ImportanceScore ?? 0.5f;
         List<string> topics = request.Topics?.ToList() ?? [];
 
-        if (_memoryClassifier != null && (request.Type == null || request.ImportanceScore == null))
+        if (_memoryClassifier != null && _intelligenceOptions.ClassificationEnabled &&
+            (request.Type == null || request.ImportanceScore == null))
         {
             try
             {

@@ -392,4 +392,61 @@ public class AutonomousMemoryManagerTests
         Assert.True(result.Success);
         Assert.Empty(result.PagedInMemories);
     }
+
+    private List<MemoryUnit> SetupLowScoringMemories(int count)
+    {
+        var memories = Enumerable.Range(0, count)
+            .Select(i => new MemoryUnit
+            {
+                Id = Guid.NewGuid(),
+                Content = $"Low priority memory {i}",
+                Stability = MemoryStability.Volatile
+            })
+            .ToList();
+
+        _memoryStoreMock.GetAllAsync(
+                Arg.Any<string>(),
+                Arg.Any<MemoryFilterOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(memories);
+
+        // Below the default MinImportanceToRetain of 0.3
+        _scoringServiceMock.CalculateScore(Arg.Any<MemoryUnit>(), Arg.Any<ReadOnlyMemory<float>?>())
+            .Returns(0.1f);
+
+        return memories;
+    }
+
+    [Fact]
+    public async Task OptimizeMemoryAsync_DefaultOptions_ArchivesLowScoringMemories()
+    {
+        // Arrange
+        SetupLowScoringMemories(3);
+
+        // Act
+        var result = await _manager.OptimizeMemoryAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(3, result.MemoriesArchived);
+        Assert.Single(result.ActionsTaken);
+        await _tieredStoreMock.Received(3).DemoteAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task OptimizeMemoryAsync_EnableArchivalFalse_ArchivesNothing()
+    {
+        // Arrange
+        SetupLowScoringMemories(3);
+        var options = new OptimizationOptions { EnableArchival = false };
+
+        // Act
+        var result = await _manager.OptimizeMemoryAsync(options, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(0, result.MemoriesArchived);
+        Assert.Empty(result.ActionsTaken);
+        Assert.Equal(result.TokensBefore, result.TokensAfter);
+        await _tieredStoreMock.DidNotReceive().DemoteAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>());
+    }
 }

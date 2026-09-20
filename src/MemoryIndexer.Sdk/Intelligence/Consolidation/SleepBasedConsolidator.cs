@@ -71,7 +71,7 @@ public sealed partial class SleepBasedConsolidator : IMemoryConsolidator
 
             if (options.ApplyForgettingCurve)
             {
-                decayResults = (await ApplyForgettingCurveAsync(memories, cancellationToken)).ToList();
+                decayResults = ApplyForgettingCurve(memories, options);
                 memoriesDecayed = decayResults.Count(r => r.NewScore != r.PreviousScore);
                 memoriesArchived = decayResults.Count(r => r.ShouldArchive);
 
@@ -210,10 +210,18 @@ public sealed partial class SleepBasedConsolidator : IMemoryConsolidator
     /// <inheritdoc />
     public Task<IReadOnlyList<MemoryDecayResult>> ApplyForgettingCurveAsync(
         IReadOnlyList<MemoryUnit> memories,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<MemoryDecayResult>>(ApplyForgettingCurve(memories, new ConsolidationOptions()));
+
+    private static List<MemoryDecayResult> ApplyForgettingCurve(
+        IReadOnlyList<MemoryUnit> memories,
+        ConsolidationOptions options)
     {
         var results = new List<MemoryDecayResult>();
         var now = DateTime.UtcNow;
+
+        // The decay rate scales the time constant of the curve: 0.1 gives the factor of 10
+        var timeConstantScale = 1f / options.ForgettingDecayRate;
 
         foreach (var memory in memories)
         {
@@ -233,7 +241,7 @@ public sealed partial class SleepBasedConsolidator : IMemoryConsolidator
 
             // Ebbinghaus forgetting curve: R = e^(-t/S)
             // R = retention, t = time, S = strength
-            var retention = MathF.Exp((float)(-daysSinceAccess / (strengthFactor * 10)));
+            var retention = MathF.Exp((float)(-daysSinceAccess / (strengthFactor * timeConstantScale)));
 
             // Apply retention to importance score
             var newScore = memory.ImportanceScore * retention;
@@ -252,12 +260,12 @@ public sealed partial class SleepBasedConsolidator : IMemoryConsolidator
                 MemoryId = memory.Id,
                 PreviousScore = memory.ImportanceScore,
                 NewScore = newScore,
-                ShouldArchive = newScore < 0.2f,
+                ShouldArchive = newScore < options.ArchiveThreshold,
                 StrengthFactor = strengthFactor
             });
         }
 
-        return Task.FromResult<IReadOnlyList<MemoryDecayResult>>(results);
+        return results;
     }
 
     /// <inheritdoc />

@@ -428,4 +428,89 @@ public class JsonProfileExporterTests
     }
 
     #endregion
+
+    #region IncludeHistory Tests
+
+    private void SetupFactWithOneSupersededVersion()
+    {
+        var facts = new List<SemanticStoreEntry>
+        {
+            new()
+            {
+                Key = "city",
+                Value = "Lives in Busan",
+                Category = SemanticStoreCategory.Fact,
+                IsActive = true,
+                Version = 2,
+                SupersedesKey = "city:v1"
+            },
+            new()
+            {
+                Key = "city:v1",
+                Value = "Lives in Seoul",
+                Category = SemanticStoreCategory.Fact,
+                IsActive = false,
+                Version = 1
+            },
+            new()
+            {
+                Key = "old-hobby",
+                Value = "Used to play chess",
+                Category = SemanticStoreCategory.Fact,
+                IsActive = false,
+                Version = 1
+            }
+        };
+
+        _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
+            .Returns(facts);
+    }
+
+    private static readonly JsonSerializerOptions ExportReadOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
+
+    private static ExportedProfile ParseExport(ProfileExportResult result)
+    {
+        result.Success.Should().BeTrue();
+        return JsonSerializer.Deserialize<ExportedProfile>(result.Data!, ExportReadOptions)!;
+    }
+
+    [Fact]
+    public async Task ExportAsync_DefaultIncludeHistory_ExportsSupersededVersionsAndLinks()
+    {
+        // Arrange
+        SetupFactWithOneSupersededVersion();
+
+        // Act
+        var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var profile = ParseExport(result);
+        profile.ActiveFacts.Should().ContainSingle().Which.SupersedesKey.Should().Be("city:v1");
+        profile.ArchivedFacts!.Select(f => f.Key).Should().BeEquivalentTo("city:v1", "old-hobby");
+        result.Metadata!.FactCount.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task ExportAsync_IncludeHistoryFalse_DropsSupersededVersionsAndLinks()
+    {
+        // Arrange
+        SetupFactWithOneSupersededVersion();
+        var options = new ProfileExportOptions { IncludeHistory = false };
+
+        // Act
+        var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
+
+        // Assert - the superseded version is gone; an archived fact that nothing superseded stays
+        var profile = ParseExport(result);
+        profile.ActiveFacts.Should().ContainSingle().Which.SupersedesKey.Should().BeNull();
+        profile.ArchivedFacts!.Select(f => f.Key).Should().BeEquivalentTo("old-hobby");
+        result.Metadata!.FactCount.Should().Be(2);
+        result.Metadata.ArchivedFactCount.Should().Be(1);
+    }
+
+    #endregion
 }

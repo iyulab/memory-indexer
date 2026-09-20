@@ -35,6 +35,16 @@ public class OptionsReachabilityRosterTests
     /// <c>ResourceLimitOptions</c> was on this list when only the core assembly was scanned and is not on it
     /// now: <c>ResourceLimitEnforcer</c> in the SDK reads it.
     /// </para>
+    /// <para>
+    /// Wired since, each with a test in both directions (the non-default value changes the outcome, the
+    /// default keeps it): <c>LatencyOptions.ProfilingEnabled</c>,
+    /// <c>SensoryBufferOptions.EnableBackgroundWorker</c>, <c>IntelligenceOptions.ClassificationEnabled</c>,
+    /// <c>MemoryPromotionBackgroundOptions.Enabled</c>, <c>FactValidationOptions.SimilarityThreshold</c> and
+    /// <c>UseSpoMatching</c>, <c>OptimizationOptions.EnableArchival</c>,
+    /// <c>ProfileExportOptions.IncludeHistory</c>, <c>ContradictionDetectionOptions.AsOfDate</c>,
+    /// <c>ConsolidationOptions.ForgettingDecayRate</c> and <c>ArchiveThreshold</c>, and
+    /// <c>LineageQueryOptions.IncludeRelated</c>.
+    /// </para>
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownUnread = new()
     {
@@ -44,16 +54,13 @@ public class OptionsReachabilityRosterTests
         ],
         ["MemoryIndexer.Configuration.IntelligenceOptions"] =
         [
-            "ClassificationEnabled", "ClassifierModel", "Enabled", "FactExtractionEnabled", "SummarizationEnabled",
+            "ClassifierModel", "Enabled", "FactExtractionEnabled", "SummarizationEnabled",
         ],
-        ["MemoryIndexer.Configuration.LatencyOptions"] =
-        [
-            "ProfilingEnabled", "QueryCacheSize",
-        ],
+        ["MemoryIndexer.Configuration.LatencyOptions"] = ["QueryCacheSize"],
         ["MemoryIndexer.Configuration.SearchOptions"] = ["RerankerModel"],
         ["MemoryIndexer.Configuration.SensoryBufferOptions"] =
         [
-            "EnableBackgroundWorker", "Enabled", "TriggerCheckInterval",
+            "Enabled", "TriggerCheckInterval",
         ],
         ["MemoryIndexer.Configuration.SqliteOptions"] =
         [
@@ -68,21 +75,18 @@ public class OptionsReachabilityRosterTests
         [
             "BoostFrequentlyAccessed", "ReduceForContradictions",
         ],
-        ["MemoryIndexer.Interfaces.FactValidationOptions"] =
-        [
-            "MaxComparisonFacts", "SimilarityThreshold", "UseSpoMatching",
-        ],
+        ["MemoryIndexer.Interfaces.FactValidationOptions"] = ["MaxComparisonFacts"],
         ["MemoryIndexer.Interfaces.InferenceOptions"] = ["MaxDepth"],
         ["MemoryIndexer.Interfaces.LinkDiscoveryOptions"] = ["FindCausalLinks"],
         ["MemoryIndexer.Interfaces.MemoryAnalysisOptions"] = ["MinConfidenceThreshold"],
         ["MemoryIndexer.Interfaces.OptimizationOptions"] =
         [
-            "EnableArchival", "EnableCompression", "EnableConsolidation", "MaxWorkingMemoryAgeHours",
+            "EnableCompression", "EnableConsolidation", "MaxWorkingMemoryAgeHours",
         ],
         ["MemoryIndexer.Interfaces.OutdatedDetectionOptions"] = ["FocusEntityTypes"],
         ["MemoryIndexer.Interfaces.ProfileExportOptions"] =
         [
-            "IncludeAuditTrail", "IncludeHistory", "IncludeInferred",
+            "IncludeAuditTrail", "IncludeInferred",
         ],
         ["MemoryIndexer.Interfaces.ReflectionOptions"] =
         [
@@ -98,23 +102,16 @@ public class OptionsReachabilityRosterTests
         [
             "Capacity", "EnableCapacityEnforcement",
         ],
-        ["MemoryIndexer.Sdk.Intelligence.Conflict.ContradictionDetectionOptions"] = ["AsOfDate"],
-        ["MemoryIndexer.Sdk.Intelligence.Consolidation.ConsolidationOptions"] =
-        [
-            "ArchiveThreshold", "ForgettingDecayRate",
-        ],
         ["MemoryIndexer.Sdk.Intelligence.ContextOptimization.ContextOptimizationOptions"] =
         [
             "EnableChunkExpansion", "MaxTokens",
         ],
         ["MemoryIndexer.Sdk.Intelligence.EntityResolution.ExpansionOptions"] = ["OnlyAmbiguous"],
         ["MemoryIndexer.Sdk.Intelligence.Graph.HybridGraphOptions"] = ["SemanticWeight"],
-        ["MemoryIndexer.Sdk.Intelligence.Security.LineageQueryOptions"] = ["IncludeRelated"],
         ["MemoryIndexer.Sdk.Intelligence.Summarization.SummarizationOptions"] =
         [
             "FocusTopics", "Style",
         ],
-        ["MemoryIndexer.Sdk.Services.MemoryPromotionBackgroundOptions"] = ["Enabled"],
         ["MemoryIndexer.Services.VCMOptions"] =
         [
             "AutoEvictionTrigger", "ConsolidationInterval", "EnableAutoEviction",

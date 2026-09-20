@@ -395,7 +395,9 @@ public sealed class LineageQueryOptions
     public int Limit { get; set; } = 100;
 
     /// <summary>
-    /// Whether to include related memory events.
+    /// Whether to include the events of directly related memories (for example the sources a
+    /// memory was merged from). When true, their events are returned together with the memory's
+    /// own, under the same filters and limit. Default: false.
     /// </summary>
     public bool IncludeRelated { get; set; }
 }

@@ -519,7 +519,11 @@ public sealed class IntelligenceOptions
     public string? ClassifierModel { get; set; }
 
     /// <summary>
-    /// Whether automatic classification is enabled for new memories.
+    /// Whether the memory primitives classify a new memory whose type or importance was not given.
+    /// When false, encoding does not call the classifier and falls back to the episodic type, an
+    /// importance of 0.5 and the caller's topics. The simple memory API is not affected: it uses
+    /// classification to decide whether and where to store, and always classifies.
+    /// Default: true.
     /// </summary>
     public bool ClassificationEnabled { get; set; } = true;
 
@@ -606,8 +610,10 @@ public sealed class SensoryBufferOptions
     public TimeSpan TriggerCheckInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Whether to enable async background promotion worker.
-    /// When disabled, promotion only occurs on explicit flush.
+    /// Whether the background promotion worker promotes the sensory buffer.
+    /// When false, the worker skips its buffer-to-working-memory phase (its other phases still run),
+    /// so buffered items are promoted only by an explicit call to the sensory promoter.
+    /// Default: true.
     /// </summary>
     public bool EnableBackgroundWorker { get; set; } = true;
 }
@@ -741,6 +747,8 @@ public sealed class LatencyOptions
 {
     /// <summary>
     /// Whether latency profiling is enabled.
+    /// When false, the in-memory latency profiler records neither latencies nor cache accesses,
+    /// so its metrics and reports stay empty.
     /// Default: true.
     /// </summary>
     public bool ProfilingEnabled { get; set; } = true;

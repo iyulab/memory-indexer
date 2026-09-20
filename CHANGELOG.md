@@ -17,6 +17,41 @@ All notable changes to Memory Indexer are documented here.
   and `IPromptInjectionDetector` (also exposed as MCP security tools), `IRateLimiter` with its own
   `RateLimitOptions`, `IAuditLogger`, and `ITenantContext`.
 
+### Fixed
+Options that were declared and documented but read by nothing now do what they say. Every default
+keeps the previous behaviour; only a caller who sets a non-default value sees a change.
+
+- **`LatencyOptions.ProfilingEnabled = false` now turns profiling off.** Nothing read it:
+  `InMemoryLatencyProfiler` recorded every latency and cache access regardless. With `false` it
+  records nothing and its metrics stay empty.
+- **`MemoryPromotionBackgroundOptions.Enabled = false` now stops the background promoter, and
+  `SensoryBufferOptions.EnableBackgroundWorker = false` now skips its buffer promotion phase.**
+  The hosted service checked neither switch and always ran all three phases.
+  **Breaking:** its constructor now also takes `IOptions<MemoryIndexerOptions>`. The container
+  supplies it; only code that constructs the service by hand has to pass it.
+- **`IntelligenceOptions.ClassificationEnabled = false` now stops `MemoryPrimitivesService.EncodeAsync`
+  from calling the classifier.** A memory stored without a type or importance then gets the
+  episodic type and an importance of 0.5. `SimpleMemoryService` still classifies: it needs the
+  result to decide whether and where to store.
+- **`FactValidationOptions.SimilarityThreshold` and `UseSpoMatching` now reach `ValidateAsync`.**
+  The contradiction band started at a hard-coded 0.8 and subject-predicate matching always ran.
+  `DetectConflictsAsync` takes no options and keeps the defaults.
+- **`OptimizationOptions.EnableArchival = false` now makes `OptimizeMemoryAsync` demote nothing.**
+  The demotion loop ran unconditionally.
+- **`ProfileExportOptions.IncludeHistory = false` now exports current facts only.** Superseded
+  versions are left out and `supersedesKey` is omitted; before, the export was identical either
+  way. This also makes the `includeHistory` parameter of the `export_profile` MCP tool effective.
+- **`ContradictionDetectionOptions.AsOfDate` now restricts triple contradiction detection to
+  triples valid at that date.** It was ignored. Unset (the default) still compares every triple;
+  memory contradiction detection has no validity period and does not use it.
+- **`ConsolidationOptions.ForgettingDecayRate` and `ArchiveThreshold` now shape a consolidation
+  cycle.** The curve used a fixed time constant and a fixed 0.2 archive cut-off; the defaults
+  (0.1 and 0.2) reproduce them exactly. `ApplyForgettingCurveAsync` takes no options and keeps
+  the defaults.
+- **`LineageQueryOptions.IncludeRelated = true` now returns the events of related memories**
+  (for example the sources of a merge) together with the memory's own, under the same filters
+  and limit. It returned the memory's own events only.
+
 ## [v0.17.16] - 2026-09-19
 
 ### Changed

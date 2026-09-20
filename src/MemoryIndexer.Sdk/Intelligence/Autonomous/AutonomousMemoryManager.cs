@@ -240,14 +240,17 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
         var archived = 0;
         var archivedIds = new List<Guid>();
 
-        foreach (var memory in memories.Where(m => m.Stability <= MemoryStability.Stabilizing))
+        if (options.EnableArchival)
         {
-            var score = _scoringService.CalculateScore(memory);
-            if (score < options.MinImportanceToRetain)
+            foreach (var memory in memories.Where(m => m.Stability <= MemoryStability.Stabilizing))
             {
-                await _tieredStore.DemoteAsync(memory, cancellationToken);
-                archived++;
-                archivedIds.Add(memory.Id);
+                var score = _scoringService.CalculateScore(memory);
+                if (score < options.MinImportanceToRetain)
+                {
+                    await _tieredStore.DemoteAsync(memory, cancellationToken);
+                    archived++;
+                    archivedIds.Add(memory.Id);
+                }
             }
         }
 

@@ -303,4 +303,39 @@ public class InMemoryLatencyProfilerTests
         Assert.Equal(50.0, user1Metrics[0].AverageLatencyMs);
         Assert.Equal(150.0, user2Metrics[0].AverageLatencyMs);
     }
+
+    [Fact]
+    public async Task RecordLatencyAsync_ProfilingDisabled_RecordsNothing()
+    {
+        // Arrange
+        var profiler = new InMemoryLatencyProfiler(Options.Create(new MemoryIndexerOptions
+        {
+            Latency = new LatencyOptions { ProfilingEnabled = false }
+        }));
+
+        // Act
+        await profiler.RecordLatencyAsync("user1", "Working", 75.5, cancellationToken: TestContext.Current.CancellationToken);
+        await profiler.RecordCacheAccessAsync("user1", "Embedding", hit: true, TestContext.Current.CancellationToken);
+        var metrics = await profiler.GetMetricsAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(metrics);
+    }
+
+    [Fact]
+    public async Task RecordLatencyAsync_DefaultOptions_Records()
+    {
+        // Arrange - ProfilingEnabled is left at its default
+        var profiler = new InMemoryLatencyProfiler(Options.Create(new MemoryIndexerOptions()));
+
+        // Act
+        await profiler.RecordLatencyAsync("user1", "Working", 75.5, cancellationToken: TestContext.Current.CancellationToken);
+        await profiler.RecordCacheAccessAsync("user1", "Embedding", hit: true, TestContext.Current.CancellationToken);
+        var metrics = await profiler.GetMetricsAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(metrics);
+        Assert.Equal(1, metrics[0].TotalQueries);
+        Assert.Equal(1, metrics[0].EmbeddingCacheHits);
+    }
 }

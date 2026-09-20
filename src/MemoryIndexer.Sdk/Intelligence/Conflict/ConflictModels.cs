@@ -184,7 +184,9 @@ public sealed class ContradictionDetectionOptions
     public int MaxComparisonItems { get; init; } = 100;
 
     /// <summary>
-    /// Point-in-time for temporal queries (default: now).
+    /// Point in time for triple contradiction detection. When set, existing triples that were not
+    /// valid at that date are not compared. When null (the default), every existing triple is
+    /// compared. Memory contradiction detection carries no validity period and ignores this value.
     /// </summary>
     public DateTime? AsOfDate { get; init; }
 }

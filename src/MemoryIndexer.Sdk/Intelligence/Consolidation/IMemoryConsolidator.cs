@@ -105,12 +105,14 @@ public sealed class ConsolidationOptions
     public bool ApplyForgettingCurve { get; init; } = true;
 
     /// <summary>
-    /// Decay rate for forgetting curve - higher = faster forgetting (default: 0.1).
+    /// Decay rate of the forgetting curve applied by a consolidation cycle: retention is
+    /// e^(-days * rate / strength), so a higher rate forgets faster and 0 disables decay (default: 0.1).
     /// </summary>
     public float ForgettingDecayRate { get; init; } = 0.1f;
 
     /// <summary>
-    /// Minimum importance score below which memories may be archived (default: 0.2).
+    /// Importance score below which a consolidation cycle counts a decayed memory as an archive
+    /// candidate (default: 0.2).
     /// </summary>
     public float ArchiveThreshold { get; init; } = 0.2f;
 

@@ -27,6 +27,11 @@ public sealed class InMemoryLatencyProfiler : ILatencyProfiler
         Dictionary<string, double>? componentLatencies = null,
         CancellationToken cancellationToken = default)
     {
+        if (!_options.ProfilingEnabled)
+        {
+            return Task.CompletedTask;
+        }
+
         var state = _userStates.GetOrAdd(userId, _ => new UserLatencyState());
         var tierState = state.GetOrCreateTierState(tier);
 
@@ -60,6 +65,11 @@ public sealed class InMemoryLatencyProfiler : ILatencyProfiler
         bool hit,
         CancellationToken cancellationToken = default)
     {
+        if (!_options.ProfilingEnabled)
+        {
+            return Task.CompletedTask;
+        }
+
         var state = _userStates.GetOrAdd(userId, _ => new UserLatencyState());
 
         if (cacheType == "Embedding")

@@ -175,6 +175,9 @@ public sealed partial class SemanticContradictionDetector : IContradictionDetect
         {
             if (existing.Id == newTriple.Id) continue;
 
+            // Point-in-time comparison: ignore triples that did not hold at the requested date
+            if (options.AsOfDate is { } asOfDate && !existing.WasValidAt(asOfDate)) continue;
+
             // Check for same subject and predicate
             if (!existing.Subject.Equals(newTriple.Subject, StringComparison.OrdinalIgnoreCase) ||
                 !existing.Predicate.Equals(newTriple.Predicate, StringComparison.OrdinalIgnoreCase))

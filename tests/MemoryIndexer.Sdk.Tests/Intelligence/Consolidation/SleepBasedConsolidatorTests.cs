@@ -419,4 +419,88 @@ public sealed class SleepBasedConsolidatorTests
     }
 
     #endregion
+
+    #region ForgettingDecayRate and ArchiveThreshold Tests
+
+    // One memory, last touched ten days ago, never accessed: strength = 1 + ln(1) + 0.5 = 1.5.
+    private MemoryUnit SetupSingleTenDayOldMemory()
+    {
+        var memory = new MemoryUnit
+        {
+            Id = Guid.NewGuid(),
+            Content = "Ten day old memory",
+            UserId = "user1",
+            CreatedAt = DateTime.UtcNow.AddDays(-10),
+            ImportanceScore = 0.5f
+        };
+
+        _memoryStore.GetAllAsync("user1", Arg.Any<MemoryFilterOptions?>(), Arg.Any<CancellationToken>())
+            .Returns([memory]);
+
+        return memory;
+    }
+
+    [Fact]
+    public async Task ConsolidateAsync_DefaultDecayRate_AppliesTheEstablishedCurve()
+    {
+        // Arrange
+        var memory = SetupSingleTenDayOldMemory();
+        var options = new ConsolidationOptions { UserId = "user1", MaxMemoryAge = TimeSpan.FromDays(30) };
+
+        // Act
+        var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
+
+        // Assert - R = e^(-t / (S * 10)) = e^(-10 / 15)
+        var expected = 0.5f * MathF.Exp(-10f / (1.5f * 10f));
+        Assert.Equal(expected, memory.ImportanceScore, 3);
+        Assert.Equal(0, result.MemoriesArchived);
+    }
+
+    [Fact]
+    public void ForgettingDecayRate_Default_MapsExactlyToTheEstablishedTimeConstant()
+    {
+        // The curve divides by strength * (1 / rate); the default rate must give exactly 10
+        Assert.Equal(10f, 1f / new ConsolidationOptions().ForgettingDecayRate);
+    }
+
+    [Fact]
+    public async Task ConsolidateAsync_HigherDecayRate_ForgetsFaster()
+    {
+        // Arrange
+        var memory = SetupSingleTenDayOldMemory();
+        var options = new ConsolidationOptions
+        {
+            UserId = "user1",
+            MaxMemoryAge = TimeSpan.FromDays(30),
+            ForgettingDecayRate = 0.2f
+        };
+
+        // Act
+        await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
+
+        // Assert - doubling the rate halves the time constant: e^(-10 / (1.5 * 5))
+        var expected = 0.5f * MathF.Exp(-10f / (1.5f * 5f));
+        Assert.Equal(expected, memory.ImportanceScore, 3);
+    }
+
+    [Fact]
+    public async Task ConsolidateAsync_HigherArchiveThreshold_FlagsMemoriesTheDefaultKeeps()
+    {
+        // Arrange - the decayed score is about 0.257: above the default 0.2, below 0.3
+        SetupSingleTenDayOldMemory();
+        var options = new ConsolidationOptions
+        {
+            UserId = "user1",
+            MaxMemoryAge = TimeSpan.FromDays(30),
+            ArchiveThreshold = 0.3f
+        };
+
+        // Act
+        var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, result.MemoriesArchived);
+    }
+
+    #endregion
 }

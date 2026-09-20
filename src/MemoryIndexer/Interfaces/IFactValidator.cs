@@ -68,7 +68,9 @@ public sealed class FactValidationOptions
     public float ConfidenceDifferentialThreshold { get; init; } = 0.2f;
 
     /// <summary>
-    /// Semantic similarity threshold for conflict detection.
+    /// Minimum semantic similarity at which validation checks an existing fact for a contradiction.
+    /// Raising it ignores looser matches; lowering it examines more of them. Similarity of 0.95 or
+    /// more is always reported as a semantic duplicate, whatever this value is.
     /// Default: 0.8
     /// </summary>
     public float SimilarityThreshold { get; init; } = 0.8f;
@@ -80,7 +82,9 @@ public sealed class FactValidationOptions
     public bool AllowAutoResolution { get; init; } = true;
 
     /// <summary>
-    /// Whether to check SPO (Subject-Predicate-Object) triple matching.
+    /// Whether validation matches SPO (Subject-Predicate-Object) triples: the same subject and
+    /// predicate with a different value is reported as a value update. When false, that check is
+    /// skipped and only exact and semantic comparison remain.
     /// Default: true
     /// </summary>
     public bool UseSpoMatching { get; init; } = true;

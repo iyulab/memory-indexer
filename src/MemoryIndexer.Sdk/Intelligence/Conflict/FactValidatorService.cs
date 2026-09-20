@@ -46,7 +46,7 @@ public sealed partial class FactValidatorService : IFactValidator
         }
 
         // Detect conflicts
-        var conflicts = await DetectConflictsAsync(newFact, existingFacts, cancellationToken);
+        var conflicts = await DetectConflictsAsync(newFact, existingFacts, options, cancellationToken);
 
         if (conflicts.Count == 0)
         {
@@ -138,10 +138,17 @@ public sealed partial class FactValidatorService : IFactValidator
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<FactConflict>> DetectConflictsAsync(
+    public Task<IReadOnlyList<FactConflict>> DetectConflictsAsync(
         UserFact newFact,
         IReadOnlyList<SemanticStoreEntry> existingFacts,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        DetectConflictsAsync(newFact, existingFacts, new FactValidationOptions(), cancellationToken);
+
+    private async Task<IReadOnlyList<FactConflict>> DetectConflictsAsync(
+        UserFact newFact,
+        IReadOnlyList<SemanticStoreEntry> existingFacts,
+        FactValidationOptions options,
+        CancellationToken cancellationToken)
     {
         var conflicts = new List<FactConflict>();
 
@@ -176,7 +183,7 @@ public sealed partial class FactValidatorService : IFactValidator
             }
 
             // Check SPO triple matching
-            var spoMatch = CheckSpoMatch(newFact, existing);
+            var spoMatch = options.UseSpoMatching ? CheckSpoMatch(newFact, existing) : null;
             if (spoMatch.HasValue && spoMatch.Value)
             {
                 // Same subject-predicate, different object = ValueUpdate
@@ -209,7 +216,7 @@ public sealed partial class FactValidatorService : IFactValidator
                         Category = newFact.Category
                     });
                 }
-                else if (similarity >= 0.8f)
+                else if (similarity >= options.SimilarityThreshold)
                 {
                     // Check for contradiction patterns
                     var isContradiction = DetectContradictionPattern(newFact.Content, existing.Value);

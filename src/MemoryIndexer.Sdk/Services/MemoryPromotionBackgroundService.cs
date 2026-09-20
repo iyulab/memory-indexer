@@ -1,3 +1,4 @@
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Hosting;
@@ -28,23 +29,36 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
     private readonly ILongTermPromoter _longTermPromoter;
     private readonly ILogger<MemoryPromotionBackgroundService> _logger;
     private readonly MemoryPromotionBackgroundOptions _options;
+    private readonly SensoryBufferOptions _sensoryBufferOptions;
 
+    /// <summary>
+    /// Creates the service. <paramref name="indexerOptions"/> supplies
+    /// <see cref="SensoryBufferOptions.EnableBackgroundWorker"/>, which gates the buffer promotion phase.
+    /// </summary>
     public MemoryPromotionBackgroundService(
         ISensoryPromoter sensoryPromoter,
         IShortTermMemoryOrchestrator orchestrator,
         ILongTermPromoter longTermPromoter,
         IOptions<MemoryPromotionBackgroundOptions> options,
+        IOptions<MemoryIndexerOptions> indexerOptions,
         ILogger<MemoryPromotionBackgroundService> logger)
     {
         _sensoryPromoter = sensoryPromoter;
         _orchestrator = orchestrator;
         _longTermPromoter = longTermPromoter;
         _options = options.Value;
+        _sensoryBufferOptions = indexerOptions.Value.SensoryBuffer;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!_options.Enabled)
+        {
+            LogWorkerDisabled(_logger);
+            return;
+        }
+
         LogWorkerStarted(_logger, _options.CheckIntervalSeconds);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -54,7 +68,10 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
                 await Task.Delay(TimeSpan.FromSeconds(_options.CheckIntervalSeconds), stoppingToken);
 
                 // Phase 1: Check Buffer → Working Memory promotions (T0→T1)
-                await CheckBufferPromotionsAsync(stoppingToken);
+                if (_sensoryBufferOptions.EnableBackgroundWorker)
+                {
+                    await CheckBufferPromotionsAsync(stoppingToken);
+                }
 
                 // Phase 2: Check Working Memory → Session archival (T1→T2)
                 await CheckWorkingMemoryArchivalAsync(stoppingToken);
@@ -220,6 +237,9 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
     [LoggerMessage(Level = LogLevel.Information, Message = "[BACKGROUND] Memory promotion worker started. Check interval: {Interval}s")]
     private static partial void LogWorkerStarted(ILogger logger, int interval);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "[BACKGROUND] Memory promotion worker is disabled by configuration and will not run")]
+    private static partial void LogWorkerDisabled(ILogger logger);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Error in promotion cycle")]
     private static partial void LogPromotionCycleError(ILogger logger, Exception ex);
 
@@ -279,6 +299,7 @@ public sealed class MemoryPromotionBackgroundOptions
 
     /// <summary>
     /// Whether the background service is enabled.
+    /// When false, the hosted service returns as soon as it starts and runs no promotion phase.
     /// Default: true.
     /// </summary>
     public bool Enabled { get; set; } = true;

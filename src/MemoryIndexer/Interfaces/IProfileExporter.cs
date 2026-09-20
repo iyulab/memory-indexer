@@ -51,6 +51,9 @@ public class ProfileExportOptions
 
     /// <summary>
     /// Include version history for facts.
+    /// When false, entries that a newer version superseded are left out of the export and the
+    /// remaining entries carry no <c>SupersedesKey</c>; archived facts that nothing superseded
+    /// are still governed by <see cref="IncludeArchived"/>.
     /// Default: true
     /// </summary>
     public bool IncludeHistory { get; set; } = true;

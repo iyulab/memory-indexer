@@ -383,7 +383,8 @@ public sealed class OptimizationOptions
     public bool EnableConsolidation { get; init; } = true;
 
     /// <summary>
-    /// Whether to archive old memories.
+    /// Whether optimization demotes memories that are not yet stable and score below
+    /// <see cref="MinImportanceToRetain"/>. When false, optimization demotes nothing.
     /// </summary>
     public bool EnableArchival { get; init; } = true;
 

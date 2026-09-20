@@ -195,12 +195,14 @@ public sealed partial class InMemoryLineageTracker : IMemoryLineageTracker
     {
         options ??= new LineageQueryOptions();
 
-        if (!_eventsByMemory.TryGetValue(memoryId, out var events))
+        var memoryIds = new List<Guid> { memoryId };
+        if (options.IncludeRelated && _relationsByMemory.TryGetValue(memoryId, out var relations))
         {
-            return Task.FromResult<IReadOnlyList<MemoryLineageEvent>>(Array.Empty<MemoryLineageEvent>());
+            memoryIds.AddRange(relations.Select(r => r.RelatedMemoryId).Distinct().Where(id => id != memoryId));
         }
 
-        var query = events.AsEnumerable();
+        var query = memoryIds
+            .SelectMany(id => _eventsByMemory.TryGetValue(id, out var events) ? events : []);
 
         if (options.EventTypes != null && options.EventTypes.Length > 0)
         {

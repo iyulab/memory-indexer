@@ -155,6 +155,16 @@ public partial class JsonProfileExporter : IProfileExporter
             filtered = filtered.Where(f => f.UpdatedAt <= options.Until.Value);
         }
 
+        // Without history, entries that a newer version superseded are left out
+        if (!options.IncludeHistory)
+        {
+            var supersededKeys = facts
+                .Where(f => f.SupersedesKey != null)
+                .Select(f => f.SupersedesKey!)
+                .ToHashSet();
+            filtered = filtered.Where(f => !supersededKeys.Contains(f.Key));
+        }
+
         return filtered.ToList();
     }
 
@@ -212,7 +222,7 @@ public partial class JsonProfileExporter : IProfileExporter
             ValidTo = entry.ValidTo,
             IsActive = entry.IsActive,
             Version = entry.Version,
-            SupersedesKey = entry.SupersedesKey,
+            SupersedesKey = options.IncludeHistory ? entry.SupersedesKey : null,
             SourceSessions = entry.SourceSessions.Count > 0 ? entry.SourceSessions.ToList() : null
         };
 
