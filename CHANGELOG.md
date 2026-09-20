@@ -2,6 +2,21 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.18.0] - 2026-09-20
+
+### Removed
+- **Breaking: `SecurityOptions` and `MultiTenantOptions`** (and `MemoryIndexerOptions.Security` /
+  `.MultiTenant`). **None of their switches did anything.** `EnablePiiDetection`,
+  `EnableInjectionDetection`, `EnableRateLimiting`, `EnableAuditLogging`, `MaxAllowedRiskLevel`,
+  `EnforceIsolation`, `EnablePerTenantEncryption` and the rest were read by nothing, so a
+  configuration that set a security posture or tenant isolation through them was not protected by
+  it. Three numeric fields were range-checked by the configuration validator and then used by
+  nothing either; those checks are removed with them.
+  Migration: delete the `Security` and `MultiTenant` sections from your configuration. The
+  components themselves are unchanged and remain available to compose explicitly: `IPiiDetector`
+  and `IPromptInjectionDetector` (also exposed as MCP security tools), `IRateLimiter` with its own
+  `RateLimitOptions`, `IAuditLogger`, and `ITenantContext`.
+
 ## [v0.17.16] - 2026-09-19
 
 ### Changed

@@ -29,8 +29,9 @@ public class OptionsReachabilityRosterTests
     /// than as judged. None has been investigated except the three operating-contract types below.
     /// </para>
     /// <para>
-    /// Checked: <c>SecurityOptions</c> (all seven) and <c>MultiTenantOptions</c> (all five) are declaration
-    /// only across both assemblies - grep over src/ finds one reference each, the declaration itself.
+    /// Removed since: <c>SecurityOptions</c> and <c>MultiTenantOptions</c>. Their switches were read by
+    /// nothing (three numeric fields were validated and then used by nothing either), so configuring a
+    /// security posture or tenant isolation through them changed no behaviour; the types are gone.
     /// <c>ResourceLimitOptions</c> was on this list when only the core assembly was scanned and is not on it
     /// now: <c>ResourceLimitEnforcer</c> in the SDK reads it.
     /// </para>
@@ -49,17 +50,7 @@ public class OptionsReachabilityRosterTests
         [
             "ProfilingEnabled", "QueryCacheSize",
         ],
-        ["MemoryIndexer.Configuration.MemoryIndexerOptions"] = ["MultiTenant"],
-        ["MemoryIndexer.Configuration.MultiTenantOptions"] =
-        [
-            "DefaultTenantId", "EnablePerTenantEncryption", "Enabled", "EnforceIsolation", "TenantHeaderName",
-        ],
         ["MemoryIndexer.Configuration.SearchOptions"] = ["RerankerModel"],
-        ["MemoryIndexer.Configuration.SecurityOptions"] =
-        [
-            "EnableAuditLogging", "EnableInjectionDetection", "EnableLineageTracking", "EnablePiiDetection",
-            "EnableRateLimiting", "GlobalPermitsPerMinute", "MaxAllowedRiskLevel",
-        ],
         ["MemoryIndexer.Configuration.SensoryBufferOptions"] =
         [
             "EnableBackgroundWorker", "Enabled", "TriggerCheckInterval",

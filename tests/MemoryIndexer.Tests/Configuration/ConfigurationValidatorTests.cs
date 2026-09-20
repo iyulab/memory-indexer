@@ -197,40 +197,6 @@ public class ConfigurationValidatorTests
     }
 
     [Fact]
-    public void Validate_InvalidPiiConfidence_ShouldReturnError()
-    {
-        // Arrange
-        var options = new MemoryIndexerOptions
-        {
-            Security = new SecurityOptions { PiiMinConfidence = 1.5f }
-        };
-
-        // Act
-        var result = _validator.Validate(options);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyPath == "Security.PiiMinConfidence");
-    }
-
-    [Fact]
-    public void Validate_ZeroRateLimit_ShouldReturnError()
-    {
-        // Arrange
-        var options = new MemoryIndexerOptions
-        {
-            Security = new SecurityOptions { StorePermitsPerMinute = 0 }
-        };
-
-        // Act
-        var result = _validator.Validate(options);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyPath == "Security.StorePermitsPerMinute");
-    }
-
-    [Fact]
     public void Validate_NegativeSensoryBufferTokenThreshold_ShouldReturnError()
     {
         // Arrange

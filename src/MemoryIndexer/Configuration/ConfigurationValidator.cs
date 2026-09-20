@@ -16,7 +16,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         ValidateCompletionOptions(options.Completion, result);
         ValidateScoringOptions(options.Scoring, result);
         ValidateSearchOptions(options.Search, result);
-        ValidateSecurityOptions(options.Security, result);
         ValidateIntelligenceOptions(options.Intelligence, result);
         ValidateSensoryBufferOptions(options.SensoryBuffer, result);
         ValidateDeduplicationOptions(options.Deduplication, result);
@@ -352,42 +351,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
                 PropertyPath = "Search.RerankCandidateMultiplier",
                 Message = "Rerank candidate multiplier should be >= 1",
                 Suggestion = "Recommended: 4 for good reranking quality"
-            });
-        }
-    }
-
-    private static void ValidateSecurityOptions(SecurityOptions options, ConfigurationValidationResult result)
-    {
-        if (options.PiiMinConfidence < 0 || options.PiiMinConfidence > 1)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Security.PiiMinConfidence",
-                Message = "PII min confidence must be between 0 and 1",
-                CurrentValue = options.PiiMinConfidence,
-                ExpectedConstraint = "[0, 1]"
-            });
-        }
-
-        if (options.StorePermitsPerMinute <= 0)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Security.StorePermitsPerMinute",
-                Message = "Rate limit must be positive",
-                CurrentValue = options.StorePermitsPerMinute,
-                ExpectedConstraint = "> 0"
-            });
-        }
-
-        if (options.RecallPermitsPerMinute <= 0)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Security.RecallPermitsPerMinute",
-                Message = "Rate limit must be positive",
-                CurrentValue = options.RecallPermitsPerMinute,
-                ExpectedConstraint = "> 0"
             });
         }
     }
