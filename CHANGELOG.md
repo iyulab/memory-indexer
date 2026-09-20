@@ -97,6 +97,16 @@ All notable changes to Memory Indexer are documented here.
   - **`SubQueryOptions.IncludeCommunityQueries`, with `SubQueryType.PatternMatch` and
     `SubQueryType.CommunitySearch`.** Sub-query generation only ever produced `EntityFacts` and
     `EntityRelationship`; those two keep their numeric values (0 and 1).
+- **Breaking: three more options that were declared and read by nothing** —
+  `ConfidenceUpdateOptions.BoostFrequentlyAccessed` and `.ReduceForContradictions` (both defaulted
+  to `true`, so a caller had every reason to believe a frequently-read memory gained confidence and
+  a contradicted one lost it; the sibling `ApplyTimeDecay`, `DecayHalfLifeDays` and
+  `MinConfidenceAfterDecay` are read, which is what made these two credible) and
+  `ContextOptimizationOptions.EnableChunkExpansion` (its siblings `EnableMMR` and `EnableHyDE` are
+  read by the optimizer; nothing expands chunk context). Implementing the first two needs a boost
+  factor and a contradiction penalty that nobody has chosen, and there is no chunk context to
+  expand, so they go rather than ship as promises. Migration: delete the assignment; it never had
+  an effect. Ask and they come back as fields with a stated magnitude.
 - **Breaking: `SummarizationOptions.Style`, the `SummaryStyle` enum and the `style` parameter of the
   `SummarizeMemories` MCP tool are removed.** Every summary is extractive: `Abstractive` and the
   default `Hybrid` produced exactly the same text as `Extractive`. Migration: delete the
@@ -152,6 +162,19 @@ keeps the previous behaviour; only a caller who sets a non-default value sees a 
   The orchestrator read a duplicate options type (see Removed), and the tier manager raised the
   topic change trigger regardless of the switch. With detection off the trigger is still listed in
   `TierTriggerStatus.AllTriggers`, never satisfied.
+- **`LatencyOptions.QueryCacheSize` now bounds the recall query cache, which ran with no bound at
+  all.** The option documents "maximum number of cached query results (LRU eviction)" and its
+  siblings `QueryCacheEnabled` and `QueryCacheTtlMinutes` were both honoured, so the cache was
+  live - it just grew until entries expired. `OptimizedRecallService` now trims to the configured
+  size on write, evicting least-recently-used first, the same way the embedding cache next to it
+  already did.
+- **`OptimizedRecallService` no longer writes into the container's shared `IMemoryCache`.**
+  Breaking: its constructor no longer takes one, and the type is now `IDisposable`. It owns a cache
+  instead, because a size bound belongs to a cache instance and cannot be expressed per entry on a
+  shared one. This also removes a failure mode that has bitten this ecosystem before: on a shared
+  cache that any library has given a `SizeLimit`, every `Set` without an entry size throws, and
+  this service was one of those callers. Migration: resolve it from DI as before; if you construct
+  it by hand, drop the cache argument and dispose the service.
 
 ## [v0.17.16] - 2026-09-19
 

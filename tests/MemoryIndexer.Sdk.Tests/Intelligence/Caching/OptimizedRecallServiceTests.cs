@@ -15,7 +15,6 @@ public class OptimizedRecallServiceTests : IDisposable
     private readonly MockEmbeddingService _mockEmbedding;
     private readonly MockScoringService _mockScoring;
     private readonly MockLatencyProfiler _mockProfiler;
-    private readonly MemoryCache _memoryCache;
     private readonly OptimizedRecallService _service;
     private readonly MemoryIndexerOptions _options;
 
@@ -41,13 +40,11 @@ public class OptimizedRecallServiceTests : IDisposable
         _mockEmbedding = new MockEmbeddingService();
         _mockScoring = new MockScoringService();
         _mockProfiler = new MockLatencyProfiler();
-        _memoryCache = new MemoryCache(new MemoryCacheOptions());
 
         _service = new OptimizedRecallService(
             _mockStore,
             _mockEmbedding,
             _mockScoring,
-            _memoryCache,
             _mockProfiler,
             patternAnalyzer: null,
             NullLogger<OptimizedRecallService>.Instance,
@@ -56,7 +53,7 @@ public class OptimizedRecallServiceTests : IDisposable
 
     public void Dispose()
     {
-        _memoryCache.Dispose();
+        _service.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -161,7 +158,6 @@ public class OptimizedRecallServiceTests : IDisposable
             _mockStore,
             _mockEmbedding,
             _mockScoring,
-            _memoryCache,
             _mockProfiler,
             patternAnalyzer: null,
             NullLogger<OptimizedRecallService>.Instance,
@@ -230,7 +226,6 @@ public class OptimizedRecallServiceTests : IDisposable
             _mockStore,
             _mockEmbedding,
             _mockScoring,
-            _memoryCache,
             _mockProfiler,
             patternAnalyzer: null,
             NullLogger<OptimizedRecallService>.Instance,
@@ -395,6 +390,80 @@ public class OptimizedRecallServiceTests : IDisposable
         Assert.Equal(1, stats.CacheMisses); // One cache miss (first call)
         Assert.Equal(2, stats.DuplicateQueryCount); // Two duplicate queries
         Assert.True(stats.HitRatio > 0.6f); // ~66% hit ratio
+    }
+
+    [Fact]
+    public async Task QueryCacheSize_BoundsTheCache_SoAnOlderQueryStopsHitting()
+    {
+        // The option documents "maximum number of cached query results". Until 0.18.0 nothing read
+        // it and the cache grew without a bound, so this asserts the effect, not just the read:
+        // with room for one entry, caching a second query must cost the first its cache slot.
+        using var bounded = CreateService(queryCacheSize: 1);
+        _mockStore.SetSearchResults(CreateMemorySearchResults(3));
+
+        var ct = TestContext.Current.CancellationToken;
+        await bounded.RecallAsync("user1", "first query", "Working", limit: 3, cancellationToken: ct);
+        await bounded.RecallAsync("user1", "second query", "Working", limit: 3, cancellationToken: ct);
+
+        var evicted = await EventuallyAsync(async () =>
+        {
+            var before = bounded.GetCacheStatistics().CacheMisses;
+            await bounded.RecallAsync("user1", "first query", "Working", limit: 3, cancellationToken: ct);
+            return bounded.GetCacheStatistics().CacheMisses > before;
+        });
+
+        Assert.True(evicted, "SizeLimit = QueryCacheSize should have pushed the older query out of the cache");
+
+        // Positive control for the same fixture: with room for both, the first query still hits.
+        using var roomy = CreateService(queryCacheSize: 50);
+        await roomy.RecallAsync("user1", "first query", "Working", limit: 3, cancellationToken: ct);
+        await roomy.RecallAsync("user1", "second query", "Working", limit: 3, cancellationToken: ct);
+
+        var missesBefore = roomy.GetCacheStatistics().CacheMisses;
+        await roomy.RecallAsync("user1", "first query", "Working", limit: 3, cancellationToken: ct);
+        Assert.Equal(missesBefore, roomy.GetCacheStatistics().CacheMisses);
+    }
+
+    private OptimizedRecallService CreateService(int queryCacheSize)
+    {
+        var options = new MemoryIndexerOptions
+        {
+            Latency = new LatencyOptions
+            {
+                QueryCacheEnabled = true,
+                QueryCacheTtlMinutes = 10,
+                QueryCacheSize = queryCacheSize
+            }
+        };
+
+        return new OptimizedRecallService(
+            _mockStore,
+            _mockEmbedding,
+            _mockScoring,
+            _mockProfiler,
+            patternAnalyzer: null,
+            NullLogger<OptimizedRecallService>.Instance,
+            Options.Create(options));
+    }
+
+    /// <summary>
+    /// MemoryCache runs its over-capacity compaction on the thread pool, so eviction is observable
+    /// but not synchronous. Poll rather than sleep a fixed amount or assert immediately.
+    /// </summary>
+    private static async Task<bool> EventuallyAsync(Func<Task<bool>> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (await condition())
+            {
+                return true;
+            }
+
+            await Task.Delay(25);
+        }
+
+        return false;
     }
 
     #endregion

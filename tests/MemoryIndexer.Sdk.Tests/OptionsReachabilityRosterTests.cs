@@ -72,24 +72,24 @@ public class OptionsReachabilityRosterTests
     /// <c>ConsolidationOptions.ForgettingDecayRate</c> and <c>ArchiveThreshold</c>, and
     /// <c>LineageQueryOptions.IncludeRelated</c>.
     /// </para>
+    /// <para>
+    /// 0.18.0 closed the last four by hand. Three were promises with nothing behind them and no way to
+    /// build one without a magnitude nobody had chosen, so they are gone:
+    /// <c>ConfidenceUpdateOptions.BoostFrequentlyAccessed</c> and <c>ReduceForContradictions</c> (a boost
+    /// factor and a contradiction penalty) and <c>ContextOptimizationOptions.EnableChunkExpansion</c>.
+    /// The fourth, <c>LatencyOptions.QueryCacheSize</c>, was different - its siblings
+    /// <c>QueryCacheEnabled</c> and <c>QueryCacheTtlMinutes</c> were live in the same service, so the
+    /// query cache ran with no bound at all. That one was wired rather than removed.
+    /// </para>
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownUnread = new()
     {
-        ["MemoryIndexer.Configuration.LatencyOptions"] = ["QueryCacheSize"],
-        ["MemoryIndexer.Interfaces.ConfidenceUpdateOptions"] =
-        [
-            "BoostFrequentlyAccessed", "ReduceForContradictions",
-        ],
         // Request fields the library populates and the consumer's ITextCompletionService
         // implementation reads - so they are read, just not inside these assemblies. The three that
         // nothing populated (TopP, FrequencyPenalty, PresencePenalty) were removed in 0.18.0.
         ["MemoryIndexer.Interfaces.TextCompletionOptions"] =
         [
             "MaxTokens", "StopSequences", "Temperature",
-        ],
-        ["MemoryIndexer.Sdk.Intelligence.ContextOptimization.ContextOptimizationOptions"] =
-        [
-            "EnableChunkExpansion",
         ],
     };
 

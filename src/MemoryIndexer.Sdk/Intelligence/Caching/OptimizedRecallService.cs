@@ -15,12 +15,12 @@ namespace MemoryIndexer.Sdk.Intelligence.Caching;
 /// Phase 22.2: Recall Latency Optimization
 /// Phase v0.5.0: Session-level Recall Caching, Recall Pattern Telemetry
 /// </summary>
-public sealed partial class OptimizedRecallService
+public sealed partial class OptimizedRecallService : IDisposable
 {
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
     private readonly IScoringService _scoringService;
-    private readonly IMemoryCache _queryCache;
+    private readonly MemoryCache _queryCache;
     private readonly ILatencyProfiler? _profiler;
     private readonly IRecallPatternAnalyzer? _patternAnalyzer;
     private readonly ILogger<OptimizedRecallService> _logger;
@@ -32,11 +32,18 @@ public sealed partial class OptimizedRecallService
     private long _cacheMisses;
     private long _duplicateQueryCount;
 
+    /// <remarks>
+    /// The query cache is owned rather than injected. <see cref="LatencyOptions.QueryCacheSize"/>
+    /// promises a bounded cache, and a bound belongs to the cache instance, not to an entry - so
+    /// honouring it on a container-shared <see cref="IMemoryCache"/> is not expressible. Owning one
+    /// also keeps this service off the shared instance entirely: a shared cache that any library
+    /// has given a <c>SizeLimit</c> throws for every caller that sets an entry without a size, and
+    /// this service used to be one of those callers.
+    /// </remarks>
     public OptimizedRecallService(
         IMemoryStore memoryStore,
         IEmbeddingService embeddingService,
         IScoringService scoringService,
-        IMemoryCache queryCache,
         ILatencyProfiler? profiler,
         IRecallPatternAnalyzer? patternAnalyzer,
         ILogger<OptimizedRecallService> logger,
@@ -45,13 +52,16 @@ public sealed partial class OptimizedRecallService
         _memoryStore = memoryStore;
         _embeddingService = embeddingService;
         _scoringService = scoringService;
-        _queryCache = queryCache;
         _profiler = profiler;
         _patternAnalyzer = patternAnalyzer;
         _logger = logger;
         _options = options.Value.Latency;
         _queryCacheTtl = TimeSpan.FromMinutes(_options.QueryCacheTtlMinutes);
+        _queryCache = new MemoryCache(new MemoryCacheOptions());
     }
+
+    /// <inheritdoc />
+    public void Dispose() => _queryCache.Dispose();
 
     /// <summary>
     /// Gets recall cache statistics for telemetry.
@@ -277,6 +287,30 @@ public sealed partial class OptimizedRecallService
 
         var cacheKey = GetQueryCacheKey(userId, query, tier, limit);
         _queryCache.Set(cacheKey, results, _queryCacheTtl);
+        TrimQueryCache();
+    }
+
+    /// <summary>
+    /// Keeps the cache within <see cref="LatencyOptions.QueryCacheSize"/> entries.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not <see cref="MemoryCacheOptions.SizeLimit"/>: that bound makes a full cache
+    /// *reject new entries* rather than make room, so the cache would freeze on whatever arrived
+    /// first and never track a moving query set - the opposite of what the option documents.
+    /// <see cref="MemoryCache.Compact"/> evicts lowest-priority then least-recently-accessed, runs
+    /// inline, and is the LRU behaviour the option promises.
+    /// </remarks>
+    private void TrimQueryCache()
+    {
+        var limit = Math.Max(1, _options.QueryCacheSize);
+        var count = _queryCache.Count;
+
+        if (count <= limit)
+        {
+            return;
+        }
+
+        _queryCache.Compact((double)(count - limit) / count);
     }
 }
 

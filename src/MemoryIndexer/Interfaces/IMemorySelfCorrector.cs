@@ -621,16 +621,6 @@ public sealed class ConfidenceUpdateOptions
     /// Minimum confidence after decay.
     /// </summary>
     public float MinConfidenceAfterDecay { get; init; } = 0.1f;
-
-    /// <summary>
-    /// Boost confidence for frequently accessed memories.
-    /// </summary>
-    public bool BoostFrequentlyAccessed { get; init; } = true;
-
-    /// <summary>
-    /// Reduce confidence for contradicted memories.
-    /// </summary>
-    public bool ReduceForContradictions { get; init; } = true;
 }
 
 /// <summary>

@@ -101,11 +101,6 @@ public sealed class ContextOptimizationOptions
     public bool EnableHyDE { get; set; }
 
     /// <summary>
-    /// Whether to expand chunk context.
-    /// </summary>
-    public bool EnableChunkExpansion { get; set; }
-
-    /// <summary>
     /// Query for relevance-based optimization.
     /// </summary>
     public string? Query { get; set; }
