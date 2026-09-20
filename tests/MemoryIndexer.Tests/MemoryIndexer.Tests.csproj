@@ -17,6 +17,7 @@
     <!-- xUnit v3 pilot rollout: xunit replaced with xunit.v3, no Microsoft.NET.Test.Sdk (not
          required under Microsoft.Testing.Platform), coverlet.collector dropped (unused: CI never
          invoked collect against it). xunit.runner.visualstudio kept for IDE Test Explorer discovery. -->
+    <PackageReference Include="Iyu.Conventions.Testing" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
