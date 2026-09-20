@@ -75,7 +75,10 @@ public sealed partial class ReflectionEngine : IReflectionEngine
             // Generate insights
             if (options.GenerateInsights)
             {
-                result.Insights = await GenerateInsightsAsync(memories, options.FocusTopic, cancellationToken);
+                var insights = await GenerateInsightsAsync(memories, options.FocusTopic, cancellationToken);
+                result.Insights = options.MaxInsights is { } max
+                    ? insights.Take(max).ToList()
+                    : insights;
             }
 
             // Discover links
@@ -423,6 +426,7 @@ public sealed partial class ReflectionEngine : IReflectionEngine
         var filtered = memories
             .Where(m => m.CreatedAt >= cutoff)
             .Where(m => options.IncludeTypes == null || options.IncludeTypes.Contains(m.Type))
+            .Where(m => m.ImportanceScore >= options.MinImportance)
             .Take(MaxMemoriesPerReflection)
             .ToList();
 

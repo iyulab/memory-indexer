@@ -131,6 +131,12 @@ public partial class JsonProfileExporter : IProfileExporter
     {
         var filtered = facts.AsEnumerable();
 
+        // Inferred facts carry the marker FactInferenceService writes when it derives them.
+        if (!options.IncludeInferred)
+        {
+            filtered = filtered.Where(f => !f.Metadata.ContainsKey("inference_type"));
+        }
+
         // Category filters
         if (options.IncludeCategories != null && options.IncludeCategories.Count > 0)
         {

@@ -90,10 +90,13 @@ public sealed class FactValidationOptions
     public bool UseSpoMatching { get; init; } = true;
 
     /// <summary>
-    /// Maximum existing facts to compare against.
-    /// Default: 50
+    /// Maximum existing facts to compare against, or <c>null</c> for no cap.
     /// </summary>
-    public int MaxComparisonFacts { get; init; } = 50;
+    /// <remarks>
+    /// Defaults to no cap, which is what the validator did while nothing read this option. Setting
+    /// a number now takes effect; it did not before.
+    /// </remarks>
+    public int? MaxComparisonFacts { get; init; }
 }
 
 /// <summary>

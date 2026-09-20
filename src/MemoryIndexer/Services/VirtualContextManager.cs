@@ -168,10 +168,31 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
         }
 
         await UpdateStateAsync(cancellationToken);
+        await MaybeAutoEvictAsync(cancellationToken);
 
         LogPagedIn(_logger, pagedIn.Count);
 
         return pagedIn;
+    }
+
+    /// <summary>
+    /// Honours <see cref="VCMOptions.EnableAutoEviction"/> after a page-in has changed
+    /// saturation. Both page-in paths go through it so the option cannot apply to one and not the
+    /// other.
+    /// </summary>
+    private async Task MaybeAutoEvictAsync(CancellationToken cancellationToken)
+    {
+        if (!_options.EnableAutoEviction)
+        {
+            return;
+        }
+
+        if (_state.SaturationLevel < _options.AutoEvictionTrigger)
+        {
+            return;
+        }
+
+        await DefensiveEvictAsync(ContextSaturationLevel.Normal, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -222,6 +243,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
         }
 
         await UpdateStateAsync(cancellationToken);
+        await MaybeAutoEvictAsync(cancellationToken);
 
         return promoteResult.UpdatedMemory;
     }
@@ -947,9 +969,15 @@ public sealed class VCMOptions
     public float SessionMigrationThreshold { get; set; } = 0.3f;
 
     /// <summary>
-    /// Enable automatic eviction when saturation is high.
+    /// Evict automatically once saturation reaches <see cref="AutoEvictionTrigger"/>.
+    /// Default: <c>false</c>.
     /// </summary>
-    public bool EnableAutoEviction { get; set; } = true;
+    /// <remarks>
+    /// Defaults to off because nothing read this option before: no page-in has ever evicted, so a
+    /// default of <c>true</c> would make every existing consumer start losing paged-in memories
+    /// on a version bump.
+    /// </remarks>
+    public bool EnableAutoEviction { get; set; }
 
     /// <summary>
     /// Saturation level that triggers automatic eviction.

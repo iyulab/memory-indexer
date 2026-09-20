@@ -118,9 +118,13 @@ public sealed class ReflectionOptions
     public int MaxMemories { get; init; } = 100;
 
     /// <summary>
-    /// Minimum importance score for inclusion.
+    /// Memories below this importance are left out of the reflection. Defaults to 0 — no filter.
     /// </summary>
-    public float MinImportance { get; init; } = 0.3f;
+    /// <remarks>
+    /// Defaults to 0 because nothing read this option before; a non-zero default would silently
+    /// narrow what today's consumers reflect over.
+    /// </remarks>
+    public float MinImportance { get; init; }
 
     /// <summary>
     /// Types of memories to include.
@@ -148,9 +152,12 @@ public sealed class ReflectionOptions
     public bool IdentifyPatterns { get; init; } = true;
 
     /// <summary>
-    /// Maximum insights to generate.
+    /// Maximum insights to return, or <c>null</c> for no cap.
     /// </summary>
-    public int MaxInsights { get; init; } = 10;
+    /// <remarks>
+    /// Defaults to no cap, which is what the engine did while nothing read this option.
+    /// </remarks>
+    public int? MaxInsights { get; init; }
 
     /// <summary>
     /// Depth of reflection (1-3).

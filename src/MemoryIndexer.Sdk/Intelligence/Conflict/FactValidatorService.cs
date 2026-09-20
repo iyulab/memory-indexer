@@ -163,10 +163,17 @@ public sealed partial class FactValidatorService : IFactValidator
             LogFailedGenerateEmbeddingNewFact(_logger, ex);
         }
 
-        foreach (var existing in existingFacts)
+        // MaxComparisonFacts is applied to the active entries, so a cap of N means N comparisons
+        // rather than N candidates of which some are skipped. Null means no cap, which is what this
+        // loop did while nothing read the option.
+        var candidates = existingFacts.Where(f => f.IsActive);
+        if (options.MaxComparisonFacts is { } cap)
         {
-            // Skip inactive entries
-            if (!existing.IsActive) continue;
+            candidates = candidates.Take(cap);
+        }
+
+        foreach (var existing in candidates)
+        {
 
             // Check for exact duplicate
             if (string.Equals(newFact.Content.Trim(), existing.Value.Trim(), StringComparison.OrdinalIgnoreCase))

@@ -91,6 +91,16 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
 
         await Task.WhenAll(tasks);
 
+        // Findings the caller asked not to hear about are dropped before anything is derived from
+        // them - the health score and the suggested corrections both read these lists.
+        if (options.MinConfidenceThreshold > 0)
+        {
+            result.Contradictions = result.Contradictions
+                .Where(c => c.Confidence >= options.MinConfidenceThreshold).ToList();
+            result.OutdatedMemories = result.OutdatedMemories
+                .Where(o => o.Confidence >= options.MinConfidenceThreshold).ToList();
+        }
+
         // Calculate health score
         result.HealthScore = CalculateHealthScore(result);
 

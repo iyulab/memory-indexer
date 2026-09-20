@@ -4,6 +4,29 @@ All notable changes to Memory Indexer are documented here.
 
 ## [v0.18.0] - 2026-09-20
 
+### Changed
+- **Seven options that were declared and never read now take effect — and their defaults were moved
+  to what the code actually did**, so nobody's behaviour changes on the upgrade. The declarations
+  carried numbers that had never applied; adopting them as-is would have silently narrowed what
+  existing consumers get. Setting any of these now does what it always said it would:
+  - `ReflectionOptions.MinImportance` filters the memories a reflection covers. **Default 0.3 → 0**
+    (no filter).
+  - `ReflectionOptions.MaxInsights` caps the insights returned. **Type `int` → `int?`, default 10 →
+    `null`** (no cap).
+  - `FactValidationOptions.MaxComparisonFacts` caps how many active facts a new one is compared
+    against. **Type `int` → `int?`, default 50 → `null`** (no cap).
+  - `MemoryAnalysisOptions.MinConfidenceThreshold` drops contradictions and outdated-memory findings
+    below it, before the health score and suggested corrections are derived from them.
+    **Default 0.5 → 0** (no filter).
+  - `VCMOptions.EnableAutoEviction` / `AutoEvictionTrigger` now evict after a page-in that pushes
+    saturation to the trigger level. `DefensiveEvictAsync` existed and nothing called it.
+    **`EnableAutoEviction` default `true` → `false`**: no page-in has ever evicted, so leaving the
+    declared default would make every existing consumer start losing paged-in memories.
+  - `ProfileExportOptions.IncludeInferred` excludes inferred facts when set to `false`.
+    **Default `false` → `true`** — this is the one default that moved *away* from the declaration on
+    purpose: an export of what the system holds about a person should carry what was inferred about
+    them, and it is also what the exporter did before.
+
 ### Removed
 - **Breaking: `SecurityOptions` and `MultiTenantOptions`** (and `MemoryIndexerOptions.Security` /
   `.MultiTenant`). **None of their switches did anything.** `EnablePiiDetection`,

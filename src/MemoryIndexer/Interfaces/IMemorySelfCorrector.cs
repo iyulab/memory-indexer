@@ -139,9 +139,15 @@ public sealed class MemoryAnalysisOptions
     public bool TrackGaps { get; init; } = true;
 
     /// <summary>
-    /// Minimum confidence threshold for analysis.
+    /// Findings below this confidence are dropped from the analysis. Defaults to 0 — no filter.
     /// </summary>
-    public float MinConfidenceThreshold { get; init; } = 0.5f;
+    /// <remarks>
+    /// The threshold applies to the confidence carried by each contradiction and outdated-memory
+    /// finding, not to the stability of the memories fed in. It defaults to 0 because nothing read
+    /// this option before, so a non-zero default would silently start discarding findings that
+    /// consumers currently receive.
+    /// </remarks>
+    public float MinConfidenceThreshold { get; init; }
 
     /// <summary>
     /// Maximum memories to analyze.

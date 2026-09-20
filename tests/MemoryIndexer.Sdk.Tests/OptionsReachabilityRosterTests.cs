@@ -80,14 +80,7 @@ public class OptionsReachabilityRosterTests
         [
             "BoostFrequentlyAccessed", "ReduceForContradictions",
         ],
-        ["MemoryIndexer.Interfaces.FactValidationOptions"] = ["MaxComparisonFacts"],
-        ["MemoryIndexer.Interfaces.MemoryAnalysisOptions"] = ["MinConfidenceThreshold"],
         ["MemoryIndexer.Interfaces.OptimizationOptions"] = ["MaxWorkingMemoryAgeHours"],
-        ["MemoryIndexer.Interfaces.ProfileExportOptions"] = ["IncludeInferred"],
-        ["MemoryIndexer.Interfaces.ReflectionOptions"] =
-        [
-            "MaxInsights", "MinImportance",
-        ],
         ["MemoryIndexer.Interfaces.SubgraphOptions"] = ["IncludeTemporalInfo"],
         ["MemoryIndexer.Interfaces.TextCompletionOptions"] =
         [
@@ -98,10 +91,6 @@ public class OptionsReachabilityRosterTests
             "EnableChunkExpansion",
         ],
         ["MemoryIndexer.Sdk.Intelligence.Summarization.SummarizationOptions"] = ["FocusTopics"],
-        ["MemoryIndexer.Services.VCMOptions"] =
-        [
-            "AutoEvictionTrigger", "EnableAutoEviction",
-        ],
     };
 
     [Fact]

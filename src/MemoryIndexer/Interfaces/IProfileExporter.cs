@@ -59,10 +59,14 @@ public class ProfileExportOptions
     public bool IncludeHistory { get; set; } = true;
 
     /// <summary>
-    /// Include inferred facts.
-    /// Default: false
+    /// Include inferred facts. Default: <c>true</c>.
     /// </summary>
-    public bool IncludeInferred { get; set; }
+    /// <remarks>
+    /// An export of what the system holds about a person should carry what was inferred about them
+    /// as well as what was stated, so this defaults to on. It also matches what the exporter did
+    /// while nothing read the option. Set it to <c>false</c> to export stated facts only.
+    /// </remarks>
+    public bool IncludeInferred { get; set; } = true;
 
     /// <summary>
     /// Include metadata (embeddings, etc.).
