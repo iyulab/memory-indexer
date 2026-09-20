@@ -351,8 +351,6 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ISensoryPromoter, SensoryPromoterService>();
 
         // Register working memory orchestrator (Phase 14.3)
-        services.AddOptions<WorkingMemoryOrchestratorOptions>()
-            .BindConfiguration("MemoryIndexer:VCM:WorkingOrchestrator");
         services.TryAddSingleton<IShortTermMemoryOrchestrator, ShortTermMemoryOrchestratorService>();
 
         // Register semantic store service (Phase 14.4 → Cognitive terminology Phase 30)

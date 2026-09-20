@@ -34,12 +34,6 @@ public interface IConfidenceDecayStrategy
 public class ConfidenceDecayOptions
 {
     /// <summary>
-    /// Default decay strategy.
-    /// Default: "TimeBased"
-    /// </summary>
-    public string DefaultStrategy { get; set; } = "TimeBased";
-
-    /// <summary>
     /// Half-life for time-based decay (days).
     /// After this period, unconfirmed facts lose half their confidence.
     /// Default: 90 days

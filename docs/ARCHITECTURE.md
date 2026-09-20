@@ -367,7 +367,7 @@ Registers (3-Axis architecture):
 Registers (intelligence):
 - `IMemoryClassifier` → `LocalMemoryClassifier`
 - `ISummarizationService` → `ExtractiveSummarizer`
-- `IRerankerService` → `LocalRerankerService`
+- `IRerankerService` → `MockRerankerService` (keeps the original scores; register your own to rerank)
 - `IContradictionDetector` → `SemanticContradictionDetector`
 - `IDeduplicationService` → `DeduplicationService`
 - `IScoreNormalizer` → `AdaptiveScoreNormalizer`
@@ -406,15 +406,17 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
         "TokenThreshold": 500,
         "TurnThreshold": 3
       },
-      "ShortOrchestrator": {
-        "IdleTimeout": "00:10:00",
-        "TokenThreshold": 2000,
-        "TurnThreshold": 10
-      },
       "ArchiveStore": {
         "MinConfirmationCount": 3,
         "MinConfidenceThreshold": 0.8
       }
+    },
+    "WorkingMemory": {
+      "IdleTimeout": "00:10:00",
+      "TokenThreshold": 2000,
+      "TurnThreshold": 10,
+      "EnableTopicChangeDetection": true,
+      "SummarizeBeforeArchival": true
     },
     "Scoring": {
       "RecencyDecayFactor": 0.99,

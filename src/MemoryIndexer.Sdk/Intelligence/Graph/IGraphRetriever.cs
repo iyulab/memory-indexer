@@ -362,11 +362,6 @@ public sealed class HybridGraphOptions
     public int GraphExpansionHops { get; init; } = 1;
 
     /// <summary>
-    /// Weight for semantic vs graph scores (0-1).
-    /// </summary>
-    public float SemanticWeight { get; init; } = 0.6f;
-
-    /// <summary>
     /// Minimum similarity for semantic matches.
     /// </summary>
     public float MinSemanticScore { get; init; } = 0.5f;

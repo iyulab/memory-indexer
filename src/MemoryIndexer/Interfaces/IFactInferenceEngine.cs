@@ -180,12 +180,6 @@ public class InferenceOptions
     public float MinInferenceConfidence { get; set; } = 0.5f;
 
     /// <summary>
-    /// Maximum inference depth (chain length).
-    /// Default: 2
-    /// </summary>
-    public int MaxDepth { get; set; } = 2;
-
-    /// <summary>
     /// Types of inference to run.
     /// Default: All types.
     /// </summary>

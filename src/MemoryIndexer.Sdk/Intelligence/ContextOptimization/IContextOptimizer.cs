@@ -76,11 +76,6 @@ public interface IContextOptimizer
 public sealed class ContextOptimizationOptions
 {
     /// <summary>
-    /// Maximum tokens allowed in context.
-    /// </summary>
-    public int MaxTokens { get; set; } = 128000;
-
-    /// <summary>
     /// Target token count (may compress to achieve).
     /// </summary>
     public int TargetTokens { get; set; } = 100000;

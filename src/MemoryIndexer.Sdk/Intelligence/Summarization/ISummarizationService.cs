@@ -84,32 +84,6 @@ public sealed class SummarizationOptions
     /// Focus topics for the summary (if any).
     /// </summary>
     public List<string>? FocusTopics { get; set; }
-
-    /// <summary>
-    /// Summary style: extractive (select sentences) or abstractive (generate new text).
-    /// </summary>
-    public SummaryStyle Style { get; set; } = SummaryStyle.Hybrid;
-}
-
-/// <summary>
-/// Summary generation style.
-/// </summary>
-public enum SummaryStyle
-{
-    /// <summary>
-    /// Select and combine existing sentences.
-    /// </summary>
-    Extractive,
-
-    /// <summary>
-    /// Generate new summarizing text.
-    /// </summary>
-    Abstractive,
-
-    /// <summary>
-    /// Combine both approaches.
-    /// </summary>
-    Hybrid
 }
 
 /// <summary>

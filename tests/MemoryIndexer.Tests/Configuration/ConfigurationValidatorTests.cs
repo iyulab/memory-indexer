@@ -180,23 +180,6 @@ public class ConfigurationValidatorTests
     }
 
     [Fact]
-    public void Validate_InvalidTemperature_ShouldReturnError()
-    {
-        // Arrange
-        var options = new MemoryIndexerOptions
-        {
-            Completion = new CompletionOptions { DefaultTemperature = 3.0f }
-        };
-
-        // Act
-        var result = _validator.Validate(options);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyPath == "Completion.DefaultTemperature");
-    }
-
-    [Fact]
     public void Validate_NegativeSensoryBufferTokenThreshold_ShouldReturnError()
     {
         // Arrange

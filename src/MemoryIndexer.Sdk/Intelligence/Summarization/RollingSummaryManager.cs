@@ -165,7 +165,6 @@ public sealed partial class RollingSummaryManager : IRollingSummaryManager
         var options = new SummarizationOptions
         {
             TargetCompressionRatio = state.Config.TargetCompressionRatio,
-            Style = isFinal ? SummaryStyle.Hybrid : SummaryStyle.Extractive,
             PreserveEntities = true,
             PreserveTimestamps = true
         };

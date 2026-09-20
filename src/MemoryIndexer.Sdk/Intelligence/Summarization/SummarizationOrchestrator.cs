@@ -237,7 +237,6 @@ public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrat
                     {
                         summary = await _summarizer.SummarizeAsync(memories, new SummarizationOptions
                         {
-                            Style = SummaryStyle.Hybrid,
                             PreserveEntities = true
                         }, cancellationToken);
                     }
@@ -247,8 +246,7 @@ public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrat
                     // Compression: aggressive token reduction
                     summary = await _summarizer.SummarizeAsync(memories, new SummarizationOptions
                     {
-                        TargetCompressionRatio = 0.3f, // Aggressive compression
-                        Style = SummaryStyle.Extractive
+                        TargetCompressionRatio = 0.3f // Aggressive compression
                     }, cancellationToken);
                     break;
 
@@ -257,7 +255,6 @@ public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrat
                     summary = await _summarizer.SummarizeAsync(memories, new SummarizationOptions
                     {
                         TargetCompressionRatio = 0.5f,
-                        Style = SummaryStyle.Hybrid,
                         PreserveEntities = true
                     }, cancellationToken);
                     break;
@@ -265,10 +262,7 @@ public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrat
                 case SummarizationStrategy.Extractive:
                 default:
                     // Extractive: preserve key sentences
-                    summary = await _summarizer.SummarizeAsync(memories, new SummarizationOptions
-                    {
-                        Style = SummaryStyle.Extractive
-                    }, cancellationToken);
+                    summary = await _summarizer.SummarizeAsync(memories, new SummarizationOptions(), cancellationToken);
                     break;
             }
 

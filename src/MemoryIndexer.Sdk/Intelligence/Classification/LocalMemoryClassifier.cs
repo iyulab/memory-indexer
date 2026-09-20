@@ -1,9 +1,7 @@
 using System.Text.RegularExpressions;
-using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace MemoryIndexer.Sdk.Intelligence.Classification;
 
@@ -23,7 +21,6 @@ namespace MemoryIndexer.Sdk.Intelligence.Classification;
 public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 {
     private readonly ILogger<LocalMemoryClassifier> _logger;
-    private readonly IntelligenceOptions _options;
 
     #region Pattern Definitions
 
@@ -161,11 +158,9 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
     #endregion
 
     public LocalMemoryClassifier(
-        IOptions<MemoryIndexerOptions> options,
         ILogger<LocalMemoryClassifier> logger)
     {
         _logger = logger;
-        _options = options.Value.Intelligence;
 
         LogInitialized(_logger);
     }

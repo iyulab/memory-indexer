@@ -337,6 +337,42 @@ public class ITierManagerTests
     }
 
     [Fact]
+    public async Task CheckPromotionTriggersAsync_ShortTier_TopicChangeDetectionDisabled_ShouldNotBeTriggered()
+    {
+        // Arrange - the same context as the test above; only the switch differs.
+        var options = new MemoryIndexerOptions();
+        options.WorkingMemory.EnableTopicChangeDetection = false;
+        var tierManager = new TierManager(Options.Create(options), NullLogger<TierManager>.Instance);
+        var context = CreateContext(topicChangeDetected: true);
+
+        // Act
+        var status = await tierManager.CheckPromotionTriggersAsync(Tier.Short, context, TestContext.Current.CancellationToken);
+
+        // Assert - the trigger is still listed, it is just never satisfied.
+        status.IsTriggered.Should().BeFalse();
+        status.SatisfiedTriggers.Should().BeEmpty();
+        status.AllTriggers.Should().ContainSingle(t => t.Type == PromotionTriggerType.TopicChange && !t.IsSatisfied);
+    }
+
+    [Fact]
+    public async Task EvaluatePromotionAsync_ShortTier_TopicChangeDetectionDisabled_ShouldNotRecommendPromotion()
+    {
+        // Arrange
+        var options = new MemoryIndexerOptions();
+        options.WorkingMemory.EnableTopicChangeDetection = false;
+        var tierManager = new TierManager(Options.Create(options), NullLogger<TierManager>.Instance);
+        var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
+        var context = CreateContext(topicChangeDetected: true);
+
+        // Act
+        var recommendation = await tierManager.EvaluatePromotionAsync(memory, context, TestContext.Current.CancellationToken);
+
+        // Assert
+        recommendation.ShouldPromote.Should().BeFalse();
+        recommendation.SatisfiedTriggers.Should().NotContain("TopicChange");
+    }
+
+    [Fact]
     public async Task CheckPromotionTriggersAsync_ShortTier_SessionEnd_ShouldBeTriggered()
     {
         // Arrange

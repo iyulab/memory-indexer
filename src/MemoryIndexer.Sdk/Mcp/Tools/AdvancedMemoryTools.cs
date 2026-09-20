@@ -332,7 +332,6 @@ public sealed class AdvancedMemoryTools
     /// <param name="query">Optional query to filter memories for summarization.</param>
     /// <param name="limit">Maximum memories to summarize.</param>
     /// <param name="compressionRatio">Target compression ratio (0.1 to 0.5).</param>
-    /// <param name="style">Summarization style: extractive, abstractive, hybrid.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Summary of selected memories.</returns>
     [McpServerTool]
@@ -341,7 +340,6 @@ public sealed class AdvancedMemoryTools
         [Description("Optional query to filter memories")] string? query = null,
         [Description("Maximum memories to summarize (1-50)")] int limit = 20,
         [Description("Target compression ratio (0.1-0.5)")] float compressionRatio = 0.3f,
-        [Description("Style: extractive, abstractive, hybrid")] string style = "hybrid",
         CancellationToken cancellationToken = default)
     {
         List<MemoryUnit> memories;
@@ -379,8 +377,7 @@ public sealed class AdvancedMemoryTools
 
         var options = new SummarizationOptions
         {
-            TargetCompressionRatio = Math.Clamp(compressionRatio, 0.1f, 0.5f),
-            Style = ParseSummaryStyle(style)
+            TargetCompressionRatio = Math.Clamp(compressionRatio, 0.1f, 0.5f)
         };
 
         var summary = await _summarizationService.SummarizeAsync(memories, options, cancellationToken);
@@ -512,12 +509,6 @@ public sealed class AdvancedMemoryTools
         _ => MergeStrategy.KeepOldest
     };
 
-    private static SummaryStyle ParseSummaryStyle(string style) => style.ToLowerInvariant() switch
-    {
-        "extractive" => SummaryStyle.Extractive,
-        "abstractive" => SummaryStyle.Abstractive,
-        _ => SummaryStyle.Hybrid
-    };
 }
 
 #region Result DTOs

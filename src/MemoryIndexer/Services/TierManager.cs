@@ -345,6 +345,9 @@ public sealed partial class TierManager : ITierManager
         var tokenThreshold = workingMemory.TokenThreshold;
         var turnThreshold = workingMemory.TurnThreshold;
 
+        // A detected topic change only counts when topic change detection is switched on.
+        var topicChangeDetected = workingMemory.EnableTopicChangeDetection && context.TopicChangeDetected;
+
         var triggers = new List<PromotionTrigger>
         {
             new()
@@ -374,10 +377,12 @@ public sealed partial class TierManager : ITierManager
             new()
             {
                 Type = PromotionTriggerType.TopicChange,
-                IsSatisfied = context.TopicChangeDetected,
-                CurrentValue = context.TopicChangeDetected,
+                IsSatisfied = topicChangeDetected,
+                CurrentValue = topicChangeDetected,
                 ThresholdValue = true,
-                Description = context.TopicChangeDetected ? "Topic change detected" : "No topic change"
+                Description = !workingMemory.EnableTopicChangeDetection
+                    ? "Topic change detection disabled"
+                    : topicChangeDetected ? "Topic change detected" : "No topic change"
             },
             new()
             {

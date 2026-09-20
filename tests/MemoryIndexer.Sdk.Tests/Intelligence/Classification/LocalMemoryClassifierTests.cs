@@ -1,10 +1,8 @@
 using AwesomeAssertions;
-using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Classification;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests.Intelligence.Classification;
@@ -18,8 +16,7 @@ public class LocalMemoryClassifierTests
 
     public LocalMemoryClassifierTests()
     {
-        var options = Options.Create(new MemoryIndexerOptions());
-        _classifier = new LocalMemoryClassifier(options, NullLogger<LocalMemoryClassifier>.Instance);
+        _classifier = new LocalMemoryClassifier(NullLogger<LocalMemoryClassifier>.Instance);
     }
 
     #region Procedural Classification Tests

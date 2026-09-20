@@ -373,16 +373,6 @@ public sealed class OptimizationOptions
     public float TargetUtilization { get; init; } = 70f;
 
     /// <summary>
-    /// Whether to compress memories.
-    /// </summary>
-    public bool EnableCompression { get; init; } = true;
-
-    /// <summary>
-    /// Whether to consolidate related memories.
-    /// </summary>
-    public bool EnableConsolidation { get; init; } = true;
-
-    /// <summary>
     /// Whether optimization demotes memories that are not yet stable and score below
     /// <see cref="MinImportanceToRetain"/>. When false, optimization demotes nothing.
     /// </summary>

@@ -435,7 +435,6 @@ public class CoreferenceResolverTests
         // Assert
         Assert.False(options.IncludeOriginalPronoun);
         Assert.Equal(0.7f, options.MinConfidence);
-        Assert.False(options.OnlyAmbiguous);
         Assert.Equal("{0}", options.ReplacementFormat);
     }
 

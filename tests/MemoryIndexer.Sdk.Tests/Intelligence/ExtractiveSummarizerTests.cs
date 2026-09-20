@@ -86,8 +86,7 @@ public class ExtractiveSummarizerTests
         var options = new SummarizationOptions
         {
             TargetCompressionRatio = 0.2f,
-            MaxOutputTokens = 50,
-            Style = SummaryStyle.Extractive
+            MaxOutputTokens = 50
         };
 
         // Act

@@ -235,22 +235,12 @@ public enum SubQueryType
     /// <summary>
     /// Find facts about an entity.
     /// </summary>
-    EntityFacts,
+    EntityFacts = 0,
 
     /// <summary>
     /// Find relationships between entities.
     /// </summary>
-    EntityRelationship,
-
-    /// <summary>
-    /// Find entities matching a pattern.
-    /// </summary>
-    PatternMatch,
-
-    /// <summary>
-    /// Find memories in a community.
-    /// </summary>
-    CommunitySearch
+    EntityRelationship = 1
 }
 
 /// <summary>
@@ -267,11 +257,6 @@ public sealed class SubQueryOptions
     /// Include relationship exploration queries.
     /// </summary>
     public bool IncludeRelationshipQueries { get; init; } = true;
-
-    /// <summary>
-    /// Include community-based queries.
-    /// </summary>
-    public bool IncludeCommunityQueries { get; init; } = true;
 }
 
 /// <summary>

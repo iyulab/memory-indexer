@@ -71,12 +71,6 @@ public class ProfileExportOptions
     public bool IncludeMetadata { get; set; }
 
     /// <summary>
-    /// Include audit trail (access history).
-    /// Default: false
-    /// </summary>
-    public bool IncludeAuditTrail { get; set; }
-
-    /// <summary>
     /// Categories to include.
     /// Default: All categories.
     /// </summary>

@@ -26,7 +26,11 @@ public class OptionsReachabilityRosterTests
     /// Options accepted as unread today. Shrink this list; never grow it silently.
     /// <para>
     /// Opening baseline (2026-09-20): 73 unread public options across 33 types, recorded as found rather
-    /// than as judged. None has been investigated except the three operating-contract types below.
+    /// than as judged. Each has since been investigated; 20 across 12 types remain below, and each of
+    /// those is a request field read by implementers outside these assemblies
+    /// (<c>TextCompletionOptions</c>), waits on a decision about an unreached parent feature, needs a
+    /// small implementation that is not written yet, or would change behaviour at its default value
+    /// when wired.
     /// </para>
     /// <para>
     /// Removed since: <c>SecurityOptions</c> and <c>MultiTenantOptions</c>. Their switches were read by
@@ -34,6 +38,29 @@ public class OptionsReachabilityRosterTests
     /// security posture or tenant isolation through them changed no behaviour; the types are gone.
     /// <c>ResourceLimitOptions</c> was on this list when only the core assembly was scanned and is not on it
     /// now: <c>ResourceLimitEnforcer</c> in the SDK reads it.
+    /// </para>
+    /// <para>
+    /// Also removed, because the feature each one promised does not exist in the library (no LLM client,
+    /// reranker model, classifier model or HNSW index is built here; no automatic fact extraction,
+    /// summarization, compression, consolidation, causal linking, inference chaining, community queries or
+    /// abstractive summaries): <c>CompletionOptions.ApiKey</c> and <c>Endpoint</c>,
+    /// <c>IntelligenceOptions.Enabled</c>, <c>ClassifierModel</c>, <c>FactExtractionEnabled</c> and
+    /// <c>SummarizationEnabled</c>, <c>SearchOptions.RerankerModel</c>, <c>SensoryBufferOptions.Enabled</c>
+    /// and <c>TriggerCheckInterval</c>, <c>SqliteOptions.HnswEfConstruction</c> and <c>HnswEfSearch</c>,
+    /// <c>ConfidenceDecayOptions.DefaultStrategy</c>, <c>InferenceOptions.MaxDepth</c>,
+    /// <c>LinkDiscoveryOptions.FindCausalLinks</c>, <c>OptimizationOptions.EnableCompression</c> and
+    /// <c>EnableConsolidation</c>, <c>OutdatedDetectionOptions.FocusEntityTypes</c>,
+    /// <c>ProfileExportOptions.IncludeAuditTrail</c>, <c>SubQueryOptions.IncludeCommunityQueries</c>,
+    /// <c>ContextOptimizationOptions.MaxTokens</c>, <c>ExpansionOptions.OnlyAmbiguous</c>,
+    /// <c>HybridGraphOptions.SemanticWeight</c>, <c>SummarizationOptions.Style</c> and
+    /// <c>VCMOptions.ConsolidationInterval</c>. Options that were only validated and then used by nothing
+    /// went with them - the scan counts a validator read as a read, so they were never listed here.
+    /// </para>
+    /// <para>
+    /// Merged: <c>WorkingMemoryOrchestratorOptions</c> duplicated <c>WorkingMemoryOptions</c> field for field
+    /// and was the one the working memory orchestrator read, so <c>EnableTopicChangeDetection</c> and
+    /// <c>SummarizeBeforeArchival</c> set on the documented type did nothing. The duplicate is gone and the
+    /// orchestrator reads <c>MemoryIndexerOptions.WorkingMemory</c>.
     /// </para>
     /// <para>
     /// Wired since, each with a test in both directions (the non-default value changes the outcome, the
@@ -48,73 +75,32 @@ public class OptionsReachabilityRosterTests
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownUnread = new()
     {
-        ["MemoryIndexer.Configuration.CompletionOptions"] =
-        [
-            "ApiKey", "Endpoint",
-        ],
-        ["MemoryIndexer.Configuration.IntelligenceOptions"] =
-        [
-            "ClassifierModel", "Enabled", "FactExtractionEnabled", "SummarizationEnabled",
-        ],
         ["MemoryIndexer.Configuration.LatencyOptions"] = ["QueryCacheSize"],
-        ["MemoryIndexer.Configuration.SearchOptions"] = ["RerankerModel"],
-        ["MemoryIndexer.Configuration.SensoryBufferOptions"] =
-        [
-            "Enabled", "TriggerCheckInterval",
-        ],
-        ["MemoryIndexer.Configuration.SqliteOptions"] =
-        [
-            "HnswEfConstruction", "HnswEfSearch",
-        ],
-        ["MemoryIndexer.Configuration.WorkingMemoryOptions"] =
-        [
-            "EnableTopicChangeDetection", "SummarizeBeforeArchival",
-        ],
-        ["MemoryIndexer.Interfaces.ConfidenceDecayOptions"] = ["DefaultStrategy"],
         ["MemoryIndexer.Interfaces.ConfidenceUpdateOptions"] =
         [
             "BoostFrequentlyAccessed", "ReduceForContradictions",
         ],
         ["MemoryIndexer.Interfaces.FactValidationOptions"] = ["MaxComparisonFacts"],
-        ["MemoryIndexer.Interfaces.InferenceOptions"] = ["MaxDepth"],
-        ["MemoryIndexer.Interfaces.LinkDiscoveryOptions"] = ["FindCausalLinks"],
         ["MemoryIndexer.Interfaces.MemoryAnalysisOptions"] = ["MinConfidenceThreshold"],
-        ["MemoryIndexer.Interfaces.OptimizationOptions"] =
-        [
-            "EnableCompression", "EnableConsolidation", "MaxWorkingMemoryAgeHours",
-        ],
-        ["MemoryIndexer.Interfaces.OutdatedDetectionOptions"] = ["FocusEntityTypes"],
-        ["MemoryIndexer.Interfaces.ProfileExportOptions"] =
-        [
-            "IncludeAuditTrail", "IncludeInferred",
-        ],
+        ["MemoryIndexer.Interfaces.OptimizationOptions"] = ["MaxWorkingMemoryAgeHours"],
+        ["MemoryIndexer.Interfaces.ProfileExportOptions"] = ["IncludeInferred"],
         ["MemoryIndexer.Interfaces.ReflectionOptions"] =
         [
             "MaxInsights", "MinImportance",
         ],
-        ["MemoryIndexer.Interfaces.SubQueryOptions"] = ["IncludeCommunityQueries"],
         ["MemoryIndexer.Interfaces.SubgraphOptions"] = ["IncludeTemporalInfo"],
         ["MemoryIndexer.Interfaces.TextCompletionOptions"] =
         [
             "FrequencyPenalty", "MaxTokens", "PresencePenalty", "StopSequences", "Temperature", "TopP",
         ],
-        ["MemoryIndexer.Interfaces.WorkingMemoryOrchestratorOptions"] =
-        [
-            "Capacity", "EnableCapacityEnforcement",
-        ],
         ["MemoryIndexer.Sdk.Intelligence.ContextOptimization.ContextOptimizationOptions"] =
         [
-            "EnableChunkExpansion", "MaxTokens",
+            "EnableChunkExpansion",
         ],
-        ["MemoryIndexer.Sdk.Intelligence.EntityResolution.ExpansionOptions"] = ["OnlyAmbiguous"],
-        ["MemoryIndexer.Sdk.Intelligence.Graph.HybridGraphOptions"] = ["SemanticWeight"],
-        ["MemoryIndexer.Sdk.Intelligence.Summarization.SummarizationOptions"] =
-        [
-            "FocusTopics", "Style",
-        ],
+        ["MemoryIndexer.Sdk.Intelligence.Summarization.SummarizationOptions"] = ["FocusTopics"],
         ["MemoryIndexer.Services.VCMOptions"] =
         [
-            "AutoEvictionTrigger", "ConsolidationInterval", "EnableAutoEviction",
+            "AutoEvictionTrigger", "EnableAutoEviction",
         ],
     };
 

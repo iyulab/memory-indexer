@@ -329,12 +329,6 @@ public sealed class ExpansionOptions
     public float MinConfidence { get; init; } = 0.7f;
 
     /// <summary>
-    /// Whether to replace only ambiguous pronouns.
-    /// Default: false.
-    /// </summary>
-    public bool OnlyAmbiguous { get; init; }
-
-    /// <summary>
     /// Format for the replacement.
     /// {0} = entity name, {1} = original pronoun.
     /// Default: "{0}".

@@ -470,11 +470,6 @@ public sealed class LinkDiscoveryOptions
     public bool FindSemanticLinks { get; init; } = true;
 
     /// <summary>
-    /// Whether to find causal links.
-    /// </summary>
-    public bool FindCausalLinks { get; init; }
-
-    /// <summary>
     /// Maximum links to discover.
     /// </summary>
     public int MaxLinks { get; init; } = 50;

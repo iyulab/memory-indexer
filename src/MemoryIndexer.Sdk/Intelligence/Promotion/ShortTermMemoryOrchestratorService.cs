@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,7 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
 {
     private readonly IShortTermMemory _workingMemory;
     private readonly IEmbeddingService _embeddingService;
-    private readonly WorkingMemoryOrchestratorOptions _options;
+    private readonly WorkingMemoryOptions _options;
     private readonly ILogger<ShortTermMemoryOrchestratorService> _logger;
 
     // Per-user state tracking
@@ -32,12 +33,12 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
     public ShortTermMemoryOrchestratorService(
         IShortTermMemory workingMemory,
         IEmbeddingService embeddingService,
-        IOptions<WorkingMemoryOrchestratorOptions> options,
+        IOptions<MemoryIndexerOptions> options,
         ILogger<ShortTermMemoryOrchestratorService> logger)
     {
         _workingMemory = workingMemory;
         _embeddingService = embeddingService;
-        _options = options.Value;
+        _options = options.Value.WorkingMemory;
         _logger = logger;
     }
 

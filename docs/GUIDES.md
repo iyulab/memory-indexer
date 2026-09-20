@@ -36,10 +36,7 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
       "Dimensions": 1024
     },
     "Completion": {
-      "Provider": "Mock",
-      "Model": "llama3.2",
-      "Endpoint": "http://localhost:11434",
-      "ApiKey": null
+      "Provider": "Mock"
     },
     "VCM": {
       "Buffer": {
@@ -59,11 +56,18 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
         "MinConfidenceThreshold": 0.8
       }
     },
+    "WorkingMemory": {
+      "Capacity": 9,
+      "EnableCapacityEnforcement": true,
+      "IdleTimeout": "00:10:00",
+      "TokenThreshold": 2000,
+      "TurnThreshold": 10,
+      "EnableTopicChangeDetection": true,
+      "TopicChangeSimilarityThreshold": 0.5,
+      "SummarizeBeforeArchival": true
+    },
     "Intelligence": {
-      "EnableDeduplication": true,
-      "DeduplicationThreshold": 0.95,
-      "EnableConflictDetection": true,
-      "EnableEntityExtraction": true
+      "ClassificationEnabled": true
     },
     "Latency": {
       "EmbeddingCacheEnabled": true,
@@ -83,6 +87,14 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
 | | ConnectionString | string | "memories.db" | Database path for SqliteVec |
 | **Embedding** | Provider | string | "Mock" | `Mock`, `Ollama`, `Custom` (inject your own IEmbeddingService for `Custom`) |
 | | Dimensions | int | 1024 | Vector dimensions (must match your embedding model) |
+| **Completion** | Provider | string | "Mock" | `Mock` returns fixed placeholder text. The library builds no LLM client: for a real model register your own `ITextCompletionService` before `AddMemoryIndexer()`; any other value without such a registration throws when the service is resolved |
+| **WorkingMemory** | Capacity | int | 9 | Short tier capacity (7±2 rule); excess items are promoted to Long when `EnableCapacityEnforcement` is true |
+| | IdleTimeout | TimeSpan | 00:10:00 | Archive working memory to Long after this idle time |
+| | TokenThreshold | int | 2000 | Archive when accumulated tokens reach this count |
+| | TurnThreshold | int | 10 | Archive after N turns |
+| | EnableTopicChangeDetection | bool | true | Whether a topic change (similarity below `TopicChangeSimilarityThreshold`, default 0.5) triggers archival |
+| | SummarizeBeforeArchival | bool | true | Write an extractive session summary when archiving |
+| **Intelligence** | ClassificationEnabled | bool | true | Classify a new memory whose type or importance was not given |
 | **VCM.Buffer** | MaxIdleSeconds | int | 60 | Promote to Short after idle timeout |
 | | TokenThreshold | int | 500 | Promote when buffer exceeds token count |
 | | TurnThreshold | int | 3 | Promote after N turns |

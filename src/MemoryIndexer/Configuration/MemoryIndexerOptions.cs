@@ -107,6 +107,9 @@ public sealed class MemoryIndexerOptions
 /// - Capacity limit based on Baddeley's 7±2 chunking model
 /// - Automatic promotion of excess items to Long tier
 /// - Multiple trigger signals for Working→Long promotion
+///
+/// Bound from the <c>MemoryIndexer:WorkingMemory</c> configuration section. Both the tier manager and the
+/// working memory orchestrator read this one type.
 /// </remarks>
 public sealed class WorkingMemoryOptions
 {
@@ -143,7 +146,10 @@ public sealed class WorkingMemoryOptions
     public int TurnThreshold { get; set; } = 10;
 
     /// <summary>
-    /// Whether to enable topic change detection.
+    /// Whether a topic change counts as a Working→Long promotion trigger.
+    /// When false, the orchestrator does not track topic embeddings and neither it nor the tier manager
+    /// raises the topic change trigger; the other triggers are unaffected.
+    /// Default: true.
     /// </summary>
     public bool EnableTopicChangeDetection { get; set; } = true;
 
@@ -154,7 +160,9 @@ public sealed class WorkingMemoryOptions
     public float TopicChangeSimilarityThreshold { get; set; } = 0.5f;
 
     /// <summary>
-    /// Whether to summarize before archiving to Long tier.
+    /// Whether the orchestrator writes an extractive session summary when it archives working memory
+    /// to the Long tier. When false, no summary is created even if the caller asks for one.
+    /// Default: true.
     /// </summary>
     public bool SummarizeBeforeArchival { get; set; } = true;
 }
@@ -216,24 +224,6 @@ public sealed class SqliteOptions
     /// Busy timeout in milliseconds. How long to wait when database is locked.
     /// </summary>
     public int BusyTimeoutMs { get; set; } = 5000;
-
-    /// <summary>
-    /// HNSW index M parameter (graph connectivity).
-    /// Higher values = better recall, more memory.
-    /// </summary>
-    public int HnswM { get; set; } = 16;
-
-    /// <summary>
-    /// HNSW index efConstruction parameter.
-    /// Higher values = better index quality, slower indexing.
-    /// </summary>
-    public int HnswEfConstruction { get; set; } = 128;
-
-    /// <summary>
-    /// HNSW search ef parameter.
-    /// Higher values = better recall, slower search.
-    /// </summary>
-    public int HnswEfSearch { get; set; } = 64;
 
     // ===== Zero-Config Auto-Management Settings =====
 
@@ -471,11 +461,6 @@ public sealed class SearchOptions
     public int RrfK { get; set; } = 60;
 
     /// <summary>
-    /// Model ID for re-ranking. Supported: bge-reranker-base, bge-reranker-large, bge-reranker-v2-m3.
-    /// </summary>
-    public string? RerankerModel { get; set; }
-
-    /// <summary>
     /// Whether to enable re-ranking for search results.
     /// </summary>
     public bool EnableReranking { get; set; } = true;
@@ -509,16 +494,6 @@ public sealed class SearchOptions
 public sealed class IntelligenceOptions
 {
     /// <summary>
-    /// Whether intelligence services are enabled.
-    /// </summary>
-    public bool Enabled { get; set; } = true;
-
-    /// <summary>
-    /// Model ID for memory classification. Supported: phi-3-mini, Qwen2.5-1.5B, Qwen2.5-3B, Llama-3.2-1B.
-    /// </summary>
-    public string? ClassifierModel { get; set; }
-
-    /// <summary>
     /// Whether the memory primitives classify a new memory whose type or importance was not given.
     /// When false, encoding does not call the classifier and falls back to the episodic type, an
     /// importance of 0.5 and the caller's topics. The simple memory API is not affected: it uses
@@ -526,27 +501,6 @@ public sealed class IntelligenceOptions
     /// Default: true.
     /// </summary>
     public bool ClassificationEnabled { get; set; } = true;
-
-    /// <summary>
-    /// Whether to enable automatic fact extraction.
-    /// </summary>
-    public bool FactExtractionEnabled { get; set; } = true;
-
-    /// <summary>
-    /// Whether to enable automatic summarization.
-    /// </summary>
-    public bool SummarizationEnabled { get; set; } = true;
-
-    /// <summary>
-    /// Maximum tokens for generator output.
-    /// </summary>
-    public int MaxGeneratorTokens { get; set; } = 512;
-
-    /// <summary>
-    /// Temperature for generator output (0.0 - 1.0).
-    /// Lower values produce more deterministic output.
-    /// </summary>
-    public float GeneratorTemperature { get; set; } = 0.1f;
 }
 
 /// <summary>
@@ -562,12 +516,6 @@ public sealed class IntelligenceOptions
 /// </remarks>
 public sealed class SensoryBufferOptions
 {
-    /// <summary>
-    /// Whether the Sensory buffer is enabled.
-    /// When disabled, memories go directly to Working tier.
-    /// </summary>
-    public bool Enabled { get; set; } = true;
-
     /// <summary>
     /// Idle timeout before triggering promotion.
     /// Promotion occurs when no new content for this duration.
@@ -602,12 +550,6 @@ public sealed class SensoryBufferOptions
     /// Default: 10000 tokens.
     /// </summary>
     public int MaxBufferTokens { get; set; } = 10000;
-
-    /// <summary>
-    /// Interval for checking promotion triggers.
-    /// Default: 5 seconds.
-    /// </summary>
-    public TimeSpan TriggerCheckInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Whether the background promotion worker promotes the sensory buffer.
@@ -903,48 +845,12 @@ public sealed class CompletionOptions
 {
     /// <summary>
     /// Completion provider type.
-    /// Default: Mock (no external LLM required). Change to Ollama/OpenAI/Custom for real LLM integration.
+    /// Default: Mock (fixed placeholder responses, no LLM). The library builds no LLM client of its own:
+    /// for a real model, register your own <c>ITextCompletionService</c> before calling
+    /// <c>AddMemoryIndexer()</c>. With any value other than Mock and no such registration, resolving the
+    /// completion service throws <see cref="NotSupportedException"/>.
     /// </summary>
     public CompletionProvider Provider { get; set; } = CompletionProvider.Mock;
-
-    /// <summary>
-    /// Model name/ID to use for completions.
-    /// </summary>
-    /// <remarks>
-    /// The model ID format depends on the provider:
-    /// <list type="bullet">
-    /// <item><term>Ollama</term><description>Model name (e.g., "llama3.2:1b")</description></item>
-    /// <item><term>OpenAI</term><description>Model name (e.g., "gpt-4o-mini")</description></item>
-    /// <item><term>AzureOpenAI</term><description>Deployment name</description></item>
-    /// <item><term>Custom</term><description>Provider-specific model ID</description></item>
-    /// </list>
-    /// </remarks>
-    public string Model { get; set; } = "llama3.2:1b";
-
-    /// <summary>
-    /// Endpoint URL for the completion service.
-    /// </summary>
-    public string Endpoint { get; set; } = "http://localhost:11434";
-
-    /// <summary>
-    /// API key (for OpenAI or other cloud providers).
-    /// </summary>
-    public string? ApiKey { get; set; }
-
-    /// <summary>
-    /// Request timeout in seconds.
-    /// </summary>
-    public int TimeoutSeconds { get; set; } = 60;
-
-    /// <summary>
-    /// Default temperature for generation (0.0 = deterministic, 1.0 = creative).
-    /// </summary>
-    public float DefaultTemperature { get; set; } = 0.1f;
-
-    /// <summary>
-    /// Default maximum tokens to generate.
-    /// </summary>
-    public int DefaultMaxTokens { get; set; } = 500;
 }
 
 /// <summary>
@@ -958,7 +864,7 @@ public enum CompletionProvider
     Mock,
 
     /// <summary>
-    /// Ollama local inference.
+    /// Ollama local inference. Not built in: register your own ITextCompletionService implementation via DI.
     /// </summary>
     Ollama,
 

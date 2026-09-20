@@ -13,10 +13,8 @@ public sealed class ConfigurationValidator : IConfigurationValidator
 
         ValidateStorageOptions(options.Storage, result);
         ValidateEmbeddingOptions(options.Embedding, result);
-        ValidateCompletionOptions(options.Completion, result);
         ValidateScoringOptions(options.Scoring, result);
         ValidateSearchOptions(options.Search, result);
-        ValidateIntelligenceOptions(options.Intelligence, result);
         ValidateSensoryBufferOptions(options.SensoryBuffer, result);
         ValidateDeduplicationOptions(options.Deduplication, result);
         ValidateMemoryGrowthOptions(options.MemoryGrowth, result);
@@ -88,16 +86,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
                 ExpectedConstraint = ">= 0"
             });
         }
-
-        if (options.HnswM < 2)
-        {
-            result.Warnings.Add(new ConfigurationWarning
-            {
-                PropertyPath = "Storage.Sqlite.HnswM",
-                Message = "HNSW M parameter is very low, may reduce search quality",
-                Suggestion = "Recommended: 16 for balanced performance"
-            });
-        }
     }
 
     private static void ValidateEmbeddingOptions(EmbeddingOptions options, ConfigurationValidationResult result)
@@ -167,53 +155,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
                 PropertyPath = "Embedding.ApiKey",
                 Message = "API key not configured for custom embedding provider",
                 Suggestion = "Set API key if your provider requires authentication"
-            });
-        }
-    }
-
-    private static void ValidateCompletionOptions(CompletionOptions options, ConfigurationValidationResult result)
-    {
-        if (string.IsNullOrWhiteSpace(options.Model))
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Completion.Model",
-                Message = "Completion model must be specified",
-                CurrentValue = options.Model,
-                ExpectedConstraint = "non-empty string"
-            });
-        }
-
-        if (options.TimeoutSeconds <= 0)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Completion.TimeoutSeconds",
-                Message = "Timeout must be positive",
-                CurrentValue = options.TimeoutSeconds,
-                ExpectedConstraint = "> 0"
-            });
-        }
-
-        if (options.DefaultTemperature < 0 || options.DefaultTemperature > 2)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Completion.DefaultTemperature",
-                Message = "Temperature must be between 0 and 2",
-                CurrentValue = options.DefaultTemperature,
-                ExpectedConstraint = "[0, 2]"
-            });
-        }
-
-        if (options.DefaultMaxTokens <= 0)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Completion.DefaultMaxTokens",
-                Message = "Max tokens must be positive",
-                CurrentValue = options.DefaultMaxTokens,
-                ExpectedConstraint = "> 0"
             });
         }
     }
@@ -351,31 +292,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
                 PropertyPath = "Search.RerankCandidateMultiplier",
                 Message = "Rerank candidate multiplier should be >= 1",
                 Suggestion = "Recommended: 4 for good reranking quality"
-            });
-        }
-    }
-
-    private static void ValidateIntelligenceOptions(IntelligenceOptions options, ConfigurationValidationResult result)
-    {
-        if (options.MaxGeneratorTokens <= 0)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Intelligence.MaxGeneratorTokens",
-                Message = "Max generator tokens must be positive",
-                CurrentValue = options.MaxGeneratorTokens,
-                ExpectedConstraint = "> 0"
-            });
-        }
-
-        if (options.GeneratorTemperature < 0 || options.GeneratorTemperature > 2)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Intelligence.GeneratorTemperature",
-                Message = "Generator temperature must be between 0 and 2",
-                CurrentValue = options.GeneratorTemperature,
-                ExpectedConstraint = "[0, 2]"
             });
         }
     }

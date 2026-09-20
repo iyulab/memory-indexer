@@ -715,11 +715,6 @@ public sealed class OutdatedDetectionOptions
     public bool CheckForSuperseding { get; init; } = true;
 
     /// <summary>
-    /// Entity types to focus on.
-    /// </summary>
-    public IReadOnlyList<string>? FocusEntityTypes { get; init; }
-
-    /// <summary>
     /// Minimum confidence to consider for outdated check.
     /// </summary>
     public float MinConfidence { get; init; } = 0.3f;

@@ -16,6 +16,61 @@ All notable changes to Memory Indexer are documented here.
   components themselves are unchanged and remain available to compose explicitly: `IPiiDetector`
   and `IPromptInjectionDetector` (also exposed as MCP security tools), `IRateLimiter` with its own
   `RateLimitOptions`, `IAuditLogger`, and `ITenantContext`.
+- **Breaking: options that promised a feature this library does not have are removed.** Each was
+  declared and documented, several defaulted to `true`, and nothing read any of them: setting one
+  changed nothing and reported nothing. Migration for every item below unless it says otherwise:
+  delete the assignment or the configuration key; it never had an effect.
+  - **`CompletionOptions` keeps only `Provider`.** `ApiKey`, `Endpoint`, `Model`, `TimeoutSeconds`,
+    `DefaultTemperature` and `DefaultMaxTokens` configured an LLM client the library never builds
+    (the last four were range-checked by the configuration validator and then used by nothing;
+    those checks are removed too). For a real model, register your own `ITextCompletionService`
+    before `AddMemoryIndexer()` and configure it there; the only built-in provider is `Mock`.
+  - **`IntelligenceOptions` keeps only `ClassificationEnabled`.** `Enabled` switched nothing off,
+    `ClassifierModel` named a model that is never loaded (the classifier is rule-based), and
+    `FactExtractionEnabled` / `SummarizationEnabled` described automatic extraction and
+    summarization that do not run. `MaxGeneratorTokens` and `GeneratorTemperature` were validated
+    and then used by nothing. `LocalMemoryClassifier`'s constructor no longer takes
+    `IOptions<MemoryIndexerOptions>`; it only stored the value.
+  - **`SearchOptions.RerankerModel`.** No reranker model is loaded; the registered
+    `IRerankerService` (`MockRerankerService`) keeps the original scores. Register your own
+    `IRerankerService` to rerank.
+  - **`SensoryBufferOptions.Enabled` and `TriggerCheckInterval`.** The library has no ingest path
+    that chooses between the buffer and working memory, so `Enabled = false` bypassed nothing; the
+    buffer is used only by code that enqueues into `IBuffer` itself. The promotion loop runs on
+    `MemoryPromotionBackgroundOptions.CheckIntervalSeconds`; use that instead of
+    `TriggerCheckInterval`.
+  - **`SqliteOptions.HnswM`, `HnswEfConstruction` and `HnswEfSearch`.** The SQLite store has no
+    HNSW index to tune (`HnswM` was validated and then used by nothing). The keys are also gone
+    from the MCP server's `appsettings.json` and the Qdrant sample configuration.
+  - **Per-call options:** `ConfidenceDecayOptions.DefaultStrategy` (only the time-based strategy
+    exists), `InferenceOptions.MaxDepth` (inference is single-pass, nothing is chained),
+    `LinkDiscoveryOptions.FindCausalLinks` (no causal link discovery),
+    `OptimizationOptions.EnableCompression` and `EnableConsolidation` (optimization always reported
+    0 compressed and 0 consolidated), `OutdatedDetectionOptions.FocusEntityTypes` (memories carry
+    no typed entities), `ProfileExportOptions.IncludeAuditTrail` (no access history is stored),
+    `ContextOptimizationOptions.MaxTokens` (`TargetTokens` is the enforced ceiling; use it),
+    `ExpansionOptions.OnlyAmbiguous` (coreferences carry no ambiguity information),
+    `HybridGraphOptions.SemanticWeight` (semantic and graph results are returned side by side and
+    never fused into one score) and `VCMOptions.ConsolidationInterval` (nothing schedules
+    consolidation; call `ConsolidateAsync` yourself).
+  - **`SubQueryOptions.IncludeCommunityQueries`, with `SubQueryType.PatternMatch` and
+    `SubQueryType.CommunitySearch`.** Sub-query generation only ever produced `EntityFacts` and
+    `EntityRelationship`; those two keep their numeric values (0 and 1).
+- **Breaking: `SummarizationOptions.Style`, the `SummaryStyle` enum and the `style` parameter of the
+  `SummarizeMemories` MCP tool are removed.** Every summary is extractive: `Abstractive` and the
+  default `Hybrid` produced exactly the same text as `Extractive`. Migration: delete the
+  assignment; MCP clients stop sending `style`.
+- **Breaking: `WorkingMemoryOrchestratorOptions` and its `MemoryIndexer:VCM:WorkingOrchestrator`
+  configuration section are removed; `MemoryIndexer:WorkingMemory` is the one section that
+  works.** The type duplicated `WorkingMemoryOptions` field for field with identical defaults, and
+  it was the one the working memory orchestrator read - so the documented
+  `MemoryIndexerOptions.WorkingMemory` reached the tier manager and capacity enforcement but never
+  the orchestrator that archives working memory. `ShortTermMemoryOrchestratorService` now takes
+  `IOptions<MemoryIndexerOptions>` and reads `.WorkingMemory`. Migration: move any
+  `MemoryIndexer:VCM:WorkingOrchestrator` keys to `MemoryIndexer:WorkingMemory` (same names).
+  Defaults are unchanged. If you already set `IdleTimeout`, `TokenThreshold`, `TurnThreshold`,
+  `TopicChangeSimilarityThreshold` or `SummarizeBeforeArchival` under `WorkingMemory`, the
+  orchestrator now honours those values where it used its own defaults before.
 
 ### Fixed
 Options that were declared and documented but read by nothing now do what they say. Every default
@@ -51,6 +106,11 @@ keeps the previous behaviour; only a caller who sets a non-default value sees a 
 - **`LineageQueryOptions.IncludeRelated = true` now returns the events of related memories**
   (for example the sources of a merge) together with the memory's own, under the same filters
   and limit. It returned the memory's own events only.
+- **`WorkingMemoryOptions.SummarizeBeforeArchival = false` now stops the session summary on
+  archival, and `EnableTopicChangeDetection = false` now suppresses the topic change trigger.**
+  The orchestrator read a duplicate options type (see Removed), and the tier manager raised the
+  topic change trigger regardless of the switch. With detection off the trigger is still listed in
+  `TierTriggerStatus.AllTriggers`, never satisfied.
 
 ## [v0.17.16] - 2026-09-19
 

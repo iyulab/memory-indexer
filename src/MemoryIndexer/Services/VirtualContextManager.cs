@@ -947,11 +947,6 @@ public sealed class VCMOptions
     public float SessionMigrationThreshold { get; set; } = 0.3f;
 
     /// <summary>
-    /// Interval for periodic consolidation.
-    /// </summary>
-    public TimeSpan ConsolidationInterval { get; set; } = TimeSpan.FromHours(1);
-
-    /// <summary>
     /// Enable automatic eviction when saturation is high.
     /// </summary>
     public bool EnableAutoEviction { get; set; } = true;

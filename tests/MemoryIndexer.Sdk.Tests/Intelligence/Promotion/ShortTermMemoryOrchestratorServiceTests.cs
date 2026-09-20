@@ -1,7 +1,11 @@
 using AwesomeAssertions;
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
+using MemoryIndexer.Sdk.Extensions;
 using MemoryIndexer.Sdk.Intelligence.Promotion;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -13,7 +17,7 @@ public class ShortTermMemoryOrchestratorServiceTests
 {
     private readonly IShortTermMemory _workingMemoryMock;
     private readonly IEmbeddingService _embeddingServiceMock;
-    private readonly WorkingMemoryOrchestratorOptions _options;
+    private readonly WorkingMemoryOptions _options;
     private readonly ShortTermMemoryOrchestratorService _orchestrator;
 
     public ShortTermMemoryOrchestratorServiceTests()
@@ -24,7 +28,7 @@ public class ShortTermMemoryOrchestratorServiceTests
         _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new float[768].AsMemory());
 
-        _options = new WorkingMemoryOrchestratorOptions
+        _options = new WorkingMemoryOptions
         {
             IdleTimeout = TimeSpan.FromMinutes(10),
             TokenThreshold = 2000,
@@ -37,7 +41,7 @@ public class ShortTermMemoryOrchestratorServiceTests
         _orchestrator = new ShortTermMemoryOrchestratorService(
             _workingMemoryMock,
             _embeddingServiceMock,
-            Options.Create(_options),
+            Options.Create(new MemoryIndexerOptions { WorkingMemory = _options }),
             NullLogger<ShortTermMemoryOrchestratorService>.Instance);
     }
 
@@ -133,7 +137,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     public async Task CheckArchivalTriggerAsync_TurnThresholdMet_ReturnsTurnThreshold()
     {
         // Arrange - use low threshold for testing
-        var options = new WorkingMemoryOrchestratorOptions { TurnThreshold = 3 };
+        var options = new WorkingMemoryOptions { TurnThreshold = 3 };
         var orchestrator = CreateOrchestratorWithOptions(options);
 
         const string userId = "user-1";
@@ -153,7 +157,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     public async Task CheckArchivalTriggerAsync_TokenThresholdMet_ReturnsTokenThreshold()
     {
         // Arrange - use low threshold for testing
-        var options = new WorkingMemoryOrchestratorOptions { TokenThreshold = 100 };
+        var options = new WorkingMemoryOptions { TokenThreshold = 100 };
         var orchestrator = CreateOrchestratorWithOptions(options);
 
         const string userId = "user-1";
@@ -238,6 +242,95 @@ public class ShortTermMemoryOrchestratorServiceTests
     }
 
     [Fact]
+    public async Task ArchiveToSessionAsync_SummarizeBeforeArchivalDisabledInWorkingMemoryOptions_NoSummary()
+    {
+        // Arrange - the switch is set where the documentation says to set it: MemoryIndexerOptions.WorkingMemory.
+        var indexerOptions = new MemoryIndexerOptions();
+        indexerOptions.WorkingMemory.SummarizeBeforeArchival = false;
+        var orchestrator = new ShortTermMemoryOrchestratorService(
+            _workingMemoryMock,
+            _embeddingServiceMock,
+            Options.Create(indexerOptions),
+            NullLogger<ShortTermMemoryOrchestratorService>.Instance);
+
+        const string userId = "user-1";
+        for (int i = 0; i < 3; i++)
+        {
+            await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, $"Content {i}"), TestContext.Current.CancellationToken);
+        }
+
+        // Act - the caller asks for a summary; the configured switch still wins.
+        var result = await orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.MemoriesArchived.Should().Be(3);
+        result.SummaryId.Should().BeNull();
+        await _embeddingServiceMock.DidNotReceive().GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ArchiveToSessionAsync_DefaultWorkingMemoryOptions_CreatesSummary()
+    {
+        // Arrange - nothing configured: the default (SummarizeBeforeArchival = true) still summarizes.
+        var orchestrator = new ShortTermMemoryOrchestratorService(
+            _workingMemoryMock,
+            _embeddingServiceMock,
+            Options.Create(new MemoryIndexerOptions()),
+            NullLogger<ShortTermMemoryOrchestratorService>.Instance);
+
+        const string userId = "user-1";
+        for (int i = 0; i < 3; i++)
+        {
+            await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, $"Content {i}"), TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        var result = await orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        result.SummaryId.Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData("false", false)]
+    [InlineData("true", true)]
+    public async Task ArchiveToSessionAsync_ResolvedFromTheContainer_HonoursTheWorkingMemoryConfigurationSection(
+        string configuredValue, bool expectSummary)
+    {
+        // Arrange - the registration the SDK ships, bound from the documented configuration section.
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MemoryIndexer:WorkingMemory:SummarizeBeforeArchival"] = configuredValue
+            })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddLogging();
+        services.AddMemoryIndexer();
+        services.AddSingleton(_workingMemoryMock);
+        services.AddSingleton(_embeddingServiceMock);
+
+        await using var provider = services.BuildServiceProvider();
+        var orchestrator = provider.GetRequiredService<IShortTermMemoryOrchestrator>();
+
+        const string userId = "user-1";
+        for (int i = 0; i < 3; i++)
+        {
+            await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, $"Content {i}"), TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        var result = await orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: true, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        (result.SummaryId != null).Should().Be(expectSummary);
+    }
+
+    [Fact]
     public async Task ArchiveToSessionAsync_ClearsState()
     {
         // Arrange
@@ -310,7 +403,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     public async Task GetState_TriggerSatisfied_ShowsTrigger()
     {
         // Arrange
-        var options = new WorkingMemoryOrchestratorOptions { TurnThreshold = 2 };
+        var options = new WorkingMemoryOptions { TurnThreshold = 2 };
         var orchestrator = CreateOrchestratorWithOptions(options);
 
         const string userId = "user-1";
@@ -398,12 +491,12 @@ public class ShortTermMemoryOrchestratorServiceTests
         };
     }
 
-    private ShortTermMemoryOrchestratorService CreateOrchestratorWithOptions(WorkingMemoryOrchestratorOptions options)
+    private ShortTermMemoryOrchestratorService CreateOrchestratorWithOptions(WorkingMemoryOptions options)
     {
         return new ShortTermMemoryOrchestratorService(
             _workingMemoryMock,
             _embeddingServiceMock,
-            Options.Create(options),
+            Options.Create(new MemoryIndexerOptions { WorkingMemory = options }),
             NullLogger<ShortTermMemoryOrchestratorService>.Instance);
     }
 
