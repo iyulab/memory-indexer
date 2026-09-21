@@ -95,6 +95,15 @@ Tier Promotion Pipeline (Atkinson-Shiffrin + Tulving):
 └─────────────────────────────────────────────────────┘
 ```
 
+**The Buffer tier is opt-in by use, not by a switch.** No ingest path in the library writes to it —
+the store APIs and the MCP tools go straight to the stores — so it stays empty, and its settings do
+nothing, until your code feeds it with `IBuffer.EnqueueAsync` (the
+[MemoryChatApp](samples/MemoryChatApp/) sample enqueues each chat turn). Once you do, `SensoryBufferOptions`
+(`IdleTimeout` 60 s · `TokenThreshold` 500 · `TurnThreshold` 3, first one reached wins) decides when a
+user's buffer is due, and the hosted promotion loop drains it into working memory
+(`SensoryBufferOptions.EnableBackgroundWorker`, cadence `MemoryPromotionBackgroundOptions.CheckIntervalSeconds`).
+If you do not enqueue, leave the `SensoryBuffer` section out of your configuration.
+
 ## Benchmark Summary
 
 | Operation | Latency | Throughput |
