@@ -388,33 +388,26 @@ public class MemoryDto { }     // Your API DTO
 
 ### 1. Conversation History Management
 
-**Pattern**: Automatic conversation archiving with 4-tier lifecycle
+**Pattern**: Store each turn with its role, recall by relevance
 
 ```csharp
 public class ConversationService
 {
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
 
-    public async Task ProcessUserMessage(string userId, string message)
+    public ConversationService(IMemoryService memory) => _memory = memory;
+
+    public async Task ProcessUserMessage(string userId, string sessionId, string message)
     {
-        // Store in Recently Buffer (Tier 0)
-        await _vcm.AddToRecentlyAsync(userId, message, metadata: new()
-        {
-            ["role"] = "user",
-            ["timestamp"] = DateTime.UtcNow.ToString("O")
-        });
-
-        // Automatic promotion:
-        // Recently → Working (60s OR 500 tokens OR 3 turns)
-        // Working → Session (topic change OR 10min)
-        // Session → User (confidence ≥ 0.8 AND confirms ≥ 3)
+        // The memory type is classified automatically; the role is kept on episodic memories.
+        await _memory.RememberAsync(userId, sessionId, message, role: "user");
     }
 
-    public async Task<string> GetConversationContext(string userId)
+    public async Task<string> GetConversationContext(string userId, string sessionId, string query)
     {
-        var context = await _vcm.RetrieveHybridAsync(userId, limit: 10);
-        return string.Join("\n\n", context.Select(m =>
-            $"[{m.Metadata["role"]}]: {m.Content}"));
+        var context = await _memory.RecallAsync(userId, sessionId, query, limit: 10);
+        return string.Join("\n\n", context.AllMemories().Select(m =>
+            $"[{m.Role ?? "unknown"}]: {m.Content}"));
     }
 }
 ```
@@ -426,17 +419,20 @@ public class ConversationService
 ```csharp
 public class PreferenceService
 {
-    private readonly MemoryService _memory;
+    private readonly IMemoryPrimitives _memory;
+
+    public PreferenceService(IMemoryPrimitives memory) => _memory = memory;
 
     public async Task LearnPreference(string userId, string preference)
     {
-        await _memory.StoreAsync(
-            userId: userId,
-            content: preference,
-            type: MemoryType.Fact,
-            importance: 0.7f,
-            metadata: new() { ["category"] = "preference" }
-        );
+        await _memory.EncodeAsync(new EncodeRequest
+        {
+            UserId = userId,
+            Content = preference,
+            Type = MemoryType.Fact,
+            ImportanceScore = 0.7f,
+            Metadata = new() { ["category"] = "preference" }
+        });
 
         // Automatically promotes to User Profile when:
         // - Mentioned 3+ times AND
@@ -445,54 +441,60 @@ public class PreferenceService
 
     public async Task<List<string>> GetUserPreferences(string userId)
     {
-        var prefs = await _memory.RecallAsync(
-            userId: userId,
-            query: "user preferences",
-            metadataFilter: new() { ["category"] = "preference" },
-            limit: 10
-        );
+        var prefs = await _memory.RetrieveAsync(new RetrieveRequest
+        {
+            UserId = userId,
+            Query = "user preferences",
+            Types = [MemoryType.Fact],
+            Limit = 10
+        });
 
-        return prefs.Select(r => r.Memory.Content).ToList();
+        return prefs
+            .Where(r => r.Memory.Metadata?.GetValueOrDefault("category") == "preference")
+            .Select(r => r.Memory.Content)
+            .ToList();
     }
 }
 ```
 
 ### 3. Entity Relationship Tracking
 
-**Pattern**: Graph-based entity management
+**Pattern**: Link a memory to the entities it mentions, then traverse from it
 
 ```csharp
 public class RelationshipTracker
 {
     private readonly IMemoryGraphService _graph;
 
+    public RelationshipTracker(IMemoryGraphService graph) => _graph = graph;
+
     public async Task TrackRelationship(
-        string userId,
+        MemoryUnit memory,
         string entity1,
         string entity2,
         string relationship)
     {
-        await _graph.AddRelationshipAsync(
-            userId: userId,
-            sourceEntity: entity1,
-            targetEntity: entity2,
-            relationshipType: relationship,
-            confidence: 0.9f
-        );
+        var triple = new EntityTriple
+        {
+            UserId = memory.UserId,
+            Subject = entity1,
+            Predicate = relationship,
+            ObjectValue = entity2,
+            Confidence = 0.9f,
+            SourceMemoryId = memory.Id
+        };
+
+        await _graph.LinkMemoryToGraphAsync(memory, [triple]);
     }
 
-    public async Task<List<string>> FindRelatedEntities(
-        string userId,
-        string entity)
+    public async Task<List<string>> FindRelatedMemories(Guid memoryId)
     {
         var related = await _graph.FindRelatedMemoriesAsync(
-            userId: userId,
-            startEntity: entity,
+            memoryId,
             maxHops: 2,
-            minConfidence: 0.5f
-        );
+            topK: 10);
 
-        return related.Select(m => m.Content).ToList();
+        return related.Select(r => r.Memory.Content).ToList();
     }
 }
 ```
@@ -504,22 +506,26 @@ public class RelationshipTracker
 ```csharp
 public class SessionManager
 {
-    private readonly MemoryService _memory;
+    private readonly IMemoryPrimitives _memory;
+    private readonly IMemoryStore _store;
+
+    public SessionManager(IMemoryPrimitives memory, IMemoryStore store) => (_memory, _store) = (memory, store);
 
     public async Task StartSession(string userId, string sessionId)
     {
-        await _memory.StoreAsync(
-            userId: userId,
-            content: $"Session started: {sessionId}",
-            type: MemoryType.Episodic,
-            sessionId: sessionId,
-            importance: 0.3f
-        );
+        await _memory.EncodeAsync(new EncodeRequest
+        {
+            UserId = userId,
+            SessionId = sessionId,
+            Content = $"Session started: {sessionId}",
+            Type = MemoryType.Episodic,
+            ImportanceScore = 0.3f
+        });
     }
 
     public async Task<string> GetSessionSummary(string userId, string sessionId)
     {
-        var memories = await _memory.GetAllAsync(
+        var memories = await _store.GetAllAsync(
             userId: userId,
             options: new MemoryFilterOptions
             {
@@ -734,23 +740,21 @@ builder.Configuration.AddAzureKeyVault(
 
 ## Anti-Patterns
 
+> In these snippets `memory` is an `IMemoryService`, `primitives` an `IMemoryPrimitives` and `store` an `IMemoryStore`, all resolved from DI.
+
 ### ❌ Anti-Pattern 1: Storing Everything
 
 **Problem:**
 ```csharp
 // Storing every minor detail
-await memory.StoreAsync(userId, "User typed 'a'", importance: 0.5f);
-await memory.StoreAsync(userId, "User backspaced", importance: 0.5f);
+await memory.RememberAsync(userId, "User typed 'a'");
+await memory.RememberAsync(userId, "User backspaced");
 ```
 
 **Solution:**
 ```csharp
 // Store only meaningful interactions
-await memory.StoreAsync(
-    userId,
-    "User searched for 'machine learning tutorials'",
-    importance: 0.6f
-);
+await memory.RememberAsync(userId, "User searched for 'machine learning tutorials'");
 ```
 
 ### ❌ Anti-Pattern 2: Ignoring Memory Types
@@ -758,7 +762,7 @@ await memory.StoreAsync(
 **Problem:**
 ```csharp
 // Everything as Episodic
-await memory.StoreAsync(userId, content, type: MemoryType.Episodic);
+await primitives.EncodeAsync(new EncodeRequest { UserId = userId, Content = content, Type = MemoryType.Episodic });
 ```
 
 **Solution:**
@@ -767,7 +771,7 @@ await memory.StoreAsync(userId, content, type: MemoryType.Episodic);
 var type = content.Contains("how to")
     ? MemoryType.Procedural
     : MemoryType.Episodic;
-await memory.StoreAsync(userId, content, type: type);
+await primitives.EncodeAsync(new EncodeRequest { UserId = userId, Content = content, Type = type });
 ```
 
 ### ❌ Anti-Pattern 3: Synchronous Calls in Hot Paths
@@ -775,29 +779,29 @@ await memory.StoreAsync(userId, content, type: type);
 **Problem:**
 ```csharp
 // Blocking the request thread
-var results = memory.RecallAsync(userId, query).Result;  // Deadlock risk
+var results = memory.RecallAsync(userId, sessionId: null, query).Result;  // Deadlock risk
 ```
 
 **Solution:**
 ```csharp
 // Async all the way
-var results = await memory.RecallAsync(userId, query);
+var results = await memory.RecallAsync(userId, sessionId: null, query);
 ```
 
 ### ❌ Anti-Pattern 4: No Error Handling
 
 **Problem:**
 ```csharp
-await memory.StoreAsync(userId, content);  // What if it fails?
+await memory.RememberAsync(userId, content);  // What if it fails?
 ```
 
 **Solution:**
 ```csharp
 try
 {
-    await memory.StoreAsync(userId, content);
+    await memory.RememberAsync(userId, content);
 }
-catch (MemoryStorageException ex)
+catch (Exception ex) when (ex is not OperationCanceledException)
 {
     _logger.LogError(ex, "Failed to store memory for {UserId}", userId);
     // Fallback: queue for retry or use circuit breaker
@@ -811,17 +815,17 @@ catch (MemoryStorageException ex)
 // Storing duplicates
 foreach (var item in items)
 {
-    await memory.StoreAsync(userId, item.Content);  // May create duplicates
+    await memory.RememberAsync(userId, item.Content);  // May create duplicates
 }
 ```
 
 **Solution:**
 ```csharp
 // Deduplication is automatic in SDK, but you can pre-check:
-var existing = await memory.RecallAsync(userId, item.Content, limit: 1);
-if (existing.FirstOrDefault()?.Score < 0.95f)  // Not exact duplicate
+var existing = await primitives.RetrieveAsync(new RetrieveRequest { UserId = userId, Query = item.Content, Limit = 1 });
+if (existing.FirstOrDefault() is not { Score: >= 0.95f })  // Not an exact duplicate
 {
-    await memory.StoreAsync(userId, item.Content);
+    await memory.RememberAsync(userId, item.Content);
 }
 ```
 
@@ -835,20 +839,14 @@ if (existing.FirstOrDefault()?.Score < 0.95f)  // Not exact duplicate
 ```csharp
 foreach (var item in items)
 {
-    await memory.StoreAsync(userId, item);  // 100 DB calls
+    await store.StoreAsync(new MemoryUnit { UserId = userId, Content = item });  // 100 DB calls
 }
 ```
 
 **✅ Fast:**
 ```csharp
-// Not yet supported, but plan for:
-await memory.StoreBatchAsync(userId, items);  // 1 DB call
-```
-
-**Current Workaround:**
-```csharp
-var tasks = items.Select(item => memory.StoreAsync(userId, item));
-await Task.WhenAll(tasks);  // Parallel execution
+// IMemoryStore.StoreBatchAsync — a store may implement it natively (the default iterates StoreAsync)
+await store.StoreBatchAsync(items.Select(item => new MemoryUnit { UserId = userId, Content = item }));
 ```
 
 ### 2. Embedding Cache Configuration
@@ -868,17 +866,18 @@ services.AddMemoryIndexer(options =>
 
 **❌ Slow:**
 ```csharp
-var results = await memory.RecallAsync(userId, query, limit: 100);  // Retrieve too many
+var results = await primitives.RetrieveAsync(new RetrieveRequest { UserId = userId, Query = query, Limit = 100 });  // Retrieve too many
 ```
 
 **✅ Fast:**
 ```csharp
-var results = await memory.RecallAsync(
-    userId,
-    query,
-    limit: 10,  // Only what you need
-    types: new[] { MemoryType.Fact, MemoryType.Semantic }  // Type filter
-);
+var results = await primitives.RetrieveAsync(new RetrieveRequest
+{
+    UserId = userId,
+    Query = query,
+    Limit = 10,                                          // Only what you need
+    Types = [MemoryType.Fact, MemoryType.Semantic]       // Type filter
+});
 ```
 
 ### 4. SQLite Auto-Management Tuning

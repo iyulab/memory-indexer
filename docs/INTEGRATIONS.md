@@ -55,12 +55,12 @@ using Microsoft.SemanticKernel;
 
 public class MemoryChatPlugin
 {
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
     private readonly Kernel _kernel;
 
-    public MemoryChatPlugin(IVirtualContextManager vcm, Kernel kernel)
+    public MemoryChatPlugin(IMemoryService memory, Kernel kernel)
     {
-        _vcm = vcm;
+        _memory = memory;
         _kernel = kernel;
     }
 
@@ -70,18 +70,14 @@ public class MemoryChatPlugin
         [Description("User ID")] string userId,
         [Description("User message")] string message)
     {
-        // 1. Store user message in Recently Buffer
-        await _vcm.AddToRecentlyAsync(userId, message, new()
-        {
-            ["role"] = "user",
-            ["timestamp"] = DateTime.UtcNow
-        });
+        // 1. Store the user message (the memory type is classified automatically)
+        await _memory.RememberAsync(userId, message, role: "user");
 
-        // 2. Retrieve relevant context from all tiers
-        var context = await _vcm.RetrieveHybridAsync(userId, message, limit: 10);
+        // 2. Recall relevant memories across sessions
+        var context = await _memory.RecallAsync(userId, sessionId: null, message, limit: 10);
 
         // 3. Build prompt with memory context
-        var systemPrompt = BuildSystemPrompt(context);
+        var systemPrompt = BuildSystemPrompt(context.AllMemories());
         var chatHistory = new ChatHistory(systemPrompt);
         chatHistory.AddUserMessage(message);
 
@@ -92,11 +88,7 @@ public class MemoryChatPlugin
             kernel: _kernel);
 
         // 5. Store assistant response
-        await _vcm.AddToRecentlyAsync(userId, response.Content!, new()
-        {
-            ["role"] = "assistant",
-            ["timestamp"] = DateTime.UtcNow
-        });
+        await _memory.RememberAsync(userId, response.Content!, role: "assistant");
 
         return response.Content!;
     }
@@ -104,7 +96,7 @@ public class MemoryChatPlugin
     private string BuildSystemPrompt(IEnumerable<MemoryUnit> memories)
     {
         var contextLines = memories.Select(m =>
-            $"[{m.Type}] {m.Content} (Relevance: {m.RelevanceScore:F2})");
+            $"[{m.Type}] {m.Content} (Importance: {m.ImportanceScore:F2})");
 
         return $"""
             You are a helpful AI assistant with access to conversation history.
@@ -121,7 +113,7 @@ public class MemoryChatPlugin
 ### Usage Example
 
 ```csharp
-var plugin = kernel.ImportPluginFromObject(new MemoryChatPlugin(vcm, kernel));
+var plugin = kernel.ImportPluginFromObject(new MemoryChatPlugin(memory, kernel));
 
 var result = await kernel.InvokeAsync(
     plugin["chat_with_memory"],
@@ -156,24 +148,24 @@ using MemoryIndexer.Interfaces;
 
 public class MemoryConversationChain
 {
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
     private readonly OpenAiProvider _provider;
 
     public MemoryConversationChain(
-        IVirtualContextManager vcm,
+        IMemoryService memory,
         string apiKey)
     {
-        _vcm = vcm;
+        _memory = memory;
         _provider = new OpenAiProvider(apiKey);
     }
 
     public async Task<string> RunAsync(string userId, string input)
     {
         // 1. Retrieve memory context
-        var memories = await _vcm.RetrieveHybridAsync(userId, input, limit: 10);
+        var memories = await _memory.RecallAsync(userId, sessionId: null, input, limit: 10);
 
         // 2. Build context string
-        var context = string.Join("\n\n", memories.Select(m =>
+        var context = string.Join("\n\n", memories.AllMemories().Select(m =>
             $"[{m.CreatedAt:yyyy-MM-dd}] {m.Content}"));
 
         // 3. Create LangChain prompt
@@ -196,15 +188,8 @@ public class MemoryConversationChain
         var result = await chain.RunAsync("text");
 
         // 5. Store conversation turn
-        await _vcm.AddToRecentlyAsync(userId, input, new()
-        {
-            ["role"] = "user"
-        });
-
-        await _vcm.AddToRecentlyAsync(userId, result, new()
-        {
-            ["role"] = "assistant"
-        });
+        await _memory.RememberAsync(userId, input, role: "user");
+        await _memory.RememberAsync(userId, result, role: "assistant");
 
         return result;
     }
@@ -232,12 +217,11 @@ public class MemoryIndexerRetriever : IBaseRetriever
         string query,
         CancellationToken cancellationToken = default)
     {
-        var memories = await _memory.RetrieveAsync(
-            _userId,
-            query,
-            limit: 10);
+        var results = await _memory.RetrieveAsync(
+            new RetrieveRequest { UserId = _userId, Query = query, Limit = 10 },
+            cancellationToken);
 
-        return memories.Select(m => m.Content);
+        return results.Select(r => r.Memory.Content);
     }
 }
 
@@ -273,18 +257,18 @@ using MemoryIndexer.Interfaces;
 
 public class MemoryAgent : IAgent
 {
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
     private readonly OpenAIChatAgent _innerAgent;
     private readonly string _userId;
 
     public string Name => "MemoryAssistant";
 
     public MemoryAgent(
-        IVirtualContextManager vcm,
+        IMemoryService memory,
         string userId,
         string openAiApiKey)
     {
-        _vcm = vcm;
+        _memory = memory;
         _userId = userId;
 
         _innerAgent = new OpenAIChatAgent(
@@ -301,8 +285,9 @@ public class MemoryAgent : IAgent
         var lastMessage = messages.Last();
 
         // 1. Retrieve memory context
-        var context = await _vcm.RetrieveHybridAsync(
+        var context = await _memory.RecallAsync(
             _userId,
+            sessionId: null,
             lastMessage.Content!,
             limit: 10);
 
@@ -311,7 +296,7 @@ public class MemoryAgent : IAgent
         {
             new TextMessage(
                 Role.System,
-                BuildMemoryContext(context),
+                BuildMemoryContext(context.AllMemories()),
                 from: "System")
         };
         augmentedMessages.AddRange(messages);
@@ -341,15 +326,8 @@ public class MemoryAgent : IAgent
         IMessage userMessage,
         IMessage assistantMessage)
     {
-        await _vcm.AddToRecentlyAsync(_userId, userMessage.Content!, new()
-        {
-            ["role"] = "user"
-        });
-
-        await _vcm.AddToRecentlyAsync(_userId, assistantMessage.Content!, new()
-        {
-            ["role"] = "assistant"
-        });
+        await _memory.RememberAsync(_userId, userMessage.Content!, role: "user");
+        await _memory.RememberAsync(_userId, assistantMessage.Content!, role: "assistant");
     }
 }
 ```
@@ -359,15 +337,15 @@ public class MemoryAgent : IAgent
 ```csharp
 public class MemoryMultiAgentSystem
 {
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
     private readonly string _userId;
 
     public async Task RunCollaborativeTaskAsync(string task)
     {
         // Create agents with shared memory
-        var planner = new MemoryAgent(_vcm, _userId, apiKey);
-        var executor = new MemoryAgent(_vcm, _userId, apiKey);
-        var reviewer = new MemoryAgent(_vcm, _userId, apiKey);
+        var planner = new MemoryAgent(_memory, _userId, apiKey);
+        var executor = new MemoryAgent(_memory, _userId, apiKey);
+        var reviewer = new MemoryAgent(_memory, _userId, apiKey);
 
         // Sequential conversation
         var planMessage = await planner.GenerateReplyAsync(
@@ -379,7 +357,7 @@ public class MemoryMultiAgentSystem
         var reviewMessage = await reviewer.GenerateReplyAsync(
             new[] { executeMessage });
 
-        // All agents share memory via VCM
+        // All agents share memory through the same IMemoryService
         // Each agent sees the full conversation history
     }
 }
@@ -400,18 +378,18 @@ public interface IMemoryProvider
 
 public class MemoryIndexerProvider : IMemoryProvider
 {
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
 
-    public MemoryIndexerProvider(IVirtualContextManager vcm)
+    public MemoryIndexerProvider(IMemoryService memory)
     {
-        _vcm = vcm;
+        _memory = memory;
     }
 
     public async Task<string> GetContextAsync(string userId, string query)
     {
-        var memories = await _vcm.RetrieveHybridAsync(userId, query, limit: 10);
+        var memories = await _memory.RecallAsync(userId, sessionId: null, query, limit: 10);
 
-        return string.Join("\n\n", memories.Select(m =>
+        return string.Join("\n\n", memories.AllMemories().Select(m =>
             $"[{m.Type}] {m.Content}"));
     }
 
@@ -420,11 +398,7 @@ public class MemoryIndexerProvider : IMemoryProvider
         string role,
         string content)
     {
-        await _vcm.AddToRecentlyAsync(userId, content, new()
-        {
-            ["role"] = role,
-            ["timestamp"] = DateTime.UtcNow
-        });
+        await _memory.RememberAsync(userId, content, role: role);
     }
 }
 ```
@@ -480,14 +454,14 @@ public class CustomMemoryChatLoop
 public class MemoryMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
 
     public MemoryMiddleware(
         RequestDelegate next,
-        IVirtualContextManager vcm)
+        IMemoryService memory)
     {
         _next = next;
-        _vcm = vcm;
+        _memory = memory;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -498,11 +472,7 @@ public class MemoryMiddleware
             var message = await ReadMessageAsync(context.Request);
 
             // Store request
-            await _vcm.AddToRecentlyAsync(userId!, message, new()
-            {
-                ["role"] = "user",
-                ["endpoint"] = context.Request.Path
-            });
+            await _memory.RememberAsync(userId!, message, role: "user");
 
             // Capture response
             var originalBodyStream = context.Response.Body;
@@ -515,11 +485,7 @@ public class MemoryMiddleware
             responseBody.Seek(0, SeekOrigin.Begin);
             var response = await new StreamReader(responseBody).ReadToEndAsync();
 
-            await _vcm.AddToRecentlyAsync(userId!, response, new()
-            {
-                ["role"] = "assistant",
-                ["endpoint"] = context.Request.Path
-            });
+            await _memory.RememberAsync(userId!, response, role: "assistant");
 
             // Copy response back
             responseBody.Seek(0, SeekOrigin.Begin);
@@ -562,7 +528,8 @@ public class ChatService
     {
         var context = await _memory.GetContextAsync(userId, message);
         var response = await _llm.GenerateAsync(context, message);
-        await _memory.StoreAsync(userId, message, response);
+        await _memory.StoreInteractionAsync(userId, "user", message);
+        await _memory.StoreInteractionAsync(userId, "assistant", response);
         return response;
     }
 }
@@ -574,14 +541,14 @@ public class ChatService
 // Limit context size to fit model's token limit
 public async Task<string> GetContextAsync(string userId, string query, int maxTokens = 1000)
 {
-    var memories = await _vcm.RetrieveHybridAsync(userId, query, limit: 50);
+    var memories = await _memory.RecallAsync(userId, sessionId: null, query, limit: 50);
 
     // Estimate tokens (rough approximation: 1 token ≈ 4 characters)
     var tokenBudget = maxTokens * 4;
     var builder = new StringBuilder();
     var currentLength = 0;
 
-    foreach (var memory in memories)
+    foreach (var memory in memories.AllMemories())
     {
         var line = $"[{memory.Type}] {memory.Content}\n";
         if (currentLength + line.Length > tokenBudget) break;
@@ -622,7 +589,7 @@ public async Task<string> ChatWithFallbackAsync(string userId, string message)
 public class BackgroundMemoryProcessor : BackgroundService
 {
     private readonly Channel<MemoryItem> _channel;
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -630,10 +597,11 @@ public class BackgroundMemoryProcessor : BackgroundService
         {
             try
             {
-                await _vcm.AddToRecentlyAsync(
+                await _memory.RememberAsync(
                     item.UserId,
                     item.Content,
-                    item.Metadata);
+                    role: item.Role,
+                    cancellationToken: stoppingToken);
             }
             catch (Exception ex)
             {
@@ -647,6 +615,8 @@ public class BackgroundMemoryProcessor : BackgroundService
         _channel.Writer.TryWrite(item);
     }
 }
+
+public sealed record MemoryItem(string UserId, string Content, string? Role);
 ```
 
 ---
@@ -659,7 +629,7 @@ public class BackgroundMemoryProcessor : BackgroundService
 public class CachedMemoryProvider : IMemoryProvider
 {
     private readonly IMemoryCache _cache;
-    private readonly IVirtualContextManager _vcm;
+    private readonly IMemoryService _memory;
 
     public async Task<string> GetContextAsync(string userId, string query)
     {
@@ -669,28 +639,29 @@ public class CachedMemoryProvider : IMemoryProvider
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
-            var memories = await _vcm.RetrieveHybridAsync(userId, query);
-            return BuildContext(memories);
+            var memories = await _memory.RecallAsync(userId, sessionId: null, query);
+            return BuildContext(memories.AllMemories());
         });
     }
 }
 ```
 
-### Parallel Context Retrieval
+### Parallel Graph Expansion
+
+Graph traversal starts from a memory, so recall first and then expand every hit in parallel
+through `IMemoryGraphService`:
 
 ```csharp
 public async Task<string> GetMultiSourceContextAsync(string userId, string query)
 {
-    var tasks = new[]
-    {
-        _vcm.RetrieveHybridAsync(userId, query, limit: 5),
-        _profile.RecallFactsAsync(userId, query),
-        _graph.GetRelatedEntitiesAsync(userId, ExtractEntities(query))
-    };
+    var recalled = await _memory.RecallAsync(userId, sessionId: null, query, limit: 5);
+    var hits = recalled.AllMemories().ToList();
 
-    await Task.WhenAll(tasks);
+    var expansions = await Task.WhenAll(hits.Select(m =>
+        _graph.FindRelatedMemoriesAsync(m.Id, maxHops: 2, topK: 3)));
 
-    return CombineContext(tasks[0].Result, tasks[1].Result, tasks[2].Result);
+    var related = expansions.SelectMany(r => r).Select(r => r.Memory);
+    return CombineContext(hits, related);
 }
 ```
 

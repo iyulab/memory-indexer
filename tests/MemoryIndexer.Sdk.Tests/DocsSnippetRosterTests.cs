@@ -39,6 +39,7 @@ public class DocsSnippetRosterTests
         "EnableBuffering", "FindFirst", "StartsWithSegments", "Ok", "PostAsJsonAsync", "ReadAllAsync",
         // OpenTelemetry
         "AddOpenTelemetry", "WithMetrics", "AddAspNetCoreInstrumentation", "AddPrometheusExporter",
+        "AddMeter", // MeterProviderBuilder.AddMeter (OpenTelemetry API), subscribing to the library's "MemoryIndexer" meter
         // EF Core, in the custom-store samples
         "AddAsync", "SaveChangesAsync", "CreateDbContextAsync", "ToListAsync",
         // Semantic Kernel and LangChain integration samples
@@ -54,11 +55,6 @@ public class DocsSnippetRosterTests
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownDrift = new(StringComparer.Ordinal)
     {
-        // The integration guides are written against a tier API the library does not have: IVirtualContextManager
-        // pages memories in and out; it has no AddToRecentlyAsync / RetrieveHybridAsync.
-        ["docs/GUIDES.md"] = ["AddRelationshipAsync", "AddToRecentlyAsync", "RetrieveHybridAsync"],
-        ["docs/INTEGRATIONS.md"] = ["AddToRecentlyAsync", "GetRelatedEntitiesAsync", "RecallFactsAsync", "RetrieveHybridAsync"],
-        ["docs/INTELLIGENCE.md"] = ["AddMemoryIndexerInstrumentation"],
     };
 
     /// <summary>Option-shaped types from other SDKs that a document legitimately shows (not ours to declare).</summary>

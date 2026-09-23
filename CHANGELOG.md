@@ -2,9 +2,17 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.19.1] - 2026-09-23
 
 ### Fixed
+- **The integration guides call the API that exists.** `docs/INTEGRATIONS.md` and `docs/GUIDES.md` were written against
+  a tier API the library does not have (`IVirtualContextManager.AddToRecentlyAsync` / `RetrieveHybridAsync`, graph
+  `AddRelationshipAsync` / `GetRelatedEntitiesAsync`, a profile `RecallFactsAsync`) and against `StoreAsync` / `RecallAsync`
+  signatures `IMemoryService` never had. The samples now use `IMemoryService.RememberAsync` / `RecallAsync`,
+  `IMemoryPrimitives.EncodeAsync` / `RetrieveAsync` (type, importance and metadata live on `EncodeRequest`),
+  `IMemoryGraphService.LinkMemoryToGraphAsync` / `FindRelatedMemoriesAsync` and `IMemoryStore.StoreBatchAsync` (which
+  exists — the guide called batching "not yet supported"). `docs/INTELLIGENCE.md` shows the real OpenTelemetry meter
+  name (`AddMeter("MemoryIndexer")`) and metric name (`memory_indexer.intelligence.graph_queries`).
 - **The README quick start calls the API that exists.** It stored with `memoryService.StoreAsync(userId, text,
   importance:)` and recalled with `RecallAsync(userId, query, limit:)` — neither signature is on `IMemoryService`.
   It now shows `RememberAsync(userId, content)` and `RecallAsync(userId, sessionId: null, query, limit:)`.

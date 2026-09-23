@@ -91,14 +91,17 @@ public class ConflictAwareService
 {
     private readonly IContradictionDetector _detector;
     private readonly IContradictionResolver _resolver;
+    private readonly IMemoryPrimitives _memory;
+    private readonly IMemoryStore _store;
 
     public async Task<bool> SafeStore(string userId, string content)
     {
         // Get existing related memories
-        var existing = await _memory.RecallAsync(userId, content, 50);
+        var existing = await _memory.RetrieveAsync(new RetrieveRequest { UserId = userId, Query = content, Limit = 50 });
 
         var newMemory = new MemoryUnit
         {
+            UserId = userId,
             Content = content,
             Type = MemoryType.Fact
         };
@@ -110,7 +113,7 @@ public class ConflictAwareService
 
         if (!analysis.HasContradiction)
         {
-            await _memory.StoreAsync(userId, content);
+            await _memory.EncodeAsync(new EncodeRequest { UserId = userId, Content = content, Type = MemoryType.Fact });
             return true;
         }
 
@@ -122,9 +125,9 @@ public class ConflictAwareService
 
         // Apply resolution
         if (resolution.SupersededItem != null)
-            await _memory.DeleteAsync(resolution.SupersededItem.Id);
+            await _store.DeleteAsync(resolution.SupersededItem.Id);
 
-        await _memory.StoreAsync(userId, content);
+        await _memory.EncodeAsync(new EncodeRequest { UserId = userId, Content = content, Type = MemoryType.Fact });
         return true;
     }
 }
@@ -561,7 +564,7 @@ Comprehensive observability for intelligence operations.
 | `memory_indexer.rapid_fire_recalls` | Rapid-fire pattern detections |
 | `memory_indexer.token_budget_warnings` | Token budget warnings |
 | `memory_indexer.token_budget_exceeded` | Token budget exceeded events |
-| `memory_indexer.graph_queries` | Graph traversal queries |
+| `memory_indexer.intelligence.graph_queries` | Graph traversal queries |
 
 **Histograms:**
 | Metric | Description |
@@ -579,10 +582,13 @@ Comprehensive observability for intelligence operations.
 services.AddOpenTelemetry()
     .WithMetrics(builder =>
     {
-        builder.AddMemoryIndexerInstrumentation();  // Add all metrics
+        builder.AddMeter("MemoryIndexer");  // MemoryIndexerTelemetry.ServiceName — all metrics above
         builder.AddPrometheusExporter();
     });
 ```
+
+Traces use an `ActivitySource` of the same name (`.WithTracing(b => b.AddSource("MemoryIndexer"))`).
+`services.AddMemoryIndexerObservability(...)` registers both, with console and OTLP exporters.
 
 ### Prometheus Example
 
