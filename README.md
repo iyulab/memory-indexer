@@ -181,11 +181,13 @@ services.AddMemoryIndexer(options =>
     options.Embedding.Dimensions = 1536;
 }).WithSqliteVec();
 
-// Store
-await memoryService.StoreAsync("user123", "User prefers dark mode", importance: 0.8f);
+var memoryService = serviceProvider.GetRequiredService<IMemoryService>();
 
-// Recall
-var results = await memoryService.RecallAsync("user123", "UI preferences", limit: 5);
+// Store
+await memoryService.RememberAsync("user123", "User prefers dark mode");
+
+// Recall (sessionId: null searches across the user's sessions)
+MemoryContext context = await memoryService.RecallAsync("user123", sessionId: null, "UI preferences", limit: 5);
 ```
 
 ## Samples

@@ -2,6 +2,15 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Fixed
+- **The README quick start calls the API that exists.** It stored with `memoryService.StoreAsync(userId, text,
+  importance:)` and recalled with `RecallAsync(userId, query, limit:)` — neither signature is on `IMemoryService`.
+  It now shows `RememberAsync(userId, content)` and `RecallAsync(userId, sessionId: null, query, limit:)`.
+- A docs snippet roster test checks that the names the README and `docs/*.md` call exist; the guides' remaining
+  phantoms (a tier API `AddToRecentlyAsync` / `RetrieveHybridAsync` the library does not have) are pinned in it.
+
 ## [v0.19.0] - 2026-09-23
 
 ### Removed
