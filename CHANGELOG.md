@@ -2,6 +2,16 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.19.0] - 2026-09-23
+
+### Removed
+- **Breaking: seven `TenantConfiguration` switches nothing read.** `RequirePiiDetection` and `EnableAuditLogging`
+  (both defaulting to `true`), `EncryptionKeyId`, `DataRetentionDays`, `AllowedMemoryTypes`, `AllowedMetadataFields` and
+  `RateLimitOverrides` were declared per tenant and applied by no code path — a tenant configured with them was not
+  protected, restricted or retained by them. The same switches at the global level were removed in 0.18.0; these were
+  their per-tenant copies. `MaxMemories` and `MaxStorageBytes` stay: `ResourceLimitEnforcer` applies them. Migration:
+  delete the assignments; compose `IPiiDetector`, `IAuditLogger` and `IRateLimiter` explicitly for those behaviours.
+
 ## [v0.18.5] - 2026-09-23
 
 ### Changed

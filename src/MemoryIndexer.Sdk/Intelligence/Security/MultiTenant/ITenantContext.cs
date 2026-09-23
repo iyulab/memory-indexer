@@ -80,7 +80,8 @@ public sealed class TenantContextData
 }
 
 /// <summary>
-/// Tenant-specific configuration.
+/// Tenant-specific configuration: the resource limits <c>ResourceLimitEnforcer</c> applies to the current tenant ahead of
+/// the global ones.
 /// </summary>
 public sealed class TenantConfiguration
 {
@@ -93,41 +94,6 @@ public sealed class TenantConfiguration
     /// Maximum storage size in bytes.
     /// </summary>
     public long MaxStorageBytes { get; set; } = 1_073_741_824; // 1 GB
-
-    /// <summary>
-    /// Rate limit overrides for this tenant.
-    /// </summary>
-    public RateLimitOptions? RateLimitOverrides { get; set; }
-
-    /// <summary>
-    /// Whether PII detection is required for this tenant.
-    /// </summary>
-    public bool RequirePiiDetection { get; set; } = true;
-
-    /// <summary>
-    /// Allowed memory types for this tenant.
-    /// </summary>
-    public HashSet<string>? AllowedMemoryTypes { get; set; }
-
-    /// <summary>
-    /// Custom metadata fields allowed for this tenant.
-    /// </summary>
-    public HashSet<string>? AllowedMetadataFields { get; set; }
-
-    /// <summary>
-    /// Encryption key ID for this tenant (if using per-tenant encryption).
-    /// </summary>
-    public string? EncryptionKeyId { get; set; }
-
-    /// <summary>
-    /// Data retention period in days (0 = indefinite).
-    /// </summary>
-    public int DataRetentionDays { get; set; }
-
-    /// <summary>
-    /// Whether audit logging is enabled for this tenant.
-    /// </summary>
-    public bool EnableAuditLogging { get; set; } = true;
 }
 
 /// <summary>

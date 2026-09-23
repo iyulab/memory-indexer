@@ -92,11 +92,6 @@ public class OptionsReachabilityRosterTests
             "MaxTokens", "StopSequences", "Temperature",
         ],
 
-        // TenantConfiguration came into the scan with the "Configuration" suffix. Unclassified: nothing reads these, and
-        // three of them promise protection (RequirePiiDetection and EnableAuditLogging default to true, EncryptionKeyId)
-        // that no code path applies. Each needs a verdict (wire or remove); shrink this, do not add to it.
-        ["MemoryIndexer.Sdk.Intelligence.Security.MultiTenant.TenantConfiguration"] =
-            ["AllowedMemoryTypes", "AllowedMetadataFields", "DataRetentionDays", "EnableAuditLogging", "EncryptionKeyId", "RateLimitOverrides", "RequirePiiDetection"],
     };
 
     [Fact]
