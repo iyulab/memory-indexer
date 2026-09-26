@@ -2,6 +2,12 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.19.9] - Unreleased
+
+### Fixed
+- **`AddMemoryIndexer(o => …)` works without a registered `IConfiguration`.** Options were bound with `BindConfiguration`, which throws "No service for type IConfiguration" on the first resolve in a console app, tool or test that configures Memory Indexer in code. The `MemoryIndexer` sections now bind when an `IConfiguration` is registered (same binding and reload as before) and are skipped when none is.
+- **A service provider disposed with `Dispose()` no longer throws with `WithSqliteVec()`.** `SqliteVecMemoryStore` implemented only `IAsyncDisposable`, and a container or scope disposed with `Dispose()` throws on such a service ("type only implements IAsyncDisposable"); it now implements `IDisposable` too.
+
 ## [v0.19.8] - 2026-09-26
 
 ### Changed

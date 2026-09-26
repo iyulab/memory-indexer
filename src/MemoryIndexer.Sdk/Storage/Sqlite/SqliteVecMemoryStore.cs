@@ -15,7 +15,7 @@ namespace MemoryIndexer.Sdk.Storage.Sqlite;
 /// SQLite-based memory store with vector search (sqlite-vec) and full-text search (FTS5).
 /// Supports both SDK embedded and MCP server standalone scenarios.
 /// </summary>
-public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable
+public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposable, IDisposable
 {
     private readonly string _connectionString;
     private readonly int _vectorDimensions;
@@ -1533,6 +1533,12 @@ ORDER BY created_at DESC";
     }
 
     #endregion
+
+    /// <summary>
+    /// Disposes synchronously, for a container or scope disposed with <c>Dispose()</c> (which throws on a service that is
+    /// only <see cref="IAsyncDisposable"/>). Blocks on <see cref="DisposeAsync"/>.
+    /// </summary>
+    public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
 
     public async ValueTask DisposeAsync()
     {

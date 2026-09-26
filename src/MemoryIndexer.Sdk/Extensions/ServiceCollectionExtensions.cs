@@ -90,7 +90,7 @@ public static class ServiceCollectionExtensions
     {
         // Register options
         services.AddOptions<MemoryIndexerOptions>()
-            .BindConfiguration(MemoryIndexerOptions.SectionName);
+            .BindConfigurationIfPresent(MemoryIndexerOptions.SectionName);
 
         if (configure is not null)
         {
@@ -109,13 +109,13 @@ public static class ServiceCollectionExtensions
         // Register VCM services (Phase 5)
         // Note: MemoryIndexer.Services.WorkingMemoryOptions is for ShortTermMemoryService cache configuration
         services.AddOptions<MemoryIndexer.Services.WorkingMemoryOptions>()
-            .BindConfiguration("MemoryIndexer:VCM:WorkingMemory");
+            .BindConfigurationIfPresent("MemoryIndexer:VCM:WorkingMemory");
         services.AddOptions<VCMOptions>()
-            .BindConfiguration("MemoryIndexer:VCM");
+            .BindConfigurationIfPresent("MemoryIndexer:VCM");
 
         // Register 3-axis model services (Phase 32.3)
         services.AddOptions<ScopeManagerOptions>()
-            .BindConfiguration("MemoryIndexer:ScopeManager");
+            .BindConfigurationIfPresent("MemoryIndexer:ScopeManager");
 
         services.TryAddSingleton<IShortTermMemory, ShortTermMemoryService>();
         services.TryAddSingleton<IMemoryPrimitives, MemoryPrimitivesService>();
@@ -235,7 +235,7 @@ public static class ServiceCollectionExtensions
 
         // Register profile evolution services (Phase v0.10.0)
         services.AddOptions<ConfidenceDecayOptions>()
-            .BindConfiguration("MemoryIndexer:ConfidenceDecay");
+            .BindConfigurationIfPresent("MemoryIndexer:ConfidenceDecay");
         services.TryAddSingleton<IConfidenceDecayStrategy, TimeBasedDecayStrategy>();
         services.TryAddSingleton<IProfileSnapshotService, ProfileSnapshotService>();
         services.TryAddSingleton<IProfileExporter, JsonProfileExporter>();
@@ -243,7 +243,7 @@ public static class ServiceCollectionExtensions
 
         // Register retention policy services (Phase v0.11.0)
         services.AddOptions<RetentionPolicyOptions>()
-            .BindConfiguration("MemoryIndexer:RetentionPolicy");
+            .BindConfigurationIfPresent("MemoryIndexer:RetentionPolicy");
         services.TryAddSingleton<IRetentionPolicy, DefaultRetentionPolicy>();
         services.TryAddSingleton<IRetentionPolicyService, RetentionPolicyService>();
 
@@ -337,7 +337,7 @@ public static class ServiceCollectionExtensions
 
         // Register summarization trigger (Phase 10)
         services.AddOptions<TriggerOptions>()
-            .BindConfiguration(TriggerOptions.SectionName);
+            .BindConfigurationIfPresent(TriggerOptions.SectionName);
         services.TryAddSingleton<ISummarizationTrigger, ThresholdBasedTrigger>();
 
         // Register summarization orchestrator (Phase 11)
@@ -355,7 +355,7 @@ public static class ServiceCollectionExtensions
 
         // Register semantic store service (Phase 14.4 → Cognitive terminology Phase 30)
         services.AddOptions<SemanticStoreOptions>()
-            .BindConfiguration("MemoryIndexer:VCM:SemanticStore");
+            .BindConfigurationIfPresent("MemoryIndexer:VCM:SemanticStore");
         services.TryAddSingleton<IArchiveStore, ArchiveStoreService>();
 
         // Register Long → Archive promotion service (Phase 52)
@@ -363,7 +363,7 @@ public static class ServiceCollectionExtensions
 
         // Register memory promotion background worker (Phase 47)
         services.AddOptions<MemoryPromotionBackgroundOptions>()
-            .BindConfiguration("MemoryIndexer:VCM:PromotionBackground");
+            .BindConfigurationIfPresent("MemoryIndexer:VCM:PromotionBackground");
         services.AddHostedService<MemoryPromotionBackgroundService>();
 
         return new MemoryIndexerBuilder(services);
