@@ -2,6 +2,11 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.19.12] - 2026-09-27
+
+### Changed
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.81.1 -> 0.83.0, `LMSupply.Generator` 0.81.1 -> 0.83.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+
 ## [v0.19.11] - 2026-09-27
 
 ### Changed
