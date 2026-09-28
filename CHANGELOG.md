@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.20.0] - Unreleased
+## [v0.20.0] - 2026-09-28
 
 ### Removed
 - **Breaking: `CompressionOptions.MinTokenImportance`.** No compression step read it; token and sentence selection keep
