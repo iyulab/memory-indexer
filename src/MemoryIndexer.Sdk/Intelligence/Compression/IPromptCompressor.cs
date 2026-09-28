@@ -49,12 +49,6 @@ public sealed class CompressionOptions
     public float TargetRatio { get; set; } = 0.5f;
 
     /// <summary>
-    /// Minimum token importance threshold for retention (0.0 to 1.0).
-    /// Tokens below this threshold may be removed.
-    /// </summary>
-    public float MinTokenImportance { get; set; } = 0.3f;
-
-    /// <summary>
     /// Whether to preserve sentence structure.
     /// </summary>
     public bool PreserveSentenceStructure { get; set; } = true;

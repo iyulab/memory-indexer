@@ -211,7 +211,6 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
         var sentenceOptions = new CompressionOptions
         {
             TargetRatio = Math.Min(0.7f, options.TargetRatio * 1.5f), // More lenient first pass
-            MinTokenImportance = options.MinTokenImportance,
             PreserveSentenceStructure = options.PreserveSentenceStructure,
             PreserveNamedEntities = options.PreserveNamedEntities,
             PreserveNumericals = options.PreserveNumericals,
@@ -234,7 +233,6 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
         var tokenOptions = new CompressionOptions
         {
             TargetRatio = adjustedRatio,
-            MinTokenImportance = options.MinTokenImportance,
             PreserveSentenceStructure = options.PreserveSentenceStructure,
             PreserveNamedEntities = options.PreserveNamedEntities,
             PreserveNumericals = options.PreserveNumericals,
