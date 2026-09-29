@@ -2,6 +2,15 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.20.1] - Unreleased
+
+### Documentation
+- **The `MemoryIndexer` package README no longer shows an API that does not exist.** Its Quick Start called
+  `AddMemoryIndexerCore` and set `options.VCM.WorkingMemoryCapacity`; neither exists. It now says the core package has no
+  registration of its own and shows `MemoryIndexer.Sdk`'s `AddMemoryIndexer` with `options.WorkingMemory.Capacity`. The
+  interface list no longer names `ISessionStore`, which does not exist. The `MemoryIndexer.Sdk` README names the
+  namespaces its example needs. Every C# block in the READMEs is now compiled against the current API by a test.
+
 ## [v0.20.0] - 2026-09-28
 
 ### Removed

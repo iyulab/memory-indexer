@@ -10,13 +10,20 @@ This package provides the foundational interfaces, models, and lightweight imple
 
 ## Quick Start
 
+This package has no service registration of its own. `MemoryIndexer.Sdk`'s `AddMemoryIndexer` registers these
+types and binds `MemoryIndexerOptions`, which this package declares:
+
 ```csharp
-services.AddMemoryIndexerCore(options =>
+using MemoryIndexer.Sdk.Extensions;   // AddMemoryIndexer — in MemoryIndexer.Sdk
+
+services.AddMemoryIndexer(options =>
 {
     options.Search.DefaultLimit = 10;
-    options.VCM.WorkingMemoryCapacity = 7;
+    options.WorkingMemory.Capacity = 7;
 });
 ```
+
+Without the SDK, construct the implementations directly — for example `MockEmbeddingService` in a unit test.
 
 ## What's Included
 
@@ -24,7 +31,6 @@ services.AddMemoryIndexerCore(options =>
 - `IMemoryStore` - Memory storage operations
 - `IEmbeddingService` - Embedding generation
 - `IScoringService` - Memory relevance scoring
-- `ISessionStore` - Session management
 - `IVirtualContextManager` - Context window management
 
 ### Models

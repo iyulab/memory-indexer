@@ -58,6 +58,8 @@
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="AwesomeAssertions" />
+    <!-- README snippet compile teeth -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <!-- LMSupply embedding for integration tests (iyulab open source) -->
     <PackageReference Include="LMSupply.Embedder" />
     <!-- transitive Microsoft.OpenApi 2.4.1 is vulnerable (GHSA-v5pm-xwqc-g5wc); promote to patched pin -->

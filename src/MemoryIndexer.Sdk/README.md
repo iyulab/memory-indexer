@@ -16,7 +16,9 @@ Long-term memory management for LLM applications via MCP (Model Context Protocol
 ## Quick Start
 
 ```csharp
+using MemoryIndexer.Interfaces;       // IEmbeddingService
 using MemoryIndexer.Sdk.Extensions;
+using MemoryIndexer.Sdk.Observability; // AddMemoryIndexerOtlpObservability
 using Microsoft.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
