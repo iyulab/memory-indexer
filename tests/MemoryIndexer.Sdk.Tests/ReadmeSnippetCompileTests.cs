@@ -9,9 +9,8 @@ using Xunit;
 namespace MemoryIndexer.Sdk.Tests;
 
 /// <summary>
-/// Compiles every <c>```csharp</c> block in README.md against the current assemblies. <see cref="DocsSnippetRosterTests"/>
-/// checks that a documented method name exists on some type and that an initializer's properties exist; a compiler also
-/// checks the receiver, the arguments, the return types a block goes on to use, and the namespaces it needs.
+/// Compiles every <c>```csharp</c> block in the README(s) against the current assemblies. A compiler checks the receiver,
+/// the arguments, the return types a block goes on to use, and the namespaces it needs.
 /// </summary>
 /// <remarks>
 /// A block is compiled as a top-level program: its <c>using</c> lines are hoisted, the common usings below are added, and
