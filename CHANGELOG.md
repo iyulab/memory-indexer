@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.20.1] - Unreleased
+## [v0.20.1] - 2026-09-29
 
 ### Documentation
 - **The `MemoryIndexer` package README no longer shows an API that does not exist.** Its Quick Start called
