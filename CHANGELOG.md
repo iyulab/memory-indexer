@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.20.2] - Unreleased
+## [v0.20.2] - 2026-09-30
 
 ### Changed
 - **Documentation comments describe behaviour only.** Comments no longer refer to internal tracking or planning records.
