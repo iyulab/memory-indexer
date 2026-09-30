@@ -21,15 +21,14 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.20.1</Version>
+    <Version>0.20.2</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- PackageReadmeFile is set per project where README exists -->
     <IsPackable>false</IsPackable> <!-- Default: only SDK is packable -->
   </PropertyGroup>
 
-  <!-- Ship the XML documentation with the package (2026-09-17, umbrella check-xml-doc-file): without this the nupkg
-       held only the dll and none of the /// docs reached a consumer. CS1591 is muted as elsewhere in the ecosystem;
-       the doc file is the goal, not a warning per member. -->
+  <!-- Ship the XML documentation with the package so the /// docs reach consumers' IDEs. CS1591 is muted: the doc
+       file is the goal, not a warning per member. -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('\src\')) OR $(MSBuildProjectDirectory.Contains('/src/'))">
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
@@ -47,7 +46,7 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
 
-  <!-- Local NuGet package source for development (see ironhive-umbrella/CLAUDE.md) -->
+  <!-- Optional local NuGet package source for development: used only when the folder exists (never in CI) -->
   <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)../../local-packages')">
     <RestoreAdditionalProjectSources>
       $(RestoreAdditionalProjectSources);$(MSBuildThisFileDirectory)../../local-packages

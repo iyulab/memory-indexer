@@ -156,7 +156,7 @@ public class LocalEmbeddingIntegrationTests
         // similarity threshold) — any embedding model must rank a passage highest against a query
         // that IS that passage. Asserting instead that a specific *paraphrased* query ranks a
         // specific memory #1 is a semantic-quality claim that varies by model (confirmed empirically:
-        // cycle-301 measured "fast" (multilingual-e5-small) ranking the REST API memory outside the
+        // "fast" (multilingual-e5-small) was measured ranking the REST API memory outside the
         // top 3 for the paraphrase "How do I build a web API?" even though it correctly favors related
         // content over unrelated content — see DuplicateDetection_ByEmbeddingSimilarity below for the
         // same compressed-similarity-range characteristic).
@@ -275,7 +275,7 @@ public class LocalEmbeddingIntegrationTests
 
         // Model-agnostic redesign (per the SKIP_ONNX_TESTS flag comment): a fixed absolute
         // threshold (e.g. "unrelated similarity < 0.5") assumes a similarity range this specific
-        // model doesn't produce. cycle-301 measured "fast" (multilingual-e5-small) scoring even
+        // model doesn't produce. "fast" (multilingual-e5-small) was measured scoring even
         // unrelated English sentence pairs at 0.85-0.92 cosine similarity — a compressed range
         // characteristic of this smaller multilingual model, not something E5 instruction prefixes
         // fix (empirically checked: prefixed pairs shifted by <0.01, didn't widen the gap). What

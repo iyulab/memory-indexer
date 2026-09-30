@@ -2,6 +2,11 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.20.2] - Unreleased
+
+### Changed
+- **Documentation comments describe behaviour only.** Comments no longer refer to internal tracking or planning records.
+
 ## [v0.20.1] - 2026-09-29
 
 ### Documentation
@@ -457,8 +462,7 @@ keeps the previous behaviour; only a caller who sets a non-default value sees a 
 - `McpServer`'s `--http`/`--sse` mode now prints an explicit startup warning: this mode has no
   authentication anywhere in its request path and binds to localhost only, so any other local
   process or user account can call its tools unauthenticated. Not a behavior change - the gap
-  itself is tracked as long-term debt (propose-only, gated on an actual shared/multi-tenant
-  consumer appearing).
+  itself remains as long-term debt.
 
 ## [v0.16.8] - 2026-09-01
 

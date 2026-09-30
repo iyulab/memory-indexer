@@ -110,7 +110,7 @@ public class ConversationSimulationTests : IAsyncLifetime
         _output.WriteLine($"=== Short-Term Memory Accuracy: {averageScore:P0} ===\n");
 
         // Threshold lowered from 0.8 to 0.5, grounded in a specific, reproducible root cause
-        // (cycle-303 finding, deterministic across repeated runs — see the
+        // (deterministic across repeated runs — see the
         // ComprehensiveQualityComparison_BaselineVsEnhanced fix nearby for confirmation this
         // pipeline has zero run-to-run variance): "The project deadline is next Friday, December
         // 15th." acts as a similarity "hub" with "fast" (multilingual-e5-small) — it ranks #1 for
@@ -371,7 +371,7 @@ public class ConversationSimulationTests : IAsyncLifetime
         }
 
         // Aggregate across all 3 topics rather than requiring every single topic to individually
-        // clear a per-query bar (cycle-303 finding). Root-caused with "fast" (multilingual-e5-small):
+        // clear a per-query bar. Root-caused with "fast" (multilingual-e5-small):
         // for this fixture's short, similarly-worded casual sentences, cosine scores across all 7
         // stored memories cluster within a ~0.04 band (0.823-0.866) — at limit=3 that's enough
         // separation for 2 of the 3 topics (each scored 100%) but not the third ("personal errands",
@@ -534,7 +534,7 @@ public class ConversationSimulationTests : IAsyncLifetime
 
         foreach (var (query, expectedKeywords, category) in qualityTests)
         {
-            // limit raised from 3 to 5 (cycle-303) to match SearchWithQueryAsync's limit in
+            // limit raised from 3 to 5 to match SearchWithQueryAsync's limit in
             // EnhancedSearchQualityTests.cs, which searches this exact same 20-memory dataset —
             // legitimate recall@K widening, not arbitrary (see below for why 5 alone isn't enough).
             var results = await SearchMemories(query, Session1, limit: 5);
@@ -570,7 +570,7 @@ public class ConversationSimulationTests : IAsyncLifetime
         _output.WriteLine(new string('=', 80));
 
         // Threshold lowered from 0.6 to 0.4, grounded in a specific, reproducible root cause
-        // (cycle-303 finding — same hub-attractor phenomenon documented in
+        // (same hub-attractor phenomenon documented in
         // ShortTermMemory_ImmediateRecall_ShouldBeHighlyAccurate nearby): with "fast"
         // (multilingual-e5-small), sentences like "Battery optimization is crucial for continuous
         // step tracking." and "Just fixed the Android step counter bug..." score anomalously high
@@ -631,7 +631,7 @@ public class ConversationSimulationTests : IAsyncLifetime
             var topResult = results.Count > 0 ? results[0] : null;
             var secondResult = results.Count > 1 ? results[1] : null;
 
-            // recall@2, not precision@1 (cycle-303 finding): with "fast" (multilingual-e5-small),
+            // recall@2, not precision@1: with "fast" (multilingual-e5-small),
             // 3 of the 4 queries here had the correct memory ranked 2nd, not 1st — the model does
             // distinguish these near-duplicate templated sentences, just not tightly enough to
             // always win the top slot. `limit: 2` was already being fetched but only results[0] was

@@ -5,10 +5,9 @@ using Xunit;
 namespace MemoryIndexer.Tests;
 
 /// <summary>
-/// Regression teeth for the umbrella layering rule (docs/LAYERING.md): memory-indexer is a
-/// leaf module — its shipped assemblies must not reference other iyulab package groups
-/// (Flux.*, FluxIndex.*, FileFlux, IronHive.*). A Flux.Abstractions edge existed until
-/// 0.16.0 (tier inversion, stale pin) and must not come back.
+/// memory-indexer is a leaf package: its shipped assemblies must not reference other iyulab
+/// package groups (Flux.*, FluxIndex.*, FileFlux, IronHive.*). A Flux.Abstractions reference
+/// existed until 0.16.0 and must not come back.
 /// </summary>
 public class LayeringConventionTests
 {

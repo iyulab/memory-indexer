@@ -8,8 +8,7 @@ using Xunit;
 namespace MemoryIndexer.Tests.Mock;
 
 /// <summary>
-/// Pilot regression test for the "silent failure" convention (docs/CONVENTIONS.md §2,
-/// ironhive-umbrella BD-20260905-03): a Mock service silently active in production looks like a
+/// A misconfiguration must not fail silently: a Mock service silently active in production looks like a
 /// working embedding/completion pipeline while actually returning non-semantic placeholders. Both
 /// Mock services log a Warning on construction specifically to prevent that — this test pins that
 /// behavior so a future refactor cannot drop it unnoticed.

@@ -12,11 +12,9 @@ public class QueryExpanderTests
 {
     private readonly QueryExpander _sut = new();
 
-    // ISSUE-memory-indexer-20260824-010000: GenerateQueryVariants does a literal single-word
-    // substring replace, so any synonym for "code" corrupted the compound noun "code review(s)"
-    // (e.g. "code reviews" -> "program reviews") — confirmed deterministic, not a model-tuning
-    // issue. Fixed by removing the "code" entry from SynonymMap rather than teaching the
-    // substitution logic about compound nouns in general (out of scope for this fix).
+    // GenerateQueryVariants does a literal single-word substring replace, so any synonym for
+    // "code" would corrupt the compound noun "code review(s)" (e.g. "code reviews" ->
+    // "program reviews"). SynonymMap therefore has no "code" entry; this pins that.
     [Fact]
     public void GenerateQueryVariants_QueryContainingCode_DoesNotSubstituteCode()
     {

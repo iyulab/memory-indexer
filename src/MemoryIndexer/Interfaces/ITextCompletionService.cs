@@ -8,8 +8,8 @@ namespace MemoryIndexer.Interfaces;
 /// </summary>
 /// <remarks>
 /// Deliberately minimal (single member + the options this package actually sends):
-/// MemoryIndexer is a Tier-0 leaf module and must not depend on other package groups
-/// for shared contracts (see umbrella docs/LAYERING.md).
+/// MemoryIndexer is a leaf package and does not depend on other package groups for
+/// shared contracts, so the completion contract it needs is defined here.
 /// </remarks>
 public interface ITextCompletionService
 {
