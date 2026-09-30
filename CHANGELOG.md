@@ -20,47 +20,47 @@ All notable changes to Memory Indexer are documented here.
 ## [v0.19.17] - 2026-09-28
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.87.0 -> 0.88.0, `LMSupply.Generator` 0.87.0 -> 0.88.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.87.0 -> 0.88.0, `LMSupply.Generator` 0.87.0 -> 0.88.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.16] - 2026-09-28
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.86.0 -> 0.87.0, `LMSupply.Generator` 0.86.0 -> 0.87.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.86.0 -> 0.87.0, `LMSupply.Generator` 0.86.0 -> 0.87.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.15] - 2026-09-27
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.85.0 -> 0.86.0, `LMSupply.Generator` 0.85.0 -> 0.86.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.85.0 -> 0.86.0, `LMSupply.Generator` 0.85.0 -> 0.86.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.14] - 2026-09-27
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.84.0 -> 0.85.0, `LMSupply.Generator` 0.84.0 -> 0.85.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.84.0 -> 0.85.0, `LMSupply.Generator` 0.84.0 -> 0.85.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.13] - 2026-09-27
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.83.0 -> 0.84.0, `LMSupply.Generator` 0.83.0 -> 0.84.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.83.0 -> 0.84.0, `LMSupply.Generator` 0.83.0 -> 0.84.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.12] - 2026-09-27
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.81.1 -> 0.83.0, `LMSupply.Generator` 0.81.1 -> 0.83.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.81.1 -> 0.83.0, `LMSupply.Generator` 0.81.1 -> 0.83.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.11] - 2026-09-27
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.80.0 -> 0.81.1, `LMSupply.Generator` 0.80.0 -> 0.81.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.80.0 -> 0.81.1, `LMSupply.Generator` 0.80.0 -> 0.81.1 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.10] - 2026-09-26
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.79.1 -> 0.80.0, `LMSupply.Generator` 0.79.1 -> 0.80.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.79.1 -> 0.80.0, `LMSupply.Generator` 0.79.1 -> 0.80.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.9] - 2026-09-26
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.79.0 -> 0.79.1, `LMSupply.Generator` 0.79.0 -> 0.79.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.79.0 -> 0.79.1, `LMSupply.Generator` 0.79.0 -> 0.79.1 — re-consumption of already-consumed iyulab packages.
 
 ### Fixed
 - **`AddMemoryIndexer(o => …)` works without a registered `IConfiguration`.** Options were bound with `BindConfiguration`, which throws "No service for type IConfiguration" on the first resolve in a console app, tool or test that configures Memory Indexer in code. The `MemoryIndexer` sections now bind when an `IConfiguration` is registered (same binding and reload as before) and are skipped when none is.
@@ -69,37 +69,37 @@ All notable changes to Memory Indexer are documented here.
 ## [v0.19.8] - 2026-09-26
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.78.0 -> 0.79.0, `LMSupply.Generator` 0.78.0 -> 0.79.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.78.0 -> 0.79.0, `LMSupply.Generator` 0.78.0 -> 0.79.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.7] - 2026-09-26
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.77.0 -> 0.78.0, `LMSupply.Generator` 0.77.0 -> 0.78.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.77.0 -> 0.78.0, `LMSupply.Generator` 0.77.0 -> 0.78.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.6] - 2026-09-26
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.76.0 -> 0.77.0, `LMSupply.Generator` 0.76.0 -> 0.77.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.76.0 -> 0.77.0, `LMSupply.Generator` 0.76.0 -> 0.77.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.5] - 2026-09-25
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.75.0 -> 0.76.0, `LMSupply.Generator` 0.75.0 -> 0.76.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.75.0 -> 0.76.0, `LMSupply.Generator` 0.75.0 -> 0.76.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.4] - 2026-09-24
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.74.0 -> 0.75.0, `LMSupply.Generator` 0.74.0 -> 0.75.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.74.0 -> 0.75.0, `LMSupply.Generator` 0.74.0 -> 0.75.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.3] - 2026-09-24
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.73.0 -> 0.74.0, `LMSupply.Generator` 0.73.0 -> 0.74.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.73.0 -> 0.74.0, `LMSupply.Generator` 0.73.0 -> 0.74.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.2] - 2026-09-24
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.72.1 -> 0.73.0, `LMSupply.Generator` 0.72.1 -> 0.73.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.72.1 -> 0.73.0, `LMSupply.Generator` 0.72.1 -> 0.73.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.19.1] - 2026-09-23
 
@@ -131,27 +131,27 @@ All notable changes to Memory Indexer are documented here.
 ## [v0.18.5] - 2026-09-23
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.72.0 -> 0.72.1, `LMSupply.Generator` 0.72.0 -> 0.72.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.72.0 -> 0.72.1, `LMSupply.Generator` 0.72.0 -> 0.72.1 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.18.4] - 2026-09-23
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.71.0 -> 0.72.0, `LMSupply.Generator` 0.71.0 -> 0.72.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.71.0 -> 0.72.0, `LMSupply.Generator` 0.71.0 -> 0.72.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.18.3] - 2026-09-22
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.70.0 -> 0.71.0, `LMSupply.Generator` 0.70.0 -> 0.71.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.70.0 -> 0.71.0, `LMSupply.Generator` 0.70.0 -> 0.71.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.18.2] - 2026-09-21
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.69.0 -> 0.70.0, `LMSupply.Generator` 0.69.0 -> 0.70.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.69.0 -> 0.70.0, `LMSupply.Generator` 0.69.0 -> 0.70.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.18.1] - 2026-09-21
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.68.3 -> 0.69.0, `LMSupply.Generator` 0.68.3 -> 0.69.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.68.3 -> 0.69.0, `LMSupply.Generator` 0.68.3 -> 0.69.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.18.0] - 2026-09-20
 
@@ -330,22 +330,22 @@ keeps the previous behaviour; only a caller who sets a non-default value sees a 
 ## [v0.17.16] - 2026-09-19
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.68.2 -> 0.68.3, `LMSupply.Generator` 0.68.2 -> 0.68.3 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.68.2 -> 0.68.3, `LMSupply.Generator` 0.68.2 -> 0.68.3 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.15] - 2026-09-18
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.68.0 -> 0.68.2, `LMSupply.Generator` 0.68.0 -> 0.68.2 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.68.0 -> 0.68.2, `LMSupply.Generator` 0.68.0 -> 0.68.2 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.14] - 2026-09-17
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.67.0 -> 0.68.0, `LMSupply.Generator` 0.67.0 -> 0.68.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.67.0 -> 0.68.0, `LMSupply.Generator` 0.67.0 -> 0.68.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.13] - 2026-09-17
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.66.1 -> 0.67.0, `LMSupply.Generator` 0.66.1 -> 0.67.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.66.1 -> 0.67.0, `LMSupply.Generator` 0.66.1 -> 0.67.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.12] - 2026-09-17
 
@@ -355,58 +355,58 @@ keeps the previous behaviour; only a caller who sets a non-default value sees a 
 ## [v0.17.11] - 2026-09-16
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.66.0 -> 0.66.1, `LMSupply.Generator` 0.66.0 -> 0.66.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.66.0 -> 0.66.1, `LMSupply.Generator` 0.66.0 -> 0.66.1 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.10] - 2026-09-16
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.65.1 -> 0.66.0, `LMSupply.Generator` 0.65.1 -> 0.66.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.65.1 -> 0.66.0, `LMSupply.Generator` 0.65.1 -> 0.66.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.9] - 2026-09-13
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.65.0 -> 0.65.1, `LMSupply.Generator` 0.65.0 -> 0.65.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.65.0 -> 0.65.1, `LMSupply.Generator` 0.65.0 -> 0.65.1 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.8] - 2026-09-12
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.64.0 -> 0.65.0, `LMSupply.Generator` 0.64.0 -> 0.65.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.64.0 -> 0.65.0, `LMSupply.Generator` 0.64.0 -> 0.65.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.7] - 2026-09-12
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.63.0 -> 0.64.0, `LMSupply.Generator` 0.63.0 -> 0.64.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.63.0 -> 0.64.0, `LMSupply.Generator` 0.63.0 -> 0.64.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.6] - 2026-09-11
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.62.0 -> 0.63.0, `LMSupply.Generator` 0.62.0 -> 0.63.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.62.0 -> 0.63.0, `LMSupply.Generator` 0.62.0 -> 0.63.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.5] - 2026-09-10
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.61.0 -> 0.62.0, `LMSupply.Generator` 0.61.0 -> 0.62.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.61.0 -> 0.62.0, `LMSupply.Generator` 0.61.0 -> 0.62.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.4] - 2026-09-10
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.60.0 -> 0.61.0, `LMSupply.Generator` 0.60.0 -> 0.61.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.60.0 -> 0.61.0, `LMSupply.Generator` 0.60.0 -> 0.61.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.3] - 2026-09-09
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.59.1 -> 0.60.0, `LMSupply.Generator` 0.59.1 -> 0.60.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.59.1 -> 0.60.0, `LMSupply.Generator` 0.59.1 -> 0.60.0 — re-consumption of already-consumed iyulab packages. No source changes.
 - Bumped `Microsoft.SourceLink.GitHub` 10.0.103 -> 10.0.112: its `Microsoft.Build.Tasks.Git` dependency 10.0.102..10.0.110 is flagged by CVE-2026-62900 (GHSA-23fw-v26w-5fgq, moderate; NuGet audit NU1902 fails the build under `TreatWarningsAsErrors`). Build-time only (`PrivateAssets=All`); no runtime surface change.
 
 ## [v0.17.2] - 2026-09-09
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.59.0 -> 0.59.1, `LMSupply.Generator` 0.59.0 -> 0.59.1 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.59.0 -> 0.59.1, `LMSupply.Generator` 0.59.0 -> 0.59.1 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.1] - 2026-09-08
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.58.0 -> 0.59.0, `LMSupply.Generator` 0.58.0 -> 0.59.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.58.0 -> 0.59.0, `LMSupply.Generator` 0.58.0 -> 0.59.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.17.0] - 2026-09-08
 
@@ -423,18 +423,18 @@ keeps the previous behaviour; only a caller who sets a non-default value sees a 
 ## [v0.16.14] - 2026-09-08
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.57.0 -> 0.58.0, `LMSupply.Generator` 0.57.0 -> 0.58.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.57.0 -> 0.58.0, `LMSupply.Generator` 0.57.0 -> 0.58.0 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.16.13] - 2026-09-07
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.55.4 -> 0.57.0, `LMSupply.Generator` 0.55.4 -> 0.57.0 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.55.4 -> 0.57.0, `LMSupply.Generator` 0.55.4 -> 0.57.0 — re-consumption of already-consumed iyulab packages. No source changes.
 - Aligned third-party pins with the rest of the ecosystem: `OpenAI` 2.10.0 -> 2.12.0 (the ecosystem floor: Microsoft.Extensions.AI.OpenAI 10.9.0 caps OpenAI below 2.13.0), `BenchmarkDotNet` 0.14.0 -> 0.15.8 (cross-submodule floor consistency). No source changes.
 
 ## [v0.16.12] - 2026-09-07
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.55.0 -> 0.55.4, `LMSupply.Generator` 0.55.0 -> 0.55.4 — re-consumption of already-consumed iyulab packages via `check-pin-drift.ps1 -Fix`. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.55.0 -> 0.55.4, `LMSupply.Generator` 0.55.0 -> 0.55.4 — re-consumption of already-consumed iyulab packages. No source changes.
 
 ## [v0.16.11] - 2026-09-05
 
@@ -448,9 +448,8 @@ keeps the previous behaviour; only a caller who sets a non-default value sees a 
 
 ### Changed
 - Re-pinned `LMSupply.Embedder`/`.Generator` from `0.42.10` to `0.54.0` — patch re-consumption of
-  already-consumed sibling packages (`check-pin-drift.ps1 -Strict` flagged this as
-  threshold-exceeding drift, minor gap 12; cold-GPU-kernel-hang protection propagated to all
-  ONNX-backed lm-supply modules). No source changes.
+  already-consumed sibling packages (a minor gap of 12; cold-GPU-kernel-hang protection
+  propagated to all ONNX-backed lm-supply modules). No source changes.
 
 ## [v0.16.9] - 2026-09-04
 
