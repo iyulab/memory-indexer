@@ -2,6 +2,15 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.20.3] - Unreleased
+
+### Fixed
+- **Packages now carry the license text.** Each `.nupkg` includes `LICENSE` next to the `MIT` expression, so an
+  application that ships third-party notices can copy the copyright line from the package.
+
+### Dependencies
+- `LMSupply.*` 0.98.1 -> 0.98.2.
+
 ## [v0.20.2] - 2026-09-30
 
 ### Changed
