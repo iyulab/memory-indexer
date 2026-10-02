@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.21.0] - Unreleased
+## [v0.21.0] - 2026-10-02
 
 ### Fixed
 - **`ContextRequest.Namespace` now isolates context.** `ContextBuilder` ignored it: semantic, episodic and fact recall
