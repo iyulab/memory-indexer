@@ -18,6 +18,8 @@ All notable changes to Memory Indexer are documented here.
 - **`ApproximateTokenCounter` counts Hangul, Han and Kana as one token per character.** It assumed four characters per
   token for all text, so a token budget held about four times as much Korean, Chinese or Japanese as it said.
   `Truncate` cuts at the same budget.
+- The `IMemoryService` documentation pointed type-aware callers at an `IMemoryServiceAdvanced` interface that does not
+  exist; it now names `IMemoryPrimitives.EncodeAsync`, which keeps the `Type` and `ImportanceScore` a caller sets.
 
 ## [v0.20.3] - 2026-10-02
 

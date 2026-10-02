@@ -21,7 +21,7 @@ namespace MemoryIndexer.Interfaces;
 ///   - Suitable for: multi-session apps, conversation history
 ///
 /// For advanced use cases (Type-Aware, Full Control), use:
-/// - Level 2: IMemoryServiceAdvanced (StoreFact/Event/Rule)
+/// - Level 2: IMemoryPrimitives.EncodeAsync (EncodeRequest.Type and ImportanceScore are kept as given; only what is left null is classified)
 /// - Level 3: IVirtualContextManager (full VCM control)
 /// </remarks>
 public interface IMemoryService
