@@ -27,6 +27,11 @@
     <IsPackable>false</IsPackable> <!-- Default: only SDK is packable -->
   </PropertyGroup>
 
+  <!-- The MIT expression names the license; the text carries the copyright line a consumer's notices need. -->
+  <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('\src\')) OR $(MSBuildProjectDirectory.Contains('/src/'))">
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" Visible="false" Condition="Exists('$(MSBuildThisFileDirectory)LICENSE')" />
+  </ItemGroup>
+
   <!-- Ship the XML documentation with the package so the /// docs reach consumers' IDEs. CS1591 is muted: the doc
        file is the goal, not a warning per member. -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('\src\')) OR $(MSBuildProjectDirectory.Contains('/src/'))">
