@@ -8,6 +8,24 @@ public class TokenCounterTests
 {
     private readonly ApproximateTokenCounter _counter = new();
 
+    // Hangul, Han and Kana count one token per character; BPE tokenizers split them about that finely or more, so four
+    // characters per token would let a budget hold four times what it says.
+    [Theory]
+    [InlineData("회의록", 3)]
+    [InlineData("会议记录", 4)]
+    [InlineData("ミーティング", 6)]
+    [InlineData("회의 notes", 4)] // 2 Hangul + ceiling(6 / 4)
+    public void Count_CountsOneTokenPerHangulHanOrKanaCharacter(string text, int expectedTokens)
+    {
+        _counter.Count(text).Should().Be(expectedTokens);
+    }
+
+    [Fact]
+    public void Truncate_CutsKoreanTextAtTheSameTokenBudget()
+    {
+        _counter.Truncate("가나다라마바사아자차", 4).Should().Be("가나다라...");
+    }
+
     // ApproximateTokenCounter uses Math.Ceiling(text.Length / 4.0)
     [Theory]
     [InlineData("", 0)]

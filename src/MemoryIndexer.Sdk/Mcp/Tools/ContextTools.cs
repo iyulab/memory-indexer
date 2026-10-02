@@ -115,7 +115,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder, IOptions<Memory
         userId ??= options.Value.DefaultUserId;
         maxTokens = Math.Clamp(maxTokens, 50, 8000);
 
-        var items = await contextBuilder.GetSessionContextAsync(userId, sessionId, maxTokens, cancellationToken);
+        var items = await contextBuilder.GetSessionContextAsync(userId, sessionId, maxTokens, ct: cancellationToken);
 
         return new SessionContextResult
         {
@@ -147,7 +147,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder, IOptions<Memory
         userId ??= options.Value.DefaultUserId;
         maxTokens = Math.Clamp(maxTokens, 50, 4000);
 
-        var items = await contextBuilder.GetUserFactsAsync(userId, maxTokens, cancellationToken);
+        var items = await contextBuilder.GetUserFactsAsync(userId, maxTokens, ct: cancellationToken);
 
         return new UserFactsResult
         {

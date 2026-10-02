@@ -78,7 +78,8 @@ public record ContextRequest(
 )
 {
     /// <summary>
-    /// Optional namespace for sub-user memory isolation.
+    /// Optional namespace for sub-user memory isolation. Semantic, episodic and fact recall return only memories stored
+    /// under it; recent turns are scoped by <see cref="SessionId"/>.
     /// </summary>
     public string? Namespace { get; init; }
 

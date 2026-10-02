@@ -179,7 +179,7 @@ public class ContextToolsTests
         };
 
         _mockContextBuilder.GetSessionContextAsync(
-            "default", "game-session-1", 1000, Arg.Any<CancellationToken>())
+            "default", "game-session-1", 1000, Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(items);
 
         // Act
@@ -209,7 +209,7 @@ public class ContextToolsTests
         };
 
         _mockContextBuilder.GetUserFactsAsync(
-            "default", 500, Arg.Any<CancellationToken>())
+            "default", 500, Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(items);
 
         // Act
@@ -231,6 +231,7 @@ public class ContextToolsTests
         _mockContextBuilder.GetUserFactsAsync(
             Arg.Any<string>(),
             Arg.Is<int>(t => t >= 50 && t <= 4000),
+            Arg.Any<string?>(),
             Arg.Any<CancellationToken>())
             .Returns(new List<ContextItem>());
 
@@ -240,7 +241,7 @@ public class ContextToolsTests
         // Assert
         result.Success.Should().BeTrue();
         await _mockContextBuilder.Received(1).GetUserFactsAsync(
-            "default", 4000, Arg.Any<CancellationToken>());
+            "default", 4000, Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     #endregion

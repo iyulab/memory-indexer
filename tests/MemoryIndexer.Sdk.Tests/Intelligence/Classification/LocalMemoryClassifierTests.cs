@@ -39,6 +39,30 @@ public class LocalMemoryClassifierTests
         result.TypeConfidences[MemoryType.Procedural].Should().BeGreaterThan(0.3f);
     }
 
+    // Indicators match whole words only: "use" inside "User:" (a role prefix a caller stores with the utterance) or
+    // "effect" inside "effective" said nothing about the content, and the first sent every stored user turn to Procedural,
+    // which no recall path reads.
+    [Theory]
+    [InlineData("User: 오늘 회의 결과를 정리해 주세요")]
+    [InlineData("User: 지난주 보고서 초안을 다시 보여 주세요")]
+    public async Task ClassifyAsync_ARolePrefix_IsNotAProceduralIndicator(string content)
+    {
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Type.Should().NotBe(MemoryType.Procedural);
+        result.TypeConfidences[MemoryType.Procedural].Should().BeLessThan(result.TypeConfidences[MemoryType.Episodic]);
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_AnIndicatorInsideALongerWord_DoesNotCount()
+    {
+        var inside = await _classifier.ClassifyAsync("회의록 effective 2026", cancellationToken: TestContext.Current.CancellationToken);
+        var whole = await _classifier.ClassifyAsync("회의록 effect 2026", cancellationToken: TestContext.Current.CancellationToken);
+
+        inside.TypeConfidences[MemoryType.Semantic].Should().BeLessThan(whole.TypeConfidences[MemoryType.Semantic],
+            "'effect' is a semantic indicator as a word, not as part of 'effective'");
+    }
+
     [Fact]
     public async Task ClassifyAsync_ToolKeywords_BoostsProceduralScore()
     {

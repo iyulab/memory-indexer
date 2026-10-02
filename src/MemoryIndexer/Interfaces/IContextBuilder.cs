@@ -32,6 +32,7 @@ public interface IContextBuilder
     /// <param name="query">The query for semantic matching.</param>
     /// <param name="maxTokens">Maximum tokens to include.</param>
     /// <param name="sessionId">Optional session ID to scope the search.</param>
+    /// <param name="namespaceName">Only memories stored under this namespace (null = every namespace of the user).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>List of semantically relevant items within the token budget.</returns>
     Task<IReadOnlyList<ContextItem>> GetSemanticContextAsync(
@@ -39,6 +40,7 @@ public interface IContextBuilder
         string query,
         int maxTokens,
         string? sessionId = null,
+        string? namespaceName = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -48,12 +50,14 @@ public interface IContextBuilder
     /// <param name="userId">The user ID.</param>
     /// <param name="sessionId">The session ID.</param>
     /// <param name="maxTokens">Maximum tokens to include.</param>
+    /// <param name="namespaceName">Only memories stored under this namespace (null = every namespace of the user).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>List of session episodic items within the token budget.</returns>
     Task<IReadOnlyList<ContextItem>> GetSessionContextAsync(
         string userId,
         string sessionId,
         int maxTokens,
+        string? namespaceName = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -62,11 +66,13 @@ public interface IContextBuilder
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <param name="maxTokens">Maximum tokens to include.</param>
+    /// <param name="namespaceName">Only memories stored under this namespace (null = every namespace of the user).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>List of user fact items within the token budget.</returns>
     Task<IReadOnlyList<ContextItem>> GetUserFactsAsync(
         string userId,
         int maxTokens,
+        string? namespaceName = null,
         CancellationToken ct = default);
 
     /// <summary>

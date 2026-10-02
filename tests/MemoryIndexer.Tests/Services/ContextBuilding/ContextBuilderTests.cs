@@ -272,6 +272,40 @@ public class ContextBuilderTests
     #region BuildAsync Tests
 
     [Fact]
+    public async Task BuildAsync_WithANamespace_PassesItToEverySemanticEpisodicAndFactQuery()
+    {
+        SetupEmptyMocks();
+        var request = new ContextRequest(UserId, SessionId, "test query", new ContextBudget(1000)) { Namespace = "workspace-b" };
+
+        await _builder.BuildAsync(request, ct: TestContext.Current.CancellationToken);
+
+        await _memoryStoreMock.Received(1).SearchAsync(
+            Arg.Any<ReadOnlyMemory<float>>(), Arg.Is<MemorySearchOptions>(o => o.Namespace == "workspace-b"), Arg.Any<CancellationToken>());
+        await _memoryStoreMock.Received(2).GetAllAsync(
+            UserId, Arg.Is<MemoryFilterOptions>(o => o.Namespace == "workspace-b"), Arg.Any<CancellationToken>());
+        await _memoryStoreMock.DidNotReceive().GetAllAsync(
+            Arg.Any<string>(), Arg.Is<MemoryFilterOptions>(o => o.Namespace != "workspace-b"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetUserFactsAsync_WithANamespace_DoesNotReturnAnotherNamespacesFacts()
+    {
+        var store = new MemoryIndexer.InMemory.InMemoryMemoryStore(NullLogger<MemoryIndexer.InMemory.InMemoryMemoryStore>.Instance);
+        var inA = CreateMemory("Budget owner is Kim", MemoryType.Fact);
+        inA.Namespace = "workspace-a";
+        var inB = CreateMemory("Budget owner is Lee", MemoryType.Fact);
+        inB.Namespace = "workspace-b";
+        await store.StoreAsync(inA, TestContext.Current.CancellationToken);
+        await store.StoreAsync(inB, TestContext.Current.CancellationToken);
+        var builder = new ContextBuilder(_bufferMock, _shortTermMemoryMock, store, _embeddingServiceMock, _tokenCounter,
+            NullLogger<ContextBuilder>.Instance);
+
+        var facts = await builder.GetUserFactsAsync(UserId, 1000, "workspace-b", TestContext.Current.CancellationToken);
+
+        facts.Select(f => f.Content).Should().Equal("Budget owner is Lee");
+    }
+
+    [Fact]
     public async Task BuildAsync_WithDefaultStrategy_ShouldUseBalanced()
     {
         // Arrange

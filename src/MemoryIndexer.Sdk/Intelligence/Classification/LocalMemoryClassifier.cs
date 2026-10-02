@@ -253,6 +253,34 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         };
     }
 
+    /// <summary>
+    /// Whether <paramref name="lower"/> holds <paramref name="phrase"/> as whole words: not inside a longer word, so
+    /// "use" does not match "user:" or "because", and "effect" does not match "effective".
+    /// </summary>
+    private static bool HasPhrase(string lower, string phrase)
+    {
+        phrase = phrase.Trim();
+        if (phrase.Length == 0)
+        {
+            return false;
+        }
+
+        var wordEnd = char.IsLetterOrDigit(phrase[^1]);
+        for (var index = lower.IndexOf(phrase, StringComparison.Ordinal); index >= 0;
+             index = lower.IndexOf(phrase, index + 1, StringComparison.Ordinal))
+        {
+            var end = index + phrase.Length;
+            var startsWord = index == 0 || !char.IsLetterOrDigit(lower[index - 1]);
+            var endsWord = !wordEnd || end >= lower.Length || !char.IsLetterOrDigit(lower[end]);
+            if (startsWord && endsWord)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     #region Phase 23.1: Multi-Score Classification
 
     private static Dictionary<MemoryType, float> CalculateTypeScores(string lower, int wordCount)
@@ -271,12 +299,12 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         float score = 0.2f; // Base score
 
         // Time/location markers (+0.3 each, max 0.6)
-        int markerCount = EpisodicIndicators.Count(i => lower.Contains(i));
+        int markerCount = EpisodicIndicators.Count(i => HasPhrase(lower, i));
         score += Math.Min(markerCount * 0.3f, 0.6f);
 
         // Personal pronouns in past tense (+0.2)
-        if ((lower.Contains("i ") || lower.Contains("we ")) &&
-            (lower.Contains("did") || lower.Contains("was") || lower.Contains("were")))
+        if ((HasPhrase(lower, "i") || HasPhrase(lower, "we")) &&
+            (HasPhrase(lower, "did") || HasPhrase(lower, "was") || HasPhrase(lower, "were")))
         {
             score += 0.2f;
         }
@@ -289,7 +317,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         float score = 0.1f;
 
         // Semantic indicators (+0.25 each, max 0.75)
-        int count = SemanticIndicators.Count(i => lower.Contains(i));
+        int count = SemanticIndicators.Count(i => HasPhrase(lower, i));
         score += Math.Min(count * 0.25f, 0.75f);
 
         // Definition pattern: "X is a Y" (+0.3) - stronger weight for definitions
@@ -306,11 +334,11 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         float score = 0.1f;
 
         // Procedural indicators (+0.2 each, max 0.6)
-        int count = ProceduralIndicators.Count(i => lower.Contains(i));
+        int count = ProceduralIndicators.Count(i => HasPhrase(lower, i));
         score += Math.Min(count * 0.2f, 0.6f);
 
         // Tool/framework keywords (+0.3 if present)
-        if (ToolKeywords.Any(k => lower.Contains(k)))
+        if (ToolKeywords.Any(k => HasPhrase(lower, k)))
         {
             score += 0.3f;
         }
@@ -321,7 +349,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
     private static float CalculateFactScore(string lower, int wordCount)
     {
         // Fact indicators (+0.2 each)
-        int count = FactIndicators.Count(i => lower.Contains(i));
+        int count = FactIndicators.Count(i => HasPhrase(lower, i));
 
         if (count == 0)
         {
@@ -415,13 +443,13 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         importance += Math.Min(wordCount * 0.005f, 0.2f);
 
         // Contains personal information
-        if (lower.Contains("i ") || lower.Contains("my ") || lower.Contains("me "))
+        if (HasPhrase(lower, "i") || HasPhrase(lower, "my") || HasPhrase(lower, "me"))
         {
             importance += 0.1f;
         }
 
         // Contains technical keywords
-        if (TopicKeywords.Keys.Any(k => lower.Contains(k)))
+        if (TopicKeywords.Keys.Any(k => HasPhrase(lower, k)))
         {
             importance += 0.05f;
         }
@@ -435,7 +463,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
         foreach (var (keyword, topic) in TopicKeywords)
         {
-            if (lower.Contains(keyword))
+            if (HasPhrase(lower, keyword))
             {
                 topics.Add(topic);
             }

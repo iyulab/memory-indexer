@@ -2,6 +2,23 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.21.0] - Unreleased
+
+### Fixed
+- **`ContextRequest.Namespace` now isolates context.** `ContextBuilder` ignored it: semantic, episodic and fact recall
+  ran across every namespace of the user, so a memory stored under one namespace reached a context built for another.
+  `BuildAsync` now passes the namespace to all three queries; recent turns stay scoped by session.
+  **Breaking:** `IContextBuilder.GetSemanticContextAsync`, `GetSessionContextAsync` and `GetUserFactsAsync` take an
+  optional `namespaceName` before the cancellation token — a caller that passes the token positionally names it
+  (`ct: token`), and an implementation adds the parameter.
+- **The local classifier matches its indicators as whole words.** It matched substrings, so `use` inside a stored
+  `User:` prefix filed every such utterance as Procedural (which no recall path reads), and `effect` inside `effective`
+  scored Semantic. Text without English indicators — Korean, for example — now classifies the same with or without a
+  role prefix.
+- **`ApproximateTokenCounter` counts Hangul, Han and Kana as one token per character.** It assumed four characters per
+  token for all text, so a token budget held about four times as much Korean, Chinese or Japanese as it said.
+  `Truncate` cuts at the same budget.
+
 ## [v0.20.3] - 2026-10-02
 
 ### Fixed

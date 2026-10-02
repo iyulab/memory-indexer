@@ -140,6 +140,7 @@ public partial class ContextBuilder : IContextBuilder
         string query,
         int maxTokens,
         string? sessionId = null,
+        string? namespaceName = null,
         CancellationToken ct = default)
     {
         var items = new List<ContextItem>();
@@ -157,6 +158,7 @@ public partial class ContextBuilder : IContextBuilder
             {
                 UserId = userId,
                 SessionId = null, // User-scoped: no session filter (sessionId param ignored by design)
+                Namespace = namespaceName, // ...but never across the namespace the caller declared
                 Types = [MemoryType.Semantic, MemoryType.Fact], // Exclude Episodic (session-specific)
                 Limit = DefaultSearchLimit, // Get more than needed, filter by tokens
                 MinScore = DefaultMinScore
@@ -199,6 +201,7 @@ public partial class ContextBuilder : IContextBuilder
         string userId,
         string sessionId,
         int maxTokens,
+        string? namespaceName = null,
         CancellationToken ct = default)
     {
         var items = new List<ContextItem>();
@@ -209,6 +212,7 @@ public partial class ContextBuilder : IContextBuilder
             var options = new MemoryFilterOptions
             {
                 SessionId = sessionId,
+                Namespace = namespaceName,
                 Types = [MemoryType.Episodic]
             };
 
@@ -249,6 +253,7 @@ public partial class ContextBuilder : IContextBuilder
     public async Task<IReadOnlyList<ContextItem>> GetUserFactsAsync(
         string userId,
         int maxTokens,
+        string? namespaceName = null,
         CancellationToken ct = default)
     {
         var items = new List<ContextItem>();
@@ -259,6 +264,7 @@ public partial class ContextBuilder : IContextBuilder
             var options = new MemoryFilterOptions
             {
                 SessionId = null, // User-scoped (no session)
+                Namespace = namespaceName,
                 Types = [MemoryType.Semantic, MemoryType.Fact]
             };
 
@@ -363,7 +369,7 @@ public partial class ContextBuilder : IContextBuilder
         if (allocation.SemanticTokens > 0)
         {
             var semanticItems = await GetSemanticContextAsync(
-                request.UserId, request.Query, allocation.SemanticTokens, request.SessionId, ct);
+                request.UserId, request.Query, allocation.SemanticTokens, request.SessionId, request.Namespace, ct);
             allItems.AddRange(semanticItems);
             actualBreakdown[1] = semanticItems.Sum(i => i.Tokens);
         }
@@ -371,14 +377,14 @@ public partial class ContextBuilder : IContextBuilder
         if (allocation.EpisodicTokens > 0 && request.SessionId != null)
         {
             var episodicItems = await GetSessionContextAsync(
-                request.UserId, request.SessionId, allocation.EpisodicTokens, ct);
+                request.UserId, request.SessionId, allocation.EpisodicTokens, request.Namespace, ct);
             allItems.AddRange(episodicItems);
             actualBreakdown[2] = episodicItems.Sum(i => i.Tokens);
         }
 
         if (allocation.FactTokens > 0)
         {
-            var factItems = await GetUserFactsAsync(request.UserId, allocation.FactTokens, ct);
+            var factItems = await GetUserFactsAsync(request.UserId, allocation.FactTokens, request.Namespace, ct);
             allItems.AddRange(factItems);
             actualBreakdown[3] = factItems.Sum(i => i.Tokens);
         }
