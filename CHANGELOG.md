@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.20.3] - Unreleased
+## [v0.20.3] - 2026-10-02
 
 ### Fixed
 - **Packages now carry the license text.** Each `.nupkg` includes `LICENSE` next to the `MIT` expression, so an
