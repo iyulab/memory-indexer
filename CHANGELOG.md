@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.22.0] - Unreleased
+## [v0.22.0] - 2026-10-04
 
 ### Fixed
 - **Something said in one conversation is recalled in the next.** `ContextBuilder` searched only Semantic and Fact
