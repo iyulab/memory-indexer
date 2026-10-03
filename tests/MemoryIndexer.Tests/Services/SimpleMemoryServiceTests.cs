@@ -231,7 +231,49 @@ public class SimpleMemoryServiceTests
 
     #endregion
 
+    #region RememberAsync with a caller type
+
+    [Fact]
+    public async Task RememberAsync_WithAType_OverridesTheClassifier()
+    {
+        _classifier.Type = MemoryType.Episodic;
+
+        await _service.RememberAsync("user-1", "session-1", "내 차 번호는 12가 3456이야.", "user", type: MemoryType.Fact,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        _primitives.EncodedMemories.Should().ContainSingle().Which.Type.Should().Be(MemoryType.Fact);
+    }
+
+    [Fact]
+    public async Task RememberAsync_WithAType_IsKeptEvenWhenTheClassifierWouldDropIt()
+    {
+        _classifier.ShouldPersist = false;
+
+        await _service.RememberAsync("user-1", "session-1", "응 알겠어", "user", type: MemoryType.Semantic,
+            cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RememberAsync("user-1", "session-1", "응 알겠어", "user",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        _primitives.EncodedMemories.Should().ContainSingle("only the typed call is kept; the untyped one is still dropped as transient")
+            .Which.Type.Should().Be(MemoryType.Semantic);
+    }
+
+    #endregion
+
     #region RecallAsync Tests
+
+    [Fact]
+    public async Task RecallAsync_WithSessionId_ReturnsWhatAnEarlierSessionStored_AsCrossSession()
+    {
+        _primitives.AddMemory("user-1", "session-1", Scope.Session, "User: 내 차 번호는 12가 3456이야. 기억해 줘.");
+        _primitives.AddMemory("user-1", "session-2", Scope.Session, "User: 지금 회의 중이야.");
+
+        var context = await _service.RecallAsync("user-1", "session-2", "내 차 번호", cancellationToken: TestContext.Current.CancellationToken);
+
+        _primitives.LastRetrieveRequest!.SessionId.Should().BeNull("a session filter would hide every earlier conversation");
+        context.UserMemories.Select(m => m.Content).Should().Equal("User: 내 차 번호는 12가 3456이야. 기억해 줘.");
+        context.SessionMemories.Select(m => m.Content).Should().Equal("User: 지금 회의 중이야.");
+    }
 
     [Fact]
     public async Task RecallAsync_WithoutSessionId_ShouldReturnOnlyUserMemories()
@@ -247,8 +289,9 @@ public class SimpleMemoryServiceTests
         var context = await _service.RecallAsync(userId, null, query, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        context.UserMemories.Should().HaveCount(1);
-        context.SessionMemories.Should().HaveCount(1); // Bug: should filter by sessionId
+        // Without a session everything is cross-session context, as IMemoryService.RecallAsync documents.
+        context.UserMemories.Should().HaveCount(2);
+        context.SessionMemories.Should().BeEmpty();
         context.TopicMemories.Should().BeEmpty();
     }
 
@@ -434,8 +477,11 @@ public class SimpleMemoryServiceTests
             return Task.FromResult(memory);
         }
 
+        public RetrieveRequest? LastRetrieveRequest { get; private set; }
+
         public Task<IReadOnlyList<RetrieveResult>> RetrieveAsync(RetrieveRequest request, CancellationToken cancellationToken = default)
         {
+            LastRetrieveRequest = request;
             var results = StoredMemories
                 .Where(m => m.UserId == request.UserId)
                 .Where(m => request.SessionId == null || m.SessionId == request.SessionId || m.Scope == Scope.User)

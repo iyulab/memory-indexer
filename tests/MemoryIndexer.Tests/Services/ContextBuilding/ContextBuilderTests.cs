@@ -271,6 +271,73 @@ public class ContextBuilderTests
 
     #region BuildAsync Tests
 
+    // A user asks, in one conversation, to have something remembered; a later conversation of the same user in the same
+    // namespace asks about it. The utterance is stored Episodic (the classifier's reading of a "User: ..." turn).
+    [Fact]
+    public async Task BuildAsync_FromALaterSession_RecallsWhatAnEarlierSessionStored_WithinTheNamespaceOnly()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (builder, store) = BuilderOverInMemoryStore();
+        await store.StoreAsync(Stored("User: 내 차 번호는 12가 3456이야. 기억해 줘.", MemoryType.Episodic, "session-1", "desk-a"), ct);
+        await store.StoreAsync(Stored("User: 회의실 예약은 금요일 오후 세 시야.", MemoryType.Episodic, "session-1", "desk-b"), ct);
+
+        var inA = await builder.BuildAsync(
+            new ContextRequest(UserId, "session-2", "내 차 번호가 뭐였지?", new ContextBudget(1000)) { Namespace = "desk-a" }, ct: ct);
+        var inC = await builder.BuildAsync(
+            new ContextRequest(UserId, "session-2", "내 차 번호가 뭐였지?", new ContextBudget(1000)) { Namespace = "desk-c" }, ct: ct);
+
+        inA.Items.Select(i => i.Content).Should().Equal("User: 내 차 번호는 12가 3456이야. 기억해 줘.");
+        inA.Items[0].MemoryType.Should().Be(MemoryType.Episodic);
+        inC.Items.Should().BeEmpty("another namespace's memories never cross over");
+    }
+
+    [Fact]
+    public async Task BuildAsync_CurrentSessionEpisodic_IsReturnedOnce()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (builder, store) = BuilderOverInMemoryStore();
+        await store.StoreAsync(Stored("User: 오늘 회의는 3시야.", MemoryType.Episodic, SessionId, null), ct);
+
+        var bundle = await builder.BuildAsync(new ContextRequest(UserId, SessionId, "회의 몇 시?", new ContextBudget(1000)), ct: ct);
+
+        bundle.Items.Should().ContainSingle().Which.Source.Should().Be(ContextItemSource.Episodic,
+            "the session slot owns this session's experience; the query slot must not repeat it");
+    }
+
+    private (ContextBuilder Builder, MemoryIndexer.InMemory.InMemoryMemoryStore Store) BuilderOverInMemoryStore()
+    {
+        var store = new MemoryIndexer.InMemory.InMemoryMemoryStore(NullLogger<MemoryIndexer.InMemory.InMemoryMemoryStore>.Instance);
+        var embedder = Substitute.For<IEmbeddingService>();
+        embedder.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(UnitVector());
+        _bufferMock.GetPendingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new List<SensoryMemory>());
+        _shortTermMemoryMock.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<MemoryUnit>());
+        return (new ContextBuilder(_bufferMock, _shortTermMemoryMock, store, embedder, _tokenCounter,
+            NullLogger<ContextBuilder>.Instance), store);
+    }
+
+    private static MemoryUnit Stored(string content, MemoryType type, string sessionId, string? ns) => new()
+    {
+        Id = Guid.NewGuid(),
+        UserId = UserId,
+        SessionId = sessionId,
+        Namespace = ns,
+        Content = content,
+        Type = type,
+        Tier = Tier.Long,
+        Scope = Scope.Topic, // what the consumer's stored row carried
+        Role = "user",
+        CreatedAt = DateTime.UtcNow,
+        Embedding = UnitVector(),
+    };
+
+    private static float[] UnitVector()
+    {
+        var v = new float[1024];
+        v[0] = 1f;
+        return v;
+    }
+
+
     [Fact]
     public async Task BuildAsync_WithANamespace_PassesItToEverySemanticEpisodicAndFactQuery()
     {

@@ -58,11 +58,14 @@ public interface IMemoryService
     /// <param name="content">Content to remember</param>
     /// <param name="role">Role of the message sender (user, assistant, system). Preserved for episodic memories.</param>
     /// <param name="namespace">Optional namespace for memory isolation (e.g., "game:chess", "project:alpha")</param>
+    /// <param name="type">The memory's type when the caller knows it (e.g. <see cref="MemoryType.Fact"/> for "remember that
+    /// ..."). Overrides the classifier's type, and the content is kept even if the classifier would drop it as
+    /// transient. <see langword="null"/> (default) lets the classifier decide.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Task representing the async operation</returns>
     /// <remarks>
     /// Behavior:
-    /// - Auto-detects Type using ITypeClassifier
+    /// - Auto-detects Type using ITypeClassifier, unless <paramref name="type"/> is given
     /// - Scope: Session (explicit session context)
     /// - Tier: Short (suitable for general use)
     /// - Enables session-scoped recall
@@ -74,6 +77,7 @@ public interface IMemoryService
         string content,
         string? role = null,
         string? @namespace = null,
+        MemoryType? type = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -89,7 +93,7 @@ public interface IMemoryService
     /// <returns>MemoryContext with scope-grouped memories</returns>
     /// <remarks>
     /// Scope grouping:
-    /// - UserMemories: Cross-session facts (Scope=User)
+    /// - UserMemories: Cross-session context — Scope=User memories, and, when sessionId is given, anything an earlier session stored
     /// - SessionMemories: Current session context (Scope=Session)
     /// - TopicMemories: Current topic (Scope=Topic, internal use)
     ///

@@ -186,9 +186,16 @@ var memoryService = serviceProvider.GetRequiredService<IMemoryService>();
 // Store
 await memoryService.RememberAsync("user123", "User prefers dark mode");
 
-// Recall (sessionId: null searches across the user's sessions)
+// Store with a known type — the classifier's guess is overridden, and the memory is never dropped as transient
+await memoryService.RememberAsync("user123", "session-1", "My car plate is 12-3456", type: MemoryType.Fact);
+
+// Recall — searches across all of the user's sessions in the namespace; with a sessionId, what that session stored is
+// grouped by scope and everything from earlier sessions comes back as UserMemories
 MemoryContext context = await memoryService.RecallAsync("user123", sessionId: null, "UI preferences", limit: 5);
 ```
+
+`IContextBuilder.BuildAsync` recalls the same way: its query slot searches Semantic, Fact and earlier sessions' Episodic
+memories of the user in the request's namespace, and its episodic slot returns the current session's in order.
 
 ## Samples
 

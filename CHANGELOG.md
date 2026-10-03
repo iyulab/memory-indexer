@@ -2,6 +2,25 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.22.0] - Unreleased
+
+### Fixed
+- **Something said in one conversation is recalled in the next.** `ContextBuilder` searched only Semantic and Fact
+  memories by relevance and returned Episodic ones only for the current session, so a user utterance stored in one
+  session (Episodic) never reached a context built for another — `BuildAsync` returned 0 items. The query slot now
+  also searches the user's Episodic memories from earlier sessions, within the request's namespace; the current
+  session's stay in the episodic slot, returned once.
+- **`RecallAsync` with a session id searched only that session.** Its `UserMemories` group is documented as
+  cross-session context but could only hold memories the same session had stored. It now searches all of the user's
+  sessions (within the namespace) and groups anything an earlier session stored under `UserMemories`. Without a
+  session id every result is in `UserMemories`, as documented — `SessionMemories` used to receive session-scoped hits.
+
+### Added
+- **`IMemoryService.RememberAsync(..., MemoryType? type)`** — a caller that knows what it stores says so: the type
+  replaces the classifier's, and the memory is kept even when the classifier would drop it as transient.
+  **Breaking** for an implementation of `IMemoryService` (add the parameter) and for a caller that passes the
+  cancellation token positionally after `namespace` (name it).
+
 ## [v0.21.0] - 2026-10-02
 
 ### Fixed

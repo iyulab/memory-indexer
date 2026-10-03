@@ -51,7 +51,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         // Level 0: Zero-Config - create implicit session
         var sessionId = GetOrCreateImplicitSession(userId);
 
-        await RememberAsync(userId, sessionId, content, role, @namespace: null, cancellationToken);
+        await RememberAsync(userId, sessionId, content, role, @namespace: null, cancellationToken: cancellationToken);
     }
 
     /// <inheritdoc />
@@ -61,6 +61,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         string content,
         string? role = null,
         string? @namespace = null,
+        MemoryType? type = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -83,10 +84,15 @@ public sealed partial class SimpleMemoryService : IMemoryService
             },
             cancellationToken);
 
-        LogClassified(_logger, classification.Type, classification.Tier, classification.Importance, classification.ShouldPersist);
+        // The caller's type wins: it knows what it is storing, the classifier only guesses. A typed memory is never
+        // dropped as transient — the caller asked for it to be kept.
+        var effectiveType = type ?? classification.Type;
+        var shouldPersist = type is not null || classification.ShouldPersist;
+
+        LogClassified(_logger, effectiveType, classification.Tier, classification.Importance, shouldPersist);
 
         // Skip transient content (greetings, acknowledgments)
-        if (!classification.ShouldPersist)
+        if (!shouldPersist)
         {
             LogSkippingTransient(_logger);
             return;
@@ -104,7 +110,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         // Resolve scope using importance and type
         var scope = await _scopeManager.ResolveScopeAsync(
             content,
-            classification.Type,
+            effectiveType,
             classification.Importance,
             cancellationToken);
 
@@ -118,7 +124,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
             Namespace = @namespace,
             Role = effectiveRole,  // Preserve role for episodic memories
             Content = content,
-            Type = classification.Type,
+            Type = effectiveType,
             Scope = scope,
             Tier = classification.Tier,
             ImportanceScore = classification.Importance,
@@ -149,11 +155,12 @@ public sealed partial class SimpleMemoryService : IMemoryService
 
         LogRecallAsync(_logger, userId, sessionId, query, limit);
 
-        // Retrieve memories using MemoryPrimitives
+        // Retrieve across all of the user's sessions (within the namespace): a session filter here would hide everything
+        // an earlier conversation stored, which is what the cross-session group exists to return.
         var retrieveRequest = new RetrieveRequest
         {
             UserId = userId,
-            SessionId = sessionId,
+            SessionId = null,
             Namespace = @namespace,
             Query = query,
             Limit = limit,
@@ -167,9 +174,15 @@ public sealed partial class SimpleMemoryService : IMemoryService
         // Group memories by scope
         var memories = results.Select(r => r.Memory).ToList();
 
-        var userMemories = memories.Where(m => m.Scope == Scope.User).ToList();
-        var sessionMemories = memories.Where(m => m.Scope == Scope.Session).ToList();
-        var topicMemories = memories.Where(m => m.Scope == Scope.Topic).ToList();
+        // What this session stored is grouped by its scope; anything from another session is cross-session context,
+        // whatever scope it was stored with. Without a session there is no "this session": everything is cross-session,
+        // as IMemoryService.RecallAsync documents.
+        bool FromOtherSession(MemoryUnit m) =>
+            sessionId is null || !string.Equals(m.SessionId, sessionId, StringComparison.Ordinal);
+
+        var userMemories = memories.Where(m => m.Scope == Scope.User || FromOtherSession(m)).ToList();
+        var sessionMemories = memories.Where(m => m.Scope == Scope.Session && !FromOtherSession(m)).ToList();
+        var topicMemories = memories.Where(m => m.Scope == Scope.Topic && !FromOtherSession(m)).ToList();
 
         var context = new MemoryContext
         {

@@ -151,15 +151,15 @@ public partial class ContextBuilder : IContextBuilder
             // Generate embedding for the query
             var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, ct);
 
-            // Search for USER-SCOPED memories only (Semantic/Fact types)
-            // These are facts that should persist across sessions (e.g., user's name, preferences)
-            // Session-specific memories (Episodic) are handled by GetSessionContextAsync
+            // Recall by relevance across the user's sessions: Semantic/Fact, and Episodic from earlier sessions too —
+            // something said in one conversation ("remember that ...") is exactly what a later conversation asks about.
+            // The current session's Episodic memories are left to GetSessionContextAsync, which returns them in order.
             var searchOptions = new MemorySearchOptions
             {
                 UserId = userId,
-                SessionId = null, // User-scoped: no session filter (sessionId param ignored by design)
+                SessionId = null, // User-scoped: no session filter
                 Namespace = namespaceName, // ...but never across the namespace the caller declared
-                Types = [MemoryType.Semantic, MemoryType.Fact], // Exclude Episodic (session-specific)
+                Types = [MemoryType.Semantic, MemoryType.Fact, MemoryType.Episodic],
                 Limit = DefaultSearchLimit, // Get more than needed, filter by tokens
                 MinScore = DefaultMinScore
             };
@@ -168,6 +168,11 @@ public partial class ContextBuilder : IContextBuilder
 
             foreach (var result in results.OrderByDescending(r => r.Score))
             {
+                if (sessionId is not null
+                    && result.Memory.Type == MemoryType.Episodic
+                    && string.Equals(result.Memory.SessionId, sessionId, StringComparison.Ordinal))
+                    continue;
+
                 if (usedTokens >= maxTokens)
                     break;
 
