@@ -2,6 +2,11 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.23.1] - Unreleased
+
+### Dependencies
+- OpenAI 2.14.0; Microsoft.Extensions.*, Microsoft.Data.Sqlite, System.Numerics.Tensors and ASP.NET Core 10.0.12 servicing.
+
 ## [v0.23.0] - 2026-10-04
 
 ### Changed
