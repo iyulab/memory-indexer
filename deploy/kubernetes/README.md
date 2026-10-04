@@ -484,5 +484,4 @@ env:
 
 - [Health Check Implementation](../../src/MemoryIndexer.Sdk/Health/)
 - [4-Tier VCM Architecture](../../docs/ARCHITECTURE.md)
-- [Memory Optimization Guide](../../docs/MEMORY_OPTIMIZATION.md)
-- [Production Checklist](../docs/PRODUCTION_CHECKLIST.md)
+- [Production Checklist](../PRODUCTION_CHECKLIST.md)

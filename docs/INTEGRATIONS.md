@@ -670,6 +670,5 @@ public async Task<string> GetMultiSourceContextAsync(string userId, string query
 ## Next Steps
 
 - **Architecture Overview**: [Architecture](ARCHITECTURE.md)
-- **Common Patterns**: [Patterns](PATTERNS.md)
+- **Guides**: [Guides](GUIDES.md)
 - **Production Deployment**: [Kubernetes Guide](../deploy/kubernetes/README.md)
-- **Best Practices**: [Best Practices](BEST_PRACTICES.md)
