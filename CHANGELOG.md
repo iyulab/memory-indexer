@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.23.2] - Unreleased
+## [v0.23.2] - 2026-10-05
 
 ### Changed
 - **Log templates and exception messages are plain ASCII.** Thirteen log templates (score normalisers, promotion,
