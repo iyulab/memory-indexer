@@ -394,7 +394,7 @@ public sealed partial class ContextWindowOptimizer : IContextOptimizer
     [LoggerMessage(Level = LogLevel.Debug, Message = "LongContextReorder applied to {Count} memories")]
     private static partial void LogLongContextReorderAppliedCountMemories(ILogger logger, int count);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "MMR applied: selected {Selected} from {Total} memories (λ={Lambda})")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "MMR applied: selected {Selected} from {Total} memories (lambda={Lambda})")]
     private static partial void LogMMRAppliedSelectedSelectedTotal(ILogger logger, int selected, int total, float lambda);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE generated for query: {Query}")]
@@ -403,6 +403,6 @@ public sealed partial class ContextWindowOptimizer : IContextOptimizer
     [LoggerMessage(Level = LogLevel.Debug, Message = "Expanded chunk context: {Before} before, {After} after")]
     private static partial void LogExpandedChunkContextBeforeBefore(ILogger logger, int before, int after);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Context optimized: {OriginalTokens} → {FinalTokens} tokens, {Optimizations} applied")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Context optimized: {OriginalTokens} -> {FinalTokens} tokens, {Optimizations} applied")]
     private static partial void LogContextOptimizedOriginalTokensFinalTokensTokens(ILogger logger, int originalTokens, int finalTokens, int optimizations);
 }

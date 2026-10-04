@@ -2,6 +2,15 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.23.2] - Unreleased
+
+### Changed
+- **Log templates and exception messages are plain ASCII.** Thirteen log templates (score normalisers, promotion,
+  context optimiser, summariser, self-corrector, topic transitions) used arrows, `≥`, `λ` or an emoji, and the
+  «no text completion service» exception an em dash; they now use `->`, `>=`, `lambda`, `-`, so they grep and
+  tokenize like the rest. A convention test covering all three assemblies — log templates and exception messages —
+  keeps it that way.
+
 ## [v0.23.1] - 2026-10-05
 
 ### Dependencies

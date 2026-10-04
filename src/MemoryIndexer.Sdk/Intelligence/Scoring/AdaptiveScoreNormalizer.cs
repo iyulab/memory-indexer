@@ -98,15 +98,15 @@ public sealed partial class AdaptiveScoreNormalizer : IScoreNormalizer
         return MathF.Sqrt(variance);
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: narrow spread ({Spread:F3} < 0.3) → Percentile")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: narrow spread ({Spread:F3} < 0.3) -> Percentile")]
     private static partial void LogAdaptiveNarrowSpreadSpreadPercentile(ILogger logger, float spread);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: high variance (CV={CV:F3} > 0.5) → Z-score")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: high variance (CV={CV:F3} > 0.5) -> Z-score")]
     private static partial void LogAdaptiveHighVarianceCVCV(ILogger logger, float cV);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: normal distribution (spread={Spread:F3}, CV={CV:F3}) → MinMax")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Adaptive: normal distribution (spread={Spread:F3}, CV={CV:F3}) -> MinMax")]
     private static partial void LogAdaptiveNormalDistributionSpreadSpread(ILogger logger, float spread, float cV);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Adaptive normalization: {Count} scores, spread {Original:F3} → {Normalized:F3}, strategy={Strategy}")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Adaptive normalization: {Count} scores, spread {Original:F3} -> {Normalized:F3}, strategy={Strategy}")]
     private static partial void LogAdaptiveNormalizationCountScoresSpread(ILogger logger, int count, float original, float normalized, NormalizationStrategy strategy);
 }

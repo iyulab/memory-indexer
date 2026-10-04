@@ -80,6 +80,6 @@ public sealed partial class MinMaxScoreNormalizer : IScoreNormalizer
     [LoggerMessage(Level = LogLevel.Warning, Message = "All scores identical (spread=0), normalized to 0.5")]
     private static partial void LogAllScoresIdenticalSpreadNormalized(ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "MinMax normalized {Count} scores: spread {Original:F3} → {Normalized:F3}")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "MinMax normalized {Count} scores: spread {Original:F3} -> {Normalized:F3}")]
     private static partial void LogMinMaxNormalizedCountScoresSpread(ILogger logger, int count, float original, float normalized);
 }

@@ -16,7 +16,7 @@ internal sealed class UnconfiguredTextCompletionService : ITextCompletionService
         throw new InvalidOperationException(
             "No text completion service is configured. Register an ITextCompletionService that wraps your LLM " +
             "(see README.md 'As SDK'), or set MemoryIndexer:Completion:Provider to 'Mock' in tests " +
-            "(fixed placeholder text — never for memories you keep).");
+            "(fixed placeholder text - never for memories you keep).");
 }
 
 /// <summary>Resolution helpers for the optional completion service.</summary>

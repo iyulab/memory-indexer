@@ -1129,7 +1129,7 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to resolve contradiction {Id}")]
     private static partial void LogFailedResolveContradictionId(ILogger logger, Exception ex, Guid id);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Confidence update complete: {Updated} memories updated, avg confidence {Before:F2} → {After:F2}")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Confidence update complete: {Updated} memories updated, avg confidence {Before:F2} -> {After:F2}")]
     private static partial void LogConfidenceUpdateCompleteUpdatedMemories(ILogger logger, int updated, float before, float after);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Unhandled correction type: {Type}")]

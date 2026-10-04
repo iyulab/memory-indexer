@@ -86,6 +86,6 @@ public sealed partial class ZScoreNormalizer : IScoreNormalizer
     [LoggerMessage(Level = LogLevel.Warning, Message = "All scores identical (stdDev=0), normalized to 0.5")]
     private static partial void LogAllScoresIdenticalStdDevNormalized(ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Z-score normalized {Count} scores: mean={Mean:F3}, stdDev={StdDev:F3}, spread {Original:F3} → {Normalized:F3}")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Z-score normalized {Count} scores: mean={Mean:F3}, stdDev={StdDev:F3}, spread {Original:F3} -> {Normalized:F3}")]
     private static partial void LogScoreNormalizedCountScoresMean(ILogger logger, int count, float mean, float stdDev, float original, float normalized);
 }

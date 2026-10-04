@@ -408,7 +408,7 @@ public sealed partial class ScopeManager : IScopeManager
     [LoggerMessage(Level = LogLevel.Debug, Message = "ScopeManager initialized with topic {TopicId}")]
     private static partial void LogInitialized(ILogger logger, string topicId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Topic transition detected: {OldTopic} → {NewTopic}")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Topic transition detected: {OldTopic} -> {NewTopic}")]
     private static partial void LogTopicTransition(ILogger logger, string oldTopic, string newTopic);
 
     [LoggerMessage(Level = LogLevel.Trace, Message = "Turn {TurnIndex} recorded in topic {TopicId} (topic turn {TopicTurnIndex})")]
