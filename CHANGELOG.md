@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.23.0] - Unreleased
+## [v0.23.0] - 2026-10-04
 
 ### Changed
 - **Without a configured text completion service, nothing writes placeholder text into memory.** `Completion.Provider`
