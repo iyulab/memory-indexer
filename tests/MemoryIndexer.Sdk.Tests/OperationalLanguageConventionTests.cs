@@ -9,7 +9,7 @@ namespace MemoryIndexer.Sdk.Tests;
 /// <summary>
 /// Operational text — every <c>[LoggerMessage]</c> template and every exception message — is ASCII. Operators grep it,
 /// paste it into issues and search it in log pipelines whose tokenizers split on Latin word boundaries; a dash or an
-/// arrow outside ASCII is as opaque there as a Korean word. The rule is the umbrella's logging convention; the scan is
+/// arrow outside ASCII is as opaque there as a Korean word. The scan is
 /// <c>Iyu.Conventions.Testing</c>'s, shared with the other repositories. It replaces the per-type Hangul-only tests.
 /// </summary>
 public class OperationalLanguageConventionTests
