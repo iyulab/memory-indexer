@@ -35,9 +35,6 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
       "ApiKey": null,
       "Dimensions": 1024
     },
-    "Completion": {
-      "Provider": "Mock"
-    },
     "VCM": {
       "Buffer": {
         "MaxIdleSeconds": 60,
@@ -87,7 +84,7 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
 | | ConnectionString | string | "memories.db" | Database path for SqliteVec |
 | **Embedding** | Provider | string | "Mock" | `Mock`, `Ollama`, `Custom` (inject your own IEmbeddingService for `Custom`) |
 | | Dimensions | int | 1024 | Vector dimensions (must match your embedding model) |
-| **Completion** | Provider | string | "Mock" | `Mock` returns fixed placeholder text. The library builds no LLM client: for a real model register your own `ITextCompletionService` before `AddMemoryIndexer()`; any other value without such a registration throws when the service is resolved |
+| **Completion** | Provider | string | "None" | Used only when the application registers no `ITextCompletionService` of its own (the library builds no LLM client — register one that wraps your model, before or after `AddMemoryIndexer()`). `None`: no completion — merge/summarize and virtual-context consolidation use their non-LLM fallbacks; fact/knowledge extraction and conflict detection return empty or default results and log why. `Mock`: fixed placeholder text, for tests only (a merge would store it as memory content). `Ollama`/`Custom` without a registration throw when the service is resolved |
 | **WorkingMemory** | Capacity | int | 9 | Short tier capacity (7±2 rule); excess items are promoted to Long when `EnableCapacityEnforcement` is true |
 | | IdleTimeout | TimeSpan | 00:10:00 | Archive working memory to Long after this idle time |
 | | TokenThreshold | int | 2000 | Archive when accumulated tokens reach this count |

@@ -142,8 +142,10 @@ Configure Claude Desktop (`%APPDATA%\Claude\claude_desktop_config.json`):
 ```
 
 `DOTNET_ENVIRONMENT=Development` selects `appsettings.json`, whose bundled `Mock`
-embedding/completion providers let the server start with no configuration for local use; they
-return deterministic, non-semantic placeholder results (a startup warning is logged). Without it,
+embedding provider lets the server start with no configuration for local use; it returns
+deterministic, non-semantic vectors (a startup warning is logged). Text completion is off unless you
+register an `ITextCompletionService`: summaries keep the memories' own text, and LLM fact extraction
+returns nothing. Without it,
 the server loads `appsettings.Production.json`, which requires you to register your own
 `IEmbeddingService` / `ITextCompletionService` (see [As SDK](#as-sdk)) for real search relevance —
 otherwise startup fails fast with an actionable error.

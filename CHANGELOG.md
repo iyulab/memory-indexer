@@ -2,6 +2,18 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.23.0] - Unreleased
+
+### Changed
+- **Without a configured text completion service, nothing writes placeholder text into memory.** `Completion.Provider`
+  now defaults to `None` (was `Mock`). Merge/summarize and virtual-context consolidation get no completion service and
+  run their fallbacks (a summary keeps the memories' own text). Fact and knowledge extraction and conflict detection
+  return empty or default results and log that no completion service is configured. Before, the `Mock` default fed
+  them "[Mock completion for prompt: …]", which a merge stored as the merged memory's content.
+- **Breaking** only if you relied on the default being `Mock`: set `MemoryIndexer:Completion:Provider` to `Mock`
+  explicitly (tests). `CompletionProvider` members keep their numbers; `None` is `3`.
+- An `ITextCompletionService` you register wins whether it is registered before or after `AddMemoryIndexer()`.
+
 ## [v0.22.0] - 2026-10-04
 
 ### Fixed

@@ -844,13 +844,18 @@ public sealed class TypeBalancerOptions
 public sealed class CompletionOptions
 {
     /// <summary>
-    /// Completion provider type.
-    /// Default: Mock (fixed placeholder responses, no LLM). The library builds no LLM client of its own:
-    /// for a real model, register your own <c>ITextCompletionService</c> before calling
-    /// <c>AddMemoryIndexer()</c>. With any value other than Mock and no such registration, resolving the
-    /// completion service throws <see cref="NotSupportedException"/>.
+    /// Completion provider type. Consulted only when the application registers no <c>ITextCompletionService</c> of
+    /// its own (the library builds no LLM client): register one that wraps your LLM for real completions.
+    /// Default: <see cref="CompletionProvider.None"/> — no completion. Services written to work without one (merge and
+    /// summarize primitives, virtual-context consolidation) use their non-LLM fallbacks; LLM-only services (fact and
+    /// knowledge extraction, conflict detection) get no answer from a model: they return their empty or default result
+    /// and log that no completion service is configured. A direct <c>CompleteAsync</c> call throws
+    /// <see cref="InvalidOperationException"/>.
+    /// <see cref="CompletionProvider.Mock"/> is a test double: its fixed placeholder text would be stored as memory
+    /// content by a merge. <see cref="CompletionProvider.Ollama"/> and <see cref="CompletionProvider.Custom"/> without a
+    /// registered service throw <see cref="NotSupportedException"/> on resolution.
     /// </summary>
-    public CompletionProvider Provider { get; set; } = CompletionProvider.Mock;
+    public CompletionProvider Provider { get; set; } = CompletionProvider.None;
 }
 
 /// <summary>
@@ -859,20 +864,26 @@ public sealed class CompletionOptions
 public enum CompletionProvider
 {
     /// <summary>
-    /// Mock provider for testing (returns placeholder text).
+    /// Mock provider for tests (returns fixed placeholder text — never for memories you keep).
     /// </summary>
-    Mock,
+    Mock = 0,
 
     /// <summary>
     /// Ollama local inference. Not built in: register your own ITextCompletionService implementation via DI.
     /// </summary>
-    Ollama,
+    Ollama = 1,
 
     /// <summary>
     /// Custom externally-configured provider (OpenAI, Azure, Anthropic, etc.).
     /// Register your own ITextCompletionService implementation via DI.
     /// </summary>
-    Custom
+    Custom = 2,
+
+    /// <summary>
+    /// No completion (the default): services that can work without one use their non-LLM fallbacks; LLM-only services
+    /// return their empty or default result and log why.
+    /// </summary>
+    None = 3,
 }
 
 /// <summary>
