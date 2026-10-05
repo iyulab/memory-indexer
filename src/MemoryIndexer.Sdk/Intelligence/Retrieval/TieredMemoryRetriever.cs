@@ -344,7 +344,7 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
                 FormattedContext = FormatGraphContext(allFacts, allPaths)
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogGraphRetrievalFailedContinuingWithout(_logger, ex);
             return null;

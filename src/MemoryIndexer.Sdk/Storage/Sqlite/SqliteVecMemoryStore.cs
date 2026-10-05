@@ -1526,7 +1526,7 @@ ORDER BY created_at DESC";
             await ExecuteNonQueryAsync($"PRAGMA incremental_vacuum({_options.IncrementalVacuumPages});", cancellationToken);
             LogIncrementalVacuumCompletedPagesPages(_logger, _options.IncrementalVacuumPages);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogIncrementalVacuumFailed(_logger, ex);
         }

@@ -139,7 +139,7 @@ public partial class FactInferenceService : IFactInferenceEngine
                     await _archiveStore.SetAsync(userId, entry, cancellationToken);
                     storedCount++;
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                 {
                     LogFailedStoreInferredFactContent(_logger, ex, fact.Content);
                 }
@@ -405,7 +405,7 @@ public partial class FactInferenceService : IFactInferenceEngine
                 var ruleInferred = await rule.EvaluateAsync(facts, cancellationToken);
                 allInferred.AddRange(ruleInferred);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogCustomRuleNameFailed(_logger, ex, rule.Name);
             }

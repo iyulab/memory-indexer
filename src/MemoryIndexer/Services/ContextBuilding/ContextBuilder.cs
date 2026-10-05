@@ -88,7 +88,7 @@ public partial class ContextBuilder : IContextBuilder
                 usedTokens += tokens;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             LogFailedToGetBufferItems(_logger, ex);
         }
@@ -122,7 +122,7 @@ public partial class ContextBuilder : IContextBuilder
                 usedTokens += tokens;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             LogFailedToGetShortTermItems(_logger, ex);
         }
@@ -192,7 +192,7 @@ public partial class ContextBuilder : IContextBuilder
                 usedTokens += tokens;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             LogFailedToGetSemanticContext(_logger, ex);
         }
@@ -245,7 +245,7 @@ public partial class ContextBuilder : IContextBuilder
                 usedTokens += tokens;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             LogFailedToGetSessionContext(_logger, ex);
         }
@@ -299,7 +299,7 @@ public partial class ContextBuilder : IContextBuilder
                 usedTokens += tokens;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             LogFailedToGetUserFacts(_logger, ex);
         }

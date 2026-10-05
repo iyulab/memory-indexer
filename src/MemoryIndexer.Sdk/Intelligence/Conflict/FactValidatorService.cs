@@ -158,7 +158,7 @@ public sealed partial class FactValidatorService : IFactValidator
         {
             newEmbedding = await _embeddingService.GenerateEmbeddingAsync(newFact.Content, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedGenerateEmbeddingNewFact(_logger, ex);
         }

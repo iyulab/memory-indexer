@@ -117,7 +117,7 @@ public sealed partial class ReflectionEngine : IReflectionEngine
             await RecordReflectionAsync(userId, result, cancellationToken);
             _lastReflectionTime[userId] = DateTime.UtcNow;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogReflectionFailedUserUserId(_logger, ex, userId);
             result.Success = false;
@@ -821,7 +821,7 @@ public sealed partial class ReflectionEngine : IReflectionEngine
             await _memoryStore.StoreAsync(memory, cancellationToken);
             return memory.Id;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedStoreInsightMemory(_logger, ex);
             return null;

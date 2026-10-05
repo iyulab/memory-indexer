@@ -77,7 +77,7 @@ public class LongTermStoreHealthCheck : IHealthCheck
                 $"Episodic store healthy (latency: {queryLatencyMs:F1}ms)",
                 data);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return HealthCheckResult.Unhealthy(
                 "Failed to check Episodic store health",

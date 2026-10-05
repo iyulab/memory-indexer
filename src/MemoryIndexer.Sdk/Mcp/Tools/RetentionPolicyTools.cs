@@ -60,7 +60,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
                 Message = $"Preview complete: {preview.RetainCount} to retain, {preview.ArchiveCount} to archive, {preview.DeleteCount} to delete"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new RetentionPreviewResult
             {

@@ -872,7 +872,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
                 }
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogMergeGroupFailed(_logger, group.Count, ex);
             return null;

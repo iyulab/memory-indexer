@@ -106,7 +106,7 @@ public sealed partial class MemoryStoreMigrator
                             await destination.StoreAsync(memory, cancellationToken);
                             totalMigrated++;
                         }
-                        catch (Exception ex)
+                        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                         {
                             totalFailed++;
                             LogFailedMigrateMemoryMemoryId(_logger, ex, memory.Id);

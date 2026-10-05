@@ -59,7 +59,7 @@ public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
 
             return facts;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedExtractKnowledge(_logger, ex);
             return Array.Empty<ExtractedFact>();

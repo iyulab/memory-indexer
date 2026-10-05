@@ -64,7 +64,7 @@ public class VectorDbHealthCheck : IHealthCheck
                 $"Vector DB healthy (latency: {queryLatencyMs:F1}ms, type: {data["storeType"]})",
                 data);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return HealthCheckResult.Unhealthy(
                 "Failed to connect to Vector DB",

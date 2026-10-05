@@ -45,6 +45,21 @@ public class ContextBuilderTests
 
     #region GetRecentTurnsAsync Tests
 
+    // Recall the caller cancelled is not an empty recall: each tier used to log the cancellation as a store failure and
+    // move on, so a cancelled caller got a context with nothing in it instead of an exception.
+    [Fact]
+    public async Task GetRecentTurnsAsync_CallerCancelsDuringTheBufferRead_Throws()
+    {
+        using var cts = new CancellationTokenSource();
+        _bufferMock.GetPendingAsync(UserId, Arg.Any<CancellationToken>())
+            .Returns<Task<IReadOnlyList<SensoryMemory>>>(_ => { cts.Cancel(); throw new OperationCanceledException(cts.Token); });
+
+        var act = () => _builder.GetRecentTurnsAsync(UserId, SessionId, maxTokens: 1000, ct: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+
     [Fact]
     public async Task GetRecentTurnsAsync_WithBufferItems_ShouldReturnRecentContext()
     {

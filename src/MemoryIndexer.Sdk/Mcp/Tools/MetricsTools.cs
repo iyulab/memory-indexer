@@ -57,7 +57,7 @@ public class MetricsTools(IMetricsDashboard dashboard)
                     : $"System status: {summary.Status} ({summary.ActiveAlerts.Count} active alerts)"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new HealthSummaryResult
             {
@@ -100,7 +100,7 @@ public class MetricsTools(IMetricsDashboard dashboard)
                 Message = $"Statistics for last {hours} hour(s): {stats.TotalOperations} operations, {stats.SuccessRate * 100:F1}% success rate"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new OperationStatsResult
             {
@@ -141,7 +141,7 @@ public class MetricsTools(IMetricsDashboard dashboard)
                 Message = $"Recall P95: {metrics.RecallLatencyP95Ms:F0}ms, Cache: {metrics.EmbeddingCacheHitRate * 100:F0}% hit rate"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new PerformanceMetricsResult
             {
@@ -193,7 +193,7 @@ public class MetricsTools(IMetricsDashboard dashboard)
                 Message = $"Total: {stats.TotalMemories} memories ({FormatBytes(stats.TotalSizeBytes)})"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new StorageStatsResult
             {
@@ -242,7 +242,7 @@ public class MetricsTools(IMetricsDashboard dashboard)
                     : $"Security score: {metrics.SecurityScore * 100:F0}% ({metrics.InjectionAttempts} injection attempts, {metrics.PiiDetections} PII detections)"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new SecurityMetricsResult
             {
@@ -299,7 +299,7 @@ public class MetricsTools(IMetricsDashboard dashboard)
                     : $"No data available for {metricName} in the specified time range"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new TimeSeriesResult
             {
@@ -374,7 +374,7 @@ public class MetricsTools(IMetricsDashboard dashboard)
                 Message = $"Dashboard: {health.Status}, {operations.TotalOperations} ops/hr, {storage.TotalMemories} memories"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new DashboardOverviewResult
             {

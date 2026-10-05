@@ -348,7 +348,7 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
                     await RecordCorrectionAsync(correction, cancellationToken);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogFailedApplyCorrectionId(_logger, ex, correction.Id);
                 failed.Add(new FailedCorrection
@@ -425,7 +425,7 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
                     break;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedResolveContradictionId(_logger, ex, contradiction.Id);
             resolution.Success = false;

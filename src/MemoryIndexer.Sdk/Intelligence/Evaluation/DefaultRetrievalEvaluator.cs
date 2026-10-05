@@ -151,7 +151,7 @@ public sealed partial class DefaultRetrievalEvaluator : IRetrievalEvaluator
                 });
                 successfulResults.Add(result);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogFailedEvaluateCaseCaseId(_logger, ex, evaluation.Id);
                 caseResults.Add(new CaseResult

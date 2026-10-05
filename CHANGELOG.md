@@ -2,6 +2,14 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.26.1] - Unreleased
+
+### Fixed
+- **Cancelling a call now cancels it.** 45 method(s) that take a `CancellationToken` caught every exception to
+  return a fallback (`null`, an empty result, a failure value) or to log and continue, and treated the caller's own
+  cancellation the same way. They now let the caller's `OperationCanceledException` through; other failures behave
+  as before. For example, `ContextBuilder` logged a cancelled tier read as a store failure and returned a context with nothing in it; health checks, extraction, promotion, reflection, summarization and the MCP tools did the same.
+
 ## [v0.26.0] - 2026-10-06
 
 ### Fixed

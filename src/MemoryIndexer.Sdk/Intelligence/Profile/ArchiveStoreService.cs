@@ -127,7 +127,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
                     $"{entry.Key}: {entry.Value}", cancellationToken);
                 entry.Embedding = embedding;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogFailedGenerateEmbeddingSemanticEntry(_logger, ex, entry.Key);
             }
@@ -448,7 +448,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
                     $"{key}: {newValue}", cancellationToken);
                 userProfile[key].Embedding = embedding;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogFailedGenerateEmbeddingUpdatedEntry(_logger, ex, key);
             }

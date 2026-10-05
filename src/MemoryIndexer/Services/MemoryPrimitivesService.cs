@@ -182,7 +182,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                     topics = classification.Topics.ToList();
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogAutoClassificationFailed(_logger, ex);
             }
@@ -1413,7 +1413,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
             return string.IsNullOrWhiteSpace(result) ? combinedContent : result;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogLlmSummarizationFailed(_logger, ex);
             return focusTopic != null

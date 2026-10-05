@@ -85,7 +85,7 @@ public sealed partial class LlmFactExtractor : IFactExtractor
 
             return result;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedToExtractFacts(_logger, ex);
             return new FactExtractionResult
@@ -137,7 +137,7 @@ public sealed partial class LlmFactExtractor : IFactExtractor
 
             return result;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedToValidateFact(_logger, ex);
             return new FactValidationResult

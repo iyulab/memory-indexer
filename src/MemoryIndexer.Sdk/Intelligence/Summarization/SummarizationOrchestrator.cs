@@ -294,7 +294,7 @@ public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrat
                 Duration = stopwatch.Elapsed
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             stopwatch.Stop();
             LogSummarizationFailed(_logger, ex, state.SessionId);

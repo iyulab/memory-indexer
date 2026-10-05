@@ -80,7 +80,7 @@ public class EmbeddingServiceHealthCheck : IHealthCheck
                 $"Embedding service healthy (latency: {embeddingLatencyMs:F1}ms, dims: {embedding.Length}, type: {data["serviceType"]})",
                 data);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return HealthCheckResult.Unhealthy(
                 "Failed to connect to Embedding service",

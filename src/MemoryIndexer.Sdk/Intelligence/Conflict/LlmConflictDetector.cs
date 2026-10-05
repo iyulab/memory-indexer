@@ -65,7 +65,7 @@ public sealed partial class LlmConflictDetector
 
             return analysis;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedAnalyzeConflict(_logger, ex);
 

@@ -202,7 +202,7 @@ public class ProfileEvolutionTools
                 }).Take(10).ToList()
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new CompareSnapshotsResult
             {

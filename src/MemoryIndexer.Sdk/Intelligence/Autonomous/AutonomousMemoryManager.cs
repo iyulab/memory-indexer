@@ -70,7 +70,7 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
                 _ => CreateFailedResponse($"Unsupported operation: {request.OperationType}")
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogOperationFailed(_logger, ex, request.OperationType);
             return CreateFailedResponse(ex.Message);

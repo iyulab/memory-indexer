@@ -148,7 +148,7 @@ public sealed partial class MemoryQualityAnalyzer : IMemoryQualityService
 
             return 1.0f; // Unique
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedCalculateUniquenessScore(_logger, ex);
             return 0.5f;
@@ -169,7 +169,7 @@ public sealed partial class MemoryQualityAnalyzer : IMemoryQualityService
             var similarity = CalculateCosineSimilarity(memory.Embedding!.Value, queryEmbedding);
             return Math.Clamp(similarity, 0f, 1f);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedCalculateRelevanceScore(_logger, ex);
             return 0f;
@@ -292,7 +292,7 @@ public sealed partial class MemoryQualityAnalyzer : IMemoryQualityService
 
             return 1.0f; // No contradiction detected
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedDetectContradictionsUsingSimple(_logger, ex);
             return await CalculateSimpleConsistencyAsync(memory, userId, issues, cancellationToken);

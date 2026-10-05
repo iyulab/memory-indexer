@@ -246,7 +246,7 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
                 LastUpdatedAt = facts.Count > 0 ? facts.Max(f => f.UpdatedAt) : null
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedGetUserProfile(_logger, ex, userId);
             return UserProfile.Empty(userId);
@@ -271,7 +271,7 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
 
             return await _memoryStore.GetAllAsync(userId, options, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedGetExistingFacts(_logger, ex);
             return [];

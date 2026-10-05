@@ -397,7 +397,7 @@ public sealed partial class GraphQueryExpander : IGraphQueryExpander
 
             return sb.ToString();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogFailedGetCommunityContext(_logger, ex);
             return null;
