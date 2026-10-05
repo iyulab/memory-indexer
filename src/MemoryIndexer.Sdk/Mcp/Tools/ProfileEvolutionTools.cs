@@ -80,7 +80,7 @@ public class ProfileEvolutionTools
     /// </summary>
     [McpServerTool(Name = "get_inference_rules")]
     [Description("Get list of registered inference rules.")]
-    public Task<GetInferenceRulesResult> GetInferenceRules()
+    public Task<GetInferenceRulesResult> GetInferenceRules(CancellationToken cancellationToken = default)
     {
         var rules = _inferenceEngine.GetRegisteredRules();
 

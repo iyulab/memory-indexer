@@ -38,10 +38,12 @@ public sealed class KnowledgeGraphTools
     /// Identifies people, organizations, dates, emails, URLs, and more.
     /// </summary>
     /// <param name="content">The text content to analyze.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of extracted entities with types and confidence scores.</returns>
     [McpServerTool, Description("Extract entities (people, organizations, dates, etc.) from text content")]
     public async Task<ExtractEntitiesResult> ExtractEntities(
-        [Description("Text content to extract entities from")] string content)
+        [Description("Text content to extract entities from")] string content,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -52,7 +54,7 @@ public sealed class KnowledgeGraphTools
             };
         }
 
-        var entities = await _knowledgeGraphService.ExtractEntitiesAsync(content);
+        var entities = await _knowledgeGraphService.ExtractEntitiesAsync(content, cancellationToken);
 
         return new ExtractEntitiesResult
         {
@@ -74,10 +76,12 @@ public sealed class KnowledgeGraphTools
     /// Identifies connections like "works at", "located in", "created by", etc.
     /// </summary>
     /// <param name="content">The text content to analyze.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of relationships between entities.</returns>
     [McpServerTool, Description("Extract relationships between entities in text content")]
     public async Task<ExtractRelationsResult> ExtractRelations(
-        [Description("Text content to extract relations from")] string content)
+        [Description("Text content to extract relations from")] string content,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -88,8 +92,8 @@ public sealed class KnowledgeGraphTools
             };
         }
 
-        var entities = await _knowledgeGraphService.ExtractEntitiesAsync(content);
-        var relations = await _knowledgeGraphService.ExtractRelationsAsync(content, entities);
+        var entities = await _knowledgeGraphService.ExtractEntitiesAsync(content, cancellationToken);
+        var relations = await _knowledgeGraphService.ExtractRelationsAsync(content, entities, cancellationToken);
 
         return new ExtractRelationsResult
         {
@@ -114,11 +118,13 @@ public sealed class KnowledgeGraphTools
     /// </summary>
     /// <param name="userId">User ID to build graph for.</param>
     /// <param name="rebuildIfExists">Whether to rebuild if graph already exists.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Summary of the built knowledge graph.</returns>
     [McpServerTool, Description("Build a knowledge graph from stored memories")]
     public async Task<BuildGraphResult> BuildKnowledgeGraph(
         [Description("User ID (optional, defaults to 'default')")] string? userId = null,
-        [Description("Rebuild graph even if it exists")] bool rebuildIfExists = false)
+        [Description("Rebuild graph even if it exists")] bool rebuildIfExists = false,
+        CancellationToken cancellationToken = default)
     {
         var uid = userId ?? _defaultUserId;
 
@@ -137,7 +143,7 @@ public sealed class KnowledgeGraphTools
             }
         }
 
-        var memories = await _memoryStore.GetAllAsync(uid);
+        var memories = await _memoryStore.GetAllAsync(uid, cancellationToken: cancellationToken);
         var contents = memories.Select(m => m.Content).ToList();
 
         if (contents.Count == 0)
@@ -149,7 +155,7 @@ public sealed class KnowledgeGraphTools
             };
         }
 
-        var graph = await _knowledgeGraphService.BuildGraphAsync(contents);
+        var graph = await _knowledgeGraphService.BuildGraphAsync(contents, cancellationToken);
 
         lock (CacheLock)
         {
@@ -184,12 +190,14 @@ public sealed class KnowledgeGraphTools
     /// <param name="query">Search query for entities.</param>
     /// <param name="userId">User ID whose graph to query.</param>
     /// <param name="maxResults">Maximum entities to return.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching entities and their relationships.</returns>
     [McpServerTool, Description("Query the knowledge graph for entities and relationships")]
     public async Task<QueryGraphResult> QueryKnowledgeGraph(
         [Description("Search query for entities")] string query,
         [Description("User ID (optional)")] string? userId = null,
-        [Description("Maximum results to return")] int maxResults = 10)
+        [Description("Maximum results to return")] int maxResults = 10,
+        CancellationToken cancellationToken = default)
     {
         var uid = userId ?? _defaultUserId;
 
@@ -202,7 +210,7 @@ public sealed class KnowledgeGraphTools
         if (graph == null)
         {
             // Try to build graph first
-            var buildResult = await BuildKnowledgeGraph(uid);
+            var buildResult = await BuildKnowledgeGraph(uid, cancellationToken: cancellationToken);
             if (!buildResult.Success)
             {
                 return new QueryGraphResult
@@ -256,10 +264,12 @@ public sealed class KnowledgeGraphTools
     /// Get statistics about the knowledge graph.
     /// </summary>
     /// <param name="userId">User ID whose graph to analyze.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Graph statistics including entity and relation counts by type.</returns>
     [McpServerTool, Description("Get statistics about the knowledge graph")]
     public Task<GraphStatsResult> GetGraphStats(
-        [Description("User ID (optional)")] string? userId = null)
+        [Description("User ID (optional)")] string? userId = null,
+        CancellationToken cancellationToken = default)
     {
         var uid = userId ?? _defaultUserId;
 
@@ -302,10 +312,12 @@ public sealed class KnowledgeGraphTools
     /// Clear the cached knowledge graph for a user.
     /// </summary>
     /// <param name="userId">User ID whose graph to clear.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the clear operation.</returns>
     [McpServerTool, Description("Clear the cached knowledge graph")]
     public Task<ClearGraphResult> ClearKnowledgeGraph(
-        [Description("User ID (optional)")] string? userId = null)
+        [Description("User ID (optional)")] string? userId = null,
+        CancellationToken cancellationToken = default)
     {
         var uid = userId ?? _defaultUserId;
 

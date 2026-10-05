@@ -252,7 +252,7 @@ public class ContextToolsTests
     public async Task GetContextStrategies_ReturnsAllStrategies()
     {
         // Act
-        var result = await ContextTools.GetContextStrategies();
+        var result = await ContextTools.GetContextStrategies(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();

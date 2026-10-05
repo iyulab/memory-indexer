@@ -27,12 +27,14 @@ public sealed class SelfEditingMemoryTools
     /// <param name="location">Memory location key (e.g., "user_preferences", "current_task").</param>
     /// <param name="newContent">New content to store at this location.</param>
     /// <param name="sessionId">Session identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the replace operation.</returns>
     [McpServerTool, Description("Replace content in working memory at a specified location")]
     public async Task<MemoryReplaceToolResult> MemoryReplace(
         [Description("Memory location key (e.g., 'user_preferences', 'current_task')")] string location,
         [Description("New content to store at this location")] string newContent,
-        [Description("Session ID (optional)")] string? sessionId = null)
+        [Description("Session ID (optional)")] string? sessionId = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(location))
         {
@@ -45,7 +47,7 @@ public sealed class SelfEditingMemoryTools
 
         var result = await _selfEditingService.ReplaceWorkingMemoryAsync(
             $"{sessionId ?? DefaultSessionId}:{location}",
-            newContent);
+            newContent, cancellationToken);
 
         return new MemoryReplaceToolResult
         {
@@ -65,12 +67,14 @@ public sealed class SelfEditingMemoryTools
     /// <param name="content">Content to archive.</param>
     /// <param name="category">Category for the archived content.</param>
     /// <param name="tags">Optional tags for organization.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result with the archived memory ID.</returns>
     [McpServerTool, Description("Insert content into archival memory for long-term storage")]
     public async Task<ArchivalInsertToolResult> ArchivalMemoryInsert(
         [Description("Content to archive for long-term storage")] string content,
         [Description("Category (e.g., 'preferences', 'facts', 'procedures')")] string? category = null,
-        [Description("Comma-separated tags for organization")] string? tags = null)
+        [Description("Comma-separated tags for organization")] string? tags = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -91,7 +95,7 @@ public sealed class SelfEditingMemoryTools
             metadata["tags"] = tags;
         }
 
-        var result = await _selfEditingService.InsertArchivalMemoryAsync(content, metadata);
+        var result = await _selfEditingService.InsertArchivalMemoryAsync(content, metadata, cancellationToken);
 
         return new ArchivalInsertToolResult
         {
@@ -110,11 +114,13 @@ public sealed class SelfEditingMemoryTools
     /// </summary>
     /// <param name="query">Search query.</param>
     /// <param name="maxResults">Maximum results to return.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching archival memories.</returns>
     [McpServerTool, Description("Search archival memory for relevant content")]
     public async Task<ArchivalSearchToolResult> ArchivalMemorySearch(
         [Description("Search query for archival memory")] string query,
-        [Description("Maximum results to return")] int maxResults = 10)
+        [Description("Maximum results to return")] int maxResults = 10,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -125,7 +131,7 @@ public sealed class SelfEditingMemoryTools
             };
         }
 
-        var results = await _selfEditingService.SearchArchivalMemoryAsync(query, maxResults);
+        var results = await _selfEditingService.SearchArchivalMemoryAsync(query, maxResults, cancellationToken);
 
         return new ArchivalSearchToolResult
         {
@@ -148,12 +154,14 @@ public sealed class SelfEditingMemoryTools
     /// Shows what the LLM currently has in its working memory.
     /// </summary>
     /// <param name="sessionId">Session identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Current working memory snapshot.</returns>
     [McpServerTool, Description("Get current working memory state")]
     public async Task<WorkingMemoryToolResult> GetWorkingMemory(
-        [Description("Session ID (optional)")] string? sessionId = null)
+        [Description("Session ID (optional)")] string? sessionId = null,
+        CancellationToken cancellationToken = default)
     {
-        var snapshot = await _selfEditingService.GetWorkingMemoryAsync(sessionId ?? DefaultSessionId);
+        var snapshot = await _selfEditingService.GetWorkingMemoryAsync(sessionId ?? DefaultSessionId, cancellationToken);
 
         return new WorkingMemoryToolResult
         {
@@ -177,11 +185,13 @@ public sealed class SelfEditingMemoryTools
     /// </summary>
     /// <param name="newContext">New context to incorporate.</param>
     /// <param name="sessionId">Session identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Update result with potential reflection trigger.</returns>
     [McpServerTool, Description("Update working memory with new conversation context")]
     public async Task<UpdateWorkingMemoryToolResult> UpdateWorkingMemory(
         [Description("New context to incorporate")] string newContext,
-        [Description("Session ID (optional)")] string? sessionId = null)
+        [Description("Session ID (optional)")] string? sessionId = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(newContext))
         {
@@ -194,7 +204,7 @@ public sealed class SelfEditingMemoryTools
 
         var result = await _selfEditingService.UpdateWorkingMemoryAsync(
             sessionId ?? DefaultSessionId,
-            newContext);
+            newContext, cancellationToken);
 
         return new UpdateWorkingMemoryToolResult
         {
@@ -214,12 +224,14 @@ public sealed class SelfEditingMemoryTools
     /// Reflection consolidates and summarizes recent memories.
     /// </summary>
     /// <param name="sessionId">Session identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Whether reflection is recommended.</returns>
     [McpServerTool, Description("Check if reflection should be triggered")]
     public async Task<ShouldReflectToolResult> ShouldReflect(
-        [Description("Session ID (optional)")] string? sessionId = null)
+        [Description("Session ID (optional)")] string? sessionId = null,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _selfEditingService.ShouldTriggerReflectionAsync(sessionId ?? DefaultSessionId);
+        var result = await _selfEditingService.ShouldTriggerReflectionAsync(sessionId ?? DefaultSessionId, cancellationToken);
 
         return new ShouldReflectToolResult
         {
@@ -238,12 +250,14 @@ public sealed class SelfEditingMemoryTools
     /// Creates summaries and archives important content.
     /// </summary>
     /// <param name="sessionId">Session identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the reflection process.</returns>
     [McpServerTool, Description("Perform reflection to consolidate and summarize memories")]
     public async Task<ReflectionToolResult> PerformReflection(
-        [Description("Session ID (optional)")] string? sessionId = null)
+        [Description("Session ID (optional)")] string? sessionId = null,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _selfEditingService.PerformReflectionAsync(sessionId ?? DefaultSessionId);
+        var result = await _selfEditingService.PerformReflectionAsync(sessionId ?? DefaultSessionId, cancellationToken);
 
         return new ReflectionToolResult
         {
@@ -264,15 +278,17 @@ public sealed class SelfEditingMemoryTools
     /// </summary>
     /// <param name="maxTokens">Maximum tokens to retain in working memory.</param>
     /// <param name="sessionId">Session identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the management operation.</returns>
     [McpServerTool, Description("Manage context window by pruning or archiving old content")]
     public async Task<ContextManagementToolResult> ManageContextWindow(
         [Description("Maximum tokens to retain (default: 4000)")] int maxTokens = 4000,
-        [Description("Session ID (optional)")] string? sessionId = null)
+        [Description("Session ID (optional)")] string? sessionId = null,
+        CancellationToken cancellationToken = default)
     {
         var result = await _selfEditingService.ManageContextWindowAsync(
             sessionId ?? DefaultSessionId,
-            maxTokens);
+            maxTokens, cancellationToken);
 
         return new ContextManagementToolResult
         {

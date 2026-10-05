@@ -211,11 +211,13 @@ public sealed class AdaptiveRetrievalTools
     /// Use this as a guide for choosing the right retrieval strategy.
     /// </summary>
     /// <param name="informationType">Type of information needed (facts, context, history, relationships).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Retrieval strategy recommendations.</returns>
     [McpServerTool]
     [Description("Get recommendations for retrieving specific information types. Helps choose the right strategy.")]
     public static Task<RetrievalRecommendationToolResult> GetRetrievalRecommendation(
-        [Description("Information type: facts, context, history, relationships, all")] string informationType = "all")
+        [Description("Information type: facts, context, history, relationships, all")] string informationType = "all",
+        CancellationToken cancellationToken = default)
     {
         var recommendation = informationType.ToLowerInvariant() switch
         {

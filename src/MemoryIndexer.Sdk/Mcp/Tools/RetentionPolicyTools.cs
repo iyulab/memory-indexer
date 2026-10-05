@@ -120,7 +120,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     /// </summary>
     [McpServerTool]
     [Description("Get retention rules showing how long each category of memory is kept.")]
-    public Task<RetentionRulesResult> GetRetentionRules()
+    public Task<RetentionRulesResult> GetRetentionRules(CancellationToken cancellationToken = default)
     {
         var rules = retentionService.Policy.GetAllRules();
 
@@ -150,7 +150,8 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     [McpServerTool]
     [Description("Get the retention rule for a specific memory category.")]
     public Task<RetentionRuleDetailResult> GetRetentionRule(
-        [Description("Category: Fact, Preference, Skill, Interest, Relationship, Work, Goal, Behavior, Communication, Other")] string category)
+        [Description("Category: Fact, Preference, Skill, Interest, Relationship, Work, Goal, Behavior, Communication, Other")] string category,
+        CancellationToken cancellationToken = default)
     {
         if (!Enum.TryParse<SemanticStoreCategory>(category, ignoreCase: true, out var categoryEnum))
         {

@@ -20,42 +20,8 @@ public class PublicApiConventionTests
 {
     private static readonly string[] KnownUncancellable =
     [
-        "McpServer.Controllers.MemoryController.DeleteMemory(Guid)",
-        "McpServer.Controllers.MemoryController.GetAllMemories(String, String, Nullable<MemoryType>, Int32)",
-        "McpServer.Controllers.MemoryController.GetMemory(Guid)",
-        "McpServer.Controllers.MemoryController.SearchMemories(MemorySearchRequest)",
-        "McpServer.Controllers.MemoryController.StoreMemory(MemoryStoreRequest)",
-        "McpServer.Controllers.MemoryController.UpdateMemory(Guid, MemoryUpdateRequest)",
+        // The HealthCheckOptions.ResponseWriter delegate shape (HttpContext, HealthReport) is ASP.NET Core's, not ours.
         "MemoryIndexer.Sdk.Health.HealthCheckResponseWriter.WriteResponse(HttpContext, HealthReport)",
-        "MemoryIndexer.Sdk.Mcp.Tools.AdaptiveRetrievalTools.GetRetrievalRecommendation(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.ConflictResolutionTools.GetResolutionStrategy(String, Single)",
-        "MemoryIndexer.Sdk.Mcp.Tools.ContextTools.GetContextStrategies()",
-        "MemoryIndexer.Sdk.Mcp.Tools.FactConflictTools.GetAllCategoryRules()",
-        "MemoryIndexer.Sdk.Mcp.Tools.FactConflictTools.GetCategoryRule(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.FactExtractionTools.GetFactCategories()",
-        "MemoryIndexer.Sdk.Mcp.Tools.FactExtractionTools.GetPromotionPaths()",
-        "MemoryIndexer.Sdk.Mcp.Tools.KnowledgeGraphTools.BuildKnowledgeGraph(String, Boolean)",
-        "MemoryIndexer.Sdk.Mcp.Tools.KnowledgeGraphTools.ClearKnowledgeGraph(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.KnowledgeGraphTools.ExtractEntities(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.KnowledgeGraphTools.ExtractRelations(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.KnowledgeGraphTools.GetGraphStats(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.KnowledgeGraphTools.QueryKnowledgeGraph(String, String, Int32)",
-        "MemoryIndexer.Sdk.Mcp.Tools.ProfileEvolutionTools.GetInferenceRules()",
-        "MemoryIndexer.Sdk.Mcp.Tools.RetentionPolicyTools.GetRetentionRule(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.RetentionPolicyTools.GetRetentionRules()",
-        "MemoryIndexer.Sdk.Mcp.Tools.SecurityTools.DetectPii(String, Single)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SecurityTools.DetectPromptInjection(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SecurityTools.RedactPii(String, Single, String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SecurityTools.SanitizeInput(String, String, String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SecurityTools.ValidateContent(String, Boolean, String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SelfEditingMemoryTools.ArchivalMemoryInsert(String, String, String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SelfEditingMemoryTools.ArchivalMemorySearch(String, Int32)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SelfEditingMemoryTools.GetWorkingMemory(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SelfEditingMemoryTools.ManageContextWindow(Int32, String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SelfEditingMemoryTools.MemoryReplace(String, String, String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SelfEditingMemoryTools.PerformReflection(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SelfEditingMemoryTools.ShouldReflect(String)",
-        "MemoryIndexer.Sdk.Mcp.Tools.SelfEditingMemoryTools.UpdateWorkingMemory(String, String)",
     ];
 
     private static readonly string[] KnownResultReturns =

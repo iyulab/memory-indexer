@@ -28,11 +28,13 @@ public sealed class SecurityTools
     /// </summary>
     /// <param name="text">Text to analyze for PII.</param>
     /// <param name="minConfidence">Minimum confidence threshold (0.0 to 1.0).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of detected PII entities.</returns>
     [McpServerTool, Description("Detect PII (names, SSN, credit cards, etc.) in text")]
     public async Task<PiiDetectionToolResult> DetectPii(
         [Description("Text to analyze for PII")] string text,
-        [Description("Minimum confidence (0.0-1.0, default 0.5)")] float minConfidence = 0.5f)
+        [Description("Minimum confidence (0.0-1.0, default 0.5)")] float minConfidence = 0.5f,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -43,7 +45,7 @@ public sealed class SecurityTools
             };
         }
 
-        var entities = await _piiDetector.DetectAsync(text, minConfidence);
+        var entities = await _piiDetector.DetectAsync(text, minConfidence, cancellationToken);
 
         return new PiiDetectionToolResult
         {
@@ -69,12 +71,14 @@ public sealed class SecurityTools
     /// <param name="text">Text to redact.</param>
     /// <param name="minConfidence">Minimum confidence threshold.</param>
     /// <param name="mode">Redaction mode: Replace, FullMask, PartialMask, Hash, or Remove.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Redacted text and redaction details.</returns>
     [McpServerTool, Description("Redact PII from text by replacing with placeholders")]
     public async Task<PiiRedactionToolResult> RedactPii(
         [Description("Text to redact")] string text,
         [Description("Minimum confidence (0.0-1.0, default 0.5)")] float minConfidence = 0.5f,
-        [Description("Redaction mode: Replace (default), FullMask, PartialMask, Hash, Remove")] string mode = "Replace")
+        [Description("Redaction mode: Replace (default), FullMask, PartialMask, Hash, Remove")] string mode = "Replace",
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -101,7 +105,7 @@ public sealed class SecurityTools
             IncludeTypeInReplacement = true
         };
 
-        var result = await _piiDetector.RedactAsync(text, options);
+        var result = await _piiDetector.RedactAsync(text, options, cancellationToken);
 
         return new PiiRedactionToolResult
         {
@@ -125,10 +129,12 @@ public sealed class SecurityTools
     /// Check if text is safe from prompt injection attacks.
     /// </summary>
     /// <param name="text">Text to analyze.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Safety assessment with detected patterns.</returns>
     [McpServerTool, Description("Check text for prompt injection attacks")]
     public async Task<InjectionDetectionToolResult> DetectPromptInjection(
-        [Description("Text to analyze for injection attacks")] string text)
+        [Description("Text to analyze for injection attacks")] string text,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -139,7 +145,7 @@ public sealed class SecurityTools
             };
         }
 
-        var result = await _injectionDetector.DetectAsync(text);
+        var result = await _injectionDetector.DetectAsync(text, cancellationToken);
 
         return new InjectionDetectionToolResult
         {
@@ -167,12 +173,14 @@ public sealed class SecurityTools
     /// <param name="text">Text to sanitize.</param>
     /// <param name="mode">Sanitization mode: Neutralize, Remove, Block, or Escape.</param>
     /// <param name="minRiskToSanitize">Minimum risk level to trigger sanitization.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Sanitized text.</returns>
     [McpServerTool, Description("Sanitize text to neutralize prompt injection attacks")]
     public async Task<SanitizationToolResult> SanitizeInput(
         [Description("Text to sanitize")] string text,
         [Description("Mode: Neutralize (default), Remove, Block, Escape")] string mode = "Neutralize",
-        [Description("Min risk level: None, Low, Medium, High, Critical")] string minRiskToSanitize = "Medium")
+        [Description("Min risk level: None, Low, Medium, High, Critical")] string minRiskToSanitize = "Medium",
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -209,7 +217,7 @@ public sealed class SecurityTools
             EscapeDelimiters = true
         };
 
-        var result = await _injectionDetector.SanitizeAsync(text, options);
+        var result = await _injectionDetector.SanitizeAsync(text, options, cancellationToken);
 
         return new SanitizationToolResult
         {
@@ -234,12 +242,14 @@ public sealed class SecurityTools
     /// <param name="content">Content to validate.</param>
     /// <param name="allowPii">Whether to allow PII (will warn but not block).</param>
     /// <param name="maxRiskLevel">Maximum allowed injection risk level.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Validation result with recommendations.</returns>
     [McpServerTool, Description("Validate content for both PII and injection risks before storage")]
     public async Task<ContentValidationResult> ValidateContent(
         [Description("Content to validate")] string content,
         [Description("Allow PII (warns but doesn't block)")] bool allowPii = false,
-        [Description("Max allowed risk: None, Low, Medium (default: Low)")] string maxRiskLevel = "Low")
+        [Description("Max allowed risk: None, Low, Medium (default: Low)")] string maxRiskLevel = "Low",
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -258,11 +268,11 @@ public sealed class SecurityTools
         };
 
         // Check for PII
-        var piiEntities = await _piiDetector.DetectAsync(content);
+        var piiEntities = await _piiDetector.DetectAsync(content, cancellationToken: cancellationToken);
         var hasPii = piiEntities.Count > 0;
 
         // Check for injection
-        var injectionResult = await _injectionDetector.DetectAsync(content);
+        var injectionResult = await _injectionDetector.DetectAsync(content, cancellationToken);
         var hasInjection = injectionResult.IsDetected && (int)injectionResult.RiskLevel > (int)maxRisk;
 
         var warnings = new List<string>();

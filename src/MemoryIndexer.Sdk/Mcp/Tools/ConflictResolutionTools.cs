@@ -304,12 +304,14 @@ public sealed class ConflictResolutionTools
     /// </summary>
     /// <param name="contradictionType">Type of contradiction (Factual, Temporal, Preference, Semantic, Logical).</param>
     /// <param name="confidence">Confidence level of the contradiction (0.0-1.0).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Strategy recommendation with explanation.</returns>
     [McpServerTool]
     [Description("Get a recommendation on how to handle a specific type of contradiction.")]
     public Task<StrategyRecommendationResult> GetResolutionStrategy(
         [Description("Contradiction type: Factual, Temporal, Preference, Semantic, Logical")] string contradictionType,
-        [Description("Confidence level (0.0-1.0)")] float confidence)
+        [Description("Confidence level (0.0-1.0)")] float confidence,
+        CancellationToken cancellationToken = default)
     {
         if (!Enum.TryParse<ContradictionType>(contradictionType, true, out var type))
         {

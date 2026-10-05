@@ -122,7 +122,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IO
     /// </summary>
     [McpServerTool]
     [Description("List available fact categories for filtering and organization.")]
-    public static Task<FactCategoriesResult> GetFactCategories()
+    public static Task<FactCategoriesResult> GetFactCategories(CancellationToken cancellationToken = default)
     {
         var categories = new List<FactCategoryInfo>
         {
@@ -150,7 +150,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IO
     /// </summary>
     [McpServerTool]
     [Description("List available promotion paths and their criteria.")]
-    public static Task<PromotionPathsResult> GetPromotionPaths()
+    public static Task<PromotionPathsResult> GetPromotionPaths(CancellationToken cancellationToken = default)
     {
         var paths = new List<PromotionPathInfo>
         {

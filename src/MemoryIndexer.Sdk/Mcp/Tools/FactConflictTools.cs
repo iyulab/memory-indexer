@@ -203,7 +203,8 @@ public sealed class FactConflictTools(
     [McpServerTool]
     [Description("Get the resolution rules for a specific fact category.")]
     public Task<CategoryRuleResult> GetCategoryRule(
-        [Description("Fact category: Identity, Preference, Relationship, Location, Temporal, Skill, Goal, Health, Professional, General")] string category)
+        [Description("Fact category: Identity, Preference, Relationship, Location, Temporal, Skill, Goal, Health, Professional, General")] string category,
+        CancellationToken cancellationToken = default)
     {
         if (!Enum.TryParse<FactCategory>(category, true, out var factCategory))
         {
@@ -233,7 +234,7 @@ public sealed class FactConflictTools(
     /// </summary>
     [McpServerTool]
     [Description("List all category-specific resolution rules.")]
-    public static Task<AllCategoryRulesResult> GetAllCategoryRules()
+    public static Task<AllCategoryRulesResult> GetAllCategoryRules(CancellationToken cancellationToken = default)
     {
         var rules = CategoryResolutionRule.Defaults.Values
             .Select(r => new CategoryRuleInfo

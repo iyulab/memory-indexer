@@ -36,7 +36,7 @@ public partial class MemoryController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(MemoryStoreResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> StoreMemory([FromBody] MemoryStoreRequest request)
+    public async Task<IActionResult> StoreMemory([FromBody] MemoryStoreRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Content))
         {
@@ -54,7 +54,8 @@ public partial class MemoryController : ControllerBase
                 type: request.Type ?? MemoryType.Episodic,
                 sessionId: request.SessionId,
                 importance: request.Importance ?? 0.5f,
-                metadata: metadata.ToDictionary(k => k.Key, v => v.Value.ToString() ?? string.Empty));
+                metadata: metadata.ToDictionary(k => k.Key, v => v.Value.ToString() ?? string.Empty),
+                cancellationToken: cancellationToken);
 
             LogStoredMemory(_logger, memory.Id, userId);
 
@@ -82,7 +83,7 @@ public partial class MemoryController : ControllerBase
     [HttpPost("search")]
     [ProducesResponseType(typeof(MemorySearchResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> SearchMemories([FromBody] MemorySearchRequest request)
+    public async Task<IActionResult> SearchMemories([FromBody] MemorySearchRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Query))
         {
@@ -99,7 +100,8 @@ public partial class MemoryController : ControllerBase
                 query: request.Query,
                 limit: request.Limit ?? 5,
                 sessionId: request.SessionId,
-                types: types);
+                types: types,
+                cancellationToken: cancellationToken);
 
             LogSearchedMemories(_logger, userId, results.Count);
 
@@ -140,7 +142,8 @@ public partial class MemoryController : ControllerBase
         [FromQuery] string? userId = null,
         [FromQuery] string? sessionId = null,
         [FromQuery] MemoryType? type = null,
-        [FromQuery] int limit = 100)
+        [FromQuery] int limit = 100,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -156,8 +159,8 @@ public partial class MemoryController : ControllerBase
                 options.Types = [type.Value];
             }
 
-            var memories = await _memoryService.GetAllAsync(userId ?? DefaultUserId, options);
-            var count = await _memoryStore.GetCountAsync(userId ?? DefaultUserId);
+            var memories = await _memoryService.GetAllAsync(userId ?? DefaultUserId, options, cancellationToken);
+            var count = await _memoryStore.GetCountAsync(userId ?? DefaultUserId, cancellationToken);
 
             return Ok(new MemoryListResponse
             {
@@ -188,11 +191,11 @@ public partial class MemoryController : ControllerBase
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(MemoryResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMemory(Guid id)
+    public async Task<IActionResult> GetMemory(Guid id, CancellationToken cancellationToken = default)
     {
         try
         {
-            var memory = await _memoryService.GetByIdAsync(id);
+            var memory = await _memoryService.GetByIdAsync(id, cancellationToken);
             if (memory == null)
             {
                 return NotFound(new { error = "Memory not found", id });
@@ -225,7 +228,7 @@ public partial class MemoryController : ControllerBase
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateMemory(Guid id, [FromBody] MemoryUpdateRequest request)
+    public async Task<IActionResult> UpdateMemory(Guid id, [FromBody] MemoryUpdateRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -233,12 +236,12 @@ public partial class MemoryController : ControllerBase
 
             if (!string.IsNullOrWhiteSpace(request.Content))
             {
-                updated = await _memoryService.UpdateContentAsync(id, request.Content);
+                updated = await _memoryService.UpdateContentAsync(id, request.Content, cancellationToken);
             }
 
             if (request.Importance.HasValue)
             {
-                updated = await _memoryService.UpdateImportanceAsync(id, request.Importance.Value) || updated;
+                updated = await _memoryService.UpdateImportanceAsync(id, request.Importance.Value, cancellationToken) || updated;
             }
 
             if (!updated)
@@ -264,11 +267,11 @@ public partial class MemoryController : ControllerBase
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteMemory(Guid id)
+    public async Task<IActionResult> DeleteMemory(Guid id, CancellationToken cancellationToken = default)
     {
         try
         {
-            var success = await _memoryService.DeleteAsync(id, hardDelete: false);
+            var success = await _memoryService.DeleteAsync(id, hardDelete: false, cancellationToken);
             if (!success)
             {
                 return NotFound(new { error = "Memory not found", id });

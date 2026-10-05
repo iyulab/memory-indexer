@@ -311,7 +311,7 @@ public class FactExtractionToolsTests
     public async Task GetFactCategories_ShouldReturnAllCategories()
     {
         // Act
-        var result = await FactExtractionTools.GetFactCategories();
+        var result = await FactExtractionTools.GetFactCategories(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -331,7 +331,7 @@ public class FactExtractionToolsTests
     public async Task GetPromotionPaths_ShouldReturnAllPaths()
     {
         // Act
-        var result = await FactExtractionTools.GetPromotionPaths();
+        var result = await FactExtractionTools.GetPromotionPaths(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();

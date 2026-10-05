@@ -2,6 +2,17 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.25.0] - Unreleased
+
+### Changed
+- **Cancelling an MCP request stops the work behind it.** 29 asynchronous MCP tools (security, knowledge graph,
+  self-editing memory, fact conflict/extraction, retention, profile evolution, conflict resolution, adaptive
+  retrieval, context) and the six `MemoryController` actions of the MCP server took no `CancellationToken`, so a
+  cancelled tool call or a dropped HTTP request ran to the end. Each now takes one (the MCP SDK binds it to the
+  request's token, ASP.NET Core to `RequestAborted`) and passes it on. The token never appears in a tool's input
+  schema — a test checks all 99 tools. The token is an optional last parameter, so source that calls these methods
+  directly still compiles; a binary compiled against 0.24.0 must be rebuilt.
+
 ## [v0.24.0] - 2026-10-05
 
 ### Fixed

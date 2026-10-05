@@ -115,7 +115,7 @@ public class ProfileEvolutionToolsTests
             .Returns(new List<IInferenceRule> { mockRule });
 
         // Act
-        var result = await _tools.GetInferenceRules();
+        var result = await _tools.GetInferenceRules(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();

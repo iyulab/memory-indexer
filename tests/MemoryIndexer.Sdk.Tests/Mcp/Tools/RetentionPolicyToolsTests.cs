@@ -211,7 +211,7 @@ public class RetentionPolicyToolsTests
         _mockPolicy.GetAllRules().Returns(rules);
 
         // Act
-        var result = await _tools.GetRetentionRules();
+        var result = await _tools.GetRetentionRules(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -241,7 +241,7 @@ public class RetentionPolicyToolsTests
         _mockPolicy.GetRule(SemanticStoreCategory.Fact).Returns(rule);
 
         // Act
-        var result = await _tools.GetRetentionRule("Fact");
+        var result = await _tools.GetRetentionRule("Fact", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -254,7 +254,7 @@ public class RetentionPolicyToolsTests
     public async Task GetRetentionRule_InvalidCategory_ShouldReturnError()
     {
         // Act
-        var result = await _tools.GetRetentionRule("InvalidCategory");
+        var result = await _tools.GetRetentionRule("InvalidCategory", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -269,7 +269,7 @@ public class RetentionPolicyToolsTests
         _mockPolicy.GetRule(SemanticStoreCategory.Goal).Returns(rule);
 
         // Act
-        var result = await _tools.GetRetentionRule("goal");
+        var result = await _tools.GetRetentionRule("goal", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();

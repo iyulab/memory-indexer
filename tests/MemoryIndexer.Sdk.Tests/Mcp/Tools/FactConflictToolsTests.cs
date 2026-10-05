@@ -272,7 +272,7 @@ public class FactConflictToolsTests
         _mockValidator.GetCategoryRule(FactCategory.Identity).Returns(rule);
 
         // Act
-        var result = await _tools.GetCategoryRule("Identity");
+        var result = await _tools.GetCategoryRule("Identity", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -285,7 +285,7 @@ public class FactConflictToolsTests
     public async Task GetCategoryRule_InvalidCategory_ShouldReturnError()
     {
         // Act
-        var result = await _tools.GetCategoryRule("InvalidCategory");
+        var result = await _tools.GetCategoryRule("InvalidCategory", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -300,7 +300,7 @@ public class FactConflictToolsTests
     public async Task GetAllCategoryRules_ShouldReturnAllRules()
     {
         // Act
-        var result = await FactConflictTools.GetAllCategoryRules();
+        var result = await FactConflictTools.GetAllCategoryRules(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Success.Should().BeTrue();
