@@ -66,7 +66,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Data.Should().NotBeNullOrEmpty();
         result.Metadata.Should().NotBeNull();
         result.Metadata!.UserId.Should().Be("user1");
@@ -117,7 +116,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Metadata!.FactCount.Should().Be(2); // Only Fact and Preference
     }
 
@@ -144,7 +142,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Metadata!.FactCount.Should().Be(2); // Fact and Preference only
     }
 
@@ -173,7 +170,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Metadata!.FactCount.Should().Be(1); // Only "recent" fact
     }
 
@@ -196,7 +192,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Metadata!.ActiveFactCount.Should().Be(1);
         result.Metadata.ArchivedFactCount.Should().Be(1);
         result.Metadata.FactCount.Should().Be(2);
@@ -221,7 +216,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Metadata!.ActiveFactCount.Should().Be(1);
         result.Metadata.ArchivedFactCount.Should().Be(0);
     }
@@ -249,7 +243,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Data.Should().Contain("[REDACTED]");
         result.Data.Should().NotContain("john@example.com");
         result.Data.Should().NotContain("123-456-7890");
@@ -271,7 +264,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
 
         // Verify valid JSON
         var parseAction = () => JsonDocument.Parse(result.Data!);
@@ -302,7 +294,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", options, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Data.Should().Contain("source");
         result.Data.Should().Contain("manual");
     }
@@ -332,7 +323,6 @@ public class JsonProfileExporterTests
         var result = await _exporter.ExportAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Data.Should().Contain("version");
         result.Data.Should().Contain("validFrom");
         result.Data.Should().Contain("supersedesKey");
@@ -474,7 +464,6 @@ public class JsonProfileExporterTests
 
     private static ExportedProfile ParseExport(ProfileExportResult result)
     {
-        result.Success.Should().BeTrue();
         return JsonSerializer.Deserialize<ExportedProfile>(result.Data!, ExportReadOptions)!;
     }
 

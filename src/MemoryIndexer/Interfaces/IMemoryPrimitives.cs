@@ -166,7 +166,7 @@ public interface IMemoryPrimitives
     /// <param name="request">Confirm request.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The confirmed memory with updated count, or null if not found.</returns>
-    Task<ConfirmResult> ConfirmAsync(ConfirmRequest request, CancellationToken cancellationToken = default);
+    Task<ConfirmResult?> ConfirmAsync(ConfirmRequest request, CancellationToken cancellationToken = default);
 
     #endregion
 }
@@ -773,11 +773,6 @@ public sealed class ConfirmRequest
 public sealed record ConfirmResult
 {
     /// <summary>
-    /// Whether the confirmation succeeded.
-    /// </summary>
-    public bool Success { get; init; }
-
-    /// <summary>
     /// The confirmed memory with updated values.
     /// </summary>
     public MemoryUnit? Memory { get; init; }
@@ -806,29 +801,6 @@ public sealed record ConfirmResult
     /// Whether the memory is now eligible for Archive promotion.
     /// </summary>
     public bool IsArchiveEligible { get; init; }
-
-    /// <summary>
-    /// Error message if confirmation failed.
-    /// </summary>
-    public string? Error { get; init; }
-
-    /// <summary>
-    /// Creates a failure result.
-    /// </summary>
-    public static ConfirmResult Failure(string error) => new()
-    {
-        Success = false,
-        Error = error
-    };
-
-    /// <summary>
-    /// Creates a not-found result.
-    /// </summary>
-    public static ConfirmResult NotFound(Guid memoryId) => new()
-    {
-        Success = false,
-        Error = $"Memory {memoryId} not found"
-    };
 }
 
 #endregion

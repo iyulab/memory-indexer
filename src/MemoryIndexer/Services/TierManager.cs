@@ -100,14 +100,8 @@ public sealed partial class TierManager : ITierManager
 
         if (targetTier <= originalTier)
         {
-            return Task.FromResult(new TierPromotionResult
-            {
-                Success = false,
-                OriginalTier = originalTier,
-                NewTier = originalTier,
-                Reason = reason,
-                Error = $"Target tier {targetTier} must be higher than current tier {originalTier}"
-            });
+            throw new ArgumentOutOfRangeException(nameof(targetTier), targetTier,
+                $"Target tier {targetTier} must be higher than current tier {originalTier}");
         }
 
         // Update memory tier
@@ -132,7 +126,6 @@ public sealed partial class TierManager : ITierManager
 
         return Task.FromResult(new TierPromotionResult
         {
-            Success = true,
             UpdatedMemory = memory,
             OriginalTier = originalTier,
             NewTier = targetTier,
@@ -153,14 +146,8 @@ public sealed partial class TierManager : ITierManager
 
         if (targetTier >= originalTier)
         {
-            return Task.FromResult(new TierPromotionResult
-            {
-                Success = false,
-                OriginalTier = originalTier,
-                NewTier = originalTier,
-                Reason = reason,
-                Error = $"Target tier {targetTier} must be lower than current tier {originalTier}"
-            });
+            throw new ArgumentOutOfRangeException(nameof(targetTier), targetTier,
+                $"Target tier {targetTier} must be lower than current tier {originalTier}");
         }
 
         // Update memory tier
@@ -175,7 +162,6 @@ public sealed partial class TierManager : ITierManager
 
         return Task.FromResult(new TierPromotionResult
         {
-            Success = true,
             UpdatedMemory = memory,
             OriginalTier = originalTier,
             NewTier = targetTier,

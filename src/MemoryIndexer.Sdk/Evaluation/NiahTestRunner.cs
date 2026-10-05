@@ -100,11 +100,6 @@ public class NiahTestRunner
 
             result.Success = result.NeedleFound && result.Ccr < config.TargetCcr;
         }
-        catch (Exception ex)
-        {
-            result.Success = false;
-            result.Error = ex.Message;
-        }
         finally
         {
             result.CompletedAt = DateTimeOffset.UtcNow;
@@ -322,11 +317,6 @@ public class NiahTestRunner
             // Success: recovery rate meets target AND CCR is acceptable
             result.Success = result.RecoveryRate >= config.MinNeedleRecoveryRate &&
                              result.Ccr <= config.TargetCcr;
-        }
-        catch (Exception ex)
-        {
-            result.Success = false;
-            result.Error = ex.Message;
         }
         finally
         {
@@ -598,10 +588,6 @@ public class NiahTestResult
     /// </summary>
     public DateTimeOffset CompletedAt { get; set; }
 
-    /// <summary>
-    /// Error message if test failed.
-    /// </summary>
-    public string? Error { get; set; }
 }
 
 /// <summary>
@@ -826,10 +812,6 @@ public class MultiNeedleTestResult
     /// </summary>
     public DateTimeOffset CompletedAt { get; set; }
 
-    /// <summary>
-    /// Error message if test failed.
-    /// </summary>
-    public string? Error { get; set; }
 }
 
 /// <summary>

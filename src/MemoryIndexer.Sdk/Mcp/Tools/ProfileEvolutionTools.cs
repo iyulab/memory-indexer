@@ -326,14 +326,17 @@ public class ProfileEvolutionTools
             IncludeHistory = includeHistory
         };
 
-        var result = await _profileExporter.ExportAsync(userId, options, cancellationToken);
-
-        if (!result.Success)
+        ProfileExportResult result;
+        try
+        {
+            result = await _profileExporter.ExportAsync(userId, options, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new ExportProfileResult
             {
                 Success = false,
-                Message = result.ErrorMessage
+                Message = ex.Message
             };
         }
 

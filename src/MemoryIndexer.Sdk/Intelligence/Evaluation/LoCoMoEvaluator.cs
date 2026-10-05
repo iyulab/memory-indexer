@@ -64,7 +64,7 @@ public sealed partial class LoCoMoEvaluator : ILoCoMoEvaluator
 
                 LogQueryQueryIdTypeSuccessSuccess(_logger, testQuery.Id, testQuery.QueryType, result.Success, result.Recall, result.MeanReciprocalRank);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 LogFailedEvaluateQueryQueryId(_logger, ex, testQuery.Id);
                 queryResults.Add(new LoCoMoQueryResult

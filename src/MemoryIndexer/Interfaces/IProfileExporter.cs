@@ -114,16 +114,6 @@ public class ProfileExportOptions
 public class ProfileExportResult
 {
     /// <summary>
-    /// Whether export was successful.
-    /// </summary>
-    public bool Success { get; set; }
-
-    /// <summary>
-    /// Error message if export failed.
-    /// </summary>
-    public string? ErrorMessage { get; set; }
-
-    /// <summary>
     /// Export metadata.
     /// </summary>
     public ProfileExportMetadata? Metadata { get; set; }

@@ -116,11 +116,6 @@ public class CognitiveScenarioTests
 
             result.RecalledMemories = recalledContents;
         }
-        catch (Exception ex)
-        {
-            result.Success = false;
-            result.Error = ex.Message;
-        }
         finally
         {
             result.CompletedAt = DateTimeOffset.UtcNow;
@@ -192,11 +187,6 @@ public class CognitiveScenarioTests
 
             result.Success = result.RetentionRate >= config.MinRetentionRate;
             result.RecalledMemories = recalledContents;
-        }
-        catch (Exception ex)
-        {
-            result.Success = false;
-            result.Error = ex.Message;
         }
         finally
         {
@@ -429,7 +419,6 @@ public record FalseMemoryTestResult
     public IReadOnlyList<string> RecalledMemories { get; set; } = [];
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset CompletedAt { get; set; }
-    public string? Error { get; set; }
 }
 
 /// <summary>
@@ -446,7 +435,6 @@ public record CrossSessionTestResult
     public IReadOnlyList<string> RecalledMemories { get; set; } = [];
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset CompletedAt { get; set; }
-    public string? Error { get; set; }
 }
 
 /// <summary>

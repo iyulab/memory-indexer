@@ -26,18 +26,8 @@ public class PublicApiConventionTests
 
     private static readonly string[] KnownResultReturns =
     [
-        "MemoryIndexer.Interfaces.IMemoryExporter.ImportAsync(MemoryExportPackage, ImportOptions, CancellationToken)",
-        "MemoryIndexer.Interfaces.IMemoryExporter.ImportFromStreamAsync(Stream, ImportOptions, CancellationToken)",
-        "MemoryIndexer.Interfaces.IMemoryPrimitives.ConfirmAsync(ConfirmRequest, CancellationToken)",
-        "MemoryIndexer.Interfaces.IProfileExporter.ExportAsync(String, ProfileExportOptions, CancellationToken)",
-        "MemoryIndexer.Interfaces.IShortTermMemoryOrchestrator.ArchiveToSessionAsync(String, WorkingPromotionTrigger, Boolean, CancellationToken)",
-        "MemoryIndexer.Interfaces.ITierManager.DemoteAsync(MemoryUnit, Tier, PromotionReason, CancellationToken)",
-        "MemoryIndexer.Interfaces.ITierManager.PromoteAsync(MemoryUnit, Tier, PromotionReason, CancellationToken)",
-        "MemoryIndexer.Sdk.Evaluation.CognitiveScenarioTests.RunCrossSessionRetentionTestAsync(CrossSessionTestConfig, CancellationToken)",
-        "MemoryIndexer.Sdk.Evaluation.CognitiveScenarioTests.RunFalseMemoryTestAsync(FalseMemoryTestConfig, CancellationToken)",
-        "MemoryIndexer.Sdk.Evaluation.NiahTestRunner.RunMultiNeedleTestAsync(MultiNeedleTestConfig, CancellationToken)",
-        "MemoryIndexer.Sdk.Evaluation.NiahTestRunner.RunTestAsync(NiahTestConfig, CancellationToken)",
-        "MemoryIndexer.Sdk.Intelligence.Consolidation.IMemoryConsolidator.ConsolidateAsync(ConsolidationOptions, CancellationToken)",
+        // A metric, not a failure channel: Success is hit@k for one benchmark query (the method throws when it cannot
+        // run); Error is filled only by the suite runner for a query that threw, so the suite reports every query.
         "MemoryIndexer.Sdk.Intelligence.Evaluation.ILoCoMoEvaluator.EvaluateQueryAsync(IMemoryStore, LoCoMoTestQuery, String, CancellationToken)",
         // MCP tool: the return value is what the model reads, so a failed policy run is reported to it as data.
         // The service underneath throws; the tool lets the caller's cancellation through.

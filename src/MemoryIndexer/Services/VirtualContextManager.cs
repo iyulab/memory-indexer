@@ -139,13 +139,13 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             if (evicted != null)
             {
                 // Handle evicted memory - demote using tier manager
-                var demoteResult = await _tierManager.DemoteAsync(
+                var demoteResult = await DemoteIfLowerAsync(
                     evicted,
                     Tier.Long,
                     PromotionReason.CapacityEviction,
                     cancellationToken);
 
-                if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+                if (demoteResult?.UpdatedMemory != null)
                 {
                     await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
                     LogEvictedMemory(_logger, evicted.Id);
@@ -153,13 +153,13 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             }
 
             // Promote memory using tier manager
-            var promoteResult = await _tierManager.PromoteAsync(
+            var promoteResult = await PromoteIfHigherAsync(
                 memory,
                 Tier.Short,
                 PromotionReason.Manual,
                 cancellationToken);
 
-            if (promoteResult.Success && promoteResult.UpdatedMemory != null)
+            if (promoteResult?.UpdatedMemory != null)
             {
                 promoteResult.UpdatedMemory.RecordAccess();
                 await _memoryStore.UpdateAsync(promoteResult.UpdatedMemory, cancellationToken);
@@ -218,25 +218,25 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
 
         if (evicted != null)
         {
-            var demoteResult = await _tierManager.DemoteAsync(
+            var demoteResult = await DemoteIfLowerAsync(
                 evicted,
                 Tier.Long,
                 PromotionReason.CapacityEviction,
                 cancellationToken);
 
-            if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+            if (demoteResult?.UpdatedMemory != null)
             {
                 await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
             }
         }
 
-        var promoteResult = await _tierManager.PromoteAsync(
+        var promoteResult = await PromoteIfHigherAsync(
             memory,
             Tier.Short,
             PromotionReason.Manual,
             cancellationToken);
 
-        if (promoteResult.Success && promoteResult.UpdatedMemory != null)
+        if (promoteResult?.UpdatedMemory != null)
         {
             promoteResult.UpdatedMemory.RecordAccess();
             await _memoryStore.UpdateAsync(promoteResult.UpdatedMemory, cancellationToken);
@@ -245,7 +245,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
         await UpdateStateAsync(cancellationToken);
         await MaybeAutoEvictAsync(cancellationToken);
 
-        return promoteResult.UpdatedMemory;
+        return promoteResult?.UpdatedMemory;
     }
 
     /// <inheritdoc />
@@ -266,13 +266,13 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             var demoted = await _workingMemory.DemoteAsync(candidate.Id, cancellationToken);
             if (demoted != null)
             {
-                var demoteResult = await _tierManager.DemoteAsync(
+                var demoteResult = await DemoteIfLowerAsync(
                     demoted,
                     Tier.Long,
                     PromotionReason.LowRetention,
                     cancellationToken);
 
-                if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+                if (demoteResult?.UpdatedMemory != null)
                 {
                     await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
                     pagedOut.Add(demoteResult.UpdatedMemory);
@@ -320,13 +320,13 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             var demoted = await _workingMemory.DemoteAsync(candidate.Id, cancellationToken);
             if (demoted != null)
             {
-                var demoteResult = await _tierManager.DemoteAsync(
+                var demoteResult = await DemoteIfLowerAsync(
                     demoted,
                     Tier.Long,
                     PromotionReason.CapacityEviction,
                     cancellationToken);
 
-                if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+                if (demoteResult?.UpdatedMemory != null)
                 {
                     await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
                     demotedCount++;
@@ -449,13 +449,13 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
 
                 if (recommendation.ShouldPromote && recommendation.TargetTier == Tier.Archive)
                 {
-                    var promoteResult = await _tierManager.PromoteAsync(
+                    var promoteResult = await PromoteIfHigherAsync(
                         memory,
                         Tier.Archive,
                         recommendation.Reason,
                         cancellationToken);
 
-                    if (promoteResult.Success)
+                    if (promoteResult is not null)
                     {
                         promotedCount++;
                         // Memory already updated by tier manager
@@ -584,13 +584,13 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             // Migrate memories above retention threshold to Archive tier using tier manager
             if (memory.RetentionScore >= _options.SessionMigrationThreshold)
             {
-                var promoteResult = await _tierManager.PromoteAsync(
+                var promoteResult = await PromoteIfHigherAsync(
                     memory,
                     Tier.Archive,
                     PromotionReason.SessionBoundary,
                     cancellationToken);
 
-                if (promoteResult.Success && promoteResult.UpdatedMemory != null)
+                if (promoteResult?.UpdatedMemory != null)
                 {
                     await _memoryStore.UpdateAsync(promoteResult.UpdatedMemory, cancellationToken);
                     migratedIds.Add(promoteResult.UpdatedMemory.Id);
@@ -698,13 +698,13 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
                 var demoted = await _workingMemory.DemoteAsync(item.Memory.Id, cancellationToken);
                 if (demoted != null)
                 {
-                    var demoteResult = await _tierManager.DemoteAsync(
+                    var demoteResult = await DemoteIfLowerAsync(
                         demoted,
                         Tier.Long,
                         PromotionReason.LowRetention,
                         cancellationToken);
 
-                    if (demoteResult.Success && demoteResult.UpdatedMemory != null)
+                    if (demoteResult?.UpdatedMemory != null)
                     {
                         await _memoryStore.UpdateAsync(demoteResult.UpdatedMemory, cancellationToken);
                     }
@@ -880,6 +880,20 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
     }
 
     #endregion
+
+    // A move toward a tier the memory is already at (or past) is skipped here rather than asked of ITierManager,
+    // which treats it as a caller error.
+    private async Task<TierPromotionResult?> PromoteIfHigherAsync(
+        MemoryUnit memory, Tier targetTier, PromotionReason reason, CancellationToken cancellationToken) =>
+        targetTier > memory.Tier
+            ? await _tierManager.PromoteAsync(memory, targetTier, reason, cancellationToken)
+            : null;
+
+    private async Task<TierPromotionResult?> DemoteIfLowerAsync(
+        MemoryUnit memory, Tier targetTier, PromotionReason reason, CancellationToken cancellationToken) =>
+        targetTier < memory.Tier
+            ? await _tierManager.DemoteAsync(memory, targetTier, reason, cancellationToken)
+            : null;
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Initializing VCM for user {UserId}, session {SessionId}")]
     private static partial void LogInitializingVcm(ILogger logger, string userId, string sessionId);

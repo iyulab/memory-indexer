@@ -99,10 +99,10 @@ public class VirtualContextManagerAutoEvictionTests
             var tierManager = Substitute.For<ITierManager>();
             tierManager
                 .PromoteAsync(Arg.Any<MemoryUnit>(), Arg.Any<Tier>(), Arg.Any<PromotionReason>(), Arg.Any<CancellationToken>())
-                .Returns(call => new TierPromotionResult { Success = true, UpdatedMemory = call.Arg<MemoryUnit>() });
+                .Returns(call => new TierPromotionResult { UpdatedMemory = call.Arg<MemoryUnit>() });
             tierManager
                 .DemoteAsync(Arg.Any<MemoryUnit>(), Arg.Any<Tier>(), Arg.Any<PromotionReason>(), Arg.Any<CancellationToken>())
-                .Returns(call => new TierPromotionResult { Success = true, UpdatedMemory = call.Arg<MemoryUnit>() });
+                .Returns(call => new TierPromotionResult { UpdatedMemory = call.Arg<MemoryUnit>() });
 
             _manager = new VirtualContextManager(
                 WorkingMemory,

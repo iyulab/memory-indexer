@@ -114,11 +114,21 @@ public class BackupRestoreTools(IMemoryExporter exporter, IOptions<MemoryIndexer
             ValidateBeforeImport = true
         };
 
-        var result = await exporter.ImportAsync(package, options, cancellationToken);
+        ImportResult result;
+        try
+        {
+            result = await exporter.ImportAsync(package, options, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return new ImportResultSummary { Success = false, Message = $"Import failed: {ex.Message}" };
+        }
 
+        // A partial import is not a completed one: memories that failed are reported as such.
+        var complete = result.FailedCount == 0 && result.Errors.Count == 0;
         return new ImportResultSummary
         {
-            Success = result.Success,
+            Success = complete,
             ImportedCount = result.ImportedCount,
             SkippedCount = result.SkippedCount,
             ReplacedCount = result.ReplacedCount,
@@ -126,7 +136,7 @@ public class BackupRestoreTools(IMemoryExporter exporter, IOptions<MemoryIndexer
             ConflictsCount = result.Conflicts.Count,
             ErrorsCount = result.Errors.Count,
             DurationMs = (int)result.Duration.TotalMilliseconds,
-            Message = result.Success
+            Message = complete
                 ? $"Import completed: {result.ImportedCount} imported, {result.SkippedCount} skipped"
                 : $"Import had issues: {result.FailedCount} failed, {result.Errors.Count} errors"
         };

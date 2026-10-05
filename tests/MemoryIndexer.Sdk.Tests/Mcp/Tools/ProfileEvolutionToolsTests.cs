@@ -351,7 +351,6 @@ public class ProfileEvolutionToolsTests
         // Arrange
         var exportResult = new ProfileExportResult
         {
-            Success = true,
             Data = "{\"activeFacts\": []}",
             Metadata = new ProfileExportMetadata
             {
@@ -393,7 +392,6 @@ public class ProfileEvolutionToolsTests
                 Arg.Any<CancellationToken>())
             .Returns(new ProfileExportResult
             {
-                Success = true,
                 Data = "{}",
                 Metadata = new ProfileExportMetadata { UserId = "user1", Format = "json" }
             });
@@ -411,11 +409,7 @@ public class ProfileEvolutionToolsTests
     {
         // Arrange
         _mockProfileExporter.ExportAsync("user1", Arg.Any<ProfileExportOptions>(), Arg.Any<CancellationToken>())
-            .Returns(new ProfileExportResult
-            {
-                Success = false,
-                ErrorMessage = "Export failed"
-            });
+            .Returns<ProfileExportResult>(_ => throw new InvalidOperationException("Export failed"));
 
         // Act
         var result = await _tools.ExportProfile("user1", cancellationToken: TestContext.Current.CancellationToken);

@@ -41,66 +41,53 @@ public partial class JsonProfileExporter : IProfileExporter
         ProfileExportOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        try
+        options ??= new ProfileExportOptions();
+
+        // Get all facts
+        var allFacts = await _archiveStore.GetAllAsync(userId, cancellationToken);
+        var factsList = allFacts.ToList();
+
+        // Apply filters
+        var filteredFacts = ApplyFilters(factsList, options);
+
+        // Separate active and archived
+        var activeFacts = filteredFacts.Where(f => f.IsActive).ToList();
+        var archivedFacts = options.IncludeArchived
+            ? filteredFacts.Where(f => !f.IsActive).ToList()
+            : null;
+
+        // Build metadata
+        var metadata = BuildMetadata(userId, activeFacts, archivedFacts, options);
+
+        // Convert to exported format
+        var exportedActiveFacts = activeFacts.Select(f => ToExportedFact(f, options)).ToList();
+        var exportedArchivedFacts = archivedFacts?.Select(f => ToExportedFact(f, options)).ToList();
+
+        // Build export object
+        var export = new ExportedProfile
         {
-            options ??= new ProfileExportOptions();
+            Metadata = metadata,
+            ActiveFacts = exportedActiveFacts,
+            ArchivedFacts = exportedArchivedFacts
+        };
 
-            // Get all facts
-            var allFacts = await _archiveStore.GetAllAsync(userId, cancellationToken);
-            var factsList = allFacts.ToList();
+        // Serialize to JSON
+        var json = JsonSerializer.Serialize(export, JsonOptions);
 
-            // Apply filters
-            var filteredFacts = ApplyFilters(factsList, options);
+        // Calculate checksum
+        metadata.Checksum = ComputeChecksum(json);
+        metadata.SizeBytes = Encoding.UTF8.GetByteCount(json);
 
-            // Separate active and archived
-            var activeFacts = filteredFacts.Where(f => f.IsActive).ToList();
-            var archivedFacts = options.IncludeArchived
-                ? filteredFacts.Where(f => !f.IsActive).ToList()
-                : null;
+        // Re-serialize with checksum
+        json = JsonSerializer.Serialize(export, JsonOptions);
 
-            // Build metadata
-            var metadata = BuildMetadata(userId, activeFacts, archivedFacts, options);
+        LogExportedProfileUserUserIdFactCount(_logger, userId, metadata.FactCount, metadata.SizeBytes);
 
-            // Convert to exported format
-            var exportedActiveFacts = activeFacts.Select(f => ToExportedFact(f, options)).ToList();
-            var exportedArchivedFacts = archivedFacts?.Select(f => ToExportedFact(f, options)).ToList();
-
-            // Build export object
-            var export = new ExportedProfile
-            {
-                Metadata = metadata,
-                ActiveFacts = exportedActiveFacts,
-                ArchivedFacts = exportedArchivedFacts
-            };
-
-            // Serialize to JSON
-            var json = JsonSerializer.Serialize(export, JsonOptions);
-
-            // Calculate checksum
-            metadata.Checksum = ComputeChecksum(json);
-            metadata.SizeBytes = Encoding.UTF8.GetByteCount(json);
-
-            // Re-serialize with checksum
-            json = JsonSerializer.Serialize(export, JsonOptions);
-
-            LogExportedProfileUserUserIdFactCount(_logger, userId, metadata.FactCount, metadata.SizeBytes);
-
-            return new ProfileExportResult
-            {
-                Success = true,
-                Metadata = metadata,
-                Data = json
-            };
-        }
-        catch (Exception ex)
+        return new ProfileExportResult
         {
-            LogFailedExportProfileUserUserId(_logger, ex, userId);
-            return new ProfileExportResult
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
-        }
+            Metadata = metadata,
+            Data = json
+        };
     }
 
     /// <inheritdoc />
@@ -112,12 +99,7 @@ public partial class JsonProfileExporter : IProfileExporter
     {
         var result = await ExportAsync(userId, options, cancellationToken);
 
-        if (!result.Success || result.Data == null)
-        {
-            throw new InvalidOperationException(result.ErrorMessage ?? "Export failed");
-        }
-
-        var bytes = Encoding.UTF8.GetBytes(result.Data);
+        var bytes = Encoding.UTF8.GetBytes(result.Data!);
         await outputStream.WriteAsync(bytes, cancellationToken);
 
         return result.Metadata!;
@@ -253,6 +235,4 @@ public partial class JsonProfileExporter : IProfileExporter
     [LoggerMessage(Level = LogLevel.Information, Message = "Exported profile for user {UserId}: {FactCount} facts, {Size} bytes")]
     private static partial void LogExportedProfileUserUserIdFactCount(ILogger logger, string userId, int factCount, long size);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to export profile for user {UserId}")]
-    private static partial void LogFailedExportProfileUserUserId(ILogger logger, Exception ex, string userId);
 }

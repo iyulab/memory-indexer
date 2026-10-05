@@ -294,11 +294,6 @@ public class ExportStatistics
 public class ImportResult
 {
     /// <summary>
-    /// Whether the import was successful.
-    /// </summary>
-    public bool Success { get; set; }
-
-    /// <summary>
     /// Number of memories successfully imported.
     /// </summary>
     public int ImportedCount { get; set; }

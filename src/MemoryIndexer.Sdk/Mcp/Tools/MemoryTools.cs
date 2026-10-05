@@ -381,12 +381,12 @@ public sealed class MemoryTools(
             Source = source ?? "mcp_tool"
         }, cancellationToken);
 
-        if (!result.Success)
+        if (result is null)
         {
             return new ConfirmMemoryResult
             {
                 Success = false,
-                Message = result.Error ?? "Confirmation failed"
+                Message = $"Memory {id} not found"
             };
         }
 

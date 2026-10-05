@@ -12,6 +12,14 @@ All notable changes to Memory Indexer are documented here.
 - **The background promotion worker keeps going when one user fails.** A failure for one user stopped that phase for
   every user after it in the cycle; each user is now handled on its own and the failure is logged with the user id.
   Stopping the host no longer reports the cancellation as a promotion error.
+- **Archiving working memory to the session tier now stores the session summary.** `ArchiveToSessionAsync` built the
+  summary memory and returned its `SummaryId`, but never wrote it, so the id pointed at nothing. It also cleared the
+  user's working state before demoting the memories, so a failed demotion lost track of them; the state is now cleared
+  after. `MemoriesArchived` counts the memories actually demoted. The orchestrator takes `IMemoryStore` (registered by
+  `AddMemoryIndexer`).
+- **The `ImportMemories` MCP tool no longer reports a partial import as complete.** With a conflict mode other than `Fail`,
+  memories that failed left the result successful and the message said "Import completed".
+- Exporting a profile to a stream no longer turns every failure (cancellation included) into an `InvalidOperationException`.
 
 ### Changed
 - **Promotion and retention services report a failure by throwing instead of returning a result that says it failed.**
@@ -23,6 +31,22 @@ All notable changes to Memory Indexer are documented here.
   **Breaking**: `Success`/`Error` are removed from `FastTrackResult`, `FastTrackBatchResult`, `BufferPromotionResult` and
   `ArchivePromotionResult` (with their `Failure(...)` factories); `Success`, `ErrorMessage`, `Errors` and
   `UsersProcessed` from `RetentionResult`. Replace the flag checks with a `try`/`catch`.
+- **The tier, archival, export/import and consolidation services follow the same rule.**
+  - `ITierManager.PromoteAsync`/`DemoteAsync` throw `ArgumentOutOfRangeException` for a move that does not go up
+    (promote) or down (demote); `VirtualContextManager` skips such moves itself, as before.
+  - `IShortTermMemoryOrchestrator.ArchiveToSessionAsync`, `IProfileExporter.ExportAsync` and
+    `IMemoryConsolidator.ConsolidateAsync` throw.
+  - `IMemoryExporter.ImportAsync`/`ImportFromStreamAsync` throw when the package cannot be imported (validation failure
+    in `Fail` mode: `InvalidDataException`; a stream without a package: `InvalidDataException`). Per-memory failures are
+    still reported in `FailedCount` and `Errors`.
+  - `IMemoryPrimitives.ConfirmAsync` returns `null` for a memory that does not exist, like the other primitives.
+  - The NIAH and cognitive evaluation runners let an error propagate instead of recording it as a failed test; `Success`
+    is the pass/fail verdict only.
+  **Breaking**: `Success`/`Error` removed from `TierPromotionResult` and `WorkingArchivalResult` (with
+  `WorkingArchivalResult.Failure`), `Success`/`ErrorMessage` from `ProfileExportResult` and `ConsolidationResult`,
+  `ImportResult.Success`, `ConfirmResult.Success`/`Error`/`Failure`/`NotFound` (`ConfirmAsync` now returns
+  `Task<ConfirmResult?>`), and `Error` from the NIAH and cognitive test results. The `ShortTermMemoryOrchestratorService`
+  constructor takes an `IMemoryStore`.
 
 ### Removed
 - **Breaking:** `IRetentionPolicyService.ApplyToAllAsync`. It did nothing and reported success: the archive store cannot

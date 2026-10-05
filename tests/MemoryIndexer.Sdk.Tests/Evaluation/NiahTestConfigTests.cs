@@ -79,7 +79,6 @@ public class NiahTestResultTests
         Assert.Null(result.NeedleRank);
         Assert.Equal(0, result.Ccr);
         Assert.Equal(0, result.HaystackTokens);
-        Assert.Null(result.Error);
     }
 
     [Fact]
@@ -105,22 +104,6 @@ public class NiahTestResultTests
         Assert.True(result.NeedleFound);
         Assert.Equal(1, result.NeedleRank);
         Assert.True(result.Ccr < 0.01);  // Below 1% target
-    }
-
-    [Fact]
-    public void NiahTestResult_FailedTest_HasErrorMessage()
-    {
-        // Arrange & Act
-        var result = new NiahTestResult
-        {
-            Success = false,
-            NeedleFound = false,
-            Error = "Needle not found in recalled memories"
-        };
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.Error);
     }
 }
 
@@ -290,7 +273,6 @@ public class MultiNeedleTestResultTests
         Assert.Equal(0, result.NeedlesFound);
         Assert.Equal(0, result.RecoveryRate);
         Assert.Empty(result.NeedleResults);
-        Assert.Null(result.Error);
     }
 
     [Fact]

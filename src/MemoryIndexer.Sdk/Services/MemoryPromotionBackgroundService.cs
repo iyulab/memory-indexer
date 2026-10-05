@@ -170,14 +170,7 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
                             summarize: true,
                             cancellationToken);
 
-                        if (result.Success)
-                        {
-                            LogArchivalSucceeded(_logger, result.MemoriesArchived);
-                        }
-                        else
-                        {
-                            LogArchivalFailed(_logger, result.Error);
-                        }
+                        LogArchivalSucceeded(_logger, result.MemoriesArchived);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
@@ -274,8 +267,6 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
     [LoggerMessage(Level = LogLevel.Information, Message = "[BACKGROUND] Archival succeeded: {Count} memories archived")]
     private static partial void LogArchivalSucceeded(ILogger logger, int count);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Archival failed: {Error}")]
-    private static partial void LogArchivalFailed(ILogger logger, string? error);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Archival failed for user {UserId}")]
     private static partial void LogArchivalThrew(ILogger logger, Exception exception, string userId);

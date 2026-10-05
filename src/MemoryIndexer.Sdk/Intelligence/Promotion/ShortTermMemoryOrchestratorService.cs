@@ -23,6 +23,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemoryOrchestrator
 {
     private readonly IShortTermMemory _workingMemory;
+    private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
     private readonly WorkingMemoryOptions _options;
     private readonly ILogger<ShortTermMemoryOrchestratorService> _logger;
@@ -32,11 +33,13 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
 
     public ShortTermMemoryOrchestratorService(
         IShortTermMemory workingMemory,
+        IMemoryStore memoryStore,
         IEmbeddingService embeddingService,
         IOptions<MemoryIndexerOptions> options,
         ILogger<ShortTermMemoryOrchestratorService> logger)
     {
         _workingMemory = workingMemory;
+        _memoryStore = memoryStore;
         _embeddingService = embeddingService;
         _options = options.Value.WorkingMemory;
         _logger = logger;
@@ -166,81 +169,74 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
 
         LogTriggerArchiving(_logger, trigger, memoriesToArchive.Count, userId);
 
-        try
+        Guid? summaryId = null;
+
+        if (summarize && _options.SummarizeBeforeArchival && memoriesToArchive.Count > 1)
         {
-            Guid? summaryId = null;
+            // Create extractive summary of all memories
+            var summaryContent = CreateExtractiveSummary(memoriesToArchive);
 
-            if (summarize && _options.SummarizeBeforeArchival && memoriesToArchive.Count > 1)
+            // Generate embedding for summary
+            var summaryEmbedding = await _embeddingService.GenerateEmbeddingAsync(
+                summaryContent, cancellationToken);
+
+            // Create session summary memory
+            var sessionSummary = new MemoryUnit
             {
-                // Create extractive summary of all memories
-                var summaryContent = CreateExtractiveSummary(memoriesToArchive);
-
-                // Generate embedding for summary
-                var summaryEmbedding = await _embeddingService.GenerateEmbeddingAsync(
-                    summaryContent, cancellationToken);
-
-                // Create session summary memory
-                var sessionSummary = new MemoryUnit
+                Content = summaryContent,
+                UserId = userId,
+                SessionId = state.SessionId,
+                Embedding = summaryEmbedding,
+                Type = MemoryType.Semantic, // Summarized content becomes semantic
+                Tier = Tier.Long,
+                Stability = MemoryStability.Stable,
+                ImportanceScore = CalculateSessionImportance(memoriesToArchive),
+                Topics = ExtractTopicsFromMemories(memoriesToArchive),
+                Metadata = new Dictionary<string, string>
                 {
-                    Content = summaryContent,
-                    UserId = userId,
-                    SessionId = state.SessionId,
-                    Embedding = summaryEmbedding,
-                    Type = MemoryType.Semantic, // Summarized content becomes semantic
-                    Tier = Tier.Long,
-                    Stability = MemoryStability.Stable,
-                    ImportanceScore = CalculateSessionImportance(memoriesToArchive),
-                    Topics = ExtractTopicsFromMemories(memoriesToArchive),
-                    Metadata = new Dictionary<string, string>
-                    {
-                        ["source"] = "working_archival",
-                        ["archival_trigger"] = trigger.ToString(),
-                        ["memory_count"] = memoriesToArchive.Count.ToString(CultureInfo.InvariantCulture),
-                        ["original_tokens"] = state.TotalTokens.ToString(CultureInfo.InvariantCulture),
-                        ["summary_tokens"] = EstimateTokens(summaryContent).ToString(CultureInfo.InvariantCulture)
-                    }
-                };
-
-                summaryId = sessionSummary.Id;
-
-                LogCreatedSessionSummary(_logger, summaryId, userId);
-            }
-
-            // Clear working memory state for this user
-            lock (state.Lock)
-            {
-                state.Reset();
-            }
-
-            // Demote memories from working memory to session tier
-            var demotedCount = 0;
-            foreach (var memory in memoriesToArchive)
-            {
-                var demoted = await _workingMemory.DemoteAsync(memory.Id, cancellationToken);
-                if (demoted != null)
-                {
-                    demotedCount++;
-                    var truncatedContent = memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content;
-                    LogArchived(_logger, truncatedContent);
+                    ["source"] = "working_archival",
+                    ["archival_trigger"] = trigger.ToString(),
+                    ["memory_count"] = memoriesToArchive.Count.ToString(CultureInfo.InvariantCulture),
+                    ["original_tokens"] = state.TotalTokens.ToString(CultureInfo.InvariantCulture),
+                    ["summary_tokens"] = EstimateTokens(summaryContent).ToString(CultureInfo.InvariantCulture)
                 }
-            }
-
-            var summaryCreated = summaryId.HasValue ? "Created" : "Skipped";
-            LogSuccessfullyArchived(_logger, demotedCount, userId, summaryCreated);
-
-            return new WorkingArchivalResult
-            {
-                Success = true,
-                Trigger = trigger,
-                MemoriesArchived = memoriesToArchive.Count,
-                SummaryId = summaryId
             };
+
+            // Store it: before, the summary was built and its id returned, but it was never written anywhere.
+            await _memoryStore.StoreAsync(sessionSummary, cancellationToken);
+            summaryId = sessionSummary.Id;
+
+            LogCreatedSessionSummary(_logger, summaryId, userId);
         }
-        catch (Exception ex)
+
+        // Demote memories from working memory to session tier
+        var demotedCount = 0;
+        foreach (var memory in memoriesToArchive)
         {
-            LogFailedToArchive(_logger, ex, userId);
-            return WorkingArchivalResult.Failure(ex.Message);
+            var demoted = await _workingMemory.DemoteAsync(memory.Id, cancellationToken);
+            if (demoted != null)
+            {
+                demotedCount++;
+                var truncatedContent = memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content;
+                LogArchived(_logger, truncatedContent);
+            }
         }
+
+        // Clear the working state only once the memories have left it, so a failed demotion is retried next cycle.
+        lock (state.Lock)
+        {
+            state.Reset();
+        }
+
+        var summaryCreated = summaryId.HasValue ? "Created" : "Skipped";
+        LogSuccessfullyArchived(_logger, demotedCount, userId, summaryCreated);
+
+        return new WorkingArchivalResult
+        {
+            Trigger = trigger,
+            MemoriesArchived = demotedCount,
+            SummaryId = summaryId
+        };
     }
 
     /// <inheritdoc />
@@ -480,8 +476,6 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
     [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Successfully archived {Count} memories for user {UserId}. Summary: {SummaryCreated}")]
     private static partial void LogSuccessfullyArchived(ILogger logger, int count, string userId, string summaryCreated);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "[CONSOLIDATION] Failed to archive working memory for user {UserId}")]
-    private static partial void LogFailedToArchive(ILogger logger, Exception ex, string userId);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Cleared state for user {UserId}")]
     private static partial void LogClearedState(ILogger logger, string userId);

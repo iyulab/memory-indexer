@@ -200,11 +200,6 @@ public sealed class WorkingMemoryState
 public sealed record WorkingArchivalResult
 {
     /// <summary>
-    /// Whether the archival succeeded.
-    /// </summary>
-    public bool Success { get; init; }
-
-    /// <summary>
     /// The trigger that caused the archival.
     /// </summary>
     public WorkingPromotionTrigger Trigger { get; init; }
@@ -220,26 +215,11 @@ public sealed record WorkingArchivalResult
     public Guid? SummaryId { get; init; }
 
     /// <summary>
-    /// Error message if archival failed.
-    /// </summary>
-    public string? Error { get; init; }
-
-    /// <summary>
     /// Empty result.
     /// </summary>
     public static WorkingArchivalResult Empty => new()
     {
-        Success = true,
         Trigger = WorkingPromotionTrigger.None,
         MemoriesArchived = 0
-    };
-
-    /// <summary>
-    /// Creates a failure result.
-    /// </summary>
-    public static WorkingArchivalResult Failure(string error) => new()
-    {
-        Success = false,
-        Error = error
     };
 }

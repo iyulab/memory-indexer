@@ -44,112 +44,97 @@ public sealed partial class SleepBasedConsolidator : IMemoryConsolidator
 
         LogStartingMemoryConsolidationCycleSleep(_logger);
 
-        try
+        // Phase 1: Retrieve memories for consolidation
+        var cutoffDate = DateTime.UtcNow - options.MaxMemoryAge;
+        var memories = await GetMemoriesForConsolidationAsync(
+            cutoffDate, options.UserId, options.SessionId, cancellationToken);
+
+        if (memories.Count == 0)
         {
-            // Phase 1: Retrieve memories for consolidation
-            var cutoffDate = DateTime.UtcNow - options.MaxMemoryAge;
-            var memories = await GetMemoriesForConsolidationAsync(
-                cutoffDate, options.UserId, options.SessionId, cancellationToken);
-
-            if (memories.Count == 0)
-            {
-                LogMemoriesFoundConsolidation(_logger);
-                return new ConsolidationResult
-                {
-                    Success = true,
-                    MemoriesProcessed = 0,
-                    Duration = stopwatch.Elapsed
-                };
-            }
-
-            LogRetrievedCountMemoriesConsolidation(_logger, memories.Count);
-
-            // Phase 2: Apply forgetting curve decay
-            var decayResults = new List<MemoryDecayResult>();
-            var memoriesDecayed = 0;
-            var memoriesArchived = 0;
-
-            if (options.ApplyForgettingCurve)
-            {
-                decayResults = ApplyForgettingCurve(memories, options);
-                memoriesDecayed = decayResults.Count(r => r.NewScore != r.PreviousScore);
-                memoriesArchived = decayResults.Count(r => r.ShouldArchive);
-
-                // Apply decay updates to store
-                foreach (var result in decayResults.Where(r => r.NewScore != r.PreviousScore))
-                {
-                    var memory = memories.FirstOrDefault(m => m.Id == result.MemoryId);
-                    if (memory != null)
-                    {
-                        memory.ImportanceScore = result.NewScore;
-                        await _memoryStore.UpdateAsync(memory, cancellationToken);
-                    }
-                }
-
-                LogAppliedForgettingCurveDecayedDecayed(_logger, memoriesDecayed, memoriesArchived);
-            }
-
-            // Phase 3: Identify and merge similar memories
-            var mergeOps = await IdentifyMergeCandidatesAsync(
-                memories, options.MergeSimilarityThreshold, cancellationToken);
-            var memoriesMerged = mergeOps.Sum(op => op.MemoriesToMerge.Count);
-
-            // Phase 4: Generate reflections
-            var reflections = new List<MemoryUnit>();
-            if (memories.Count >= options.MinMemoriesForReflection)
-            {
-                var generatedReflections = await GenerateReflectionsAsync(memories, cancellationToken);
-                reflections.AddRange(generatedReflections.Take(options.MaxReflectionsPerCycle));
-
-                // Store reflections
-                foreach (var reflection in reflections)
-                {
-                    await _memoryStore.StoreAsync(reflection, cancellationToken);
-                }
-
-                LogGeneratedCountReflections(_logger, reflections.Count);
-            }
-
-            // Phase 5: Apply time-series compression (Phase 29)
-            var memoriesCompressed = 0;
-            if (options.ApplyTimeSeriesCompression && options.TimeSeriesMetadataKeys?.Count > 0)
-            {
-                foreach (var key in options.TimeSeriesMetadataKeys)
-                {
-                    var compressedMemories = await ConsolidateTimeSeriesAsync(
-                        memories, key, options.TimeSeriesStrategy, cancellationToken);
-                    memoriesCompressed += compressedMemories.Count(m =>
-                        m.Metadata?.ContainsKey(key) == true);
-                }
-                LogCompressedTimeSeriesMetadataCount(_logger, memoriesCompressed);
-            }
-
-            stopwatch.Stop();
-
-            LogConsolidationCompleteProcessedProcessedReflections(_logger, memories.Count, reflections.Count, memoriesMerged, memoriesDecayed, memoriesCompressed);
-
+            LogMemoriesFoundConsolidation(_logger);
             return new ConsolidationResult
             {
-                Success = true,
-                MemoriesProcessed = memories.Count,
-                ReflectionsGenerated = reflections.Count,
-                MemoriesMerged = memoriesMerged,
-                MemoriesArchived = memoriesArchived,
-                MemoriesDecayed = memoriesDecayed,
-                Duration = stopwatch.Elapsed,
-                Reflections = reflections
-            };
-        }
-        catch (Exception ex)
-        {
-            LogMemoryConsolidationFailed(_logger, ex);
-            return new ConsolidationResult
-            {
-                Success = false,
-                ErrorMessage = ex.Message,
+                MemoriesProcessed = 0,
                 Duration = stopwatch.Elapsed
             };
         }
+
+        LogRetrievedCountMemoriesConsolidation(_logger, memories.Count);
+
+        // Phase 2: Apply forgetting curve decay
+        var decayResults = new List<MemoryDecayResult>();
+        var memoriesDecayed = 0;
+        var memoriesArchived = 0;
+
+        if (options.ApplyForgettingCurve)
+        {
+            decayResults = ApplyForgettingCurve(memories, options);
+            memoriesDecayed = decayResults.Count(r => r.NewScore != r.PreviousScore);
+            memoriesArchived = decayResults.Count(r => r.ShouldArchive);
+
+            // Apply decay updates to store
+            foreach (var result in decayResults.Where(r => r.NewScore != r.PreviousScore))
+            {
+                var memory = memories.FirstOrDefault(m => m.Id == result.MemoryId);
+                if (memory != null)
+                {
+                    memory.ImportanceScore = result.NewScore;
+                    await _memoryStore.UpdateAsync(memory, cancellationToken);
+                }
+            }
+
+            LogAppliedForgettingCurveDecayedDecayed(_logger, memoriesDecayed, memoriesArchived);
+        }
+
+        // Phase 3: Identify and merge similar memories
+        var mergeOps = await IdentifyMergeCandidatesAsync(
+            memories, options.MergeSimilarityThreshold, cancellationToken);
+        var memoriesMerged = mergeOps.Sum(op => op.MemoriesToMerge.Count);
+
+        // Phase 4: Generate reflections
+        var reflections = new List<MemoryUnit>();
+        if (memories.Count >= options.MinMemoriesForReflection)
+        {
+            var generatedReflections = await GenerateReflectionsAsync(memories, cancellationToken);
+            reflections.AddRange(generatedReflections.Take(options.MaxReflectionsPerCycle));
+
+            // Store reflections
+            foreach (var reflection in reflections)
+            {
+                await _memoryStore.StoreAsync(reflection, cancellationToken);
+            }
+
+            LogGeneratedCountReflections(_logger, reflections.Count);
+        }
+
+        // Phase 5: Apply time-series compression (Phase 29)
+        var memoriesCompressed = 0;
+        if (options.ApplyTimeSeriesCompression && options.TimeSeriesMetadataKeys?.Count > 0)
+        {
+            foreach (var key in options.TimeSeriesMetadataKeys)
+            {
+                var compressedMemories = await ConsolidateTimeSeriesAsync(
+                    memories, key, options.TimeSeriesStrategy, cancellationToken);
+                memoriesCompressed += compressedMemories.Count(m =>
+                    m.Metadata?.ContainsKey(key) == true);
+            }
+            LogCompressedTimeSeriesMetadataCount(_logger, memoriesCompressed);
+        }
+
+        stopwatch.Stop();
+
+        LogConsolidationCompleteProcessedProcessedReflections(_logger, memories.Count, reflections.Count, memoriesMerged, memoriesDecayed, memoriesCompressed);
+
+        return new ConsolidationResult
+        {
+            MemoriesProcessed = memories.Count,
+            ReflectionsGenerated = reflections.Count,
+            MemoriesMerged = memoriesMerged,
+            MemoriesArchived = memoriesArchived,
+            MemoriesDecayed = memoriesDecayed,
+            Duration = stopwatch.Elapsed,
+            Reflections = reflections
+        };
     }
 
     /// <inheritdoc />
@@ -606,8 +591,6 @@ public sealed partial class SleepBasedConsolidator : IMemoryConsolidator
     [LoggerMessage(Level = LogLevel.Information, Message = "Consolidation complete: {Processed} processed, {Reflections} reflections, {Merged} merged, {Decayed} decayed, {Compressed} time-series compressed")]
     private static partial void LogConsolidationCompleteProcessedProcessedReflections(ILogger logger, int processed, int reflections, int merged, int decayed, int compressed);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Memory consolidation failed")]
-    private static partial void LogMemoryConsolidationFailed(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "UserId is required for consolidation - skipping")]
     private static partial void LogUserIdRequiredConsolidationSkipping(ILogger logger);

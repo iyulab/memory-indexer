@@ -177,17 +177,12 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
             };
         }
 
-        // Perform tier promotion via TierManager
-        var promotionResult = await _tierManager.PromoteAsync(
+        // Perform tier promotion via TierManager (throws when the memory is already at Archive)
+        await _tierManager.PromoteAsync(
             memory,
             Tier.Archive,
             PromotionReason.ThresholdMet,
             cancellationToken);
-
-        if (!promotionResult.Success)
-        {
-            throw new InvalidOperationException(promotionResult.Error ?? $"Memory {memory.Id} could not be promoted to Archive.");
-        }
 
         // Update in store
         await _memoryStore.UpdateAsync(memory, cancellationToken);

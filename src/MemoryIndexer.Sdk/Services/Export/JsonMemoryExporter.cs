@@ -108,7 +108,7 @@ public partial class JsonMemoryExporter : IMemoryExporter
         activity?.SetTag("import.memory_count", package.Memories.Count);
 
         var sw = Stopwatch.StartNew();
-        var result = new ImportResult { Success = true };
+        var result = new ImportResult();
         var conflicts = new List<ImportConflict>();
         var errors = new List<ImportError>();
         var idMapping = new Dictionary<Guid, Guid>();
@@ -134,9 +134,8 @@ public partial class JsonMemoryExporter : IMemoryExporter
                 ValidatePackage(package, errors);
                 if (errors.Count > 0 && options.ConflictResolution == ImportConflictResolution.Fail)
                 {
-                    result.Success = false;
-                    result.Errors = errors;
-                    return result;
+                    throw new InvalidDataException(
+                        $"The export package failed validation ({errors.Count} error(s)); first: {errors[0].Message}");
                 }
             }
 
@@ -169,22 +168,17 @@ public partial class JsonMemoryExporter : IMemoryExporter
             activity?.SetTag("import.imported_count", result.ImportedCount);
             activity?.SetTag("import.skipped_count", result.SkippedCount);
             activity?.SetTag("import.failed_count", result.FailedCount);
-            MemoryIndexerTelemetry.CompleteOperation(activity, success: result.Success);
+            MemoryIndexerTelemetry.CompleteOperation(activity, success: result.FailedCount == 0);
 
             LogImportCompletedImportedImportedSkipped(_logger, result.ImportedCount, result.SkippedCount, result.FailedCount, sw.ElapsedMilliseconds);
 
             return result;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogImportFailed(_logger, ex);
-            result.Success = false;
-            result.Duration = sw.Elapsed;
-            result.Conflicts = conflicts;
-            result.Errors = errors;
-            errors.Add(new ImportError { Message = ex.Message });
             MemoryIndexerTelemetry.CompleteOperation(activity, success: false, exception: ex);
-            return result;
+            throw;
         }
     }
 
@@ -215,11 +209,7 @@ public partial class JsonMemoryExporter : IMemoryExporter
 
         if (package == null)
         {
-            return new ImportResult
-            {
-                Success = false,
-                Errors = [new ImportError { Message = "Failed to deserialize export package" }]
-            };
+            throw new InvalidDataException("The stream does not contain a memory export package.");
         }
 
         return await ImportAsync(package, options, cancellationToken);
@@ -420,7 +410,7 @@ public partial class JsonMemoryExporter : IMemoryExporter
                     result,
                     cancellationToken);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 errors.Add(new ImportError
                 {

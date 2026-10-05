@@ -154,11 +154,6 @@ public sealed class ConsolidationOptions
 public sealed class ConsolidationResult
 {
     /// <summary>
-    /// Whether the consolidation completed successfully.
-    /// </summary>
-    public bool Success { get; init; }
-
-    /// <summary>
     /// Total memories processed.
     /// </summary>
     public int MemoriesProcessed { get; init; }
@@ -193,10 +188,6 @@ public sealed class ConsolidationResult
     /// </summary>
     public IReadOnlyList<MemoryUnit> Reflections { get; init; } = [];
 
-    /// <summary>
-    /// Error message if consolidation failed.
-    /// </summary>
-    public string? ErrorMessage { get; init; }
 }
 
 /// <summary>

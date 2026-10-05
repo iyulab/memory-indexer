@@ -16,6 +16,7 @@ namespace MemoryIndexer.Sdk.Tests.Intelligence.Promotion;
 public class ShortTermMemoryOrchestratorServiceTests
 {
     private readonly IShortTermMemory _workingMemoryMock;
+    private readonly IMemoryStore _memoryStoreMock = Substitute.For<IMemoryStore>();
     private readonly IEmbeddingService _embeddingServiceMock;
     private readonly WorkingMemoryOptions _options;
     private readonly ShortTermMemoryOrchestratorService _orchestrator;
@@ -23,6 +24,9 @@ public class ShortTermMemoryOrchestratorServiceTests
     public ShortTermMemoryOrchestratorServiceTests()
     {
         _workingMemoryMock = Substitute.For<IShortTermMemory>();
+        // Demotion succeeds: the working memory hands the memory back (null means it was not there).
+        _workingMemoryMock.DemoteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => new MemoryUnit { Id = ci.ArgAt<Guid>(0), Content = "demoted", UserId = "user-1" });
         _embeddingServiceMock = Substitute.For<IEmbeddingService>();
 
         _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -40,6 +44,7 @@ public class ShortTermMemoryOrchestratorServiceTests
 
         _orchestrator = new ShortTermMemoryOrchestratorService(
             _workingMemoryMock,
+            _memoryStoreMock,
             _embeddingServiceMock,
             Options.Create(new MemoryIndexerOptions { WorkingMemory = _options }),
             NullLogger<ShortTermMemoryOrchestratorService>.Instance);
@@ -183,7 +188,6 @@ public class ShortTermMemoryOrchestratorServiceTests
         var result = await _orchestrator.ArchiveToSessionAsync("nonexistent-user", WorkingPromotionTrigger.Manual, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.MemoriesArchived.Should().Be(0);
     }
 
@@ -201,7 +205,6 @@ public class ShortTermMemoryOrchestratorServiceTests
         var result = await _orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.MemoriesArchived.Should().Be(3);
         result.Trigger.Should().Be(WorkingPromotionTrigger.Manual);
     }
@@ -220,10 +223,12 @@ public class ShortTermMemoryOrchestratorServiceTests
         var result = await _orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.SummaryId.Should().NotBeNull();
         // Embedding should be generated for the summary
         await _embeddingServiceMock.Received().GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        // ... and the summary is stored under the id the result reports (it was built and never written)
+        await _memoryStoreMock.Received(1).StoreAsync(
+            Arg.Is<MemoryUnit>(u => u.Id == result.SummaryId && u.Tier == Tier.Long), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -237,7 +242,6 @@ public class ShortTermMemoryOrchestratorServiceTests
         var result = await _orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.SummaryId.Should().BeNull();
     }
 
@@ -249,6 +253,7 @@ public class ShortTermMemoryOrchestratorServiceTests
         indexerOptions.WorkingMemory.SummarizeBeforeArchival = false;
         var orchestrator = new ShortTermMemoryOrchestratorService(
             _workingMemoryMock,
+            _memoryStoreMock,
             _embeddingServiceMock,
             Options.Create(indexerOptions),
             NullLogger<ShortTermMemoryOrchestratorService>.Instance);
@@ -263,7 +268,6 @@ public class ShortTermMemoryOrchestratorServiceTests
         var result = await orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.MemoriesArchived.Should().Be(3);
         result.SummaryId.Should().BeNull();
         await _embeddingServiceMock.DidNotReceive().GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -275,6 +279,7 @@ public class ShortTermMemoryOrchestratorServiceTests
         // Arrange - nothing configured: the default (SummarizeBeforeArchival = true) still summarizes.
         var orchestrator = new ShortTermMemoryOrchestratorService(
             _workingMemoryMock,
+            _memoryStoreMock,
             _embeddingServiceMock,
             Options.Create(new MemoryIndexerOptions()),
             NullLogger<ShortTermMemoryOrchestratorService>.Instance);
@@ -289,7 +294,6 @@ public class ShortTermMemoryOrchestratorServiceTests
         var result = await orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.SummaryId.Should().NotBeNull();
     }
 
@@ -326,7 +330,6 @@ public class ShortTermMemoryOrchestratorServiceTests
         var result = await orchestrator.ArchiveToSessionAsync(userId, WorkingPromotionTrigger.Manual, summarize: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         (result.SummaryId != null).Should().Be(expectSummary);
     }
 
@@ -495,6 +498,7 @@ public class ShortTermMemoryOrchestratorServiceTests
     {
         return new ShortTermMemoryOrchestratorService(
             _workingMemoryMock,
+            _memoryStoreMock,
             _embeddingServiceMock,
             Options.Create(new MemoryIndexerOptions { WorkingMemory = options }),
             NullLogger<ShortTermMemoryOrchestratorService>.Instance);

@@ -298,11 +298,6 @@ public enum PromotionReason
 public sealed class TierPromotionResult
 {
     /// <summary>
-    /// Whether operation succeeded.
-    /// </summary>
-    public bool Success { get; init; }
-
-    /// <summary>
     /// Updated memory after promotion/demotion.
     /// </summary>
     public MemoryUnit? UpdatedMemory { get; init; }
@@ -321,11 +316,6 @@ public sealed class TierPromotionResult
     /// Reason for operation.
     /// </summary>
     public PromotionReason Reason { get; init; }
-
-    /// <summary>
-    /// Error message if operation failed.
-    /// </summary>
-    public string? Error { get; init; }
 
     /// <summary>
     /// Additional metadata about operation.

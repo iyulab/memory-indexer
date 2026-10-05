@@ -145,7 +145,6 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var result = await _exporter.ImportAsync(package, options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.Equal(2, result.ImportedCount);
         Assert.Equal(0, result.SkippedCount);
         Assert.Equal(0, result.FailedCount);
@@ -181,7 +180,6 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var result = await _exporter.ImportAsync(package, options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.Equal(0, result.ImportedCount);
         Assert.Equal(1, result.SkippedCount);
         Assert.Single(result.Conflicts);
@@ -217,7 +215,6 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var result = await _exporter.ImportAsync(package, options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.Equal(0, result.ImportedCount);
         Assert.Equal(1, result.ReplacedCount);
 
@@ -249,7 +246,6 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var result = await _exporter.ImportAsync(package, options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.NotNull(result.IdMapping);
         Assert.Contains(originalId, result.IdMapping!.Keys);
         Assert.NotEqual(originalId, result.IdMapping[originalId]);
@@ -296,7 +292,6 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         var result = await _exporter.ImportFromStreamAsync(stream, options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.Equal(1, result.ImportedCount);
     }
 

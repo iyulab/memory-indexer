@@ -863,7 +863,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     #region Validation Operations
 
     /// <inheritdoc />
-    public async Task<ConfirmResult> ConfirmAsync(ConfirmRequest request, CancellationToken cancellationToken = default)
+    public async Task<ConfirmResult?> ConfirmAsync(ConfirmRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -871,7 +871,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         if (memory == null)
         {
             LogConfirmNotFound(_logger, request.MemoryId);
-            return ConfirmResult.NotFound(request.MemoryId);
+            return null;
         }
 
         // Store previous values
@@ -911,7 +911,6 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
         return new ConfirmResult
         {
-            Success = true,
             Memory = memory,
             PreviousConfirmCount = previousConfirmCount,
             NewConfirmCount = memory.ConfirmCount,
@@ -957,7 +956,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             Source = $"deduplication (similarity: {similarityScore:F3})"
         }, cancellationToken);
 
-        if (result.Success)
+        if (result is not null)
         {
             LogDedupConfirmSuccess(_logger, existingMemory.Id,
                 result.PreviousConfirmCount, result.NewConfirmCount,
@@ -966,7 +965,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         }
         else
         {
-            LogDedupConfirmFailed(_logger, existingMemory.Id, result.Error);
+            LogDedupConfirmFailed(_logger, existingMemory.Id);
         }
     }
 
@@ -1144,15 +1143,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                     summarize: true,
                     cancellationToken);
 
-                if (result.Success)
-                {
-                    var summaryIdStr = result.SummaryId?.ToString() ?? "none";
-                    LogAutoConsolidationSuccess(_logger, result.MemoriesArchived, summaryIdStr);
-                }
-                else
-                {
-                    LogAutoConsolidationArchivalFailed(_logger, result.Error);
-                }
+                var summaryIdStr = result.SummaryId?.ToString() ?? "none";
+                LogAutoConsolidationSuccess(_logger, result.MemoriesArchived, summaryIdStr);
             }
             else
             {
@@ -1168,7 +1160,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                     cancellationToken);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             // Never fail the main EncodeAsync operation due to consolidation issues
             LogAutoConsolidationError(_logger, ex, memory.UserId);
@@ -1333,8 +1325,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     [LoggerMessage(Level = LogLevel.Information, Message = "[DEDUP_CONFIRM] Memory {MemoryId} confirmed via deduplication: ConfirmCount {PrevCount}->{NewCount}, Confidence {PrevConf:F2}->{NewConf:F2}, ArchiveEligible={Eligible}")]
     private static partial void LogDedupConfirmSuccess(ILogger logger, Guid memoryId, int prevCount, int newCount, float prevConf, float newConf, bool eligible);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "[DEDUP_CONFIRM] Failed to confirm memory {MemoryId}: {Error}")]
-    private static partial void LogDedupConfirmFailed(ILogger logger, Guid memoryId, string? error);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[DEDUP_CONFIRM] Memory {MemoryId} to confirm was not found (removed meanwhile)")]
+    private static partial void LogDedupConfirmFailed(ILogger logger, Guid memoryId);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "[AUTO_CONSOLIDATION] Skipping - no session ID for memory {MemoryId}")]
     private static partial void LogAutoConsolidationSkipped(ILogger logger, Guid memoryId);
@@ -1348,8 +1340,6 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     [LoggerMessage(Level = LogLevel.Information, Message = "[AUTO_CONSOLIDATION] Successfully archived {Count} memories. Summary ID: {SummaryId}")]
     private static partial void LogAutoConsolidationSuccess(ILogger logger, int count, string summaryId);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "[AUTO_CONSOLIDATION] Archival failed: {Error}")]
-    private static partial void LogAutoConsolidationArchivalFailed(ILogger logger, string? error);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "[AUTO_CONSOLIDATION] No triggers satisfied for user {UserId}")]
     private static partial void LogAutoConsolidationNoTriggers(ILogger logger, string userId);

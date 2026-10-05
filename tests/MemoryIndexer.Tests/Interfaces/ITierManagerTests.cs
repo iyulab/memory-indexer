@@ -481,7 +481,6 @@ public class ITierManagerTests
         var result = await tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.AutomaticTrigger, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.OriginalTier.Should().Be(Tier.Buffer);
         result.NewTier.Should().Be(Tier.Short);
         result.UpdatedMemory.Should().NotBeNull();
@@ -500,7 +499,6 @@ public class ITierManagerTests
         var result = await tierManager.PromoteAsync(memory, Tier.Long, PromotionReason.TopicBoundary, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.OriginalTier.Should().Be(Tier.Short);
         result.NewTier.Should().Be(Tier.Long);
         result.UpdatedMemory!.Tier.Should().Be(Tier.Long);
@@ -522,7 +520,6 @@ public class ITierManagerTests
         var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.ThresholdMet, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.OriginalTier.Should().Be(Tier.Long);
         result.NewTier.Should().Be(Tier.Archive);
         result.UpdatedMemory!.Tier.Should().Be(Tier.Archive);
@@ -545,7 +542,6 @@ public class ITierManagerTests
         var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.ThresholdMet, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.UpdatedMemory!.Type.Should().Be(MemoryType.Semantic); // Remains semantic
     }
 
@@ -556,13 +552,9 @@ public class ITierManagerTests
         var tierManager = CreateTierManager();
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
 
-        // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Buffer, PromotionReason.Manual, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.Error.Should().Contain("must be higher");
-        result.UpdatedMemory.Should().BeNull();
+        // Act / Assert - an impossible move is a caller error, not a result
+        var act = () => tierManager.PromoteAsync(memory, Tier.Buffer, PromotionReason.Manual, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>().WithMessage("*must be higher*");
     }
 
     [Fact]
@@ -572,12 +564,9 @@ public class ITierManagerTests
         var tierManager = CreateTierManager();
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
 
-        // Act
-        var result = await tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.Manual, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.Error.Should().Contain("must be higher");
+        // Act / Assert - an impossible move is a caller error, not a result
+        var act = () => tierManager.PromoteAsync(memory, Tier.Short, PromotionReason.Manual, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>().WithMessage("*must be higher*");
     }
 
     [Fact]
@@ -591,7 +580,6 @@ public class ITierManagerTests
         var result = await tierManager.PromoteAsync(memory, Tier.Archive, PromotionReason.Manual, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.OriginalTier.Should().Be(Tier.Buffer);
         result.NewTier.Should().Be(Tier.Archive);
         result.UpdatedMemory!.Tier.Should().Be(Tier.Archive);
@@ -628,7 +616,6 @@ public class ITierManagerTests
         var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.OriginalTier.Should().Be(Tier.Long);
         result.NewTier.Should().Be(Tier.Short);
         result.UpdatedMemory!.Tier.Should().Be(Tier.Short);
@@ -646,7 +633,6 @@ public class ITierManagerTests
         var result = await tierManager.DemoteAsync(memory, Tier.Long, PromotionReason.CapacityEviction, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.OriginalTier.Should().Be(Tier.Archive);
         result.NewTier.Should().Be(Tier.Long);
         result.UpdatedMemory!.Tier.Should().Be(Tier.Long);
@@ -659,13 +645,9 @@ public class ITierManagerTests
         var tierManager = CreateTierManager();
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
 
-        // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Long, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.Error.Should().Contain("must be lower");
-        result.UpdatedMemory.Should().BeNull();
+        // Act / Assert - an impossible move is a caller error, not a result
+        var act = () => tierManager.DemoteAsync(memory, Tier.Long, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>().WithMessage("*must be lower*");
     }
 
     [Fact]
@@ -675,12 +657,9 @@ public class ITierManagerTests
         var tierManager = CreateTierManager();
         var memory = new MemoryUnit { Tier = Tier.Short, Content = "Test" };
 
-        // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.Error.Should().Contain("must be lower");
+        // Act / Assert - an impossible move is a caller error, not a result
+        var act = () => tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>().WithMessage("*must be lower*");
     }
 
     [Fact]
@@ -694,7 +673,6 @@ public class ITierManagerTests
         var result = await tierManager.DemoteAsync(memory, Tier.Buffer, PromotionReason.CapacityEviction, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.OriginalTier.Should().Be(Tier.Archive);
         result.NewTier.Should().Be(Tier.Buffer);
         result.UpdatedMemory!.Tier.Should().Be(Tier.Buffer);
@@ -707,12 +685,9 @@ public class ITierManagerTests
         var tierManager = CreateTierManager();
         var memory = new MemoryUnit { Tier = Tier.Buffer, Content = "Test" };
 
-        // Act
-        var result = await tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Success.Should().BeFalse();
-        result.Error.Should().Contain("must be lower");
+        // Act / Assert - an impossible move is a caller error, not a result
+        var act = () => tierManager.DemoteAsync(memory, Tier.Short, PromotionReason.LowRetention, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>().WithMessage("*must be lower*");
     }
 
     #endregion

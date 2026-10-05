@@ -40,7 +40,6 @@ public sealed class SleepBasedConsolidatorTests
         var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.Equal(0, result.MemoriesProcessed);
     }
 
@@ -56,7 +55,6 @@ public sealed class SleepBasedConsolidatorTests
         var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.Equal(0, result.MemoriesProcessed);
     }
 
@@ -82,7 +80,6 @@ public sealed class SleepBasedConsolidatorTests
         var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.Equal(10, result.MemoriesProcessed);
         Assert.True(result.Duration > TimeSpan.Zero);
     }
@@ -116,7 +113,6 @@ public sealed class SleepBasedConsolidatorTests
         var result = await _sut.ConsolidateAsync(options, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(result.Success);
         Assert.True(result.MemoriesDecayed > 0);
         await _memoryStore.Received().UpdateAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>());
     }
