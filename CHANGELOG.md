@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.24.0] - Unreleased
+## [v0.24.0] - 2026-10-05
 
 ### Fixed
 - **A short chat turn that carries information is stored, in any language.** An untyped `RememberAsync` turn under
