@@ -10,15 +10,17 @@ namespace MemoryIndexer.Interfaces;
 /// </summary>
 /// <remarks>
 /// This interface provides a simplified API for 99% of use cases:
-/// - **Level 0 (Zero-Config)**: RememberAsync(userId, content)
-///   - Auto-detects memory type using ITypeClassifier
-///   - Stores in default scope (Session)
+/// - **Level 0 (Zero-Config)**: RememberAsync(userId, sessionId: null, content)
+///   - Auto-detects memory type with the registered IMemoryClassifier
+///   - Stores in an implicit session of the user
 ///   - Suitable for: chat apps, personal assistants, simple games
 ///
 /// - **Level 1 (Session-Aware)**: RememberAsync(userId, sessionId, content)
 ///   - Explicit session management
 ///   - Enables session-scoped recall
 ///   - Suitable for: multi-session apps, conversation history
+///
+/// Remember and recall take the session the same way: a nullable second argument.
 ///
 /// For advanced use cases (Type-Aware, Full Control), use:
 /// - Level 2: IMemoryPrimitives.EncodeAsync (EncodeRequest.Type and ImportanceScore are kept as given; only what is left null is classified)
@@ -27,34 +29,11 @@ namespace MemoryIndexer.Interfaces;
 public interface IMemoryService
 {
     /// <summary>
-    /// Level 0: Zero-Config Remember.
-    /// Stores content for a user without session context.
+    /// Stores content for a user, in a session or (with a <see langword="null"/> session) in an implicit session of the
+    /// user.
     /// </summary>
     /// <param name="userId">User identifier</param>
-    /// <param name="content">Content to remember</param>
-    /// <param name="role">Role of the message sender (user, assistant, system). Preserved for episodic memories.</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Task representing the async operation</returns>
-    /// <remarks>
-    /// Behavior:
-    /// - Auto-detects Type using ITypeClassifier
-    /// - Scope: Session (default for non-session-aware calls)
-    /// - Tier: Short (suitable for general use)
-    /// - Creates implicit session ID if not provided
-    /// - Role preserved in T0-T2 tiers, abstracted in T3 (semantic)
-    /// </remarks>
-    Task RememberAsync(
-        string userId,
-        string content,
-        string? role = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Level 1: Session-Aware Remember.
-    /// Stores content for a user within a specific session.
-    /// </summary>
-    /// <param name="userId">User identifier</param>
-    /// <param name="sessionId">Session identifier</param>
+    /// <param name="sessionId">Session identifier, or <see langword="null"/> for the user's implicit session (Level 0)</param>
     /// <param name="content">Content to remember</param>
     /// <param name="role">Role of the message sender (user, assistant, system). Preserved for episodic memories.</param>
     /// <param name="namespace">Optional namespace for memory isolation (e.g., "game:chess", "project:alpha")</param>
@@ -65,15 +44,15 @@ public interface IMemoryService
     /// <returns>Task representing the async operation</returns>
     /// <remarks>
     /// Behavior:
-    /// - Auto-detects Type using ITypeClassifier, unless <paramref name="type"/> is given
-    /// - Scope: Session (explicit session context)
-    /// - Tier: Short (suitable for general use)
+    /// - Auto-detects Type with the registered <see cref="IMemoryClassifier"/>, unless <paramref name="type"/> is given
+    /// - Tier: chosen by the classifier from type and length (a short turn is working memory, <see cref="Tier.Short"/>)
+    /// - Only small talk (greetings, acknowledgements) is dropped; length is measured in tokens, whatever the language
     /// - Enables session-scoped recall
     /// - Role preserved in T0-T2 tiers, abstracted in T3 (semantic)
     /// </remarks>
     Task RememberAsync(
         string userId,
-        string sessionId,
+        string? sessionId,
         string content,
         string? role = null,
         string? @namespace = null,

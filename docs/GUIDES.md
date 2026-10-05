@@ -744,14 +744,14 @@ builder.Configuration.AddAzureKeyVault(
 **Problem:**
 ```csharp
 // Storing every minor detail
-await memory.RememberAsync(userId, "User typed 'a'");
-await memory.RememberAsync(userId, "User backspaced");
+await memory.RememberAsync(userId, null, "User typed 'a'");
+await memory.RememberAsync(userId, null, "User backspaced");
 ```
 
 **Solution:**
 ```csharp
 // Store only meaningful interactions
-await memory.RememberAsync(userId, "User searched for 'machine learning tutorials'");
+await memory.RememberAsync(userId, null, "User searched for 'machine learning tutorials'");
 ```
 
 ### ❌ Anti-Pattern 2: Ignoring Memory Types
@@ -789,14 +789,14 @@ var results = await memory.RecallAsync(userId, sessionId: null, query);
 
 **Problem:**
 ```csharp
-await memory.RememberAsync(userId, content);  // What if it fails?
+await memory.RememberAsync(userId, null, content);  // What if it fails?
 ```
 
 **Solution:**
 ```csharp
 try
 {
-    await memory.RememberAsync(userId, content);
+    await memory.RememberAsync(userId, null, content);
 }
 catch (Exception ex) when (ex is not OperationCanceledException)
 {
@@ -812,7 +812,7 @@ catch (Exception ex) when (ex is not OperationCanceledException)
 // Storing duplicates
 foreach (var item in items)
 {
-    await memory.RememberAsync(userId, item.Content);  // May create duplicates
+    await memory.RememberAsync(userId, null, item.Content);  // May create duplicates
 }
 ```
 
@@ -822,7 +822,7 @@ foreach (var item in items)
 var existing = await primitives.RetrieveAsync(new RetrieveRequest { UserId = userId, Query = item.Content, Limit = 1 });
 if (existing.FirstOrDefault() is not { Score: >= 0.95f })  // Not an exact duplicate
 {
-    await memory.RememberAsync(userId, item.Content);
+    await memory.RememberAsync(userId, null, item.Content);
 }
 ```
 

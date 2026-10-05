@@ -58,7 +58,7 @@ public class NiahTestRunner
                 await _memoryService.RememberAsync(
                     userId,
                     sessionId,
-                    segment,
+                    content: segment,
                     cancellationToken: cancellationToken);
             }
             storeStopwatch.Stop();
@@ -206,7 +206,7 @@ public class NiahTestRunner
                 await _memoryService.RememberAsync(
                     userId,
                     sessionId,
-                    segment,
+                    content: segment,
                     cancellationToken: cancellationToken);
             }
             storeStopwatch.Stop();

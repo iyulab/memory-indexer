@@ -17,10 +17,26 @@ namespace MemoryIndexer.Sdk.Intelligence.Classification;
 /// - Expanded pattern detection (30+ procedural patterns, 20+ semantic patterns)
 /// - Type-specific scoring algorithms
 /// - Implicit procedural knowledge detection (tool usage, environment setup)
+///
+/// Length is measured with the registered <see cref="ITokenCounter"/>, not by splitting on spaces: Korean puts
+/// particles inside space-separated units and Chinese and Japanese use no spaces at all, so a word count calls almost
+/// every turn in those languages short. Length decides the tier (where a memory lives), never whether it is kept —
+/// only small talk (<see cref="MemoryClassification.Transient"/>) is dropped. The small-talk lexicon is English; a
+/// turn in another language that is all greeting is kept at <see cref="Tier.Short"/> rather than risk dropping one
+/// that carries information.
 /// </remarks>
 public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 {
+    // Thresholds were written in English words; ~0.75 words per token is the usual English ratio, so each is the
+    // same English length in tokens (5 → 7, 20 → 27, 50 → 67, 100 → 133).
+    private const int TransientMaxTokens = 7;
+    private const int ShortEpisodicBelowTokens = 27;
+    private const int ArchiveSemanticAboveTokens = 67;
+    private const int ArchiveProceduralAboveTokens = 133;
+    private const float ImportancePerToken = 0.00375f;
+
     private readonly ILogger<LocalMemoryClassifier> _logger;
+    private readonly ITokenCounter _tokenCounter;
 
     #region Pattern Definitions
 
@@ -95,13 +111,21 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
     ];
 
     /// <summary>
-    /// Patterns that indicate transient/ephemeral content.
+    /// Small-talk phrases (greetings, acknowledgements, fillers), longest first. Content is transient only when it is
+    /// made of these alone, so "ok, my plate is 12-3456" is kept while "ok thanks!" is not.
     /// </summary>
-    private static readonly string[] TransientPatterns =
+    private static readonly string[][] TransientPhrases =
     [
-        "hello", "hi", "hey", "thanks", "thank you", "ok", "okay",
-        "yes", "no", "sure", "got it", "understood", "bye", "goodbye",
-        "see you", "hmm", "um", "uh", "well", "cool", "great", "nice"
+        .. new[]
+        {
+            "hello", "hi", "hey", "thanks", "thank you", "ok", "okay",
+            "yes", "no", "sure", "got it", "understood", "bye", "goodbye",
+            "see you", "hmm", "um", "uh", "well", "cool", "great", "nice",
+            "yeah", "yep", "nope", "alright", "all right", "sounds good", "good", "oh", "ah", "haha", "lol",
+            "good morning", "good night", "sure thing", "there", "so much", "a lot", "very much", "you", "too", "again"
+        }
+        .Select(phrase => phrase.Split(' '))
+        .OrderByDescending(words => words.Length)
     ];
 
     /// <summary>
@@ -157,10 +181,19 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
     #endregion
 
+    /// <summary>
+    /// Creates the classifier.
+    /// </summary>
+    /// <param name="logger">Logger.</param>
+    /// <param name="tokenCounter">Measures content length in a way that does not depend on the language using spaces.</param>
     public LocalMemoryClassifier(
-        ILogger<LocalMemoryClassifier> logger)
+        ILogger<LocalMemoryClassifier> logger,
+        ITokenCounter tokenCounter)
     {
+        ArgumentNullException.ThrowIfNull(tokenCounter);
+
         _logger = logger;
+        _tokenCounter = tokenCounter;
 
         LogInitialized(_logger);
     }
@@ -176,7 +209,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
             return Task.FromResult(MemoryClassification.Transient);
         }
 
-        var classification = ClassifyHeuristic(content, context);
+        var classification = ClassifyHeuristic(content);
 
         var secondaryTypesStr = string.Join(",", classification.SecondaryTypes);
         LogClassified(_logger, classification.Tier, classification.Type, secondaryTypesStr, classification.Importance);
@@ -201,19 +234,19 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return results;
     }
 
-    private static MemoryClassification ClassifyHeuristic(string content, ClassificationContext? context)
+    private MemoryClassification ClassifyHeuristic(string content)
     {
         var lower = content.ToLowerInvariant();
-        var wordCount = content.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        var tokens = _tokenCounter.Count(content);
 
-        // Check for transient content first
-        if (IsTransientContent(lower, wordCount))
+        // Small talk is the only content that is not kept.
+        if (IsTransientContent(lower, tokens))
         {
             return MemoryClassification.Transient;
         }
 
         // Phase 23.1: Multi-score classification
-        var scores = CalculateTypeScores(lower, wordCount);
+        var scores = CalculateTypeScores(lower);
 
         // Primary type = highest score
         var primaryType = scores.OrderByDescending(x => x.Value).First().Key;
@@ -226,17 +259,14 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
             .ToList();
 
         // Determine tier based on primary type and content
-        var tier = DetermineTier(lower, wordCount, primaryType, context);
+        var tier = DetermineTier(tokens, primaryType);
 
         // Calculate importance
-        var importance = CalculateImportance(lower, wordCount, primaryType, context);
+        var importance = CalculateImportance(lower, tokens, primaryType);
 
         // Extract topics and entities
         var topics = ExtractTopics(lower);
         var entities = ExtractEntities(content);
-
-        // Determine if should persist
-        var shouldPersist = tier != Tier.Short && importance >= 0.3f;
 
         return new MemoryClassification
         {
@@ -247,9 +277,10 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
             Importance = importance,
             Topics = topics,
             Entities = entities,
-            ShouldPersist = shouldPersist,
+            // The tier says where a memory lives; a short turn is working memory, not something to throw away.
+            ShouldPersist = true,
             Confidence = CalculateOverallConfidence(scores),
-            Reason = $"Multi-score: {primaryType}={scores[primaryType]:F2}, {wordCount} words"
+            Reason = $"Multi-score: {primaryType}={scores[primaryType]:F2}, {tokens} tokens"
         };
     }
 
@@ -283,18 +314,18 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
     #region Phase 23.1: Multi-Score Classification
 
-    private static Dictionary<MemoryType, float> CalculateTypeScores(string lower, int wordCount)
+    private static Dictionary<MemoryType, float> CalculateTypeScores(string lower)
     {
         return new Dictionary<MemoryType, float>
         {
-            [MemoryType.Episodic] = CalculateEpisodicScore(lower, wordCount),
-            [MemoryType.Semantic] = CalculateSemanticScore(lower, wordCount),
-            [MemoryType.Procedural] = CalculateProceduralScore(lower, wordCount),
-            [MemoryType.Fact] = CalculateFactScore(lower, wordCount)
+            [MemoryType.Episodic] = CalculateEpisodicScore(lower),
+            [MemoryType.Semantic] = CalculateSemanticScore(lower),
+            [MemoryType.Procedural] = CalculateProceduralScore(lower),
+            [MemoryType.Fact] = CalculateFactScore(lower)
         };
     }
 
-    private static float CalculateEpisodicScore(string lower, int wordCount)
+    private static float CalculateEpisodicScore(string lower)
     {
         float score = 0.2f; // Base score
 
@@ -312,7 +343,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return Math.Clamp(score, 0f, 1f);
     }
 
-    private static float CalculateSemanticScore(string lower, int wordCount)
+    private static float CalculateSemanticScore(string lower)
     {
         float score = 0.1f;
 
@@ -329,7 +360,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return Math.Clamp(score, 0f, 1f);
     }
 
-    private static float CalculateProceduralScore(string lower, int wordCount)
+    private static float CalculateProceduralScore(string lower)
     {
         float score = 0.1f;
 
@@ -346,7 +377,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return Math.Clamp(score, 0f, 1f);
     }
 
-    private static float CalculateFactScore(string lower, int wordCount)
+    private static float CalculateFactScore(string lower)
     {
         // Fact indicators (+0.2 each)
         int count = FactIndicators.Count(i => HasPhrase(lower, i));
@@ -373,30 +404,40 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
     #region Original Helper Methods
 
-    private static bool IsTransientContent(string lower, int wordCount)
+    /// <summary>
+    /// Whether short content is small talk only: after a leading role label ("User:") and punctuation are set aside,
+    /// every word belongs to a <see cref="TransientPhrases"/> phrase. A prefix or suffix match is not enough: it
+    /// dropped "ok, my plate is 12-3456" with its acknowledgement and "his name is Kim" as "hi".
+    /// </summary>
+    private static bool IsTransientContent(string lower, int tokens)
     {
-        // Very short content that matches transient patterns
-        if (wordCount <= 5)
+        if (tokens > TransientMaxTokens)
         {
-            foreach (var pattern in TransientPatterns)
+            return false;
+        }
+
+        var words = WordRegex().Matches(RoleLabelRegex().Replace(lower, string.Empty, 1))
+            .Select(match => match.Value)
+            .ToArray();
+
+        // Nothing left but a role label, punctuation or emoji counts as small talk: there is nothing to remember.
+        var index = 0;
+        while (index < words.Length)
+        {
+            var phrase = TransientPhrases.FirstOrDefault(p =>
+                index + p.Length <= words.Length && p.SequenceEqual(words.Skip(index).Take(p.Length), StringComparer.Ordinal));
+            if (phrase is null)
             {
-                if (lower.StartsWith(pattern, StringComparison.Ordinal) || lower == pattern || lower.EndsWith(pattern, StringComparison.Ordinal))
-                {
-                    return true;
-                }
+                return false;
             }
+
+            index += phrase.Length;
         }
 
-        // Single word responses
-        if (wordCount == 1 && TransientPatterns.Contains(lower.Trim('!', '.', '?')))
-        {
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
-    private static Tier DetermineTier(string lower, int wordCount, MemoryType type, ClassificationContext? context)
+    private static Tier DetermineTier(int tokens, MemoryType type)
     {
         // Facts about user go to User tier
         if (type == MemoryType.Fact)
@@ -405,7 +446,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         }
 
         // Long semantic content goes to User tier
-        if (type == MemoryType.Semantic && wordCount > 50)
+        if (type == MemoryType.Semantic && tokens > ArchiveSemanticAboveTokens)
         {
             return Tier.Archive;
         }
@@ -413,11 +454,11 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         // Procedural knowledge persists at Session or User level
         if (type == MemoryType.Procedural)
         {
-            return wordCount > 100 ? Tier.Archive : Tier.Long;
+            return tokens > ArchiveProceduralAboveTokens ? Tier.Archive : Tier.Long;
         }
 
         // Short episodic content stays in Working memory
-        if (wordCount < 20)
+        if (tokens < ShortEpisodicBelowTokens)
         {
             return Tier.Short;
         }
@@ -426,7 +467,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         return Tier.Long;
     }
 
-    private static float CalculateImportance(string lower, int wordCount, MemoryType type, ClassificationContext? context)
+    private static float CalculateImportance(string lower, int tokens, MemoryType type)
     {
         var importance = 0.3f; // Base importance
 
@@ -440,7 +481,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         };
 
         // Length-based adjustment (longer = potentially more important)
-        importance += Math.Min(wordCount * 0.005f, 0.2f);
+        importance += Math.Min(tokens * ImportancePerToken, 0.2f);
 
         // Contains personal information
         if (HasPhrase(lower, "i") || HasPhrase(lower, "my") || HasPhrase(lower, "me"))
@@ -504,6 +545,12 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 
     [GeneratedRegex(@"\b[A-Z][a-z]+\b")]
     private static partial Regex CapitalizedWordRegex();
+
+    [GeneratedRegex(@"^\s*\p{L}[\p{L}\p{N}_ -]{0,30}:")]
+    private static partial Regex RoleLabelRegex();
+
+    [GeneratedRegex(@"[\p{L}\p{N}]+")]
+    private static partial Regex WordRegex();
 
     [LoggerMessage(Level = LogLevel.Information, Message = "LocalMemoryClassifier initialized (Phase 23.1 multi-score mode)")]
     private static partial void LogInitialized(ILogger logger);

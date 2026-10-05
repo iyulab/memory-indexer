@@ -44,7 +44,7 @@ public class CognitiveScenarioTests
             await _memoryService.RememberAsync(
                 userId,
                 sessionId,
-                config.InitialFact,
+                content: config.InitialFact,
                 cancellationToken: cancellationToken);
             result.InitialFactStored = true;
 
@@ -57,7 +57,7 @@ public class CognitiveScenarioTests
                 await _memoryService.RememberAsync(
                     userId,
                     sessionId,
-                    noise,
+                    content: noise,
                     cancellationToken: cancellationToken);
             }
             result.InterveningMemoriesStored = config.InterveningMemoryCount;
@@ -66,7 +66,7 @@ public class CognitiveScenarioTests
             await _memoryService.RememberAsync(
                 userId,
                 sessionId,
-                config.ConflictingFact,
+                content: config.ConflictingFact,
                 cancellationToken: cancellationToken);
             result.ConflictingFactStored = true;
 
@@ -156,7 +156,7 @@ public class CognitiveScenarioTests
                 await _memoryService.RememberAsync(
                     userId,
                     session1Id,
-                    fact,
+                    content: fact,
                     cancellationToken: cancellationToken);
             }
             result.FactsStoredInSession1 = config.UserProfileFacts.Count;

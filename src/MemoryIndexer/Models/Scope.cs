@@ -78,7 +78,7 @@ public enum Scope
     /// </summary>
     /// <remarks>
     /// Highest scope level - survives session boundaries.
-    /// Exposed to API: RememberAsync(userId, content) [no sessionId]
+    /// Exposed to API: RememberAsync(userId, sessionId: null, content)
     /// Requires explicit promotion from Session (confidence >= 0.8, confirmCount >= 3).
     /// </remarks>
     User = 3

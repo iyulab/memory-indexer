@@ -185,11 +185,13 @@ services.AddMemoryIndexer(options =>
 
 var memoryService = serviceProvider.GetRequiredService<IMemoryService>();
 
-// Store
-await memoryService.RememberAsync("user123", "User prefers dark mode");
+// Store — the classifier picks type and tier; only small talk ("thanks!", "ok") is dropped, and length is measured in
+// tokens, so a short Korean, Chinese or Japanese turn is kept like an English one (in working memory, Tier.Short)
+await memoryService.RememberAsync("user123", sessionId: null, "User prefers dark mode");
 
 // Store with a known type — the classifier's guess is overridden, and the memory is never dropped as transient
 await memoryService.RememberAsync("user123", "session-1", "My car plate is 12-3456", type: MemoryType.Fact);
+await memoryService.RememberAsync("user123", sessionId: null, "My car plate is 12-3456", type: MemoryType.Fact);  // without a session
 
 // Recall — searches across all of the user's sessions in the namespace; with a sessionId, what that session stored is
 // grouped by scope and everything from earlier sessions comes back as UserMemories

@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Classification;
+using MemoryIndexer.Services.TokenCounting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -16,7 +17,7 @@ public class LocalMemoryClassifierTests
 
     public LocalMemoryClassifierTests()
     {
-        _classifier = new LocalMemoryClassifier(NullLogger<LocalMemoryClassifier>.Instance);
+        _classifier = new LocalMemoryClassifier(NullLogger<LocalMemoryClassifier>.Instance, new ApproximateTokenCounter());
     }
 
     #region Procedural Classification Tests
@@ -354,6 +355,62 @@ public class LocalMemoryClassifierTests
         // Assert
         result.ShouldPersist.Should().BeFalse();
         result.Tier.Should().Be(Tier.Short);
+    }
+
+    [Theory]
+    [InlineData("User: thanks!")]
+    [InlineData("ok thanks")]
+    [InlineData("Thank you so much!")]
+    [InlineData("Good morning!")]
+    [InlineData("👍")]
+    public async Task ClassifyAsync_SmallTalkOnly_IsDropped(string content)
+    {
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.ShouldPersist.Should().BeFalse();
+    }
+
+    // A short turn that carries information is kept in every language. Length was a whitespace word count, and anything
+    // untyped under 20 words was dropped: a Korean turn has about half the space-separated units of its English
+    // equivalent, and Chinese and Japanese have none, so nearly every turn in those languages was lost (and short
+    // English facts with them).
+    [Theory]
+    [InlineData("User: 제 프로젝트 코드명은 '청록고래-1005'입니다. 앞으로 이걸 기억해 주세요.")]
+    [InlineData("User: 내 차 번호는 12가 3456이야.")]
+    [InlineData("我的项目代号是青鲸一〇〇五，请记住。")]
+    [InlineData("私のプロジェクト名は青鯨1005です。")]
+    [InlineData("User: my project codename is Teal Whale 1005")]
+    [InlineData("ok, my plate is 12-3456")]
+    [InlineData("his name is Kim")]
+    public async Task ClassifyAsync_AShortTurnThatCarriesInformation_IsKept(string content)
+    {
+        var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.ShouldPersist.Should().BeTrue();
+    }
+
+    // The tier says where a memory lives, not whether it is kept: a short episodic turn is working memory.
+    [Fact]
+    public async Task ClassifyAsync_AShortEpisodicTurn_IsWorkingMemoryAndKept()
+    {
+        var result = await _classifier.ClassifyAsync("User: 내 차 번호는 12가 3456이야.", cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Tier.Should().Be(Tier.Short);
+        result.ShouldPersist.Should().BeTrue();
+    }
+
+    // Length is measured in tokens: the same sentence without spaces is as long as with them.
+    [Fact]
+    public async Task ClassifyAsync_LengthDoesNotDependOnSpaces()
+    {
+        var spaced = string.Join(" ", Enumerable.Repeat("지난주 회의에서 결정한 배포 일정", 6));
+        var unspaced = spaced.Replace(" ", string.Empty, StringComparison.Ordinal);
+
+        var a = await _classifier.ClassifyAsync(spaced, cancellationToken: TestContext.Current.CancellationToken);
+        var b = await _classifier.ClassifyAsync(unspaced, cancellationToken: TestContext.Current.CancellationToken);
+
+        a.Tier.Should().Be(Tier.Long);
+        b.Tier.Should().Be(a.Tier);
     }
 
     #endregion

@@ -39,7 +39,7 @@ public class SimpleMemoryServiceTests
         const string content = "I like pizza";
 
         // Act
-        await _service.RememberAsync(userId, content, cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RememberAsync(userId, null, content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         _primitives.EncodedMemories.Should().HaveCount(1);
@@ -56,7 +56,7 @@ public class SimpleMemoryServiceTests
         const string content = "My name is John";
 
         // Act
-        await _service.RememberAsync(userId, content, cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RememberAsync(userId, null, content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         _primitives.EncodedMemories[0].Type.Should().Be(MemoryType.Fact);
@@ -73,7 +73,7 @@ public class SimpleMemoryServiceTests
         _classifier.ShouldPersist = false;
 
         // Act
-        await _service.RememberAsync(userId, content, cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RememberAsync(userId, null, content, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         _primitives.EncodedMemories.Should().BeEmpty();
@@ -86,8 +86,8 @@ public class SimpleMemoryServiceTests
         const string userId = "user-1";
 
         // Act
-        await _service.RememberAsync(userId, "First", cancellationToken: TestContext.Current.CancellationToken);
-        await _service.RememberAsync(userId, "Second", cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RememberAsync(userId, null, "First", cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RememberAsync(userId, null, "Second", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         _primitives.EncodedMemories.Should().HaveCount(2);
@@ -102,8 +102,8 @@ public class SimpleMemoryServiceTests
         const string user2 = "user-2";
 
         // Act
-        await _service.RememberAsync(user1, "User1 content", cancellationToken: TestContext.Current.CancellationToken);
-        await _service.RememberAsync(user2, "User2 content", cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RememberAsync(user1, null, "User1 content", cancellationToken: TestContext.Current.CancellationToken);
+        await _service.RememberAsync(user2, null, "User2 content", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         _primitives.EncodedMemories[0].SessionId.Should().NotBe(_primitives.EncodedMemories[1].SessionId);
@@ -390,12 +390,12 @@ public class SimpleMemoryServiceTests
         // Arrange
         const string userId = "user-1";
 
-        await _service.RememberAsync(userId, "First", cancellationToken: TestContext.Current.CancellationToken); // Creates implicit session
+        await _service.RememberAsync(userId, null, "First", cancellationToken: TestContext.Current.CancellationToken); // Creates implicit session
         var firstSessionId = _primitives.EncodedMemories[0].SessionId;
 
         // Act
         await _service.EndSessionAsync(userId, firstSessionId!, TestContext.Current.CancellationToken);
-        await _service.RememberAsync(userId, "Second", cancellationToken: TestContext.Current.CancellationToken); // Should create new implicit session
+        await _service.RememberAsync(userId, null, "Second", cancellationToken: TestContext.Current.CancellationToken); // Should create new implicit session
 
         // Assert
         var secondSessionId = _primitives.EncodedMemories[1].SessionId;

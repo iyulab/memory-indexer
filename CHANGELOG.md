@@ -2,6 +2,38 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.24.0] - Unreleased
+
+### Fixed
+- **A short chat turn that carries information is stored, in any language.** An untyped `RememberAsync` turn under
+  20 space-separated words was dropped as transient unless it hit an English fact phrase — so most Korean turns,
+  nearly every Chinese and Japanese one (no spaces at all), and short English facts such as "my project codename is
+  Teal Whale" were never stored and could not be recalled from a later session. Now only small talk is dropped
+  (content made entirely of greetings, acknowledgements and fillers such as "thanks!", "ok, got it"); a short turn is
+  kept as working memory (`Tier.Short`), which recall reaches across sessions. The small-talk lexicon is English: a
+  greeting in another language is kept rather than risk dropping a turn that carries information.
+- **An acknowledgement no longer swallows what follows it.** Small talk was matched as a prefix or suffix, so
+  "ok, my plate is 12-3456" was dropped with its "ok", and "his name is Kim" as "hi".
+- **`RememberAsync(userId, sessionId, content, cancellationToken: ct)` stores `content`.** With two overloads sharing
+  `(string, string, string?)`, that call bound to the session-less one: it stored the session id as the memory and
+  the text as its role. `MemoryIndexer.Sdk`'s `CognitiveScenarioTests` and `NiahTestRunner` called it that way.
+- **Concurrent session-less calls share the implicit-session map safely** (it was a plain `Dictionary` on a singleton).
+
+### Changed
+- **Length is measured with the registered `ITokenCounter`, not by splitting on spaces**, for the small-talk check,
+  the tier (short episodic → `Tier.Short`, long semantic or procedural → `Tier.Archive`) and the length part of
+  importance. The thresholds are the former word thresholds at about 0.75 English words per token, so English content
+  lands where it did.
+- **Breaking:** `LocalMemoryClassifier` takes an `ITokenCounter` (`AddMemoryIndexer` registers one). Constructing it
+  yourself: `new LocalMemoryClassifier(logger, new ApproximateTokenCounter())`.
+
+- **Breaking:** `IMemoryService.RememberAsync` is one method,
+  `RememberAsync(userId, string? sessionId, content, role, namespace, type, cancellationToken)` — the session is a
+  nullable second argument, as in `RecallAsync`. `null` uses the user's implicit session (what the removed
+  `RememberAsync(userId, content, role)` did), and a caller without a session can now pass `type`. Migration:
+  `RememberAsync(userId, content)` → `RememberAsync(userId, null, content)`; calls that already pass a session are
+  unchanged.
+
 ## [v0.23.2] - 2026-10-05
 
 ### Changed

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace MemoryIndexer.Services;
 /// </summary>
 /// <remarks>
 /// This is a facade over the complex VCM architecture, providing:
-/// - **Level 0 (Zero-Config)**: RememberAsync(userId, content)
+/// - **Level 0 (Zero-Config)**: RememberAsync(userId, sessionId: null, content)
 /// - **Level 1 (Session-Aware)**: RememberAsync(userId, sessionId, content)
 ///
 /// For advanced use cases, use:
@@ -23,8 +24,8 @@ public sealed partial class SimpleMemoryService : IMemoryService
     private readonly IScopeManager _scopeManager;
     private readonly ILogger<SimpleMemoryService> _logger;
 
-    // Implicit session tracking for zero-config (Level 0) calls
-    private readonly Dictionary<string, string> _implicitSessions = new();
+    // Implicit session tracking for zero-config (Level 0) calls. The service is a singleton, so concurrent callers share it.
+    private readonly ConcurrentDictionary<string, string> _implicitSessions = new(StringComparer.Ordinal);
 
     public SimpleMemoryService(
         IMemoryPrimitives primitives,
@@ -41,23 +42,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
     /// <inheritdoc />
     public async Task RememberAsync(
         string userId,
-        string content,
-        string? role = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(content);
-
-        // Level 0: Zero-Config - create implicit session
-        var sessionId = GetOrCreateImplicitSession(userId);
-
-        await RememberAsync(userId, sessionId, content, role, @namespace: null, cancellationToken: cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public async Task RememberAsync(
-        string userId,
-        string sessionId,
+        string? sessionId,
         string content,
         string? role = null,
         string? @namespace = null,
@@ -65,8 +50,14 @@ public sealed partial class SimpleMemoryService : IMemoryService
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        if (sessionId is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        }
+
+        // Level 0: Zero-Config - an implicit session of the user
+        sessionId ??= GetOrCreateImplicitSession(userId);
 
         var effectiveRole = role ?? "user";
 
@@ -211,7 +202,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         await _scopeManager.EndSessionAsync(cancellationToken);
 
         // Remove implicit session if exists
-        _implicitSessions.Remove(userId);
+        _implicitSessions.TryRemove(userId, out _);
 
         LogSessionEndedSuccessfully(_logger);
     }
@@ -251,7 +242,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         }
 
         // Remove implicit session
-        _implicitSessions.Remove(userId);
+        _implicitSessions.TryRemove(userId, out _);
 
         LogDeletedMemoriesForUser(_logger, results.Count, userId);
     }
@@ -341,11 +332,15 @@ public sealed partial class SimpleMemoryService : IMemoryService
     /// </summary>
     private string GetOrCreateImplicitSession(string userId)
     {
-        if (!_implicitSessions.TryGetValue(userId, out var sessionId))
+        if (_implicitSessions.TryGetValue(userId, out var existing))
         {
-            sessionId = $"implicit-{userId}-{Guid.NewGuid():N}";
-            _implicitSessions[userId] = sessionId;
+            return existing;
+        }
 
+        var created = $"implicit-{userId}-{Guid.NewGuid():N}";
+        var sessionId = _implicitSessions.GetOrAdd(userId, created);
+        if (ReferenceEquals(sessionId, created))
+        {
             LogCreatedImplicitSession(_logger, sessionId, userId);
         }
 

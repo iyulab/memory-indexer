@@ -71,7 +71,7 @@ public class MemoryChatPlugin
         [Description("User message")] string message)
     {
         // 1. Store the user message (the memory type is classified automatically)
-        await _memory.RememberAsync(userId, message, role: "user");
+        await _memory.RememberAsync(userId, null, message, role: "user");
 
         // 2. Recall relevant memories across sessions
         var context = await _memory.RecallAsync(userId, sessionId: null, message, limit: 10);
@@ -88,7 +88,7 @@ public class MemoryChatPlugin
             kernel: _kernel);
 
         // 5. Store assistant response
-        await _memory.RememberAsync(userId, response.Content!, role: "assistant");
+        await _memory.RememberAsync(userId, null, response.Content!, role: "assistant");
 
         return response.Content!;
     }
@@ -188,8 +188,8 @@ public class MemoryConversationChain
         var result = await chain.RunAsync("text");
 
         // 5. Store conversation turn
-        await _memory.RememberAsync(userId, input, role: "user");
-        await _memory.RememberAsync(userId, result, role: "assistant");
+        await _memory.RememberAsync(userId, null, input, role: "user");
+        await _memory.RememberAsync(userId, null, result, role: "assistant");
 
         return result;
     }
@@ -326,8 +326,8 @@ public class MemoryAgent : IAgent
         IMessage userMessage,
         IMessage assistantMessage)
     {
-        await _memory.RememberAsync(_userId, userMessage.Content!, role: "user");
-        await _memory.RememberAsync(_userId, assistantMessage.Content!, role: "assistant");
+        await _memory.RememberAsync(_userId, null, userMessage.Content!, role: "user");
+        await _memory.RememberAsync(_userId, null, assistantMessage.Content!, role: "assistant");
     }
 }
 ```
@@ -398,7 +398,7 @@ public class MemoryIndexerProvider : IMemoryProvider
         string role,
         string content)
     {
-        await _memory.RememberAsync(userId, content, role: role);
+        await _memory.RememberAsync(userId, null, content, role: role);
     }
 }
 ```
@@ -472,7 +472,7 @@ public class MemoryMiddleware
             var message = await ReadMessageAsync(context.Request);
 
             // Store request
-            await _memory.RememberAsync(userId!, message, role: "user");
+            await _memory.RememberAsync(userId!, null, message, role: "user");
 
             // Capture response
             var originalBodyStream = context.Response.Body;
@@ -485,7 +485,7 @@ public class MemoryMiddleware
             responseBody.Seek(0, SeekOrigin.Begin);
             var response = await new StreamReader(responseBody).ReadToEndAsync();
 
-            await _memory.RememberAsync(userId!, response, role: "assistant");
+            await _memory.RememberAsync(userId!, null, response, role: "assistant");
 
             // Copy response back
             responseBody.Seek(0, SeekOrigin.Begin);
@@ -599,6 +599,7 @@ public class BackgroundMemoryProcessor : BackgroundService
             {
                 await _memory.RememberAsync(
                     item.UserId,
+                    sessionId: null,
                     item.Content,
                     role: item.Role,
                     cancellationToken: stoppingToken);
