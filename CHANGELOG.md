@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.25.0] - Unreleased
+## [v0.25.0] - 2026-10-05
 
 ### Changed
 - **Cancelling an MCP request stops the work behind it.** 29 asynchronous MCP tools (security, knowledge graph,
