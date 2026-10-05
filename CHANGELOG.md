@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.26.0] - Unreleased
+## [v0.26.0] - 2026-10-06
 
 ### Fixed
 - **A buffer promotion that fails no longer loses the buffered conversation.** `ISensoryPromoter.PromoteAsync` drained
