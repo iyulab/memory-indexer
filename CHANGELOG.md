@@ -2,6 +2,32 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.26.0] - Unreleased
+
+### Fixed
+- **A buffer promotion that fails no longer loses the buffered conversation.** `ISensoryPromoter.PromoteAsync` drained
+  the user's buffer and then failed (an embedding error, for example) with the items gone. The items now go back to the
+  front of the buffer in their original order and the next cycle retries them; a topic group written before the failure
+  may be written again. New `IBuffer.RestoreAsync` does the put-back.
+- **The background promotion worker keeps going when one user fails.** A failure for one user stopped that phase for
+  every user after it in the cycle; each user is now handled on its own and the failure is logged with the user id.
+  Stopping the host no longer reports the cancellation as a promotion error.
+
+### Changed
+- **Promotion and retention services report a failure by throwing instead of returning a result that says it failed.**
+  `IFastTrackPromoter.ProcessAsync`/`ProcessBatchAsync`, `ISensoryPromoter.PromoteAsync`/`PromoteItemsAsync`,
+  `ILongTermPromoter.PromoteToArchiveAsync` and `IRetentionPolicyService.ApplyAsync` caught every exception (and for most,
+  the caller's cancellation too) and returned `Success = false` with an error string. `ILongTermPromoter.PromoteMemoryAsync`
+  reports a memory that does not meet the Archive requirements as `MemoriesSkipped = 1` (it was a failure) and throws when
+  the tier change itself fails. The MCP tools that wrap these services still answer the model with an error result.
+  **Breaking**: `Success`/`Error` are removed from `FastTrackResult`, `FastTrackBatchResult`, `BufferPromotionResult` and
+  `ArchivePromotionResult` (with their `Failure(...)` factories); `Success`, `ErrorMessage`, `Errors` and
+  `UsersProcessed` from `RetentionResult`. Replace the flag checks with a `try`/`catch`.
+
+### Removed
+- **Breaking:** `IRetentionPolicyService.ApplyToAllAsync`. It did nothing and reported success: the archive store cannot
+  list its users, so no user was ever processed. Call `ApplyAsync` per user.
+
 ## [v0.25.0] - 2026-10-05
 
 ### Changed

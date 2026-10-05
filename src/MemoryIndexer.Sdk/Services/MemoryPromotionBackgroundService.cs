@@ -116,22 +116,23 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
 
                 LogTriggeringBufferPromotion(_logger, check.UserId, check.Trigger, check.PendingItems, check.PendingTokens);
 
-                var result = await _sensoryPromoter.PromoteAsync(
-                    check.UserId,
-                    check.Trigger,
-                    cancellationToken);
-
-                if (result.Success)
+                // One user's failure must not stop the others; the promoter restores that user's buffer.
+                try
                 {
+                    var result = await _sensoryPromoter.PromoteAsync(
+                        check.UserId,
+                        check.Trigger,
+                        cancellationToken);
+
                     LogBufferPromotionSucceeded(_logger, result.ItemsProcessed, result.CreatedMemories.Count, result.EvictedMemories.Count);
                 }
-                else
+                catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                 {
-                    LogBufferPromotionFailed(_logger, result.Error);
+                    LogBufferPromotionFailed(_logger, ex, check.UserId);
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogErrorCheckingBufferPromotions(_logger, ex);
         }
@@ -161,24 +162,31 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
                 {
                     LogTriggeringWorkingMemoryArchival(_logger, userId, trigger.Value);
 
-                    var result = await _orchestrator.ArchiveToSessionAsync(
-                        userId,
-                        trigger.Value,
-                        summarize: true,
-                        cancellationToken);
+                    try
+                    {
+                        var result = await _orchestrator.ArchiveToSessionAsync(
+                            userId,
+                            trigger.Value,
+                            summarize: true,
+                            cancellationToken);
 
-                    if (result.Success)
-                    {
-                        LogArchivalSucceeded(_logger, result.MemoriesArchived);
+                        if (result.Success)
+                        {
+                            LogArchivalSucceeded(_logger, result.MemoriesArchived);
+                        }
+                        else
+                        {
+                            LogArchivalFailed(_logger, result.Error);
+                        }
                     }
-                    else
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
-                        LogArchivalFailed(_logger, result.Error);
+                        LogArchivalThrew(_logger, ex, userId);
                     }
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogErrorCheckingWorkingMemoryArchival(_logger, ex);
         }
@@ -215,20 +223,19 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
                 {
                     LogFoundLongTierCandidates(_logger, eligibleCount, candidates.Count, userId);
 
-                    var result = await _longTermPromoter.PromoteToArchiveAsync(userId, cancellationToken);
-
-                    if (result.Success)
+                    try
                     {
+                        var result = await _longTermPromoter.PromoteToArchiveAsync(userId, cancellationToken);
                         LogArchivePromotionSucceeded(_logger, result.MemoriesPromoted, result.MemoriesSkipped);
                     }
-                    else
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
-                        LogArchivePromotionFailed(_logger, result.Error);
+                        LogArchivePromotionFailed(_logger, ex, userId);
                     }
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogErrorCheckingLongTermArchival(_logger, ex);
         }
@@ -255,8 +262,8 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
     [LoggerMessage(Level = LogLevel.Information, Message = "[BACKGROUND] Buffer promotion succeeded: {Items} items -> {Memories} memories, Evicted: {Evicted}")]
     private static partial void LogBufferPromotionSucceeded(ILogger logger, int items, int memories, int evicted);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Buffer promotion failed: {Error}")]
-    private static partial void LogBufferPromotionFailed(ILogger logger, string? error);
+    [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Buffer promotion failed for user {UserId}; its items stay buffered")]
+    private static partial void LogBufferPromotionFailed(ILogger logger, Exception exception, string userId);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Error checking buffer promotions")]
     private static partial void LogErrorCheckingBufferPromotions(ILogger logger, Exception ex);
@@ -270,6 +277,9 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
     [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Archival failed: {Error}")]
     private static partial void LogArchivalFailed(ILogger logger, string? error);
 
+    [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Archival failed for user {UserId}")]
+    private static partial void LogArchivalThrew(ILogger logger, Exception exception, string userId);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Error checking working memory archival")]
     private static partial void LogErrorCheckingWorkingMemoryArchival(ILogger logger, Exception ex);
 
@@ -279,8 +289,8 @@ public sealed partial class MemoryPromotionBackgroundService : BackgroundService
     [LoggerMessage(Level = LogLevel.Information, Message = "[BACKGROUND] Archive promotion succeeded: {Promoted} promoted, {Skipped} skipped (AND logic)")]
     private static partial void LogArchivePromotionSucceeded(ILogger logger, int promoted, int skipped);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Archive promotion failed: {Error}")]
-    private static partial void LogArchivePromotionFailed(ILogger logger, string? error);
+    [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Archive promotion failed for user {UserId}")]
+    private static partial void LogArchivePromotionFailed(ILogger logger, Exception exception, string userId);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "[BACKGROUND] Error checking Long->Archive promotion")]
     private static partial void LogErrorCheckingLongTermArchival(ILogger logger, Exception ex);

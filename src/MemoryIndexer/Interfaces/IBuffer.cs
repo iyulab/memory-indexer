@@ -98,6 +98,16 @@ public interface IBuffer
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Puts drained items back at the front of the user's buffer, in their original order, so a promotion that failed
+    /// after <see cref="DrainAsync(string, CancellationToken)"/> does not lose them.
+    /// </summary>
+    /// <param name="items">Items returned by a drain, all of one user.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task RestoreAsync(
+        IReadOnlyList<SensoryMemory> items,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Clears all items from the buffer for a user.
     /// Use with caution - items are discarded without promotion.
     /// </summary>

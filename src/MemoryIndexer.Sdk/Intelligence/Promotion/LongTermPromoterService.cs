@@ -106,62 +106,52 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
 
         var sw = Stopwatch.StartNew();
 
-        try
+        var candidates = await CheckPromotionCandidatesAsync(userId, cancellationToken);
+
+        if (candidates.Count == 0)
         {
-            var candidates = await CheckPromotionCandidatesAsync(userId, cancellationToken);
+            return ArchivePromotionResult.Empty with { Duration = sw.Elapsed };
+        }
 
-            if (candidates.Count == 0)
-            {
-                return ArchivePromotionResult.Empty with { Duration = sw.Elapsed };
-            }
+        var eligibleCandidates = candidates.Where(c => c.IsEligible).ToList();
 
-            var eligibleCandidates = candidates.Where(c => c.IsEligible).ToList();
-
-            if (eligibleCandidates.Count == 0)
-            {
-                LogARCHIVEPROMOTIONUserUserIdMemories(_logger, userId);
-
-                return new ArchivePromotionResult
-                {
-                    Success = true,
-                    MemoriesPromoted = 0,
-                    MemoriesSkipped = candidates.Count,
-                    Duration = sw.Elapsed
-                };
-            }
-
-            var promotedMemories = new List<PromotedMemoryInfo>();
-            var promotedCount = 0;
-
-            foreach (var candidate in eligibleCandidates)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var result = await PromoteMemoryAsync(candidate.Memory, cancellationToken);
-
-                if (result.Success)
-                {
-                    promotedCount++;
-                    promotedMemories.AddRange(result.PromotedMemories);
-                }
-            }
-
-            LogARCHIVEPROMOTIONUserUserIdPromoted(_logger, userId, promotedCount, _archiveOptions.MinConfidenceThreshold, _archiveOptions.MinConfirmationCount);
+        if (eligibleCandidates.Count == 0)
+        {
+            LogARCHIVEPROMOTIONUserUserIdMemories(_logger, userId);
 
             return new ArchivePromotionResult
             {
-                Success = true,
-                MemoriesPromoted = promotedCount,
-                MemoriesSkipped = candidates.Count - eligibleCandidates.Count,
-                PromotedMemories = promotedMemories,
+                MemoriesPromoted = 0,
+                MemoriesSkipped = candidates.Count,
                 Duration = sw.Elapsed
             };
         }
-        catch (Exception ex)
+
+        var promotedMemories = new List<PromotedMemoryInfo>();
+        var promotedCount = 0;
+
+        foreach (var candidate in eligibleCandidates)
         {
-            LogARCHIVEPROMOTIONErrorPromotingMemories(_logger, ex, userId);
-            return ArchivePromotionResult.Failure(ex.Message) with { Duration = sw.Elapsed };
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = await PromoteMemoryAsync(candidate.Memory, cancellationToken);
+
+            if (result.MemoriesPromoted > 0)
+            {
+                promotedCount++;
+                promotedMemories.AddRange(result.PromotedMemories);
+            }
         }
+
+        LogARCHIVEPROMOTIONUserUserIdPromoted(_logger, userId, promotedCount, _archiveOptions.MinConfidenceThreshold, _archiveOptions.MinConfirmationCount);
+
+        return new ArchivePromotionResult
+        {
+            MemoriesPromoted = promotedCount,
+            MemoriesSkipped = candidates.Count - eligibleCandidates.Count,
+            PromotedMemories = promotedMemories,
+            Duration = sw.Elapsed
+        };
     }
 
     /// <inheritdoc />
@@ -179,11 +169,10 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
 
         if (memory.Confidence < minConfidence || memory.ConfirmCount < minConfirmCount)
         {
+            // Not eligible is an answer, not a failure: the memory is skipped.
             return new ArchivePromotionResult
             {
-                Success = false,
                 MemoriesSkipped = 1,
-                Error = $"Memory does not meet AND logic: confidence {memory.Confidence:F2}/{minConfidence:F2}, confirms {memory.ConfirmCount}/{minConfirmCount}",
                 Duration = sw.Elapsed
             };
         }
@@ -197,12 +186,7 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
 
         if (!promotionResult.Success)
         {
-            return new ArchivePromotionResult
-            {
-                Success = false,
-                Error = promotionResult.Error,
-                Duration = sw.Elapsed
-            };
+            throw new InvalidOperationException(promotionResult.Error ?? $"Memory {memory.Id} could not be promoted to Archive.");
         }
 
         // Update in store
@@ -223,7 +207,6 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
 
         return new ArchivePromotionResult
         {
-            Success = true,
             MemoriesPromoted = 1,
             PromotedMemories = [promotedInfo],
             Duration = sw.Elapsed
@@ -259,8 +242,6 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
     [LoggerMessage(Level = LogLevel.Information, Message = "[ARCHIVE_PROMOTION] User {UserId}: Promoted {Count} memories to Archive tier (AND logic: confidence>={Confidence}, confirms>={Confirms})")]
     private static partial void LogARCHIVEPROMOTIONUserUserIdPromoted(ILogger logger, string userId, int count, float confidence, double confirms);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "[ARCHIVE_PROMOTION] Error promoting memories for user {UserId}")]
-    private static partial void LogARCHIVEPROMOTIONErrorPromotingMemories(ILogger logger, Exception ex, string userId);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "[ARCHIVE_PROMOTION] Memory {MemoryId} promoted: Long->Archive (confidence={Confidence:F2}, confirms={Confirms})")]
     private static partial void LogARCHIVEPROMOTIONMemoryMemoryIdPromoted(ILogger logger, Guid memoryId, float confidence, double confirms);

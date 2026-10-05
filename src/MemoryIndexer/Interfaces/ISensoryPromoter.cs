@@ -61,10 +61,6 @@ public interface ISensoryPromoter
 /// </summary>
 public sealed record BufferPromotionResult
 {
-    /// <summary>
-    /// Whether the promotion succeeded.
-    /// </summary>
-    public bool Success { get; init; }
 
     /// <summary>
     /// The trigger that caused the promotion.
@@ -92,10 +88,6 @@ public sealed record BufferPromotionResult
     /// </summary>
     public IReadOnlyList<MemoryUnit> EvictedMemories { get; init; } = [];
 
-    /// <summary>
-    /// Error message if promotion failed.
-    /// </summary>
-    public string? Error { get; init; }
 
     /// <summary>
     /// Duration of the promotion operation.
@@ -107,20 +99,11 @@ public sealed record BufferPromotionResult
     /// </summary>
     public static BufferPromotionResult Empty => new()
     {
-        Success = true,
         Trigger = PromotionTriggerType.None,
         ItemsProcessed = 0,
         TopicGroupsCreated = 0
     };
 
-    /// <summary>
-    /// Creates a failure result.
-    /// </summary>
-    public static BufferPromotionResult Failure(string error) => new()
-    {
-        Success = false,
-        Error = error
-    };
 }
 
 /// <summary>

@@ -37,11 +37,20 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IO
             Role = role
         };
 
-        var result = await fastTrackPromoter.ProcessAsync(context, cancellationToken);
+        FastTrackResult result;
+        try
+        {
+            result = await fastTrackPromoter.ProcessAsync(context, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            // The tool's answer to the model: the extraction failed, and why.
+            return new FactExtractionToolResult { Success = false, Message = ex.Message };
+        }
 
         return new FactExtractionToolResult
         {
-            Success = result.Success,
+            Success = true,
             ContextType = result.ContextType.ToString(),
             TotalExtracted = result.ExtractedFacts.Count,
             FastTracked = result.FastTrackedFacts.Count,
@@ -63,8 +72,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IO
                 Content = s.Fact.Content,
                 Reason = s.Reason.ToString(),
                 Details = s.Details
-            }).ToList(),
-            Message = result.Error
+            }).ToList()
         };
     }
 

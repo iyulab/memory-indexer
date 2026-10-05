@@ -57,85 +57,75 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
         ArgumentNullException.ThrowIfNull(context);
         ArgumentException.ThrowIfNullOrWhiteSpace(context.UserId);
 
-        try
+        LogProcessingFastTrack(_logger, context.UserId);
+
+        // Extract facts from content
+        var extractionResult = await _factExtractor.ExtractAsync(context, cancellationToken);
+
+        if (!extractionResult.HasFacts)
         {
-            LogProcessingFastTrack(_logger, context.UserId);
-
-            // Extract facts from content
-            var extractionResult = await _factExtractor.ExtractAsync(context, cancellationToken);
-
-            if (!extractionResult.HasFacts)
-            {
-                LogNoFactsExtracted(_logger);
-                return new FastTrackResult
-                {
-                    Success = true,
-                    ExtractedFacts = [],
-                    ContextType = extractionResult.ContextType
-                };
-            }
-
-            // Get existing facts for validation
-            var existingFacts = await GetExistingFactsAsync(context.UserId, cancellationToken);
-
-            var fastTracked = new List<UserFact>();
-            var standardPath = new List<UserFact>();
-            var skipped = new List<FactSkipReason>();
-
-            foreach (var fact in extractionResult.Facts)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // Validate against existing facts
-                var validation = await _factExtractor.ValidateAsync(fact, existingFacts, cancellationToken);
-
-                // Determine promotion path
-                var decision = DeterminePromotionDecision(fact, validation, extractionResult.ContextType);
-
-                switch (decision)
-                {
-                    case PromotionDecision.FastTrack:
-                        await PromoteToArchiveAsync(context.UserId, fact, context.SessionId, cancellationToken);
-                        fastTracked.Add(fact);
-                        break;
-
-                    case PromotionDecision.Standard:
-                        standardPath.Add(fact);
-                        break;
-
-                    case PromotionDecision.Skip:
-                        skipped.Add(new FactSkipReason
-                        {
-                            Fact = fact,
-                            Reason = MapConflictToSkipReason(validation),
-                            Details = validation.Reasoning
-                        });
-                        break;
-
-                    case PromotionDecision.Replace:
-                        await ReplaceInArchiveAsync(context.UserId, fact, validation.ConflictingMemory, cancellationToken);
-                        fastTracked.Add(fact);
-                        break;
-                }
-            }
-
-            LogFastTrackProcessingComplete(_logger, extractionResult.Facts.Count, fastTracked.Count, standardPath.Count, skipped.Count);
-
+            LogNoFactsExtracted(_logger);
             return new FastTrackResult
             {
-                Success = true,
-                ExtractedFacts = extractionResult.Facts,
-                FastTrackedFacts = fastTracked,
-                StandardPathFacts = standardPath,
-                SkippedFacts = skipped,
+                ExtractedFacts = [],
                 ContextType = extractionResult.ContextType
             };
         }
-        catch (Exception ex)
+
+        // Get existing facts for validation
+        var existingFacts = await GetExistingFactsAsync(context.UserId, cancellationToken);
+
+        var fastTracked = new List<UserFact>();
+        var standardPath = new List<UserFact>();
+        var skipped = new List<FactSkipReason>();
+
+        foreach (var fact in extractionResult.Facts)
         {
-            LogFailedFastTrackProcessing(_logger, ex);
-            return FastTrackResult.Failure(ex.Message);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Validate against existing facts
+            var validation = await _factExtractor.ValidateAsync(fact, existingFacts, cancellationToken);
+
+            // Determine promotion path
+            var decision = DeterminePromotionDecision(fact, validation, extractionResult.ContextType);
+
+            switch (decision)
+            {
+                case PromotionDecision.FastTrack:
+                    await PromoteToArchiveAsync(context.UserId, fact, context.SessionId, cancellationToken);
+                    fastTracked.Add(fact);
+                    break;
+
+                case PromotionDecision.Standard:
+                    standardPath.Add(fact);
+                    break;
+
+                case PromotionDecision.Skip:
+                    skipped.Add(new FactSkipReason
+                    {
+                        Fact = fact,
+                        Reason = MapConflictToSkipReason(validation),
+                        Details = validation.Reasoning
+                    });
+                    break;
+
+                case PromotionDecision.Replace:
+                    await ReplaceInArchiveAsync(context.UserId, fact, validation.ConflictingMemory, cancellationToken);
+                    fastTracked.Add(fact);
+                    break;
+            }
         }
+
+        LogFastTrackProcessingComplete(_logger, extractionResult.Facts.Count, fastTracked.Count, standardPath.Count, skipped.Count);
+
+        return new FastTrackResult
+        {
+            ExtractedFacts = extractionResult.Facts,
+            FastTrackedFacts = fastTracked,
+            StandardPathFacts = standardPath,
+            SkippedFacts = skipped,
+            ContextType = extractionResult.ContextType
+        };
     }
 
     /// <inheritdoc />
@@ -154,72 +144,55 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
         var totalStandardPath = 0;
         var totalSkipped = 0;
 
-        try
+        // Group by user for efficiency
+        var byUser = items.GroupBy(i => i.UserId);
+
+        foreach (var userGroup in byUser)
         {
-            // Group by user for efficiency
-            var byUser = items.GroupBy(i => i.UserId);
+            var userId = userGroup.Key;
 
-            foreach (var userGroup in byUser)
+            // Process each item for the user
+            foreach (var item in userGroup)
             {
-                var userId = userGroup.Key;
+                cancellationToken.ThrowIfCancellationRequested();
 
-                // Process each item for the user
-                foreach (var item in userGroup)
+                // Only process user messages (not assistant responses)
+                if (item.Role?.Equals("assistant", StringComparison.OrdinalIgnoreCase) == true)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    // Only process user messages (not assistant responses)
-                    if (item.Role?.Equals("assistant", StringComparison.OrdinalIgnoreCase) == true)
-                    {
-                        continue;
-                    }
-
-                    var context = new FactExtractionContext
-                    {
-                        Content = item.Content,
-                        UserId = userId,
-                        SessionId = item.SessionId,
-                        Role = item.Role
-                    };
-
-                    var result = await ProcessAsync(context, cancellationToken);
-                    results.Add(result);
-
-                    totalFastTracked += result.FastTrackedFacts.Count;
-                    totalStandardPath += result.StandardPathFacts.Count;
-                    totalSkipped += result.SkippedFacts.Count;
+                    continue;
                 }
+
+                var context = new FactExtractionContext
+                {
+                    Content = item.Content,
+                    UserId = userId,
+                    SessionId = item.SessionId,
+                    Role = item.Role
+                };
+
+                var result = await ProcessAsync(context, cancellationToken);
+                results.Add(result);
+
+                totalFastTracked += result.FastTrackedFacts.Count;
+                totalStandardPath += result.StandardPathFacts.Count;
+                totalSkipped += result.SkippedFacts.Count;
             }
-
-            stopwatch.Stop();
-
-            LogBatchFastTrackComplete(_logger, items.Count, totalFastTracked, totalStandardPath, totalSkipped, stopwatch.Elapsed.TotalSeconds);
-
-            return new FastTrackBatchResult
-            {
-                Success = true,
-                ItemsProcessed = items.Count,
-                TotalFactsExtracted = results.Sum(r => r.ExtractedFacts.Count),
-                TotalFastTracked = totalFastTracked,
-                TotalStandardPath = totalStandardPath,
-                TotalSkipped = totalSkipped,
-                Results = results,
-                Duration = stopwatch.Elapsed
-            };
         }
-        catch (Exception ex)
+
+        stopwatch.Stop();
+
+        LogBatchFastTrackComplete(_logger, items.Count, totalFastTracked, totalStandardPath, totalSkipped, stopwatch.Elapsed.TotalSeconds);
+
+        return new FastTrackBatchResult
         {
-            LogFailedBatchFastTrack(_logger, ex);
-            stopwatch.Stop();
-            return new FastTrackBatchResult
-            {
-                Success = false,
-                Error = ex.Message,
-                ItemsProcessed = results.Count,
-                Results = results,
-                Duration = stopwatch.Elapsed
-            };
-        }
+            ItemsProcessed = items.Count,
+            TotalFactsExtracted = results.Sum(r => r.ExtractedFacts.Count),
+            TotalFastTracked = totalFastTracked,
+            TotalStandardPath = totalStandardPath,
+            TotalSkipped = totalSkipped,
+            Results = results,
+            Duration = stopwatch.Elapsed
+        };
     }
 
     /// <inheritdoc />
@@ -457,14 +430,10 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
     [LoggerMessage(Level = LogLevel.Information, Message = "Fast-track processing complete: Extracted={Extracted}, FastTracked={FastTracked}, StandardPath={Standard}, Skipped={Skipped}")]
     private static partial void LogFastTrackProcessingComplete(ILogger logger, int extracted, int fastTracked, int standard, int skipped);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to process content for fast-track promotion")]
-    private static partial void LogFailedFastTrackProcessing(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Batch fast-track complete: Items={Items}, FastTracked={FastTracked}, StandardPath={Standard}, Skipped={Skipped}, Duration={Duration:F2}s")]
     private static partial void LogBatchFastTrackComplete(ILogger logger, int items, int fastTracked, int standard, int skipped, double duration);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to process batch for fast-track promotion")]
-    private static partial void LogFailedBatchFastTrack(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get user profile for {UserId}")]
     private static partial void LogFailedGetUserProfile(ILogger logger, Exception ex, string userId);

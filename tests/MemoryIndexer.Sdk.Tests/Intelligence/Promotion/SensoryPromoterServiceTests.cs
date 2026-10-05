@@ -80,7 +80,6 @@ public class SensoryPromoterServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Success.Should().BeTrue();
         result.ItemsProcessed.Should().Be(0);
         result.TopicGroupsCreated.Should().Be(0);
         result.CreatedMemories.Should().BeEmpty();
@@ -97,7 +96,6 @@ public class SensoryPromoterServiceTests
         var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.ItemsProcessed.Should().Be(1);
         result.TopicGroupsCreated.Should().Be(1);
         result.CreatedMemories.Should().HaveCount(1);
@@ -120,7 +118,6 @@ public class SensoryPromoterServiceTests
         var result = await _promoter.PromoteAsync(userId, PromotionTriggerType.TurnThreshold, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue(because: result.Error ?? "no error");
         result.ItemsProcessed.Should().Be(3);
         result.TopicGroupsCreated.Should().BeGreaterThanOrEqualTo(1);
         result.CreatedMemories.Should().NotBeEmpty();
@@ -187,7 +184,6 @@ public class SensoryPromoterServiceTests
         var result = await _promoter.PromoteItemsAsync([], TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.ItemsProcessed.Should().Be(0);
     }
 
@@ -215,7 +211,6 @@ public class SensoryPromoterServiceTests
         var result = await _promoter.PromoteItemsAsync(items, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.Trigger.Should().Be(PromotionTriggerType.Manual);
         result.CreatedMemories.Should().NotBeEmpty();
     }
@@ -244,7 +239,6 @@ public class SensoryPromoterServiceTests
         var result = await _promoter.PromoteItemsAsync(items, TestContext.Current.CancellationToken);
 
         // Assert - Role should be preserved in MemoryUnit
-        result.Success.Should().BeTrue();
         result.CreatedMemories.Should().NotBeEmpty();
         result.CreatedMemories[0].Role.Should().Be("user");
     }
@@ -279,7 +273,6 @@ public class SensoryPromoterServiceTests
         var result = await _promoter.PromoteItemsAsync(items, TestContext.Current.CancellationToken);
 
         // Assert - dominant role (assistant) should be stored
-        result.Success.Should().BeTrue();
         result.CreatedMemories.Should().NotBeEmpty();
         result.CreatedMemories[0].Role.Should().Be("assistant");
         // Also verify roles metadata contains all unique roles
@@ -393,7 +386,6 @@ public class SensoryPromoterServiceTests
         var result = await promoter.PromoteAsync("user-1", PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.EvictedMemories.Should().HaveCount(1);
         result.EvictedMemories[0].Content.Should().Be("Pre-existing 1");
     }
@@ -426,11 +418,12 @@ public class SensoryPromoterServiceTests
         await _recentlyBuffer.EnqueueAsync("Content", "user-1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var result = await promoter.PromoteAsync("user-1", PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
+        var act = () => promoter.PromoteAsync("user-1", PromotionTriggerType.Manual, TestContext.Current.CancellationToken);
 
-        // Assert
-        result.Success.Should().BeFalse();
-        result.Error.Should().NotBeNullOrEmpty();
+        // Assert - the failure reaches the caller and the drained item is back in the buffer for the next cycle
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        var pending = await _recentlyBuffer.GetPendingAsync("user-1", TestContext.Current.CancellationToken);
+        pending.Should().ContainSingle().Which.Content.Should().Be("Content");
     }
 
     #endregion

@@ -88,7 +88,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
 
             return new RetentionApplyResult
             {
-                Success = result.Success,
+                Success = true,
                 UserId = targetUserId,
                 DryRun = dryRun,
                 TotalProcessed = result.TotalProcessed,
@@ -98,11 +98,10 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
                 ProcessingTimeMs = result.ProcessingTimeMs,
                 Message = dryRun
                     ? $"Dry run complete: would retain {result.RetainedCount}, archive {result.ArchivedCount}, delete {result.DeletedCount}"
-                    : $"Policy applied: retained {result.RetainedCount}, archived {result.ArchivedCount}, deleted {result.DeletedCount}",
-                ErrorMessage = result.ErrorMessage
+                    : $"Policy applied: retained {result.RetainedCount}, archived {result.ArchivedCount}, deleted {result.DeletedCount}"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return new RetentionApplyResult
             {

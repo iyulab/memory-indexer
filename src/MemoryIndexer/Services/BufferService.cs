@@ -215,6 +215,42 @@ public sealed partial class BufferService : IBuffer
     }
 
     /// <inheritdoc />
+    public Task RestoreAsync(IReadOnlyList<SensoryMemory> items, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        if (items.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        var userId = items[0].UserId;
+        var buffer = _userBuffers.GetOrAdd(userId, _ => new UserBuffer { LastActivityTime = DateTime.UtcNow });
+
+        lock (buffer.Lock)
+        {
+            // ConcurrentQueue has no push-front: rebuild it as restored items followed by what arrived meanwhile.
+            var arrived = new List<SensoryMemory>();
+            while (buffer.Items.TryDequeue(out var item))
+            {
+                arrived.Add(item);
+            }
+
+            foreach (var item in items)
+            {
+                buffer.Items.Enqueue(item);
+                buffer.TotalTokens += item.TokenCount;
+            }
+
+            foreach (var item in arrived)
+            {
+                buffer.Items.Enqueue(item);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public Task<int> ClearAsync(string userId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

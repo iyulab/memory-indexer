@@ -69,16 +69,6 @@ public interface IRetentionPolicyService
         string userId,
         bool dryRun = false,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Applies retention policy to all users.
-    /// </summary>
-    /// <param name="dryRun">If true, only reports what would be done.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Aggregated results across all users.</returns>
-    Task<RetentionResult> ApplyToAllAsync(
-        bool dryRun = false,
-        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -309,16 +299,6 @@ public class CategoryPreview
 public class RetentionResult
 {
     /// <summary>
-    /// Whether the operation succeeded.
-    /// </summary>
-    public bool Success { get; init; }
-
-    /// <summary>
-    /// Error message if failed.
-    /// </summary>
-    public string? ErrorMessage { get; init; }
-
-    /// <summary>
     /// Total entries processed.
     /// </summary>
     public int TotalProcessed { get; init; }
@@ -347,16 +327,6 @@ public class RetentionResult
     /// When the policy was applied.
     /// </summary>
     public DateTime AppliedAt { get; init; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Users processed (for ApplyToAll).
-    /// </summary>
-    public int UsersProcessed { get; init; }
-
-    /// <summary>
-    /// Errors encountered (for ApplyToAll).
-    /// </summary>
-    public IReadOnlyList<string> Errors { get; init; } = [];
 }
 
 /// <summary>

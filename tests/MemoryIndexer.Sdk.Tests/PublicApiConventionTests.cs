@@ -26,18 +26,10 @@ public class PublicApiConventionTests
 
     private static readonly string[] KnownResultReturns =
     [
-        "MemoryIndexer.Interfaces.IFastTrackPromoter.ProcessAsync(FactExtractionContext, CancellationToken)",
-        "MemoryIndexer.Interfaces.IFastTrackPromoter.ProcessBatchAsync(IReadOnlyList<SensoryMemory>, CancellationToken)",
-        "MemoryIndexer.Interfaces.ILongTermPromoter.PromoteMemoryAsync(MemoryUnit, CancellationToken)",
-        "MemoryIndexer.Interfaces.ILongTermPromoter.PromoteToArchiveAsync(String, CancellationToken)",
         "MemoryIndexer.Interfaces.IMemoryExporter.ImportAsync(MemoryExportPackage, ImportOptions, CancellationToken)",
         "MemoryIndexer.Interfaces.IMemoryExporter.ImportFromStreamAsync(Stream, ImportOptions, CancellationToken)",
         "MemoryIndexer.Interfaces.IMemoryPrimitives.ConfirmAsync(ConfirmRequest, CancellationToken)",
         "MemoryIndexer.Interfaces.IProfileExporter.ExportAsync(String, ProfileExportOptions, CancellationToken)",
-        "MemoryIndexer.Interfaces.IRetentionPolicyService.ApplyAsync(String, Boolean, CancellationToken)",
-        "MemoryIndexer.Interfaces.IRetentionPolicyService.ApplyToAllAsync(Boolean, CancellationToken)",
-        "MemoryIndexer.Interfaces.ISensoryPromoter.PromoteAsync(String, PromotionTriggerType, CancellationToken)",
-        "MemoryIndexer.Interfaces.ISensoryPromoter.PromoteItemsAsync(IReadOnlyList<SensoryMemory>, CancellationToken)",
         "MemoryIndexer.Interfaces.IShortTermMemoryOrchestrator.ArchiveToSessionAsync(String, WorkingPromotionTrigger, Boolean, CancellationToken)",
         "MemoryIndexer.Interfaces.ITierManager.DemoteAsync(MemoryUnit, Tier, PromotionReason, CancellationToken)",
         "MemoryIndexer.Interfaces.ITierManager.PromoteAsync(MemoryUnit, Tier, PromotionReason, CancellationToken)",
@@ -47,6 +39,8 @@ public class PublicApiConventionTests
         "MemoryIndexer.Sdk.Evaluation.NiahTestRunner.RunTestAsync(NiahTestConfig, CancellationToken)",
         "MemoryIndexer.Sdk.Intelligence.Consolidation.IMemoryConsolidator.ConsolidateAsync(ConsolidationOptions, CancellationToken)",
         "MemoryIndexer.Sdk.Intelligence.Evaluation.ILoCoMoEvaluator.EvaluateQueryAsync(IMemoryStore, LoCoMoTestQuery, String, CancellationToken)",
+        // MCP tool: the return value is what the model reads, so a failed policy run is reported to it as data.
+        // The service underneath throws; the tool lets the caller's cancellation through.
         "MemoryIndexer.Sdk.Mcp.Tools.RetentionPolicyTools.ApplyRetentionPolicy(String, Boolean, CancellationToken)",
     ];
 

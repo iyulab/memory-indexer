@@ -31,7 +31,6 @@ public class FactExtractionToolsTests
         // Arrange
         var processResult = new FastTrackResult
         {
-            Success = true,
             ContextType = StatementContextType.Direct,
             ExtractedFacts =
             [
@@ -82,7 +81,6 @@ public class FactExtractionToolsTests
         // Arrange
         var processResult = new FastTrackResult
         {
-            Success = true,
             ContextType = StatementContextType.Quoted,
             ExtractedFacts =
             [
@@ -128,7 +126,6 @@ public class FactExtractionToolsTests
         // Arrange
         var processResult = new FastTrackResult
         {
-            Success = true,
             ContextType = StatementContextType.Question,
             ExtractedFacts = [],
             FastTrackedFacts = [],

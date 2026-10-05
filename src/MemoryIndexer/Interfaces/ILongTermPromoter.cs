@@ -106,10 +106,6 @@ public sealed record ArchivePromotionCandidate
 /// </summary>
 public sealed record ArchivePromotionResult
 {
-    /// <summary>
-    /// Whether the promotion succeeded.
-    /// </summary>
-    public bool Success { get; init; }
 
     /// <summary>
     /// Number of memories promoted to Archive.
@@ -126,10 +122,6 @@ public sealed record ArchivePromotionResult
     /// </summary>
     public IReadOnlyList<PromotedMemoryInfo> PromotedMemories { get; init; } = [];
 
-    /// <summary>
-    /// Error message if promotion failed.
-    /// </summary>
-    public string? Error { get; init; }
 
     /// <summary>
     /// Duration of the promotion operation.
@@ -141,19 +133,10 @@ public sealed record ArchivePromotionResult
     /// </summary>
     public static ArchivePromotionResult Empty => new()
     {
-        Success = true,
         MemoriesPromoted = 0,
         MemoriesSkipped = 0
     };
 
-    /// <summary>
-    /// Creates a failure result.
-    /// </summary>
-    public static ArchivePromotionResult Failure(string error) => new()
-    {
-        Success = false,
-        Error = error
-    };
 }
 
 /// <summary>

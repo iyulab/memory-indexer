@@ -121,7 +121,6 @@ public class RetentionPolicyServiceTests
         var result = await _service.ApplyAsync("user1", dryRun: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.ArchivedCount.Should().Be(1);
         await _mockArchiveStore.DidNotReceive().SetAsync(Arg.Any<string>(), Arg.Any<SemanticStoreEntry>(), Arg.Any<CancellationToken>());
         await _mockArchiveStore.DidNotReceive().RemoveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -154,7 +153,6 @@ public class RetentionPolicyServiceTests
         var result = await _service.ApplyAsync("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.ArchivedCount.Should().Be(1);
         await _mockArchiveStore.Received(1).SetAsync("user1", Arg.Is<SemanticStoreEntry>(e => e.Key == "archive" && !e.IsActive), Arg.Any<CancellationToken>());
     }
@@ -186,7 +184,6 @@ public class RetentionPolicyServiceTests
         var result = await _service.ApplyAsync("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.DeletedCount.Should().Be(1);
         await _mockArchiveStore.Received(1).RemoveAsync("user1", "delete", Arg.Any<CancellationToken>());
     }
@@ -215,7 +212,6 @@ public class RetentionPolicyServiceTests
         var result = await _service.ApplyAsync("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.RetainedCount.Should().Be(1);
         result.ArchivedCount.Should().Be(0);
         result.DeletedCount.Should().Be(0);
@@ -256,7 +252,6 @@ public class RetentionPolicyServiceTests
         var result = await _service.ApplyAsync("user1", dryRun: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.TotalProcessed.Should().Be(3);
         result.RetainedCount.Should().Be(1);
         result.ArchivedCount.Should().Be(1);
@@ -265,19 +260,17 @@ public class RetentionPolicyServiceTests
     }
 
     [Fact]
-    public async Task ApplyAsync_OnException_ShouldReturnError()
+    public async Task ApplyAsync_OnException_Throws()
     {
         // Arrange
         _mockArchiveStore.GetAllAsync("user1", Arg.Any<CancellationToken>())
             .Throws(new InvalidOperationException("Database error"));
 
         // Act
-        var result = await _service.ApplyAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
+        var act = () => _service.ApplyAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Database error");
-        result.Errors.Should().Contain("Database error");
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Database error");
     }
 
     [Fact]

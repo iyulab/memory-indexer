@@ -63,10 +63,6 @@ public interface IFastTrackPromoter
 /// </summary>
 public sealed class FastTrackResult
 {
-    /// <summary>
-    /// Whether the operation succeeded.
-    /// </summary>
-    public bool Success { get; init; }
 
     /// <summary>
     /// All facts extracted from the content.
@@ -93,28 +89,15 @@ public sealed class FastTrackResult
     /// </summary>
     public StatementContextType ContextType { get; init; }
 
-    /// <summary>
-    /// Error message if the operation failed.
-    /// </summary>
-    public string? Error { get; init; }
 
     /// <summary>
     /// Creates an empty successful result.
     /// </summary>
     public static FastTrackResult Empty => new()
     {
-        Success = true,
         ContextType = StatementContextType.Unknown
     };
 
-    /// <summary>
-    /// Creates a failure result.
-    /// </summary>
-    public static FastTrackResult Failure(string error) => new()
-    {
-        Success = false,
-        Error = error
-    };
 }
 
 /// <summary>
@@ -122,10 +105,6 @@ public sealed class FastTrackResult
 /// </summary>
 public sealed class FastTrackBatchResult
 {
-    /// <summary>
-    /// Whether the batch operation succeeded.
-    /// </summary>
-    public bool Success { get; init; }
 
     /// <summary>
     /// Number of items processed.
@@ -157,10 +136,6 @@ public sealed class FastTrackBatchResult
     /// </summary>
     public IReadOnlyList<FastTrackResult> Results { get; init; } = [];
 
-    /// <summary>
-    /// Error message if the operation failed.
-    /// </summary>
-    public string? Error { get; init; }
 
     /// <summary>
     /// Duration of the batch operation.
@@ -172,7 +147,6 @@ public sealed class FastTrackBatchResult
     /// </summary>
     public static FastTrackBatchResult Empty => new()
     {
-        Success = true,
         ItemsProcessed = 0
     };
 }

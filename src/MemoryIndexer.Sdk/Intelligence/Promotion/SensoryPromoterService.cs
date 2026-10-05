@@ -67,26 +67,28 @@ public sealed partial class SensoryPromoterService : ISensoryPromoter
 
             LogPROMOTIONFoundCountPromotableItems(_logger, items.Count, userId, trigger);
 
-            var result = await PromoteItemsInternalAsync(items, trigger, cancellationToken);
+            BufferPromotionResult result;
+            try
+            {
+                result = await PromoteItemsInternalAsync(items, trigger, cancellationToken);
+            }
+            catch
+            {
+                // The items left the buffer when it was drained; put them back so the next cycle retries them instead
+                // of losing them. A segment written before the failure may be written again (at-least-once).
+                await _sensoryBuffer.RestoreAsync(items, CancellationToken.None);
+                throw;
+            }
 
             stopwatch.Stop();
-
-            if (result.Success)
-            {
-                LogPROMOTIONSuccessfullyPromotedItemCountItems(_logger, result.ItemsProcessed, result.CreatedMemories.Count, result.EvictedMemories.Count, stopwatch.Elapsed.TotalSeconds);
-            }
-            else
-            {
-                LogPROMOTIONPromotionFailedError(_logger, result.Error ?? "Unknown error");
-            }
+            LogPROMOTIONSuccessfullyPromotedItemCountItems(_logger, result.ItemsProcessed, result.CreatedMemories.Count, result.EvictedMemories.Count, stopwatch.Elapsed.TotalSeconds);
 
             return result with { Duration = stopwatch.Elapsed };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             LogPROMOTIONFailedPromoteBufferUser(_logger, ex, userId);
-            stopwatch.Stop();
-            return BufferPromotionResult.Failure(ex.Message) with { Duration = stopwatch.Elapsed };
+            throw;
         }
     }
 
@@ -102,20 +104,11 @@ public sealed partial class SensoryPromoterService : ISensoryPromoter
 
         var stopwatch = Stopwatch.StartNew();
 
-        try
-        {
-            var result = await PromoteItemsInternalAsync(
-                items, PromotionTriggerType.Manual, cancellationToken);
+        var result = await PromoteItemsInternalAsync(
+            items, PromotionTriggerType.Manual, cancellationToken);
 
-            stopwatch.Stop();
-            return result with { Duration = stopwatch.Elapsed };
-        }
-        catch (Exception ex)
-        {
-            LogFailedPromoteCountItems(_logger, ex, items.Count);
-            stopwatch.Stop();
-            return BufferPromotionResult.Failure(ex.Message) with { Duration = stopwatch.Elapsed };
-        }
+        stopwatch.Stop();
+        return result with { Duration = stopwatch.Elapsed };
     }
 
     /// <inheritdoc />
@@ -255,7 +248,6 @@ public sealed partial class SensoryPromoterService : ISensoryPromoter
 
         return new BufferPromotionResult
         {
-            Success = true,
             Trigger = trigger,
             ItemsProcessed = items.Count,
             TopicGroupsCreated = segments.Count,
@@ -315,14 +307,10 @@ public sealed partial class SensoryPromoterService : ISensoryPromoter
     [LoggerMessage(Level = LogLevel.Information, Message = "[PROMOTION] Successfully promoted {ItemCount} items as {SegmentCount} memories. Evicted: {EvictedCount}. Duration: {Duration:F2}s")]
     private static partial void LogPROMOTIONSuccessfullyPromotedItemCountItems(ILogger logger, int itemCount, int segmentCount, int evictedCount, double duration);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "[PROMOTION] Promotion failed: {Error}")]
-    private static partial void LogPROMOTIONPromotionFailedError(ILogger logger, string error);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "[PROMOTION] Failed to promote buffer for user {UserId}")]
     private static partial void LogPROMOTIONFailedPromoteBufferUser(ILogger logger, Exception ex, string userId);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to promote {Count} items")]
-    private static partial void LogFailedPromoteCountItems(ILogger logger, Exception ex, int count);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Created {SegmentCount} topic segments from {ItemCount} items")]
     private static partial void LogCreatedSegmentCountTopicSegmentsItemCount(ILogger logger, int segmentCount, int itemCount);

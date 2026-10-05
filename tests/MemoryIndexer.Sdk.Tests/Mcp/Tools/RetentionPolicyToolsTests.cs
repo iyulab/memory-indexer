@@ -124,7 +124,6 @@ public class RetentionPolicyToolsTests
         // Arrange
         var applyResult = new RetentionResult
         {
-            Success = true,
             TotalProcessed = 10,
             RetainedCount = 7,
             ArchivedCount = 2,
@@ -151,7 +150,6 @@ public class RetentionPolicyToolsTests
         // Arrange
         var applyResult = new RetentionResult
         {
-            Success = true,
             TotalProcessed = 10,
             RetainedCount = 7,
             ArchivedCount = 2,
@@ -176,15 +174,9 @@ public class RetentionPolicyToolsTests
     [Fact]
     public async Task ApplyRetentionPolicy_OnFailure_ShouldReturnError()
     {
-        // Arrange
-        var applyResult = new RetentionResult
-        {
-            Success = false,
-            ErrorMessage = "Storage connection failed"
-        };
-
+        // Arrange - the service reports a failure by throwing; the tool turns it into an error result for the model
         _mockRetentionService.ApplyAsync(Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
-            .Returns(applyResult);
+            .Returns<RetentionResult>(_ => throw new InvalidOperationException("Storage connection failed"));
 
         // Act
         var result = await _tools.ApplyRetentionPolicy("user1", cancellationToken: TestContext.Current.CancellationToken);
@@ -192,6 +184,19 @@ public class RetentionPolicyToolsTests
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Be("Storage connection failed");
+    }
+
+    [Fact]
+    public async Task ApplyRetentionPolicy_CallerCancels_Propagates()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        _mockRetentionService.ApplyAsync(Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns<RetentionResult>(ci => throw new OperationCanceledException(ci.ArgAt<CancellationToken>(2)));
+
+        var act = () => _tools.ApplyRetentionPolicy("user1", cancellationToken: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     #endregion

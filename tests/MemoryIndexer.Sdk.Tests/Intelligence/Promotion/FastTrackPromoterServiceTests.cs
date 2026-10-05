@@ -85,7 +85,6 @@ public class FastTrackPromoterServiceTests
         var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.FastTrackedFacts.Should().HaveCount(1);
         result.ContextType.Should().Be(StatementContextType.Direct);
 
@@ -144,7 +143,6 @@ public class FastTrackPromoterServiceTests
         var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.FastTrackedFacts.Should().BeEmpty();
         result.StandardPathFacts.Should().HaveCount(1);
 
@@ -199,7 +197,6 @@ public class FastTrackPromoterServiceTests
         var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.ContextType.Should().Be(StatementContextType.Quoted);
         result.FastTrackedFacts.Should().BeEmpty();
         result.SkippedFacts.Should().HaveCount(1);
@@ -255,7 +252,6 @@ public class FastTrackPromoterServiceTests
         var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.FastTrackedFacts.Should().BeEmpty();
         result.SkippedFacts.Should().HaveCount(1);
         result.SkippedFacts[0].Reason.Should().Be(SkipReasonType.Duplicate);
@@ -285,7 +281,6 @@ public class FastTrackPromoterServiceTests
         var result = await _service.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.ExtractedFacts.Should().BeEmpty();
         result.FastTrackedFacts.Should().BeEmpty();
         result.StandardPathFacts.Should().BeEmpty();
@@ -339,7 +334,6 @@ public class FastTrackPromoterServiceTests
         var result = await _service.ProcessBatchAsync(items, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.ItemsProcessed.Should().Be(3);
         // Only user messages processed (assistant skipped)
         result.Results.Should().HaveCount(2);
@@ -352,7 +346,6 @@ public class FastTrackPromoterServiceTests
         var result = await _service.ProcessBatchAsync([], TestContext.Current.CancellationToken);
 
         // Assert
-        result.Success.Should().BeTrue();
         result.ItemsProcessed.Should().Be(0);
         result.Results.Should().BeEmpty();
     }
