@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.26.1] - Unreleased
+## [v0.26.1] - 2026-10-06
 
 ### Fixed
 - **Cancelling a call now cancels it.** 45 method(s) that take a `CancellationToken` caught every exception to
