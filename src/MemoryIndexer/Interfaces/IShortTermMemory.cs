@@ -95,39 +95,3 @@ public interface IShortTermMemory
     /// <returns>The eviction candidate, or null if working memory is empty.</returns>
     Task<MemoryUnit?> GetEvictionCandidateAsync(CancellationToken cancellationToken = default);
 }
-
-/// <summary>
-/// Context information for working memory state.
-/// </summary>
-public sealed class WorkingMemoryContext
-{
-    /// <summary>
-    /// Current user ID.
-    /// </summary>
-    public required string UserId { get; init; }
-
-    /// <summary>
-    /// Current session ID.
-    /// </summary>
-    public required string SessionId { get; init; }
-
-    /// <summary>
-    /// Current namespace (null = no namespace partitioning).
-    /// </summary>
-    public string? Namespace { get; init; }
-
-    /// <summary>
-    /// Current task or conversation context identifier.
-    /// </summary>
-    public string? TaskId { get; init; }
-
-    /// <summary>
-    /// Estimated token count of current working memory contents.
-    /// </summary>
-    public int EstimatedTokens { get; set; }
-
-    /// <summary>
-    /// Context saturation level based on token usage.
-    /// </summary>
-    public ContextSaturationLevel SaturationLevel { get; set; }
-}
