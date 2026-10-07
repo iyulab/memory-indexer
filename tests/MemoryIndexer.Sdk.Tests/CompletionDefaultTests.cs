@@ -37,7 +37,7 @@ public class CompletionDefaultTests
         var primitives = provider.GetRequiredService<IMemoryPrimitives>();
         var a = await primitives.EncodeAsync(new EncodeRequest { UserId = "u", Content = "The user prefers tea." }, Ct);
         var b = await primitives.EncodeAsync(new EncodeRequest { UserId = "u", Content = "The user lives in Busan." }, Ct);
-        var summary = await primitives.SummarizeAsync(new SummarizeRequest { MemoryIds = [a.Id, b.Id] }, Ct);
+        var summary = await primitives.SummarizeAsync(new SummarizeRequest { UserId = "u", MemoryIds = [a.Id, b.Id] }, Ct);
         return summary.Content;
     }
 

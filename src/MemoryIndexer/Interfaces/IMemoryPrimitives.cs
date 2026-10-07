@@ -252,6 +252,11 @@ public sealed class EncodeRequest
 public sealed class UpdateRequest
 {
     /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
+    /// <summary>
     /// Memory ID to update.
     /// </summary>
     public required Guid MemoryId { get; init; }
@@ -292,6 +297,11 @@ public sealed class UpdateRequest
 /// </summary>
 public sealed class SplitRequest
 {
+    /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
     /// <summary>
     /// Memory ID to split.
     /// </summary>
@@ -350,6 +360,11 @@ public enum SplitStrategy
 public sealed class MergeRequest
 {
     /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
+    /// <summary>
     /// Memory IDs to merge.
     /// </summary>
     public required IReadOnlyList<Guid> MemoryIds { get; init; }
@@ -397,6 +412,11 @@ public enum MemoryMergeStrategy
 public sealed class DeleteRequest
 {
     /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
+    /// <summary>
     /// Memory ID to delete.
     /// </summary>
     public required Guid MemoryId { get; init; }
@@ -417,6 +437,11 @@ public sealed class DeleteRequest
 /// </summary>
 public sealed class ExpireRequest
 {
+    /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
     /// <summary>
     /// Memory ID.
     /// </summary>
@@ -439,6 +464,11 @@ public sealed class ExpireRequest
 public sealed class LockRequest
 {
     /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
+    /// <summary>
     /// Memory ID.
     /// </summary>
     public required Guid MemoryId { get; init; }
@@ -459,6 +489,11 @@ public sealed class LockRequest
 /// </summary>
 public sealed class LabelRequest
 {
+    /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
     /// <summary>
     /// Memory ID.
     /// </summary>
@@ -651,6 +686,11 @@ public sealed class ScoreBreakdown
 public sealed class SummarizeRequest
 {
     /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
+    /// <summary>
     /// Memory IDs to summarize.
     /// </summary>
     public required IReadOnlyList<Guid> MemoryIds { get; init; }
@@ -677,6 +717,11 @@ public sealed class SummarizeRequest
 public sealed class PromoteRequest
 {
     /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
+    /// <summary>
     /// Memory ID to promote.
     /// </summary>
     public required Guid MemoryId { get; init; }
@@ -692,6 +737,11 @@ public sealed class PromoteRequest
 /// </summary>
 public sealed class DemoteRequest
 {
+    /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
     /// <summary>
     /// Memory ID to demote.
     /// </summary>
@@ -744,6 +794,11 @@ public enum DemoteReason
 /// </summary>
 public sealed class ConfirmRequest
 {
+    /// <summary>
+    /// The user whose memory it is. A memory of another user with this ID is not found.
+    /// </summary>
+    public required string UserId { get; init; }
+
     /// <summary>
     /// Memory ID to confirm.
     /// </summary>

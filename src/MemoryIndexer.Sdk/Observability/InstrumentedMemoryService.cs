@@ -143,16 +143,17 @@ public sealed partial class InstrumentedMemoryService
     /// <summary>
     /// Gets a memory by ID.
     /// </summary>
-    public async Task<MemoryUnit?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<MemoryUnit?> GetByIdAsync(string userId, Guid id, CancellationToken cancellationToken = default)
     {
         using var activity = MemoryIndexerTelemetry.StartOperation("MemoryGet", "get");
         var sw = Stopwatch.StartNew();
 
         try
         {
+            activity?.SetTag("memory.user_id", userId);
             activity?.SetTag("memory.id", id.ToString());
 
-            var result = await _inner.GetByIdAsync(id, cancellationToken);
+            var result = await _inner.GetByIdAsync(userId, id, cancellationToken);
 
             sw.Stop();
             MemoryIndexerTelemetry.MemoryOperations.Add(1, new KeyValuePair<string, object?>("operation", "get"));
@@ -207,6 +208,7 @@ public sealed partial class InstrumentedMemoryService
     /// Updates a memory's content with new embedding.
     /// </summary>
     public async Task<bool> UpdateContentAsync(
+        string userId,
         Guid id,
         string content,
         CancellationToken cancellationToken = default)
@@ -216,10 +218,11 @@ public sealed partial class InstrumentedMemoryService
 
         try
         {
+            activity?.SetTag("memory.user_id", userId);
             activity?.SetTag("memory.id", id.ToString());
             activity?.SetTag("memory.content_length", content.Length);
 
-            var result = await _inner.UpdateContentAsync(id, content, cancellationToken);
+            var result = await _inner.UpdateContentAsync(userId, id, content, cancellationToken);
 
             sw.Stop();
             MemoryIndexerTelemetry.MemoryOperations.Add(1, new KeyValuePair<string, object?>("operation", "update"));
@@ -241,6 +244,7 @@ public sealed partial class InstrumentedMemoryService
     /// Updates a memory's importance score.
     /// </summary>
     public async Task<bool> UpdateImportanceAsync(
+        string userId,
         Guid id,
         float importance,
         CancellationToken cancellationToken = default)
@@ -250,10 +254,11 @@ public sealed partial class InstrumentedMemoryService
 
         try
         {
+            activity?.SetTag("memory.user_id", userId);
             activity?.SetTag("memory.id", id.ToString());
             activity?.SetTag("memory.importance", importance);
 
-            var result = await _inner.UpdateImportanceAsync(id, importance, cancellationToken);
+            var result = await _inner.UpdateImportanceAsync(userId, id, importance, cancellationToken);
 
             sw.Stop();
             MemoryIndexerTelemetry.MemoryOperations.Add(1, new KeyValuePair<string, object?>("operation", "update_importance"));
@@ -275,6 +280,7 @@ public sealed partial class InstrumentedMemoryService
     /// Deletes a memory.
     /// </summary>
     public async Task<bool> DeleteAsync(
+        string userId,
         Guid id,
         bool hardDelete = false,
         CancellationToken cancellationToken = default)
@@ -284,10 +290,11 @@ public sealed partial class InstrumentedMemoryService
 
         try
         {
+            activity?.SetTag("memory.user_id", userId);
             activity?.SetTag("memory.id", id.ToString());
             activity?.SetTag("memory.hard_delete", hardDelete);
 
-            var result = await _inner.DeleteAsync(id, hardDelete, cancellationToken);
+            var result = await _inner.DeleteAsync(userId, id, hardDelete, cancellationToken);
 
             sw.Stop();
             MemoryIndexerTelemetry.MemoryOperations.Add(1, new KeyValuePair<string, object?>("operation", "delete"));

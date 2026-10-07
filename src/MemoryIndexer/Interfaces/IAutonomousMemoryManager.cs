@@ -46,11 +46,13 @@ public interface IAutonomousMemoryManager
     /// Pages in relevant memories based on query intent.
     /// Autonomous decision on what to page in.
     /// </summary>
+    /// <param name="userId">The user whose memories are paged in. A page-in never spans users.</param>
     /// <param name="query">The query to find relevant memories for.</param>
     /// <param name="intent">Optional query intent classification.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Paged-in memories with relevance scores.</returns>
     Task<PageInResponse> AutonomousPageInAsync(
+        string userId,
         string query,
         QueryIntent? intent = null,
         CancellationToken cancellationToken = default);

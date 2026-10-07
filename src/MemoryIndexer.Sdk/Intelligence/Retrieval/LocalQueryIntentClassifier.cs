@@ -158,7 +158,7 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
         // Determine tier priority based on intent
         var tierPriority = GetTierPriority(primaryIntent);
 
-        LogQueryQueryClassifiedIntentConfidence(_logger, query, primaryIntent, primaryConfidence, specificity);
+        LogQueryQueryClassifiedIntentConfidence(_logger, query.Length, primaryIntent, primaryConfidence, specificity);
 
         var result = new QueryIntentResult
         {
@@ -326,6 +326,6 @@ public sealed partial class LocalQueryIntentClassifier : IQueryIntentClassifier
         return Math.Clamp(specificity, 0f, 1f);
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Query '{Query}' classified as {Intent} with confidence {Confidence:F2}, specificity {Specificity:F2}")]
-    private static partial void LogQueryQueryClassifiedIntentConfidence(ILogger logger, string query, QueryIntent intent, float confidence, float specificity);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Query (length {QueryLength}) classified as {Intent} with confidence {Confidence:F2}, specificity {Specificity:F2}")]
+    private static partial void LogQueryQueryClassifiedIntentConfidence(ILogger logger, int queryLength, QueryIntent intent, float confidence, float specificity);
 }

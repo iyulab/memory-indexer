@@ -188,19 +188,20 @@ Memory Indexer provides `IMemoryStore` interface for custom storage backends. Th
 ```csharp
 public interface IMemoryStore
 {
-    // Core CRUD
+    // Core CRUD - the user id is part of the key: another user's memory with the same id is not found,
+    // updated, or deleted, and UpdateAsync only updates a row stored under memory.UserId
     Task<MemoryUnit> StoreAsync(MemoryUnit memory, CancellationToken ct = default);
     Task<IReadOnlyList<MemoryUnit>> StoreBatchAsync(IEnumerable<MemoryUnit> memories, CancellationToken ct = default);
-    Task<MemoryUnit?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<IReadOnlyList<MemoryUnit>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
+    Task<MemoryUnit?> GetByIdAsync(string userId, Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<MemoryUnit>> GetByIdsAsync(string userId, IEnumerable<Guid> ids, CancellationToken ct = default);
     Task<bool> UpdateAsync(MemoryUnit memory, CancellationToken ct = default);
-    Task<bool> DeleteAsync(Guid id, bool hardDelete = false, CancellationToken ct = default);
+    Task<bool> DeleteAsync(string userId, Guid id, bool hardDelete = false, CancellationToken ct = default);
 
     // Bulk operations
     Task<int> DeleteByUserAsync(string userId, bool hardDelete = false, CancellationToken ct = default);
     Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken ct = default);
 
-    // Search & retrieval
+    // Search & retrieval - MemorySearchOptions.UserId is required; throw ArgumentException when it is empty
     Task<IReadOnlyList<MemorySearchResult>> SearchAsync(ReadOnlyMemory<float> queryEmbedding, MemorySearchOptions options, CancellationToken ct = default);
     Task<IReadOnlyList<MemoryUnit>> GetAllAsync(string userId, MemoryFilterOptions? options = null, CancellationToken ct = default);
 
@@ -283,11 +284,11 @@ public class MyPostgresMemoryStore : IMemoryStore
 |--------|---------|
 | `PrepareForStore()` | Sets Id (if empty), CreatedAt, UpdatedAt |
 | `ValidateForStore()` | Throws if UserId or Content is missing |
-| `ValidateSearchOptions()` | Validates search parameters |
+| `ValidateSearchOptions()` | Validates search parameters (throws if UserId is empty) |
 | `StoreBatchDefaultAsync()` | Default batch store (iterates StoreAsync) |
-| `GetByIdsDefaultAsync()` | Default multi-get (iterates GetByIdAsync) |
+| `GetByIdsDefaultAsync()` | Default multi-get for one user (iterates GetByIdAsync) |
 | `ApplyFilter()` | LINQ filter for MemoryFilterOptions |
-| `ApplySearchFilter()` | LINQ filter for MemorySearchOptions |
+| `ApplySearchFilter()` | LINQ filter for MemorySearchOptions (always scoped to UserId) |
 | `CalculateSimilarityResults()` | Cosine similarity calculation |
 | `HasDuplicateHash()` | Check for content hash duplicates |
 

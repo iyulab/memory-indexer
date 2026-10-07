@@ -143,7 +143,7 @@ public sealed partial class MemGPTStyleMemoryManager : ISelfEditingMemoryService
             })
             .ToList();
 
-        LogSearchedArchivalMemoryQueryFound(_logger, query, results.Count);
+        LogSearchedArchivalMemoryQueryFound(_logger, query.Length, results.Count);
 
         return results;
     }
@@ -509,8 +509,8 @@ public sealed partial class MemGPTStyleMemoryManager : ISelfEditingMemoryService
     [LoggerMessage(Level = LogLevel.Debug, Message = "Archived memory {MemoryId} with {Tokens} estimated tokens")]
     private static partial void LogArchivedMemoryMemoryIdTokensEstimated(ILogger logger, Guid memoryId, int tokens);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Searched archival memory for '{Query}', found {Count} results")]
-    private static partial void LogSearchedArchivalMemoryQueryFound(ILogger logger, string query, int count);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Searched archival memory (query length {QueryLength}), found {Count} results")]
+    private static partial void LogSearchedArchivalMemoryQueryFound(ILogger logger, int queryLength, int count);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Performed reflection for session {SessionId}, freed {Tokens} tokens")]
     private static partial void LogPerformedReflectionSessionSessionIdFreed(ILogger logger, string sessionId, int tokens);

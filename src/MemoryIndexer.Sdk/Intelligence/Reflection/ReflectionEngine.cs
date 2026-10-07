@@ -253,12 +253,19 @@ public sealed partial class ReflectionEngine : IReflectionEngine
         return await SynthesizeQuestionsFromMemoriesAsync(memories, cancellationToken);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Discovers links between one memory and the other memories of the same user.
+    /// </summary>
+    /// <param name="userId">The user whose memory it is. Another user's memory with this ID is not found.</param>
+    /// <param name="memoryId">The memory to find links for.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Discovered links, or empty when the memory is not found for this user.</returns>
     public async Task<IReadOnlyList<MemoryLink>> DiscoverLinksAsync(
+        string userId,
         Guid memoryId,
         CancellationToken cancellationToken = default)
     {
-        var memory = await _memoryStore.GetByIdAsync(memoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(userId, memoryId, cancellationToken);
         if (memory == null)
             return [];
 

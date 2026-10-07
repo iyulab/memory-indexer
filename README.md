@@ -148,7 +148,8 @@ register an `ITextCompletionService`: summaries keep the memories' own text, and
 returns nothing. Without it,
 the server loads `appsettings.Production.json`, which requires you to register your own
 `IEmbeddingService` / `ITextCompletionService` (see [As SDK](#as-sdk)) for real search relevance —
-otherwise startup fails fast with an actionable error.
+otherwise startup fails fast with an actionable error. Both configurations keep memories in `memories.db`
+(`MemoryIndexer:Storage:Type: SqliteVec`); set `InMemory` for a store that forgets on restart.
 ```
 
 #### HTTP mode (Streamable HTTP)

@@ -40,10 +40,11 @@ public class AutonomousMemoryManagerTests
                 Arg.Any<CancellationToken>())
             .Returns([]);
 
-        _memoryStoreMock.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => new MemoryUnit
             {
-                Id = callInfo.ArgAt<Guid>(0),
+                UserId = callInfo.ArgAt<string>(0),
+                Id = callInfo.ArgAt<Guid>(1),
                 Content = "Test memory content",
                 Stability = MemoryStability.Stable
             });
@@ -149,7 +150,7 @@ public class AutonomousMemoryManagerTests
             .Returns([new MemorySearchResult { Memory = testMemory, Score = 0.9f }]);
 
         // Act
-        var result = await _manager.AutonomousPageInAsync("test query", cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _manager.AutonomousPageInAsync("test_user", "test query", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -354,7 +355,7 @@ public class AutonomousMemoryManagerTests
             TargetMemoryIds = [memoryId]
         };
 
-        _memoryStoreMock.DeleteAsync(Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+        _memoryStoreMock.DeleteAsync("test_user", Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
         // Act
@@ -386,7 +387,7 @@ public class AutonomousMemoryManagerTests
         // Arrange - default mock returns empty list
 
         // Act
-        var result = await _manager.AutonomousPageInAsync("query with no results", cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _manager.AutonomousPageInAsync("test_user", "query with no results", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);

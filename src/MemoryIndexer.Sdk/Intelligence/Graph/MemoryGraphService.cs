@@ -83,12 +83,14 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<RelatedMemory>> FindRelatedMemoriesAsync(
+        string userId,
         Guid memoryId,
         int maxHops = 2,
         int topK = 10,
         CancellationToken cancellationToken = default)
     {
-        if (!_memoryNodes.TryGetValue(memoryId, out var sourceNode))
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        if (!_memoryNodes.TryGetValue(memoryId, out var sourceNode) || sourceNode.UserId != userId)
         {
             LogMemoryMemoryIdFoundGraph(_logger, memoryId);
             return [];
@@ -118,7 +120,8 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
             {
                 foreach (var connectedMemoryId in connectedMemories)
                 {
-                    if (connectedMemoryId == memoryId)
+                    // Entities are shared across users; the memories behind them are not
+                    if (connectedMemoryId == memoryId || !IsOwnedBy(connectedMemoryId, userId))
                         continue;
 
                     if (!related.TryGetValue(connectedMemoryId, out var info))
@@ -158,7 +161,7 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
             .ThenByDescending(x => x.Value.SharedEntities.Count)
             .Take(topK))
         {
-            var memory = await _memoryStore.GetByIdAsync(relatedId, cancellationToken);
+            var memory = await _memoryStore.GetByIdAsync(sourceNode.UserId, relatedId, cancellationToken);
             if (memory == null)
                 continue;
 
@@ -179,10 +182,12 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
 
     /// <inheritdoc />
     public async Task<MemorySubgraph> ExtractSubgraphAsync(
+        string userId,
         IReadOnlyList<Guid> memoryIds,
         SubgraphOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         options ??= new SubgraphOptions();
         var stopwatch = Stopwatch.StartNew();
 
@@ -209,7 +214,7 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
 
             visitedMemories.Add(currentMemoryId);
 
-            if (!_memoryNodes.TryGetValue(currentMemoryId, out var node))
+            if (!_memoryNodes.TryGetValue(currentMemoryId, out var node) || node.UserId != userId)
                 continue;
 
             subgraphNodes.Add(node);
@@ -299,21 +304,34 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
 
     /// <inheritdoc />
     public Task<MemoryGraphNode?> GetMemoryNodeAsync(
+        string userId,
         Guid memoryId,
         CancellationToken cancellationToken = default)
     {
-        _memoryNodes.TryGetValue(memoryId, out var node);
-        return Task.FromResult(node);
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        return Task.FromResult(_memoryNodes.TryGetValue(memoryId, out var node) && node.UserId == userId ? node : null);
     }
+
+    private bool IsOwnedBy(Guid memoryId, string userId)
+        => _memoryNodes.TryGetValue(memoryId, out var node) && node.UserId == userId;
 
     /// <inheritdoc />
     public async Task UpdateMemoryGraphAsync(
+        string userId,
         Guid memoryId,
         IReadOnlyList<EntityTriple> newEntities,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        // Another user's node is not touched
+        if (_memoryNodes.TryGetValue(memoryId, out var existingNode) && existingNode.UserId != userId)
+        {
+            return;
+        }
+
         // Remove old edges
-        if (_memoryNodes.TryGetValue(memoryId, out var existingNode))
+        if (existingNode is not null)
         {
             lock (_indexLock)
             {
@@ -328,7 +346,7 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
         }
 
         // Get the memory to re-link
-        var memory = await _memoryStore.GetByIdAsync(memoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(userId, memoryId, cancellationToken);
         if (memory != null)
         {
             await LinkMemoryToGraphAsync(memory, newEntities, cancellationToken);
@@ -337,10 +355,12 @@ public sealed partial class MemoryGraphService : IMemoryGraphService
 
     /// <inheritdoc />
     public Task UnlinkMemoryFromGraphAsync(
+        string userId,
         Guid memoryId,
         CancellationToken cancellationToken = default)
     {
-        if (_memoryNodes.TryRemove(memoryId, out var node))
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        if (IsOwnedBy(memoryId, userId) && _memoryNodes.TryRemove(memoryId, out var node))
         {
             lock (_indexLock)
             {

@@ -411,7 +411,7 @@ public sealed partial class DefaultContradictionResolver : IContradictionResolve
         newTriple.SupersedesId = existingTriple.Id;
         newTriple.Version = existingTriple.Version + 1;
 
-        LogTemporalPartition(_logger, existingTriple.Subject, existingTriple.Predicate, existingTriple.ObjectValue, existingTriple.ValidTo, newTriple.ObjectValue);
+        LogTemporalPartition(_logger, existingTriple.Id, existingTriple.ValidTo, newTriple.Version);
 
         return new ResolutionResult<EntityTriple>
         {
@@ -448,6 +448,6 @@ public sealed partial class DefaultContradictionResolver : IContradictionResolve
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to update superseded triple in store")]
     private static partial void LogFailedToUpdateSuperseded(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Temporal partition: {Subject}.{Predicate} = '{OldValue}' until {EndDate}, then '{NewValue}'")]
-    private static partial void LogTemporalPartition(ILogger logger, string subject, string predicate, string oldValue, DateTime? endDate, string newValue);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Temporal partition: triple {ExistingId} valid until {EndDate}, superseded by version {Version}")]
+    private static partial void LogTemporalPartition(ILogger logger, Guid existingId, DateTime? endDate, int version);
 }

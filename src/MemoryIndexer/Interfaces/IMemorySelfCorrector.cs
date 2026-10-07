@@ -65,11 +65,13 @@ public interface IMemorySelfCorrector
     /// <summary>
     /// Applies corrections to memories.
     /// </summary>
+    /// <param name="userId">The user whose memories are corrected. A correction that names another user's memory is not applied.</param>
     /// <param name="corrections">Corrections to apply.</param>
     /// <param name="options">Correction options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Correction result.</returns>
     Task<CorrectionResult> ApplyCorrectionsAsync(
+        string userId,
         IReadOnlyList<MemoryCorrection> corrections,
         CorrectionOptions? options = null,
         CancellationToken cancellationToken = default);

@@ -2,6 +2,7 @@
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MemoryIndexer.Utilities;
 
 namespace MemoryIndexer.Sdk.Intelligence.Profile;
 
@@ -129,7 +130,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
-                LogFailedGenerateEmbeddingSemanticEntry(_logger, ex, entry.Key);
+                LogFailedGenerateEmbeddingSemanticEntry(_logger, ex, new FingerprintedValue(entry.Key));
             }
         }
 
@@ -140,13 +141,13 @@ public sealed partial class ArchiveStoreService : IArchiveStore
             // Update existing entry
             entry.UpdatedAt = DateTime.UtcNow;
             userProfile[entry.Key] = entry;
-            LogUpdatedSemanticEntryKeyUser(_logger, entry.Key, userId);
+            LogUpdatedSemanticEntryKeyUser(_logger, new FingerprintedValue(entry.Key), userId);
         }
         else
         {
             // Add new entry
             userProfile[entry.Key] = entry;
-            LogCreatedSemanticEntryKeyUser(_logger, entry.Key, userId);
+            LogCreatedSemanticEntryKeyUser(_logger, new FingerprintedValue(entry.Key), userId);
         }
 
         return isUpdate;
@@ -186,7 +187,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
             entry.Metadata[evidenceKey] = evidence;
         }
 
-        LogConfirmedSemanticEntryKeyUser(_logger, key, userId, entry.ConfirmationCount, entry.Confidence);
+        LogConfirmedSemanticEntryKeyUser(_logger, new FingerprintedValue(key), userId, entry.ConfirmationCount, entry.Confidence);
 
         return Task.FromResult<SemanticStoreEntry?>(entry);
     }
@@ -208,7 +209,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         var removed = userProfile.TryRemove(key, out _);
         if (removed)
         {
-            LogRemovedSemanticEntryKeyUser(_logger, key, userId);
+            LogRemovedSemanticEntryKeyUser(_logger, new FingerprintedValue(key), userId);
         }
 
         return Task.FromResult(removed);
@@ -450,7 +451,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
-                LogFailedGenerateEmbeddingUpdatedEntry(_logger, ex, key);
+                LogFailedGenerateEmbeddingUpdatedEntry(_logger, ex, new FingerprintedValue(key));
             }
         }
 
@@ -483,23 +484,23 @@ public sealed partial class ArchiveStoreService : IArchiveStore
     [LoggerMessage(Level = LogLevel.Warning, Message = "User {UserId} semantic store at capacity ({Max} entries), cannot add new entry")]
     private static partial void LogUserUserIdSemanticStoreCapacity(ILogger logger, string userId, object max);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to generate embedding for semantic entry {Key}")]
-    private static partial void LogFailedGenerateEmbeddingSemanticEntry(ILogger logger, Exception ex, string key);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to generate embedding for semantic entry {KeyHash}")]
+    private static partial void LogFailedGenerateEmbeddingSemanticEntry(ILogger logger, Exception ex, FingerprintedValue keyHash);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated semantic entry {Key} for user {UserId}")]
-    private static partial void LogUpdatedSemanticEntryKeyUser(ILogger logger, string key, string userId);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated semantic entry {KeyHash} for user {UserId}")]
+    private static partial void LogUpdatedSemanticEntryKeyUser(ILogger logger, FingerprintedValue keyHash, string userId);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Created semantic entry {Key} for user {UserId}")]
-    private static partial void LogCreatedSemanticEntryKeyUser(ILogger logger, string key, string userId);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Created semantic entry {KeyHash} for user {UserId}")]
+    private static partial void LogCreatedSemanticEntryKeyUser(ILogger logger, FingerprintedValue keyHash, string userId);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Confirmed semantic entry {Key} for user {UserId}: Count={Count}, Confidence={Confidence}")]
-    private static partial void LogConfirmedSemanticEntryKeyUser(ILogger logger, string key, string userId, int count, float confidence);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Confirmed semantic entry {KeyHash} for user {UserId}: Count={Count}, Confidence={Confidence}")]
+    private static partial void LogConfirmedSemanticEntryKeyUser(ILogger logger, FingerprintedValue keyHash, string userId, int count, float confidence);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Removed semantic entry {Key} for user {UserId}")]
-    private static partial void LogRemovedSemanticEntryKeyUser(ILogger logger, string key, string userId);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Removed semantic entry {KeyHash} for user {UserId}")]
+    private static partial void LogRemovedSemanticEntryKeyUser(ILogger logger, FingerprintedValue keyHash, string userId);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to generate embedding for updated entry {Key}")]
-    private static partial void LogFailedGenerateEmbeddingUpdatedEntry(ILogger logger, Exception ex, string key);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to generate embedding for updated entry {KeyHash}")]
+    private static partial void LogFailedGenerateEmbeddingUpdatedEntry(ILogger logger, Exception ex, FingerprintedValue keyHash);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Archived entry {OldKey} (v{OldVersion}) and created new version {NewKey} (v{NewVersion})")]
     private static partial void LogArchivedEntryOldKeyOldVersionCreated(ILogger logger, string oldKey, int oldVersion, string newKey, int newVersion);

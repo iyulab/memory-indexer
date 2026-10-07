@@ -28,12 +28,15 @@ public interface IMemoryGraphService
     /// <summary>
     /// Finds memories related to a given memory through shared entities.
     /// </summary>
+    /// <param name="userId">The user whose memories are traversed. The source must be theirs; related memories of
+    /// other users that share an entity are not returned.</param>
     /// <param name="memoryId">The memory to find relations for.</param>
     /// <param name="maxHops">Maximum graph hops (default: 2).</param>
     /// <param name="topK">Maximum related memories to return.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Related memories ranked by graph proximity.</returns>
     Task<IReadOnlyList<RelatedMemory>> FindRelatedMemoriesAsync(
+        string userId,
         Guid memoryId,
         int maxHops = 2,
         int topK = 10,
@@ -42,11 +45,14 @@ public interface IMemoryGraphService
     /// <summary>
     /// Extracts a subgraph centered on specific memories.
     /// </summary>
+    /// <param name="userId">The user whose memories the subgraph contains. Other users' memories are left out, including
+    /// center IDs that are not theirs.</param>
     /// <param name="memoryIds">Memory IDs to center the subgraph on.</param>
     /// <param name="options">Subgraph extraction options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Extracted subgraph with memories, entities, and relations.</returns>
     Task<MemorySubgraph> ExtractSubgraphAsync(
+        string userId,
         IReadOnlyList<Guid> memoryIds,
         SubgraphOptions? options = null,
         CancellationToken cancellationToken = default);
@@ -54,20 +60,24 @@ public interface IMemoryGraphService
     /// <summary>
     /// Gets the graph node for a memory if it exists.
     /// </summary>
+    /// <param name="userId">The user whose memory it is. Another user's node with this ID is not found.</param>
     /// <param name="memoryId">The memory ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The memory graph node or null if not linked.</returns>
     Task<MemoryGraphNode?> GetMemoryNodeAsync(
+        string userId,
         Guid memoryId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates the graph when a memory's entities change.
     /// </summary>
+    /// <param name="userId">The user whose memory it is. Another user's memory with this ID is not changed.</param>
     /// <param name="memoryId">The memory ID.</param>
     /// <param name="newEntities">New extracted entities.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task UpdateMemoryGraphAsync(
+        string userId,
         Guid memoryId,
         IReadOnlyList<EntityTriple> newEntities,
         CancellationToken cancellationToken = default);
@@ -75,9 +85,11 @@ public interface IMemoryGraphService
     /// <summary>
     /// Removes a memory from the graph.
     /// </summary>
+    /// <param name="userId">The user whose memory it is. Another user's node with this ID is not removed.</param>
     /// <param name="memoryId">The memory ID to remove.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task UnlinkMemoryFromGraphAsync(
+        string userId,
         Guid memoryId,
         CancellationToken cancellationToken = default);
 }

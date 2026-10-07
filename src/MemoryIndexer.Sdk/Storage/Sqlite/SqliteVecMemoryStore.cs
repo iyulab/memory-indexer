@@ -450,13 +450,15 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
     }
 
     /// <inheritdoc />
-    public async Task<MemoryUnit?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<MemoryUnit?> GetByIdAsync(string userId, Guid id, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         await EnsureCollectionExistsAsync(cancellationToken);
 
-        var sql = $"SELECT * FROM {TableName} WHERE id = @id";
+        var sql = $"SELECT * FROM {TableName} WHERE id = @id AND user_id = @user_id";
         using var command = CreateCommand(sql);
         command.Parameters.AddWithValue("@id", id.ToString());
+        command.Parameters.AddWithValue("@user_id", userId);
 
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
@@ -469,18 +471,21 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<MemoryUnit>> GetByIdsAsync(
+        string userId,
         IEnumerable<Guid> ids,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         await EnsureCollectionExistsAsync(cancellationToken);
 
         var idList = ids.ToList();
         if (idList.Count == 0) return [];
 
         var placeholders = string.Join(", ", idList.Select((_, i) => $"@id{i}"));
-        var sql = $"SELECT * FROM {TableName} WHERE id IN ({placeholders})";
+        var sql = $"SELECT * FROM {TableName} WHERE user_id = @user_id AND id IN ({placeholders})";
 
         using var command = CreateCommand(sql);
+        command.Parameters.AddWithValue("@user_id", userId);
         for (int i = 0; i < idList.Count; i++)
         {
             command.Parameters.AddWithValue($"@id{i}", idList[i].ToString());
@@ -502,6 +507,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         MemoryFilterOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         await EnsureCollectionExistsAsync(cancellationToken);
 
         var sql = BuildFilterQuery(userId, options);
@@ -682,9 +688,9 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
 
         // Phase 49: Added tier and scope columns for 3-axis memory model
         // Role column added for multi-party conversation support
+        // The row's owner is part of the key: an update never moves a memory to another user
         var sql = $@"
             UPDATE {TableName} SET
-                user_id = @user_id,
                 session_id = @session_id,
                 namespace = @namespace,
                 content = @content,
@@ -702,7 +708,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
                 entities = @entities,
                 metadata = @metadata,
                 embedding = @embedding
-            WHERE id = @id
+            WHERE id = @id AND user_id = @user_id
         ";
 
         using var command = CreateCommand(sql);
@@ -718,22 +724,24 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
     }
 
     /// <inheritdoc />
-    public async Task<bool> DeleteAsync(Guid id, bool hardDelete = false, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(string userId, Guid id, bool hardDelete = false, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         await EnsureCollectionExistsAsync(cancellationToken);
 
         string sql;
         if (hardDelete)
         {
-            sql = $"DELETE FROM {TableName} WHERE id = @id";
+            sql = $"DELETE FROM {TableName} WHERE id = @id AND user_id = @user_id";
         }
         else
         {
-            sql = $"UPDATE {TableName} SET is_deleted = 1, updated_at = @updated_at WHERE id = @id";
+            sql = $"UPDATE {TableName} SET is_deleted = 1, updated_at = @updated_at WHERE id = @id AND user_id = @user_id";
         }
 
         using var command = CreateCommand(sql);
         command.Parameters.AddWithValue("@id", id.ToString());
+        command.Parameters.AddWithValue("@user_id", userId);
         if (!hardDelete)
         {
             command.Parameters.AddWithValue("@updated_at", DateTime.UtcNow.ToString("O"));
@@ -843,6 +851,22 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetUserIdsAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureCollectionExistsAsync(cancellationToken);
+
+        using var command = CreateCommand($"SELECT DISTINCT user_id FROM {TableName} WHERE is_deleted = 0 ORDER BY user_id");
+        var users = new List<string>();
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            users.Add(reader.GetString(0));
+        }
+
+        return users;
+    }
+
+    /// <inheritdoc />
     public async Task<long> GetCountAsync(string userId, CancellationToken cancellationToken = default)
     {
         await EnsureCollectionExistsAsync(cancellationToken);
@@ -890,14 +914,16 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
     }
 
     /// <summary>
-    /// Performs full-text search using FTS5 with BM25 ranking.
+    /// Performs full-text search using FTS5 with BM25 ranking, within one user's memories.
     /// </summary>
     public async Task<IReadOnlyList<MemorySearchResult>> FullTextSearchAsync(
         string query,
-        string? userId = null,
+        string userId,
         int limit = 10,
         CancellationToken cancellationToken = default)
     {
+        // A search never spans users
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         await EnsureCollectionExistsAsync(cancellationToken);
 
         if (!_options.EnableFullTextSearch)
@@ -912,7 +938,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
             INNER JOIN {FtsTableName} fts ON m.rowid = fts.rowid
             WHERE {FtsTableName} MATCH @query
             AND m.is_deleted = 0
-            {(userId != null ? "AND m.user_id = @user_id" : "")}
+            AND m.user_id = @user_id
             ORDER BY score
             LIMIT @limit
         ";
@@ -920,10 +946,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         using var command = CreateCommand(sql);
         command.Parameters.AddWithValue("@query", query);
         command.Parameters.AddWithValue("@limit", limit);
-        if (userId != null)
-        {
-            command.Parameters.AddWithValue("@user_id", userId);
-        }
+        command.Parameters.AddWithValue("@user_id", userId);
 
         var results = new List<MemorySearchResult>();
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -941,7 +964,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
             });
         }
 
-        LogFTSSearchQueryFoundCount(_logger, query, results.Count);
+        LogFTSSearchQueryFoundCount(_logger, query.Length, results.Count);
         return results;
     }
 
@@ -952,7 +975,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
     public async Task<IReadOnlyList<MemorySearchResult>> HybridSearchAsync(
         string query,
         ReadOnlyMemory<float> queryEmbedding,
-        string? userId = null,
+        string userId,
         int limit = 10,
         float denseWeight = 0.6f,
         float sparseWeight = 0.4f,
@@ -1182,11 +1205,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
     {
         var conditions = new List<string>();
 
-        // Only add user_id filter if userId is provided (null = all users)
-        if (!string.IsNullOrEmpty(userId))
-        {
-            conditions.Add("user_id = @user_id");
-        }
+        conditions.Add("user_id = @user_id");
 
         if (options?.IncludeDeleted != true)
         {
@@ -1259,14 +1278,9 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
     /// </remarks>
     private static string BuildSearchFilterQuery(MemorySearchOptions options)
     {
-        // When UserId is provided, use CTE-based pre-filtering for explicit tenant isolation
-        if (!string.IsNullOrEmpty(options.UserId))
-        {
-            return BuildCteSearchQuery(options);
-        }
-
-        // Fallback for legacy queries without UserId (should be rare/deprecated)
-        return BuildLegacySearchQuery(options);
+        // A search never spans users: tenant isolation is always the first filter
+        ArgumentException.ThrowIfNullOrEmpty(options.UserId);
+        return BuildCteSearchQuery(options);
     }
 
     /// <summary>
@@ -1337,40 +1351,6 @@ SELECT * FROM tenant_scope
 {whereClause}
 ORDER BY created_at DESC";
     }
-
-    /// <summary>
-    /// Legacy query builder for backward compatibility (without CTE).
-    /// Should be avoided in favor of CTE-based queries.
-    /// </summary>
-    private static string BuildLegacySearchQuery(MemorySearchOptions options)
-    {
-        var conditions = new List<string>();
-
-        if (!string.IsNullOrEmpty(options.SessionId))
-        {
-            conditions.Add("session_id = @session_id");
-        }
-
-        if (!string.IsNullOrEmpty(options.Namespace))
-        {
-            conditions.Add("namespace = @namespace");
-        }
-
-        if (!options.IncludeDeleted)
-        {
-            conditions.Add("is_deleted = 0");
-        }
-
-        if (options.Types?.Length > 0)
-        {
-            var typeConditions = string.Join(" OR ", options.Types.Select(t => $"type = {(int)t}"));
-            conditions.Add($"({typeConditions})");
-        }
-
-        var whereClause = conditions.Count > 0 ? $"WHERE {string.Join(" AND ", conditions)}" : "";
-        return $"SELECT * FROM {TableName} {whereClause}";
-    }
-
 
     #endregion
 
@@ -1612,8 +1592,8 @@ ORDER BY created_at DESC";
     [LoggerMessage(Level = LogLevel.Warning, Message = "Full-text search is disabled")]
     private static partial void LogFullTextSearchDisabled(ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "FTS search for '{Query}' found {Count} results")]
-    private static partial void LogFTSSearchQueryFoundCount(ILogger logger, string query, int count);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "FTS search (query length {QueryLength}) found {Count} results")]
+    private static partial void LogFTSSearchQueryFoundCount(ILogger logger, int queryLength, int count);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid search found {Count} results (dense={DenseCount}, sparse={SparseCount})")]
     private static partial void LogHybridSearchFoundCountResults(ILogger logger, int count, int denseCount, int sparseCount);

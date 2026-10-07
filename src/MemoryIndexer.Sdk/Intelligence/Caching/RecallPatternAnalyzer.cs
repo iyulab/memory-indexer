@@ -39,8 +39,7 @@ public sealed partial class RecallPatternAnalyzer : IRecallPatternAnalyzer
         if (analysis.IsDuplicate)
         {
             Interlocked.Increment(ref _duplicateRecalls);
-            var queryPreview = TruncateQuery(query);
-            LogDuplicateRecall(_logger, userId, queryPreview, analysis.DuplicateCount);
+            LogDuplicateRecall(_logger, userId, query.Length, analysis.DuplicateCount);
         }
 
         if (analysis.IsRapidFire)
@@ -127,14 +126,11 @@ public sealed partial class RecallPatternAnalyzer : IRecallPatternAnalyzer
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Duplicate recall detected for user {UserId}: {Query} (count: {Count})")]
-    private static partial void LogDuplicateRecall(ILogger logger, string userId, string query, int count);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Duplicate recall detected for user {UserId} (query length {QueryLength}, count: {Count})")]
+    private static partial void LogDuplicateRecall(ILogger logger, string userId, int queryLength, int count);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Rapid-fire recall pattern detected for user {UserId}: {Count} recalls in {WindowMs}ms")]
     private static partial void LogRapidFireRecall(ILogger logger, string userId, int count, int windowMs);
-
-    private static string TruncateQuery(string query)
-        => query.Length > 50 ? query[..50] + "..." : query;
 }
 
 /// <summary>

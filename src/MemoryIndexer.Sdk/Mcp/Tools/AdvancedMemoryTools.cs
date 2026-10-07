@@ -130,7 +130,7 @@ public sealed class AdvancedMemoryTools
             };
         }
 
-        var memory = await _memoryService.GetByIdAsync(id, cancellationToken);
+        var memory = await _memoryService.GetByIdAsync(_defaultUserId, id, cancellationToken);
         if (memory is null)
         {
             return new GetRelatedMemoriesResult

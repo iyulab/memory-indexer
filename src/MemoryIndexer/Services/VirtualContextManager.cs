@@ -104,7 +104,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
     {
         EnsureInitialized();
 
-        LogPagingIn(_logger, query);
+        LogPagingIn(_logger, query.Length);
 
         // Generate query embedding
         var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
@@ -207,7 +207,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             return await _workingMemory.GetAsync(memoryId, cancellationToken);
         }
 
-        var memory = await _memoryStore.GetByIdAsync(memoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(_state.UserId!, memoryId, cancellationToken);
         if (memory == null)
         {
             return null;
@@ -351,7 +351,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             var evictedMemories = new List<MemoryUnit>();
             foreach (var id in affectedIds)
             {
-                var m = await _memoryStore.GetByIdAsync(id, cancellationToken);
+                var m = await _memoryStore.GetByIdAsync(_state.UserId!, id, cancellationToken);
                 if (m != null)
                 {
                     evictedMemories.Add(m);
@@ -369,7 +369,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
 
                 foreach (var source in group)
                 {
-                    await _memoryStore.DeleteAsync(source.Id, hardDelete: false, cancellationToken);
+                    await _memoryStore.DeleteAsync(source.UserId, source.Id, hardDelete: false, cancellationToken);
                 }
 
                 summarizedCount += group.Count;
@@ -492,7 +492,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
                     source.SupersedesId = stored.Id;
                     source.MarkUpdated();
                     await _memoryStore.UpdateAsync(source, cancellationToken);
-                    await _memoryStore.DeleteAsync(source.Id, hardDelete: false, cancellationToken);
+                    await _memoryStore.DeleteAsync(source.UserId, source.Id, hardDelete: false, cancellationToken);
                 }
 
                 mergedCount += group.Count;
@@ -599,7 +599,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
             else if (!memory.IsLocked)
             {
                 // Soft delete low-retention memories
-                await _memoryStore.DeleteAsync(memory.Id, hardDelete: false, cancellationToken);
+                await _memoryStore.DeleteAsync(memory.UserId, memory.Id, hardDelete: false, cancellationToken);
                 discardedCount++;
             }
         }
@@ -901,8 +901,8 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
     [LoggerMessage(Level = LogLevel.Information, Message = "VCM initialized with {Count} working memories")]
     private static partial void LogVcmInitialized(ILogger logger, int count);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Paging in memories for query: {Query}")]
-    private static partial void LogPagingIn(ILogger logger, string query);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Paging in memories (query length {QueryLength})")]
+    private static partial void LogPagingIn(ILogger logger, int queryLength);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Evicted memory {MemoryId} to Long tier")]
     private static partial void LogEvictedMemory(ILogger logger, Guid memoryId);

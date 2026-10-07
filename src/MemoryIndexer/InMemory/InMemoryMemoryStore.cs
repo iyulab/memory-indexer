@@ -41,20 +41,22 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
     }
 
     /// <inheritdoc />
-    public Task<MemoryUnit?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<MemoryUnit?> GetByIdAsync(string userId, Guid id, CancellationToken cancellationToken = default)
     {
-        _memories.TryGetValue(id, out var memory);
-        return Task.FromResult(memory);
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        return Task.FromResult(_memories.TryGetValue(id, out var memory) && memory.UserId == userId ? memory : null);
     }
 
     /// <inheritdoc />
     public Task<IReadOnlyList<MemoryUnit>> GetByIdsAsync(
+        string userId,
         IEnumerable<Guid> ids,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         var results = ids
             .Select(id => _memories.TryGetValue(id, out var m) ? m : null)
-            .Where(m => m is not null)
+            .Where(m => m is not null && m.UserId == userId)
             .Cast<MemoryUnit>()
             .ToList();
 
@@ -64,7 +66,8 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
     /// <inheritdoc />
     public Task<bool> UpdateAsync(MemoryUnit memory, CancellationToken cancellationToken = default)
     {
-        if (!_memories.ContainsKey(memory.Id))
+        // The stored owner is part of the key: an update never moves a memory to another user
+        if (!_memories.TryGetValue(memory.Id, out var existing) || existing.UserId != memory.UserId)
             return Task.FromResult(false);
 
         memory.UpdatedAt = DateTime.UtcNow;
@@ -75,8 +78,12 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
     }
 
     /// <inheritdoc />
-    public Task<bool> DeleteAsync(Guid id, bool hardDelete = false, CancellationToken cancellationToken = default)
+    public Task<bool> DeleteAsync(string userId, Guid id, bool hardDelete = false, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        if (!_memories.TryGetValue(id, out var memory) || memory.UserId != userId)
+            return Task.FromResult(false);
+
         if (hardDelete)
         {
             var removed = _memories.TryRemove(id, out _);
@@ -85,15 +92,10 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
             return Task.FromResult(removed);
         }
 
-        if (_memories.TryGetValue(id, out var memory))
-        {
-            memory.IsDeleted = true;
-            memory.UpdatedAt = DateTime.UtcNow;
-            LogSoftDeletedMemory(logger, id);
-            return Task.FromResult(true);
-        }
-
-        return Task.FromResult(false);
+        memory.IsDeleted = true;
+        memory.UpdatedAt = DateTime.UtcNow;
+        LogSoftDeletedMemory(logger, id);
+        return Task.FromResult(true);
     }
 
     /// <inheritdoc />
@@ -183,9 +185,9 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
     {
         var query = _memories.Values.AsEnumerable();
 
-        // Apply filters
-        if (!string.IsNullOrEmpty(options.UserId))
-            query = query.Where(m => m.UserId == options.UserId);
+        // A search never spans users
+        ArgumentException.ThrowIfNullOrEmpty(options.UserId);
+        query = query.Where(m => m.UserId == options.UserId);
 
         if (!string.IsNullOrEmpty(options.SessionId))
             query = query.Where(m => m.SessionId == options.SessionId);
@@ -236,6 +238,7 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
         MemoryFilterOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         var query = _memories.Values
             .Where(m => m.UserId == userId);
 
@@ -284,6 +287,18 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
         }
 
         return Task.FromResult<IReadOnlyList<MemoryUnit>>(query.ToList());
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<string>> GetUserIdsAsync(CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<string> users = _memories.Values
+            .Where(m => !m.IsDeleted)
+            .Select(m => m.UserId)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        return Task.FromResult(users);
     }
 
     /// <inheritdoc />

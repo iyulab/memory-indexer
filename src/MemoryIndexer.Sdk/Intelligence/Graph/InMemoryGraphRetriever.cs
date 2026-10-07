@@ -56,7 +56,7 @@ public sealed partial class InMemoryGraphRetriever : IGraphRetriever
         var traversedRelations = new List<TraversedRelation>();
         var currentFrontier = new List<(string Entity, int Depth, float Score)> { (startEntity, 0, 1.0f) };
 
-        LogStartingGraphTraversalEntityMax(_logger, startEntity, maxHops);
+        LogStartingGraphTraversalEntityMax(_logger, maxHops);
 
         while (currentFrontier.Count > 0 && discoveredEntities.Count < options.MaxEntities)
         {
@@ -173,7 +173,7 @@ public sealed partial class InMemoryGraphRetriever : IGraphRetriever
         queue.Enqueue(fromEntity);
         visited[fromEntity] = (null, null);
 
-        LogFindingPath(_logger, fromEntity, toEntity);
+        LogFindingPath(_logger, options.MaxHops);
 
         while (queue.Count > 0)
         {
@@ -219,7 +219,7 @@ public sealed partial class InMemoryGraphRetriever : IGraphRetriever
             }
         }
 
-        LogPathFound(_logger, fromEntity, toEntity);
+        LogPathFound(_logger, visited.Count);
         return null;
     }
 
@@ -299,7 +299,7 @@ public sealed partial class InMemoryGraphRetriever : IGraphRetriever
     {
         options ??= new HybridGraphOptions();
 
-        LogHybridRetrievalQueryQuery(_logger, query);
+        LogHybridRetrievalQueryQuery(_logger, userId, query.Length);
 
         // Step 1: Semantic search for relevant memories
         var embedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
@@ -628,18 +628,18 @@ public sealed partial class InMemoryGraphRetriever : IGraphRetriever
 
     #endregion
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Starting graph traversal from '{Entity}' with max {MaxHops} hops")]
-    private static partial void LogStartingGraphTraversalEntityMax(ILogger logger, string entity, int maxHops);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Starting graph traversal with max {MaxHops} hops")]
+    private static partial void LogStartingGraphTraversalEntityMax(ILogger logger, int maxHops);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Graph traversal completed: {Entities} entities, {Relations} relations in {Duration}ms")]
     private static partial void LogGraphTraversalCompletedEntitiesEntities(ILogger logger, int entities, int relations, long duration);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Finding path from '{From}' to '{To}'")]
-    private static partial void LogFindingPath(ILogger logger, object from, object to);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Finding path between two entities (max {MaxHops} hops)")]
+    private static partial void LogFindingPath(ILogger logger, int maxHops);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "No path found from '{From}' to '{To}'")]
-    private static partial void LogPathFound(ILogger logger, object from, object to);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "No path found between the two entities (visited {Visited} entities)")]
+    private static partial void LogPathFound(ILogger logger, int visited);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid retrieval for query: '{Query}'")]
-    private static partial void LogHybridRetrievalQueryQuery(ILogger logger, string query);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid retrieval for user {UserId} (query length {QueryLength})")]
+    private static partial void LogHybridRetrievalQueryQuery(ILogger logger, string userId, int queryLength);
 }

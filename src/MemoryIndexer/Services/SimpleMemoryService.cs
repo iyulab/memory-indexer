@@ -61,8 +61,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
 
         var effectiveRole = role ?? "user";
 
-        var contentPreview = content.Substring(0, Math.Min(50, content.Length));
-        LogRememberAsync(_logger, userId, sessionId, effectiveRole, contentPreview);
+        LogRememberAsync(_logger, userId, sessionId, effectiveRole, content.Length);
 
         // Auto-classify using IMemoryClassifier
         var classification = await _classifier.ClassifyAsync(
@@ -144,7 +143,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
             throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be greater than 0");
         }
 
-        LogRecallAsync(_logger, userId, sessionId, query, limit);
+        LogRecallAsync(_logger, userId, sessionId, query.Length, limit);
 
         // Retrieve across all of the user's sessions (within the namespace): a session filter here would hide everything
         // an earlier conversation stored, which is what the cross-session group exists to return.
@@ -234,6 +233,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         {
             var deleteRequest = new DeleteRequest
             {
+                UserId = userId,
                 MemoryId = result.Memory.Id,
                 HardDelete = true // GDPR requires permanent deletion
             };
@@ -279,6 +279,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         {
             var deleteRequest = new DeleteRequest
             {
+                UserId = userId,
                 MemoryId = result.Memory.Id,
                 HardDelete = false // Soft delete for session cleanup
             };
@@ -315,6 +316,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         {
             var deleteRequest = new DeleteRequest
             {
+                UserId = userId,
                 MemoryId = result.Memory.Id,
                 HardDelete = true
             };
@@ -349,8 +351,8 @@ public sealed partial class SimpleMemoryService : IMemoryService
 
     #endregion
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "RememberAsync: UserId={UserId}, SessionId={SessionId}, Role={Role}, Content={Content}")]
-    private static partial void LogRememberAsync(ILogger logger, string userId, string sessionId, string role, string content);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "RememberAsync: UserId={UserId}, SessionId={SessionId}, Role={Role}, ContentLength={ContentLength}")]
+    private static partial void LogRememberAsync(ILogger logger, string userId, string sessionId, string role, int contentLength);
 
     [LoggerMessage(Level = LogLevel.Trace, Message = "Classified: Type={Type}, Tier={Tier}, Importance={Importance}, ShouldPersist={ShouldPersist}")]
     private static partial void LogClassified(ILogger logger, MemoryType type, Tier tier, float importance, bool shouldPersist);
@@ -364,8 +366,8 @@ public sealed partial class SimpleMemoryService : IMemoryService
     [LoggerMessage(Level = LogLevel.Information, Message = "Remembered: MemoryId={MemoryId}, Type={Type}, Scope={Scope}, Tier={Tier}")]
     private static partial void LogRemembered(ILogger logger, Guid memoryId, MemoryType type, Scope scope, Tier tier);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "RecallAsync: UserId={UserId}, SessionId={SessionId}, Query={Query}, Limit={Limit}")]
-    private static partial void LogRecallAsync(ILogger logger, string userId, string? sessionId, string query, int limit);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "RecallAsync: UserId={UserId}, SessionId={SessionId}, QueryLength={QueryLength}, Limit={Limit}")]
+    private static partial void LogRecallAsync(ILogger logger, string userId, string? sessionId, int queryLength, int limit);
 
     [LoggerMessage(Level = LogLevel.Trace, Message = "Retrieved {Count} memories")]
     private static partial void LogRetrievedMemories(ILogger logger, int count);

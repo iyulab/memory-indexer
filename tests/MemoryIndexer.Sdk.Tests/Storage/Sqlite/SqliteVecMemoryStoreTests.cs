@@ -112,7 +112,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var memory = await _store.StoreAsync(CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var result = await _store.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -125,7 +125,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task GetByIdAsync_NonExistingMemory_ShouldReturnNull()
     {
         // Act
-        var result = await _store.GetByIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await _store.GetByIdAsync("test-user", Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
@@ -145,7 +145,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         // Assert
         result.Should().BeTrue();
 
-        var updated = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var updated = await _store.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         updated!.Content.Should().Be("Updated content");
         updated.ImportanceScore.Should().BeApproximately(0.9f, 0.01f);
     }
@@ -171,12 +171,12 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var memory = await _store.StoreAsync(CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.DeleteAsync(memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _store.DeleteAsync(memory.UserId, memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var deleted = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var deleted = await _store.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         deleted!.IsDeleted.Should().BeTrue();
     }
 
@@ -187,12 +187,12 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var memory = await _store.StoreAsync(CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.DeleteAsync(memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _store.DeleteAsync(memory.UserId, memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var deleted = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var deleted = await _store.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         deleted.Should().BeNull();
     }
 
@@ -200,7 +200,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
     public async Task DeleteAsync_NonExistingMemory_ShouldReturnFalse()
     {
         // Act
-        var result = await _store.DeleteAsync(Guid.NewGuid(), hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _store.DeleteAsync("test-user", Guid.NewGuid(), hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeFalse();
@@ -445,7 +445,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var memory1 = await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
         var memory2 = await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
 
-        await _store.DeleteAsync(memory1.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _store.DeleteAsync(memory1.UserId, memory1.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         var results = await _store.GetAllAsync("user1", cancellationToken: TestContext.Current.CancellationToken);
@@ -477,7 +477,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         var memory = await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
         await _store.StoreAsync(CreateTestMemory("user1"), TestContext.Current.CancellationToken);
 
-        await _store.DeleteAsync(memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
+        await _store.DeleteAsync(memory.UserId, memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         var count = await _store.GetCountAsync("user1", TestContext.Current.CancellationToken);
@@ -586,7 +586,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
 
         // Act
         var stored = await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
-        var retrieved = await _store.GetByIdAsync(stored.Id, TestContext.Current.CancellationToken);
+        var retrieved = await _store.GetByIdAsync(stored.UserId, stored.Id, TestContext.Current.CancellationToken);
 
         // Assert
         retrieved!.Topics.Should().BeEquivalentTo(["AI", "Machine Learning", "NLP"]);
@@ -607,7 +607,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
 
         // Act
         var stored = await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
-        var retrieved = await _store.GetByIdAsync(stored.Id, TestContext.Current.CancellationToken);
+        var retrieved = await _store.GetByIdAsync(stored.UserId, stored.Id, TestContext.Current.CancellationToken);
 
         // Assert
         retrieved!.Metadata.Should().ContainKey("source");
@@ -651,7 +651,7 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
 
         // Act
         var readTasks = Enumerable.Range(0, 20)
-            .Select(_ => _store.GetByIdAsync(storedMemory.Id))
+            .Select(_ => _store.GetByIdAsync(storedMemory.UserId, storedMemory.Id))
             .ToList();
 
         var writeTasks = Enumerable.Range(0, 10)
@@ -680,6 +680,92 @@ public class SqliteVecMemoryStoreTests : IAsyncLifetime, IDisposable
         // Assert - no exceptions means success
         var count = await _store.GetCountAsync("test-user", TestContext.Current.CancellationToken);
         count.Should().BeGreaterThanOrEqualTo(11); // Original + 10 writes
+    }
+
+    #endregion
+
+    #region User Isolation
+
+    private async Task<(MemoryUnit Alice, MemoryUnit Bob)> StoreAliceAndBobAsync()
+    {
+        var alice = CreateTestMemory("alice");
+        alice.Content = "Alice's memory";
+        alice.Embedding = CreateTestEmbedding(768, seed: 1);
+        var bob = CreateTestMemory("bob");
+        bob.Content = "Bob's memory";
+        bob.Embedding = CreateTestEmbedding(768, seed: 2);
+
+        await _store.StoreAsync(alice, TestContext.Current.CancellationToken);
+        await _store.StoreAsync(bob, TestContext.Current.CancellationToken);
+        return (alice, bob);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_AnotherUsersId_ReturnsNull()
+    {
+        var (alice, _) = await StoreAliceAndBobAsync();
+
+        var asBob = await _store.GetByIdAsync("bob", alice.Id, TestContext.Current.CancellationToken);
+        var asAlice = await _store.GetByIdAsync("alice", alice.Id, TestContext.Current.CancellationToken);
+
+        asBob.Should().BeNull();
+        asAlice.Should().NotBeNull();
+        asAlice!.Id.Should().Be(alice.Id);
+        asAlice.Content.Should().Be("Alice's memory");
+    }
+
+    [Fact]
+    public async Task GetByIdsAsync_MixedUsers_ReturnsOnlyTheCallersMemories()
+    {
+        var (alice, bob) = await StoreAliceAndBobAsync();
+
+        var results = await _store.GetByIdsAsync("bob", [alice.Id, bob.Id], TestContext.Current.CancellationToken);
+
+        results.Should().ContainSingle().Which.Id.Should().Be(bob.Id);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AnotherUsersId_DeletesNothing()
+    {
+        var (alice, _) = await StoreAliceAndBobAsync();
+
+        var deleted = await _store.DeleteAsync("bob", alice.Id, hardDelete: true, TestContext.Current.CancellationToken);
+
+        deleted.Should().BeFalse();
+        var stillThere = await _store.GetByIdAsync("alice", alice.Id, TestContext.Current.CancellationToken);
+        stillThere.Should().NotBeNull();
+        stillThere!.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithAnotherUserAsOwner_ChangesNothing()
+    {
+        var (alice, _) = await StoreAliceAndBobAsync();
+
+        var tampered = CreateTestMemory("bob");
+        tampered.Id = alice.Id;
+        tampered.Content = "Tampered by bob";
+        tampered.Embedding = alice.Embedding;
+
+        var updated = await _store.UpdateAsync(tampered, TestContext.Current.CancellationToken);
+
+        updated.Should().BeFalse();
+        var stored = await _store.GetByIdAsync("alice", alice.Id, TestContext.Current.CancellationToken);
+        stored.Should().NotBeNull();
+        stored!.UserId.Should().Be("alice");
+        stored.Content.Should().Be("Alice's memory");
+        (await _store.GetByIdAsync("bob", alice.Id, TestContext.Current.CancellationToken)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithoutUser_Throws()
+    {
+        await StoreAliceAndBobAsync();
+        var options = new MemorySearchOptions { UserId = "", Limit = 10, MinScore = 0f };
+
+        var act = () => _store.SearchAsync(CreateTestEmbedding(768, seed: 1), options, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     #endregion

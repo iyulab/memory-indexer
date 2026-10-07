@@ -233,14 +233,12 @@ public sealed partial class SensoryPromoterService : ISensoryPromoter
             var evicted = await _workingMemory.PromoteAsync(memory, cancellationToken);
             createdMemories.Add(memory);
 
-            var contentValue = memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content;
-            LogPROMOTIONPromotedContent(_logger, contentValue);
+            LogPROMOTIONPromotedContent(_logger, memory.Id, memory.Content.Length);
 
             if (evicted != null)
             {
                 evictedMemories.Add(evicted);
-                var evictedContent = evicted.Content.Length > 50 ? evicted.Content[..50] + "..." : evicted.Content;
-                LogPROMOTIONEvictedMemoryEvictedIdMake(_logger, evicted.Id, memory.Id, evictedContent);
+                LogPROMOTIONEvictedMemoryEvictedIdMake(_logger, evicted.Id, memory.Id, evicted.Content.Length);
             }
         }
 
@@ -315,11 +313,11 @@ public sealed partial class SensoryPromoterService : ISensoryPromoter
     [LoggerMessage(Level = LogLevel.Debug, Message = "Created {SegmentCount} topic segments from {ItemCount} items")]
     private static partial void LogCreatedSegmentCountTopicSegmentsItemCount(ILogger logger, int segmentCount, int itemCount);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "[PROMOTION] Promoted: {Content}")]
-    private static partial void LogPROMOTIONPromotedContent(ILogger logger, string content);
+    [LoggerMessage(Level = LogLevel.Information, Message = "[PROMOTION] Promoted memory {MemoryId} (content length {ContentLength})")]
+    private static partial void LogPROMOTIONPromotedContent(ILogger logger, Guid memoryId, int contentLength);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "[PROMOTION] Evicted memory {EvictedId} to make room for {NewId}. Content: {Content}")]
-    private static partial void LogPROMOTIONEvictedMemoryEvictedIdMake(ILogger logger, Guid evictedId, Guid newId, string content);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[PROMOTION] Evicted memory {EvictedId} to make room for {NewId} (evicted content length {ContentLength})")]
+    private static partial void LogPROMOTIONEvictedMemoryEvictedIdMake(ILogger logger, Guid evictedId, Guid newId, int contentLength);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Promoted {ItemCount} items as {SegmentCount} topic segments for user {UserId}. Created {CreatedCount} memories, evicted {EvictedCount}")]
     private static partial void LogPromotedItemCountItemsSegmentCountTopic(ILogger logger, int itemCount, int segmentCount, string userId, int createdCount, int evictedCount);

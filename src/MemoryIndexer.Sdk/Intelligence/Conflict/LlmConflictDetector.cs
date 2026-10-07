@@ -173,7 +173,7 @@ public sealed partial class LlmConflictDetector
         }
         catch (JsonException ex)
         {
-            LogFailedParseConflictAnalysisJSON(_logger, ex, response);
+            LogFailedParseConflictAnalysisJSON(_logger, ex, response.Length);
             return CreateFallbackAnalysis();
         }
     }
@@ -232,8 +232,8 @@ public sealed partial class LlmConflictDetector
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to deserialize conflict analysis JSON")]
     private static partial void LogFailedDeserializeConflictAnalysisJSON(ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse conflict analysis as JSON: {Response}")]
-    private static partial void LogFailedParseConflictAnalysisJSON(ILogger logger, Exception ex, string response);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse conflict analysis as JSON (response length {ResponseLength})")]
+    private static partial void LogFailedParseConflictAnalysisJSON(ILogger logger, Exception ex, int responseLength);
 }
 
 #region DTOs

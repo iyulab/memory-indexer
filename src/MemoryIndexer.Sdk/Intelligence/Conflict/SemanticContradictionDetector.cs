@@ -207,7 +207,7 @@ public sealed partial class SemanticContradictionDetector : IContradictionDetect
 
                 if (confidence >= options.MinContradictionConfidence)
                 {
-                    LogDetectedTemporalContradictionSubjectPredicate(_logger, newTriple.Subject, newTriple.Predicate, existing.ObjectValue, newTriple.ObjectValue);
+                    LogDetectedTemporalContradictionSubjectPredicate(_logger, existing.Id, confidence);
 
                     return Task.FromResult(new ContradictionAnalysis<EntityTriple>
                     {
@@ -387,6 +387,6 @@ public sealed partial class SemanticContradictionDetector : IContradictionDetect
     [LoggerMessage(Level = LogLevel.Information, Message = "Detected {Type} contradiction (confidence: {Confidence:P1}) between new memory and existing {ExistingId}")]
     private static partial void LogDetectedTypeContradictionConfidenceConfidence(ILogger logger, ContradictionType type, float confidence, Guid existingId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Detected temporal contradiction for {Subject}.{Predicate}: '{OldValue}' vs '{NewValue}'")]
-    private static partial void LogDetectedTemporalContradictionSubjectPredicate(ILogger logger, string subject, string predicate, object oldValue, object newValue);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Detected temporal contradiction with triple {ExistingId} (confidence {Confidence:F2})")]
+    private static partial void LogDetectedTemporalContradictionSubjectPredicate(ILogger logger, Guid existingId, float confidence);
 }

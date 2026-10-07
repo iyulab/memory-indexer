@@ -407,7 +407,7 @@ public class LocalEmbeddingIntegrationTests
         _output.WriteLine($"2. Search found: [{searchResults[0].Score:F4}]");
 
         // 3. Get by ID
-        var retrieved = await _memoryStore.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var retrieved = await _memoryStore.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         retrieved.Should().NotBeNull();
         retrieved!.Content.Should().Be(content);
         _output.WriteLine($"3. Retrieved by ID: {retrieved.Id}");
@@ -420,17 +420,17 @@ public class LocalEmbeddingIntegrationTests
         _output.WriteLine($"4. Updated content");
 
         // 5. Verify update
-        var updatedMemory = await _memoryStore.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var updatedMemory = await _memoryStore.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         updatedMemory!.Content.Should().Contain("K8s");
         _output.WriteLine($"5. Verified update: {updatedMemory.Content}");
 
         // 6. Delete
-        var deleted = await _memoryStore.DeleteAsync(memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
+        var deleted = await _memoryStore.DeleteAsync(memory.UserId, memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
         deleted.Should().BeTrue();
         _output.WriteLine($"6. Deleted memory");
 
         // 7. Verify deletion
-        var afterDelete = await _memoryStore.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var afterDelete = await _memoryStore.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         afterDelete.Should().BeNull();
         _output.WriteLine($"7. Verified deletion");
     }

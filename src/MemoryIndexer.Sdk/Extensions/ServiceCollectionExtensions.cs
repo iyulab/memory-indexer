@@ -89,8 +89,11 @@ public static class ServiceCollectionExtensions
         Action<MemoryIndexerOptions>? configure = null)
     {
         // Register options
+        // Bound when the host starts, so a configuration value that does not bind (an unknown Storage:Type, say)
+        // fails startup instead of the first request that resolves a store
         services.AddOptions<MemoryIndexerOptions>()
-            .BindConfigurationIfPresent(MemoryIndexerOptions.SectionName);
+            .BindConfigurationIfPresent(MemoryIndexerOptions.SectionName)
+            .ValidateOnStart();
 
         if (configure is not null)
         {
@@ -152,12 +155,19 @@ public static class ServiceCollectionExtensions
         // Register Sensory buffer (Tier 0) - Phase 14 → Cognitive terminology (Phase 30)
         services.TryAddSingleton<IBuffer, BufferService>();
 
-        // Register default storage (InMemory)
-        // Use WithSqliteVec() for persistent storage, or register your own IMemoryStore before calling AddMemoryIndexer()
+        // Register the configured built-in store (Storage:Type, default InMemory). WithSqliteVec() selects SQLite in
+        // code; an IMemoryStore the application registered before calling AddMemoryIndexer() wins over both.
         services.TryAddSingleton<IMemoryStore>(sp =>
         {
-            var logger = sp.GetRequiredService<ILogger<InMemoryMemoryStore>>();
-            return new InMemoryMemoryStore(logger);
+            var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
+            return options.Storage.Type switch
+            {
+                StorageType.InMemory => new InMemoryMemoryStore(sp.GetRequiredService<ILogger<InMemoryMemoryStore>>()),
+                StorageType.SqliteVec => CreateSqliteVecStore(sp, options, databasePath: null),
+                _ => throw new InvalidOperationException(
+                    $"MemoryIndexer:Storage:Type '{options.Storage.Type}' is not a built-in store. Use InMemory or SqliteVec, " +
+                    "or register your own IMemoryStore before calling AddMemoryIndexer()."),
+            };
         });
 
         services.TryAddSingleton<ILongTermStore>(sp =>
@@ -429,20 +439,22 @@ public static class ServiceCollectionExtensions
         }
 
         builder.Services.AddSingleton<IMemoryStore>(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
-            var resolvedPath = databasePath ?? options.Storage.ConnectionString ?? "memories.db";
-            var dimensions = options.Storage.VectorDimensions > 0
-                ? options.Storage.VectorDimensions
-                : options.Embedding.Dimensions;
-
-            return new SqliteVecMemoryStore(
-                databasePath: resolvedPath,
-                vectorDimensions: dimensions,
-                options: options.Storage.Sqlite,
-                logger: sp.GetRequiredService<ILogger<SqliteVecMemoryStore>>());
-        });
+            CreateSqliteVecStore(sp, sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value, databasePath));
 
         return builder;
+    }
+
+    private static SqliteVecMemoryStore CreateSqliteVecStore(IServiceProvider sp, MemoryIndexerOptions options, string? databasePath)
+    {
+        var resolvedPath = databasePath ?? options.Storage.ConnectionString ?? "memories.db";
+        var dimensions = options.Storage.VectorDimensions > 0
+            ? options.Storage.VectorDimensions
+            : options.Embedding.Dimensions;
+
+        return new SqliteVecMemoryStore(
+            databasePath: resolvedPath,
+            vectorDimensions: dimensions,
+            options: options.Storage.Sqlite,
+            logger: sp.GetRequiredService<ILogger<SqliteVecMemoryStore>>());
     }
 }

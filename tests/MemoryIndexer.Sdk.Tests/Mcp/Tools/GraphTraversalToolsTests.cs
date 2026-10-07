@@ -359,6 +359,7 @@ public class GraphTraversalToolsTests
         };
 
         _mockGraphService.FindRelatedMemoriesAsync(
+            DefaultUserId,
             sourceMemoryId,
             2,
             10,
@@ -423,6 +424,7 @@ public class GraphTraversalToolsTests
         };
 
         _mockGraphService.ExtractSubgraphAsync(
+            DefaultUserId,
             Arg.Any<IReadOnlyList<Guid>>(),
             Arg.Any<SubgraphOptions>(),
             Arg.Any<CancellationToken>())
@@ -469,6 +471,7 @@ public class GraphTraversalToolsTests
         };
 
         _mockGraphService.ExtractSubgraphAsync(
+            DefaultUserId,
             Arg.Is<IReadOnlyList<Guid>>(ids => ids.Count == 2),
             Arg.Any<SubgraphOptions>(),
             Arg.Any<CancellationToken>())

@@ -49,7 +49,7 @@ public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
                 StopSequences = new[] { "###" }
             };
 
-            LogExtractingKnowledgeQuestionAnswer(_logger, context.Question, context.Answer);
+            LogExtractingKnowledgeQuestionAnswer(_logger, context.Question.Length, context.Answer.Length);
 
             var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
 
@@ -135,13 +135,13 @@ public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
         }
         catch (JsonException ex)
         {
-            LogFailedParseExtractionResponseJSON(_logger, ex, response);
+            LogFailedParseExtractionResponseJSON(_logger, ex, response.Length);
             return Array.Empty<ExtractedFact>();
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting knowledge from Q&A: {Question} -> {Answer}")]
-    private static partial void LogExtractingKnowledgeQuestionAnswer(ILogger logger, object question, object answer);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting knowledge from Q&A (question length {QuestionLength}, answer length {AnswerLength})")]
+    private static partial void LogExtractingKnowledgeQuestionAnswer(ILogger logger, int questionLength, int answerLength);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Extracted {Count} facts from Q&A")]
     private static partial void LogExtractedCountFacts(ILogger logger, int count);
@@ -152,8 +152,8 @@ public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
     [LoggerMessage(Level = LogLevel.Warning, Message = "No JSON found in extraction response")]
     private static partial void LogJSONFoundExtractionResponse(ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse extraction response as JSON: {Response}")]
-    private static partial void LogFailedParseExtractionResponseJSON(ILogger logger, Exception ex, object response);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse extraction response as JSON (response length {ResponseLength})")]
+    private static partial void LogFailedParseExtractionResponseJSON(ILogger logger, Exception ex, int responseLength);
 }
 
 #region JSON Models

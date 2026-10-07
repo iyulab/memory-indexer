@@ -202,7 +202,7 @@ public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrat
         try
         {
             // Fetch memories to summarize
-            var memories = await _memoryStore.GetByIdsAsync(state.MemoryIds, cancellationToken);
+            var memories = await _memoryStore.GetByIdsAsync(state.UserId, state.MemoryIds, cancellationToken);
 
             if (memories.Count == 0)
             {

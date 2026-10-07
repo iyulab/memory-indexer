@@ -219,7 +219,7 @@ public class JsonMemoryExporterTests : IAsyncLifetime
         Assert.Equal(1, result.ReplacedCount);
 
         // Verify content was replaced
-        var updated = await _memoryStore.GetByIdAsync(existingMemory.Id, TestContext.Current.CancellationToken);
+        var updated = await _memoryStore.GetByIdAsync(existingMemory.UserId, existingMemory.Id, TestContext.Current.CancellationToken);
         Assert.Equal("New content", updated?.Content);
     }
 

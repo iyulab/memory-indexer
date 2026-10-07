@@ -212,20 +212,19 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
     public async Task<IReadOnlyList<string>> GetUsersWithCandidatesAsync(
         CancellationToken cancellationToken = default)
     {
-        // Get all users with Long tier memories
-        // This is a simplified implementation - in production, you might want
-        // to track active users more efficiently
-        var allMemories = await _memoryStore.GetAllAsync(
-            userId: null!, // Will need to iterate over known users
-            new MemoryFilterOptions { Tiers = [Tier.Long] },
-            cancellationToken);
+        // One user at a time: a store-wide job never reads across users
+        var users = new List<string>();
+        foreach (var userId in await _memoryStore.GetUserIdsAsync(cancellationToken))
+        {
+            var longTier = await _memoryStore.GetAllAsync(
+                userId, new MemoryFilterOptions { Tiers = [Tier.Long], Limit = 1 }, cancellationToken);
+            if (longTier.Count > 0)
+            {
+                users.Add(userId);
+            }
+        }
 
-        var userIds = allMemories
-            .Select(m => m.UserId)
-            .Distinct()
-            .ToList();
-
-        return userIds;
+        return users;
     }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "[ARCHIVE_PROMOTION] User {UserId}: {Total} Long tier memories, {Eligible} eligible for Archive")]

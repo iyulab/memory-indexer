@@ -523,9 +523,9 @@ public partial class ContextBuilder : IContextBuilder
     [LoggerMessage(Level = LogLevel.Information, Message = "Registered context strategy: {Name}")]
     private static partial void LogRegisteredStrategy(ILogger logger, string name);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Building context with strategy {Strategy}: Recent={Recent}, Semantic={Semantic}, Episodic={Episodic}, Fact={Fact}")]
-    private static partial void LogBuildingContext(ILogger logger, string strategy, int recent, int semantic, int episodic, int fact);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Building context with strategy {Strategy}: Recent={Recent}, Semantic={Semantic}, Episodic={Episodic}, Fact={FactCount}")]
+    private static partial void LogBuildingContext(ILogger logger, string strategy, int recent, int semantic, int episodic, int factCount);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Built context: {Items} items, {Tokens} tokens (R:{Recent}/S:{Semantic}/E:{Episodic}/F:{Fact})")]
-    private static partial void LogBuiltContext(ILogger logger, int items, int tokens, int recent, int semantic, int episodic, int fact);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Built context: {Items} items, {Tokens} tokens (R:{Recent}/S:{Semantic}/E:{Episodic}/F:{FactCount})")]
+    private static partial void LogBuiltContext(ILogger logger, int items, int tokens, int recent, int semantic, int episodic, int factCount);
 }

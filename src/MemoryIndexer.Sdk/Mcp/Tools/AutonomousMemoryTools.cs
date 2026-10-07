@@ -89,12 +89,13 @@ public sealed partial class AutonomousMemoryTools
     /// </summary>
     [McpServerTool, Description("Page relevant memories into working context based on a query. Returns retrieved memories.")]
     public async Task<string> MemoryPageIn(
+        [Description("User ID")] string userId,
         [Description("Query to find relevant memories")] string query,
         CancellationToken cancellationToken = default)
     {
-        LogMemoryPageQueryQuery(_logger, query);
+        LogMemoryPageQueryQuery(_logger, userId, query.Length);
 
-        var response = await _memoryManager.AutonomousPageInAsync(query, null, cancellationToken);
+        var response = await _memoryManager.AutonomousPageInAsync(userId, query, null, cancellationToken);
 
         var sb = new StringBuilder();
         sb.AppendLine("## Memory Page-In Result");
@@ -280,7 +281,7 @@ public sealed partial class AutonomousMemoryTools
         };
 
         var result = await _selfCorrector.ApplyCorrectionsAsync(
-            analysis.SuggestedCorrections, options, cancellationToken);
+            userId, analysis.SuggestedCorrections, options, cancellationToken);
 
         var sb = new StringBuilder();
         sb.AppendLine("## Memory Correction Result");
@@ -536,8 +537,8 @@ public sealed partial class AutonomousMemoryTools
     [LoggerMessage(Level = LogLevel.Debug, Message = "Memory heartbeat triggered")]
     private static partial void LogMemoryHeartbeatTriggered(ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Memory page-in for query: {Query}")]
-    private static partial void LogMemoryPageQueryQuery(ILogger logger, string query);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Memory page-in for user {UserId} (query length {QueryLength})")]
+    private static partial void LogMemoryPageQueryQuery(ILogger logger, string userId, int queryLength);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Memory page-out: {Tokens} tokens")]
     private static partial void LogMemoryPageOutTokensTokens(ILogger logger, int tokens);

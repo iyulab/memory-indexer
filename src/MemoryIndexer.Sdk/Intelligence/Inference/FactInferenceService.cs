@@ -141,7 +141,7 @@ public partial class FactInferenceService : IFactInferenceEngine
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                 {
-                    LogFailedStoreInferredFactContent(_logger, ex, fact.Content);
+                    LogFailedStoreInferredFactContent(_logger, ex, fact.Category, fact.Content.Length);
                 }
             }
         }
@@ -582,8 +582,8 @@ public partial class FactInferenceService : IFactInferenceEngine
     [LoggerMessage(Level = LogLevel.Debug, Message = "Not enough qualified facts for inference: {Count}")]
     private static partial void LogEnoughQualifiedFactsInferenceCount(ILogger logger, int count);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to store inferred fact: {Content}")]
-    private static partial void LogFailedStoreInferredFactContent(ILogger logger, Exception ex, string content);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to store inferred {Category} fact (content length {ContentLength})")]
+    private static partial void LogFailedStoreInferredFactContent(ILogger logger, Exception ex, FactCategory category, int contentLength);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Registered inference rule: {Name}")]
     private static partial void LogRegisteredInferenceRuleName(ILogger logger, string name);

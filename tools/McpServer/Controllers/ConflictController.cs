@@ -1,5 +1,6 @@
 using MemoryIndexer.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using MemoryIndexer.Utilities;
 
 namespace McpServer.Controllers;
 
@@ -128,7 +129,7 @@ public partial class ConflictController : ControllerBase
             userId ??= DefaultUserId;
             var history = await _archiveStore.GetHistoryAsync(userId, key, cancellationToken);
 
-            LogRetrievedFactHistory(_logger, history.Count, key, userId);
+            LogRetrievedFactHistory(_logger, history.Count, new FingerprintedValue(key), userId);
 
             return Ok(new FactHistoryResponse
             {
@@ -153,7 +154,7 @@ public partial class ConflictController : ControllerBase
         }
         catch (Exception ex)
         {
-            LogFailedToGetFactHistory(_logger, ex, key);
+            LogFailedToGetFactHistory(_logger, ex, new FingerprintedValue(key));
             return StatusCode(500, new { error = "Failed to get fact history", details = ex.Message });
         }
     }
@@ -249,7 +250,7 @@ public partial class ConflictController : ControllerBase
                 return NotFound(new { error = $"Fact with key '{request.Key}' not found" });
             }
 
-            LogArchivedAndUpdatedFact(_logger, request.Key, userId, updatedEntry.Version - 1, updatedEntry.Version);
+            LogArchivedAndUpdatedFact(_logger, new FingerprintedValue(request.Key), userId, updatedEntry.Version - 1, updatedEntry.Version);
 
             return Ok(new ArchiveAndUpdateResponse
             {
@@ -263,7 +264,7 @@ public partial class ConflictController : ControllerBase
         }
         catch (Exception ex)
         {
-            LogFailedToArchiveAndUpdate(_logger, ex, request.Key);
+            LogFailedToArchiveAndUpdate(_logger, ex, new FingerprintedValue(request.Key));
             return StatusCode(500, new { error = "Failed to archive and update fact", details = ex.Message });
         }
     }
@@ -328,11 +329,11 @@ public partial class ConflictController : ControllerBase
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to validate fact")]
     private static partial void LogFailedToValidateFact(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved {Count} versions for fact {Key}, user {UserId}")]
-    private static partial void LogRetrievedFactHistory(ILogger logger, int count, string key, string userId);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved {Count} versions for fact {KeyHash}, user {UserId}")]
+    private static partial void LogRetrievedFactHistory(ILogger logger, int count, FingerprintedValue keyHash, string userId);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get fact history for key {Key}")]
-    private static partial void LogFailedToGetFactHistory(ILogger logger, Exception ex, string key);
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get fact history for key {KeyHash}")]
+    private static partial void LogFailedToGetFactHistory(ILogger logger, Exception ex, FingerprintedValue keyHash);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieved {Count} facts valid at {Date} for user {UserId}")]
     private static partial void LogRetrievedTemporalFacts(ILogger logger, int count, DateTime date, string userId);
@@ -340,11 +341,11 @@ public partial class ConflictController : ControllerBase
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to get temporal facts for date {Date}")]
     private static partial void LogFailedToGetTemporalFacts(ILogger logger, Exception ex, string date);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Archived and updated fact {Key} for user {UserId}: v{OldVersion} -> v{NewVersion}")]
-    private static partial void LogArchivedAndUpdatedFact(ILogger logger, string key, string userId, int oldVersion, int newVersion);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Archived and updated fact {KeyHash} for user {UserId}: v{OldVersion} -> v{NewVersion}")]
+    private static partial void LogArchivedAndUpdatedFact(ILogger logger, FingerprintedValue keyHash, string userId, int oldVersion, int newVersion);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to archive and update fact {Key}")]
-    private static partial void LogFailedToArchiveAndUpdate(ILogger logger, Exception ex, string key);
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to archive and update fact {KeyHash}")]
+    private static partial void LogFailedToArchiveAndUpdate(ILogger logger, Exception ex, FingerprintedValue keyHash);
 }
 
 #region Request/Response Models

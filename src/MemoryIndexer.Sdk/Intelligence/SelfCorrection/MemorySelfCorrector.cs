@@ -283,16 +283,18 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
             }
         }
 
-        LogTrackedCountEvidenceGapsQuery(_logger, gaps.Count, query);
+        LogTrackedCountEvidenceGapsQuery(_logger, gaps.Count, query.Length);
         return gaps;
     }
 
     /// <inheritdoc />
     public async Task<CorrectionResult> ApplyCorrectionsAsync(
+        string userId,
         IReadOnlyList<MemoryCorrection> corrections,
         CorrectionOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
         options ??= new CorrectionOptions();
         var stopwatch = Stopwatch.StartNew();
 
@@ -330,11 +332,11 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
                 Guid? backupId = null;
                 if (options.CreateBackup)
                 {
-                    backupId = await CreateBackupAsync(correction.MemoryId, cancellationToken);
+                    backupId = await CreateBackupAsync(userId, correction.MemoryId, cancellationToken);
                 }
 
                 // Apply the correction
-                await ApplySingleCorrectionAsync(correction, cancellationToken);
+                await ApplySingleCorrectionAsync(userId, correction, cancellationToken);
 
                 applied.Add(new AppliedCorrection
                 {
@@ -843,9 +845,9 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
         return Task.FromResult(true);
     }
 
-    private async Task<Guid?> CreateBackupAsync(Guid memoryId, CancellationToken cancellationToken)
+    private async Task<Guid?> CreateBackupAsync(string userId, Guid memoryId, CancellationToken cancellationToken)
     {
-        var memory = await _memoryStore.GetByIdAsync(memoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(userId, memoryId, cancellationToken);
         if (memory == null)
             return null;
 
@@ -867,9 +869,9 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
         return backup.Id;
     }
 
-    private async Task ApplySingleCorrectionAsync(MemoryCorrection correction, CancellationToken cancellationToken)
+    private async Task ApplySingleCorrectionAsync(string userId, MemoryCorrection correction, CancellationToken cancellationToken)
     {
-        var memory = await _memoryStore.GetByIdAsync(correction.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(userId, correction.MemoryId, cancellationToken);
         if (memory == null)
             return;
 
@@ -901,7 +903,7 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
                 break;
 
             case CorrectionType.Delete:
-                await _memoryStore.DeleteAsync(correction.MemoryId, false, cancellationToken);
+                await _memoryStore.DeleteAsync(userId, correction.MemoryId, false, cancellationToken);
                 break;
 
             default:
@@ -1114,8 +1116,8 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
     [LoggerMessage(Level = LogLevel.Debug, Message = "Identified {Count} outdated memories for user {UserId}")]
     private static partial void LogIdentifiedCountOutdatedMemoriesUser(ILogger logger, int count, string userId);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Tracked {Count} evidence gaps for query: {Query}")]
-    private static partial void LogTrackedCountEvidenceGapsQuery(ILogger logger, int count, string query);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Tracked {Count} evidence gaps (query length {QueryLength})")]
+    private static partial void LogTrackedCountEvidenceGapsQuery(ILogger logger, int count, int queryLength);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to apply correction {Id}")]
     private static partial void LogFailedApplyCorrectionId(ILogger logger, Exception ex, Guid id);

@@ -102,15 +102,16 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                     case DuplicateAction.Skip:
                         LogSkippingDuplicate(_logger, dupCheck.SimilarityScore);
                         // Phase 55: Implicit confirmation - duplicate = repeated mention
-                        await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
+                        await ConfirmDuplicateAsync(request.UserId, dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         return dupCheck.ExistingMemory!;
 
                     case DuplicateAction.Update:
                         LogUpdatingExistingMemory(_logger, dupCheck.ExistingMemory!.Id);
                         // Phase 55: Implicit confirmation before update
-                        await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
+                        await ConfirmDuplicateAsync(request.UserId, dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         return await UpdateAsync(new UpdateRequest
                         {
+                            UserId = request.UserId,
                             MemoryId = dupCheck.ExistingMemory.Id,
                             Content = request.Content,
                             RegenerateEmbedding = true
@@ -119,7 +120,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                     case DuplicateAction.Merge:
                         LogMergingWithExisting(_logger, dupCheck.ExistingMemory!.Id);
                         // Phase 55: Implicit confirmation before merge
-                        await ConfirmDuplicateAsync(dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
+                        await ConfirmDuplicateAsync(request.UserId, dupCheck.ExistingMemory!, dupCheck.SimilarityScore, cancellationToken);
                         // Boost importance and update access count
                         dupCheck.ExistingMemory.ImportanceScore = Math.Min(1.0f,
                             dupCheck.ExistingMemory.ImportanceScore + 0.1f);
@@ -229,7 +230,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             LogMemoryNotFoundForUpdate(_logger, request.MemoryId);
@@ -290,7 +291,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             LogMemoryNotFoundForSplit(_logger, request.MemoryId);
@@ -342,7 +343,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         // Delete original if requested
         if (request.DeleteOriginal)
         {
-            await _memoryStore.DeleteAsync(memory.Id, hardDelete: false, cancellationToken);
+            await _memoryStore.DeleteAsync(memory.UserId, memory.Id, hardDelete: false, cancellationToken);
         }
 
         LogSplitMemory(_logger, request.MemoryId, results.Count);
@@ -360,7 +361,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             throw new ArgumentException("At least 2 memories required for merge", nameof(request));
         }
 
-        var memories = await _memoryStore.GetByIdsAsync(request.MemoryIds, cancellationToken);
+        var memories = await _memoryStore.GetByIdsAsync(request.UserId, request.MemoryIds, cancellationToken);
 
         if (memories.Count < 2)
         {
@@ -421,7 +422,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         {
             foreach (var memory in memories)
             {
-                await _memoryStore.DeleteAsync(memory.Id, hardDelete: false, cancellationToken);
+                await _memoryStore.DeleteAsync(memory.UserId, memory.Id, hardDelete: false, cancellationToken);
             }
         }
 
@@ -439,7 +440,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             return false;
@@ -458,7 +459,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             await _workingMemory.DemoteAsync(request.MemoryId, cancellationToken);
         }
 
-        var deleted = await _memoryStore.DeleteAsync(request.MemoryId, request.HardDelete, cancellationToken);
+        var deleted = await _memoryStore.DeleteAsync(request.UserId, request.MemoryId, request.HardDelete, cancellationToken);
 
         LogDeletedMemory(_logger, request.MemoryId, request.HardDelete);
 
@@ -470,7 +471,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             return null;
@@ -499,7 +500,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             return null;
@@ -538,7 +539,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             return null;
@@ -594,7 +595,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         ArgumentException.ThrowIfNullOrWhiteSpace(request.UserId);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Query);
 
-        LogRetrievingMemories(_logger, request.UserId, request.Query);
+        LogRetrievingMemories(_logger, request.UserId, request.Query.Length);
 
         // Generate query embedding
         var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(request.Query, cancellationToken);
@@ -732,7 +733,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             throw new ArgumentException("At least 1 memory required for summarization", nameof(request));
         }
 
-        var memories = await _memoryStore.GetByIdsAsync(request.MemoryIds, cancellationToken);
+        var memories = await _memoryStore.GetByIdsAsync(request.UserId, request.MemoryIds, cancellationToken);
 
         if (memories.Count == 0)
         {
@@ -775,7 +776,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         {
             foreach (var memory in memories)
             {
-                await _memoryStore.DeleteAsync(memory.Id, hardDelete: false, cancellationToken);
+                await _memoryStore.DeleteAsync(memory.UserId, memory.Id, hardDelete: false, cancellationToken);
             }
         }
 
@@ -793,7 +794,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             return null;
@@ -827,7 +828,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             return null;
@@ -867,7 +868,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var memory = await _memoryStore.GetByIdAsync(request.MemoryId, cancellationToken);
+        var memory = await _memoryStore.GetByIdAsync(request.UserId, request.MemoryId, cancellationToken);
         if (memory == null)
         {
             LogConfirmNotFound(_logger, request.MemoryId);
@@ -936,6 +937,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     /// - Medium similarity (>= 0.75): +0.02 boost
     /// </remarks>
     private async Task ConfirmDuplicateAsync(
+        string userId,
         MemoryUnit existingMemory,
         float similarityScore,
         CancellationToken cancellationToken)
@@ -951,6 +953,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
         var result = await ConfirmAsync(new ConfirmRequest
         {
+            UserId = userId,
             MemoryId = existingMemory.Id,
             ConfidenceBoost = boost,
             Source = $"deduplication (similarity: {similarityScore:F3})"
@@ -1292,8 +1295,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     [LoggerMessage(Level = LogLevel.Debug, Message = "Labeled memory {MemoryId} with type {Type}")]
     private static partial void LogLabeledMemory(ILogger logger, Guid memoryId, MemoryType type);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieving memories for user {UserId} with query: {Query}")]
-    private static partial void LogRetrievingMemories(ILogger logger, string userId, string query);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Retrieving memories for user {UserId} (query length {QueryLength})")]
+    private static partial void LogRetrievingMemories(ILogger logger, string userId, int queryLength);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Re-ranking {Count} candidates with cross-encoder")]
     private static partial void LogReranking(ILogger logger, int count);
@@ -1362,8 +1365,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     [LoggerMessage(Level = LogLevel.Information, Message = "[CAPACITY_ENFORCEMENT] Capacity enforcement complete: Promoted {Promoted} items, new Short tier count: {NewCount}/{Capacity}")]
     private static partial void LogCapacityEnforcementComplete(ILogger logger, int promoted, int newCount, int capacity);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "[LLM_SUMMARY] Summarizing {Count} memories via LLM (focus: {Focus})")]
-    private static partial void LogLlmSummarizing(ILogger logger, int count, string focus);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "[LLM_SUMMARY] Summarizing {Count} memories via LLM (focus length {FocusLength})")]
+    private static partial void LogLlmSummarizing(ILogger logger, int count, int focusLength);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "[LLM_SUMMARY] LLM summarization unavailable, falling back to concatenation")]
     private static partial void LogLlmSummarizationFallback(ILogger logger);
@@ -1400,7 +1403,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                 : combinedContent;
         }
 
-        LogLlmSummarizing(_logger, memories.Count, focusTopic ?? "all");
+        LogLlmSummarizing(_logger, memories.Count, focusTopic?.Length ?? 0);
 
         try
         {

@@ -52,8 +52,7 @@ public sealed partial class HybridSearchService : IHybridSearchService
         var useHyde = options.UseHyde ?? _options.EnableHyde;
         var hydeDocCount = options.HydeDocumentCount ?? _options.HydeDocumentCount;
 
-        var truncatedQuery = query.Length > 50 ? query[..50] + "..." : query;
-        LogHybridSearch(_logger, truncatedQuery, denseWeight, sparseWeight, useHyde);
+        LogHybridSearch(_logger, query.Length, denseWeight, sparseWeight, useHyde);
 
         // Generate query embedding (with optional HyDE)
         var queryEmbedding = await GenerateQueryEmbeddingAsync(query, useHyde, hydeDocCount, cancellationToken);
@@ -110,7 +109,7 @@ public sealed partial class HybridSearchService : IHybridSearchService
             else
             {
                 // Need to fetch memory for sparse-only results
-                var memory = await _memoryStore.GetByIdAsync(id, cancellationToken);
+                var memory = await _memoryStore.GetByIdAsync(options.UserId, id, cancellationToken);
                 if (memory != null)
                 {
                     fusedScores[id] = new FusionScore
@@ -338,8 +337,8 @@ public sealed partial class HybridSearchService : IHybridSearchService
         return averaged;
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid search: query='{Query}', denseWeight={DenseWeight}, sparseWeight={SparseWeight}, hyde={UseHyde}")]
-    private static partial void LogHybridSearch(ILogger logger, string query, float denseWeight, float sparseWeight, bool useHyde);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Hybrid search: queryLength={QueryLength}, denseWeight={DenseWeight}, sparseWeight={SparseWeight}, hyde={UseHyde}")]
+    private static partial void LogHybridSearch(ILogger logger, int queryLength, float denseWeight, float sparseWeight, bool useHyde);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Search results: dense={DenseCount}, sparse={SparseCount}")]
     private static partial void LogSearchResults(ILogger logger, int denseCount, int sparseCount);
@@ -414,9 +413,9 @@ public interface IHybridSearchService
 public sealed class HybridSearchOptions
 {
     /// <summary>
-    /// User ID to filter by.
+    /// The user whose memories are searched. Required: a search never spans users.
     /// </summary>
-    public string? UserId { get; set; }
+    public required string UserId { get; set; }
 
     /// <summary>
     /// Session ID to filter by.

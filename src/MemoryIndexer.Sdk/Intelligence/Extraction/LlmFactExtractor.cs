@@ -71,8 +71,7 @@ public sealed partial class LlmFactExtractor : IFactExtractor
                 StopSequences = ["###"]
             };
 
-            var truncatedContent = context.Content.Length > 100 ? context.Content[..100] + "..." : context.Content;
-            LogExtractingFacts(_logger, truncatedContent);
+            LogExtractingFacts(_logger, context.Content.Length);
 
             var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
 
@@ -127,7 +126,7 @@ public sealed partial class LlmFactExtractor : IFactExtractor
                 StopSequences = ["###"]
             };
 
-            LogValidatingFact(_logger, existingFacts.Count, fact.Content);
+            LogValidatingFact(_logger, existingFacts.Count, fact.Content.Length);
 
             var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
 
@@ -525,8 +524,8 @@ public sealed partial class LlmFactExtractor : IFactExtractor
             _ => FactConflictAction.Add
         };
     }
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting facts from content: {Content}")]
-    private static partial void LogExtractingFacts(ILogger logger, string content);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting facts from content (length {ContentLength})")]
+    private static partial void LogExtractingFacts(ILogger logger, int contentLength);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Extracted {Count} facts (FastTrack: {FastTrack}, Standard: {Standard}, SessionOnly: {Session})")]
     private static partial void LogExtractedFacts(ILogger logger, int count, int fastTrack, int standard, int session);
@@ -534,8 +533,8 @@ public sealed partial class LlmFactExtractor : IFactExtractor
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to extract facts from content")]
     private static partial void LogFailedToExtractFacts(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Validating fact against {Count} existing facts: {Content}")]
-    private static partial void LogValidatingFact(ILogger logger, int count, string content);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Validating fact (content length {ContentLength}) against {Count} existing facts")]
+    private static partial void LogValidatingFact(ILogger logger, int count, int contentLength);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Validation result: {ConflictType} -> {Action}")]
     private static partial void LogValidationResult(ILogger logger, FactConflictType conflictType, FactConflictAction action);

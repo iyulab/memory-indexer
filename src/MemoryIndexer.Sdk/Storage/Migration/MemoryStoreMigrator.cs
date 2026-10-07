@@ -94,7 +94,7 @@ public sealed partial class MemoryStoreMigrator
                         try
                         {
                             // Check if already exists in destination
-                            var existing = await destination.GetByIdAsync(memory.Id, cancellationToken);
+                            var existing = await destination.GetByIdAsync(userId, memory.Id, cancellationToken);
                             if (existing != null)
                             {
                                 totalSkipped++;

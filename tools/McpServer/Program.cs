@@ -41,6 +41,17 @@ else
 }
 
 /// <summary>
+/// Resolves the store and the embedding service once at startup, so a configuration that cannot work (an embedding
+/// provider with no registered implementation, a store that cannot open its file) stops the server with its message
+/// instead of failing the first tool call.
+/// </summary>
+static void ResolveRequiredServices(IServiceProvider services)
+{
+    _ = services.GetRequiredService<MemoryIndexer.Interfaces.IMemoryStore>();
+    _ = services.GetRequiredService<MemoryIndexer.Interfaces.IEmbeddingService>();
+}
+
+/// <summary>
 /// Runs the MCP server with stdio transport (default mode for Claude Desktop).
 /// </summary>
 static async Task RunStdioServer(string[] args)
@@ -86,8 +97,9 @@ static async Task RunStdioServer(string[] args)
         .WithStdioServerTransport()
         .WithMemoryTools();
 
-    // Build and run
+    // Build, check what the first request would need, and run
     var app = builder.Build();
+    ResolveRequiredServices(app.Services);
     await app.RunAsync();
 }
 
@@ -143,6 +155,7 @@ static async Task RunHttpServer(string[] args, int port)
     });
 
     var app = builder.Build();
+    ResolveRequiredServices(app.Services);
 
     // Enable Swagger middleware
     app.UseSwagger();

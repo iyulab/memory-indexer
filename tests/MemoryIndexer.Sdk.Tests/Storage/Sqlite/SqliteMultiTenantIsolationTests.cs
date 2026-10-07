@@ -368,7 +368,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
         await _store.StoreAsync(memory, TestContext.Current.CancellationToken);
 
         // Delete it
-        var deleted = await _store.DeleteAsync(memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
+        var deleted = await _store.DeleteAsync(memory.UserId, memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
         deleted.Should().BeTrue();
 
         // Verify Tenant 1's count decreased
@@ -393,7 +393,7 @@ public class SqliteMultiTenantIsolationTests : IAsyncLifetime, IDisposable
         updated.Should().BeTrue();
 
         // Verify update worked for Tenant 1
-        var updatedMemory = await _store.GetByIdAsync(memoryToUpdate.Id, TestContext.Current.CancellationToken);
+        var updatedMemory = await _store.GetByIdAsync(memoryToUpdate.UserId, memoryToUpdate.Id, TestContext.Current.CancellationToken);
         updatedMemory!.Content.Should().Be("Updated content for Tenant 1");
         updatedMemory.UserId.Should().Be(Tenant1);
 

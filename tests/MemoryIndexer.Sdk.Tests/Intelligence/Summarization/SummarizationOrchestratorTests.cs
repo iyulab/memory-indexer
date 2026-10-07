@@ -154,7 +154,7 @@ public class SummarizationOrchestratorTests
                 Explanation = "Token threshold exceeded"
             });
 
-        _memoryStoreMock.GetByIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdsAsync("user-1", Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<MemoryUnit> { memory });
 
         _summarizerMock.SummarizeAsync(
@@ -225,7 +225,7 @@ public class SummarizationOrchestratorTests
             SummarizedTokenCount = 15
         };
 
-        _memoryStoreMock.GetByIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdsAsync("user-1", Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<MemoryUnit> { memory });
 
         _summarizerMock.SummarizeAsync(
@@ -271,7 +271,7 @@ public class SummarizationOrchestratorTests
             SourceMemoryIds = [memory.Id]
         };
 
-        _memoryStoreMock.GetByIdsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdsAsync("user-1", Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<MemoryUnit> { memory });
 
         _summarizerMock.SummarizeAsync(

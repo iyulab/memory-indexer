@@ -67,10 +67,11 @@ public static class MemoryStoreExtensions
     /// </summary>
     /// <param name="options">The search options to validate.</param>
     /// <exception cref="ArgumentNullException">If options is null.</exception>
-    /// <exception cref="ArgumentException">If Limit is less than 1.</exception>
+    /// <exception cref="ArgumentException">If UserId is empty or Limit is less than 1.</exception>
     public static void ValidateSearchOptions(this MemorySearchOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrEmpty(options.UserId);
 
         if (options.Limit < 1)
         {
@@ -109,6 +110,7 @@ public static class MemoryStoreExtensions
     /// Override in your implementation if your storage supports multi-get natively.
     /// </summary>
     /// <param name="store">The memory store.</param>
+    /// <param name="userId">The user whose memories they must be. Other users' IDs are not returned.</param>
     /// <param name="ids">The IDs to retrieve.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The found memories.</returns>
@@ -118,13 +120,14 @@ public static class MemoryStoreExtensions
     /// </remarks>
     public static async Task<IReadOnlyList<MemoryUnit>> GetByIdsDefaultAsync(
         this IMemoryStore store,
+        string userId,
         IEnumerable<Guid> ids,
         CancellationToken cancellationToken = default)
     {
         var results = new List<MemoryUnit>();
         foreach (var id in ids)
         {
-            var memory = await store.GetByIdAsync(id, cancellationToken);
+            var memory = await store.GetByIdAsync(userId, id, cancellationToken);
             if (memory != null)
             {
                 results.Add(memory);
@@ -258,12 +261,9 @@ public static class MemoryStoreExtensions
         this IEnumerable<MemoryUnit> memories,
         MemorySearchOptions options)
     {
-        var query = memories.AsEnumerable();
-
-        if (!string.IsNullOrEmpty(options.UserId))
-        {
-            query = query.Where(m => m.UserId == options.UserId);
-        }
+        // A search never spans users
+        ArgumentException.ThrowIfNullOrEmpty(options.UserId);
+        var query = memories.Where(m => m.UserId == options.UserId);
 
         if (!string.IsNullOrEmpty(options.SessionId))
         {

@@ -521,8 +521,8 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
     [LoggerMessage(Level = LogLevel.Debug, Message = "Summarizing {Count} memories")]
     private static partial void LogSummarizingCountMemories(ILogger logger, int count);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Summary created: {Original} -> {Summary} tokens ({Ratio:P0} compression)")]
-    private static partial void LogSummaryCreatedOriginalSummaryTokens(ILogger logger, int original, int summary, float ratio);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Summary created: {OriginalTokens} -> {SummaryTokens} tokens ({Ratio:P0} compression)")]
+    private static partial void LogSummaryCreatedOriginalSummaryTokens(ILogger logger, int originalTokens, int summaryTokens, float ratio);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Incrementally updating summary with {Count} new memories")]
     private static partial void LogIncrementallyUpdatingSummaryCountNew(ILogger logger, int count);

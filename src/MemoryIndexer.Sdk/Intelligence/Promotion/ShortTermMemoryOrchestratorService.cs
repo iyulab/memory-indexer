@@ -217,8 +217,7 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
             if (demoted != null)
             {
                 demotedCount++;
-                var truncatedContent = memory.Content.Length > 50 ? memory.Content[..50] + "..." : memory.Content;
-                LogArchived(_logger, truncatedContent);
+                LogArchived(_logger, memory.Id, memory.Content.Length);
             }
         }
 
@@ -470,8 +469,8 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
     [LoggerMessage(Level = LogLevel.Debug, Message = "Created session summary {SummaryId} for user {UserId}")]
     private static partial void LogCreatedSessionSummary(ILogger logger, Guid? summaryId, string userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Archived: {Content}")]
-    private static partial void LogArchived(ILogger logger, string content);
+    [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Archived memory {MemoryId} (content length {ContentLength})")]
+    private static partial void LogArchived(ILogger logger, Guid memoryId, int contentLength);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "[CONSOLIDATION] Successfully archived {Count} memories for user {UserId}. Summary: {SummaryCreated}")]
     private static partial void LogSuccessfullyArchived(ILogger logger, int count, string userId, string summaryCreated);

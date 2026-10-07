@@ -441,7 +441,7 @@ public partial class JsonMemoryExporter : IMemoryExporter
         var importMemory = PrepareMemoryForImport(memory, options);
 
         // Check for existing memory
-        var existingMemory = await _memoryStore.GetByIdAsync(importMemory.Id, cancellationToken);
+        var existingMemory = await _memoryStore.GetByIdAsync(importMemory.UserId, importMemory.Id, cancellationToken);
 
         if (existingMemory != null)
         {

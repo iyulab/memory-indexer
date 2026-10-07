@@ -104,9 +104,8 @@ public sealed partial class OptimizedRecallService : IDisposable
                 stopwatch.Stop();
                 componentLatencies["CacheHit"] = stopwatch.Elapsed.TotalMilliseconds;
 
-                var queryPreview = query.Length > 50 ? query[..50] + "..." : query;
                 var dupCount = _duplicateQueryCount;
-                LogQueryCacheHit(_logger, userId, tier, queryPreview, dupCount);
+                LogQueryCacheHit(_logger, userId, tier, query.Length, dupCount);
 
                 return cachedResults;
             }
@@ -262,8 +261,8 @@ public sealed partial class OptimizedRecallService : IDisposable
         return $"recall:{Convert.ToHexString(hash)}";
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Query cache hit for user {UserId}, tier {Tier}: {Query} (duplicates: {Count})")]
-    private static partial void LogQueryCacheHit(ILogger logger, string userId, string tier, string query, long count);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Query cache hit for user {UserId}, tier {Tier} (query length {QueryLength}, duplicates: {Count})")]
+    private static partial void LogQueryCacheHit(ILogger logger, string userId, string tier, int queryLength, long count);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Early termination triggered: {Count} results with avg score {Score:F3}")]
     private static partial void LogEarlyTermination(ILogger logger, int count, double score);

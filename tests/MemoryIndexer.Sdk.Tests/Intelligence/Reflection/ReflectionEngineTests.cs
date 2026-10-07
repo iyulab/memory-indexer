@@ -237,7 +237,7 @@ public class ReflectionEngineTests
         // Arrange
         var memoryId = Guid.NewGuid();
 
-        _memoryStoreMock.GetByIdAsync(memoryId, Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdAsync("test-user", memoryId, Arg.Any<CancellationToken>())
             .Returns(new MemoryUnit
             {
                 Id = memoryId,
@@ -245,7 +245,7 @@ public class ReflectionEngineTests
             });
 
         // Act
-        var result = await _engine.DiscoverLinksAsync(memoryId, TestContext.Current.CancellationToken);
+        var result = await _engine.DiscoverLinksAsync("test-user", memoryId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -273,7 +273,7 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock.GetByIdAsync(targetId, Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdAsync("test-user", targetId, Arg.Any<CancellationToken>())
             .Returns(targetMemory);
 
         _memoryStoreMock.GetAllAsync(
@@ -283,7 +283,7 @@ public class ReflectionEngineTests
             .Returns(relatedMemories);
 
         // Act
-        var result = await _engine.DiscoverLinksAsync(targetId, TestContext.Current.CancellationToken);
+        var result = await _engine.DiscoverLinksAsync("test-user", targetId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -477,7 +477,7 @@ public class ReflectionEngineTests
             }
         };
 
-        _memoryStoreMock.GetByIdAsync(targetId, Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdAsync("test-user", targetId, Arg.Any<CancellationToken>())
             .Returns(targetMemory);
 
         _memoryStoreMock.GetAllAsync(
@@ -487,7 +487,7 @@ public class ReflectionEngineTests
             .Returns(relatedMemories);
 
         // Act
-        var result = await _engine.DiscoverLinksAsync(targetId, TestContext.Current.CancellationToken);
+        var result = await _engine.DiscoverLinksAsync("test-user", targetId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

@@ -37,10 +37,11 @@ public class MemorySelfCorrectorTests
                 Arg.Any<CancellationToken>())
             .Returns([]);
 
-        _memoryStoreMock.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => new MemoryUnit
             {
-                Id = callInfo.ArgAt<Guid>(0),
+                UserId = callInfo.ArgAt<string>(0),
+                Id = callInfo.ArgAt<Guid>(1),
                 Content = "Test memory content",
                 CreatedAt = DateTime.UtcNow.AddDays(-1)
             });
@@ -48,7 +49,7 @@ public class MemorySelfCorrectorTests
         _memoryStoreMock.UpdateAsync(Arg.Any<MemoryUnit>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
-        _memoryStoreMock.DeleteAsync(Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+        _memoryStoreMock.DeleteAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
         _memoryStoreMock.SearchAsync(
@@ -279,7 +280,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.ApplyCorrectionsAsync(corrections, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _corrector.ApplyCorrectionsAsync("test-user", corrections, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -292,7 +293,7 @@ public class MemorySelfCorrectorTests
         var corrections = new List<MemoryCorrection>();
 
         // Act
-        var result = await _corrector.ApplyCorrectionsAsync(corrections, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _corrector.ApplyCorrectionsAsync("test-user", corrections, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -466,7 +467,7 @@ public class MemorySelfCorrectorTests
         };
 
         // Act
-        var result = await _corrector.ApplyCorrectionsAsync(corrections, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _corrector.ApplyCorrectionsAsync("test-user", corrections, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

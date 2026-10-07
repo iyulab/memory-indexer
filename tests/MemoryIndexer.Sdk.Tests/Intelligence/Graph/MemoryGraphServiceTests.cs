@@ -83,6 +83,40 @@ public class MemoryGraphServiceTests
     }
 
     [Fact]
+    public async Task FindRelatedAndSubgraph_StayWithinTheUser_EvenThroughASharedEntity()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var alice = new MemoryUnit { Id = Guid.NewGuid(), UserId = "alice", Content = "Alice in Seoul", Embedding = new ReadOnlyMemory<float>([0.1f]) };
+        var aliceToo = new MemoryUnit { Id = Guid.NewGuid(), UserId = "alice", Content = "Alice again in Seoul", Embedding = new ReadOnlyMemory<float>([0.2f]) };
+        var bob = new MemoryUnit { Id = Guid.NewGuid(), UserId = "bob", Content = "Bob in Seoul", Embedding = new ReadOnlyMemory<float>([0.3f]) };
+
+        foreach (var m in new[] { alice, aliceToo, bob })
+        {
+            await _service.LinkMemoryToGraphAsync(m,
+            [
+                new EntityTriple
+                {
+                    Id = Guid.NewGuid(), Subject = "Seoul", Predicate = "mentioned_in", ObjectValue = m.Content,
+                    SourceMemoryId = m.Id, UserId = m.UserId, Confidence = 0.9f,
+                },
+            ], ct);
+            _memoryStoreMock.GetByIdAsync(m.UserId, m.Id, Arg.Any<CancellationToken>()).Returns(m);
+        }
+
+        var related = await _service.FindRelatedMemoriesAsync("alice", alice.Id, cancellationToken: ct);
+        var asBob = await _service.FindRelatedMemoriesAsync("bob", alice.Id, cancellationToken: ct);
+        var subgraph = await _service.ExtractSubgraphAsync("alice", [alice.Id, bob.Id], cancellationToken: ct);
+        var bobNodeForAlice = await _service.GetMemoryNodeAsync("alice", bob.Id, ct);
+
+        Assert.Contains(related, r => r.Memory.Id == aliceToo.Id);
+        Assert.DoesNotContain(related, r => r.Memory.Id == bob.Id);
+        Assert.Empty(asBob);
+        Assert.DoesNotContain(subgraph.MemoryNodes, n => n.UserId == "bob");
+        Assert.Contains(subgraph.MemoryNodes, n => n.MemoryId == alice.Id);
+        Assert.Null(bobNodeForAlice);
+    }
+
+    [Fact]
     public async Task FindRelatedMemoriesAsync_ShouldReturnRelatedMemoriesWithinHops()
     {
         // Arrange
@@ -138,11 +172,11 @@ public class MemoryGraphServiceTests
         await _service.LinkMemoryToGraphAsync(memory, entities, TestContext.Current.CancellationToken);
         await _service.LinkMemoryToGraphAsync(relatedMemory, relatedEntities, TestContext.Current.CancellationToken);
 
-        _memoryStoreMock.GetByIdAsync(relatedMemoryId, Arg.Any<CancellationToken>())
+        _memoryStoreMock.GetByIdAsync(userId, relatedMemoryId, Arg.Any<CancellationToken>())
             .Returns(relatedMemory);
 
         // Act
-        var result = await _service.FindRelatedMemoriesAsync(memoryId, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _service.FindRelatedMemoriesAsync(userId, memoryId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEmpty(result);
@@ -203,7 +237,7 @@ public class MemoryGraphServiceTests
         await _service.LinkMemoryToGraphAsync(memory2, entities2, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _service.ExtractSubgraphAsync([memoryId1, memoryId2], cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _service.ExtractSubgraphAsync(userId, [memoryId1, memoryId2], cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

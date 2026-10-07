@@ -22,7 +22,7 @@ public sealed partial class InMemoryTemporalEntityStore(ILogger<InMemoryTemporal
         triple.TransactionTime = DateTime.UtcNow;
 
         _triples[triple.Id] = triple;
-        LogStoredEntityTriple(logger, triple.Id, triple.Subject, triple.Predicate, triple.ObjectValue);
+        LogStoredEntityTriple(logger, triple.Id, triple.Version);
 
         return Task.FromResult(triple);
     }
@@ -142,8 +142,7 @@ public sealed partial class InMemoryTemporalEntityStore(ILogger<InMemoryTemporal
         var newTriple = existing.CreateSupersedingVersion(newObjectValue, validFrom);
         await StoreAsync(newTriple, cancellationToken);
 
-        LogSupersededTriple(logger, existingTripleId, newTriple.Id, existing.Subject, existing.Predicate,
-            existing.ObjectValue, newObjectValue);
+        LogSupersededTriple(logger, existingTripleId, newTriple.Id, newTriple.Version);
 
         return newTriple;
     }
@@ -255,9 +254,9 @@ public sealed partial class InMemoryTemporalEntityStore(ILogger<InMemoryTemporal
         return start1 < end2 && start2 < end1;
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Stored entity triple {TripleId}: {Subject} - {Predicate} - {ObjectValue}")]
-    private static partial void LogStoredEntityTriple(ILogger logger, Guid tripleId, string subject, string predicate, string objectValue);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Stored entity triple {TripleId} (version {Version})")]
+    private static partial void LogStoredEntityTriple(ILogger logger, Guid tripleId, int version);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Superseded triple {OldId} with {NewId}: {Subject}.{Predicate} changed from '{OldValue}' to '{NewValue}'")]
-    private static partial void LogSupersededTriple(ILogger logger, Guid oldId, Guid newId, string subject, string predicate, string oldValue, string newValue);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Superseded triple {OldId} with {NewId} (version {Version})")]
+    private static partial void LogSupersededTriple(ILogger logger, Guid oldId, Guid newId, int version);
 }

@@ -103,9 +103,7 @@ public sealed partial class HydeQueryExpander : IHydeQueryExpander
     {
         var hypotheticalDoc = GenerateHypotheticalDocument(query);
 
-        var truncatedQuery = query.Length > 50 ? query[..50] + "..." : query;
-        var truncatedDoc = hypotheticalDoc.Length > 80 ? hypotheticalDoc[..80] + "..." : hypotheticalDoc;
-        LogHydeQueryToHypothetical(_logger, truncatedQuery, truncatedDoc);
+        LogHydeQueryToHypothetical(_logger, query.Length, hypotheticalDoc.Length);
 
         return await _embeddingService.GenerateEmbeddingAsync(hypotheticalDoc, cancellationToken);
     }
@@ -118,8 +116,7 @@ public sealed partial class HydeQueryExpander : IHydeQueryExpander
     {
         var hypotheticalDocs = GenerateMultipleHypotheticalDocuments(query, count);
 
-        var truncatedQuery = query.Length > 50 ? query[..50] + "..." : query;
-        LogHydeGeneratedDocuments(_logger, hypotheticalDocs.Count, truncatedQuery);
+        LogHydeGeneratedDocuments(_logger, hypotheticalDocs.Count, query.Length);
 
         var embeddings = await _embeddingService.GenerateBatchEmbeddingsAsync(
             hypotheticalDocs, cancellationToken);
@@ -339,11 +336,11 @@ public sealed partial class HydeQueryExpander : IHydeQueryExpander
     [GeneratedRegex(@"^(?:what|who|where|when|why|how|which|is|are|do|does|did|can|could|will|would)\s+", RegexOptions.IgnoreCase)]
     private static partial Regex QuestionWordPattern();
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE: Query '{Query}' -> Hypothetical '{Hypothetical}'")]
-    private static partial void LogHydeQueryToHypothetical(ILogger logger, string query, string hypothetical);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE: query length {QueryLength} -> hypothetical document length {HypotheticalLength}")]
+    private static partial void LogHydeQueryToHypothetical(ILogger logger, int queryLength, int hypotheticalLength);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE: Generated {Count} hypothetical documents for '{Query}'")]
-    private static partial void LogHydeGeneratedDocuments(ILogger logger, int count, string query);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE: Generated {Count} hypothetical documents (query length {QueryLength})")]
+    private static partial void LogHydeGeneratedDocuments(ILogger logger, int count, int queryLength);
 
     /// <summary>
     /// Extracted terms from query analysis.

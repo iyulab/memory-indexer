@@ -230,12 +230,12 @@ public sealed class MemoryTools(
 
         if (!string.IsNullOrWhiteSpace(content))
         {
-            updated = await memoryService.UpdateContentAsync(id, content, cancellationToken);
+            updated = await memoryService.UpdateContentAsync(indexerOptions.Value.DefaultUserId, id, content, cancellationToken);
         }
 
         if (importance.HasValue)
         {
-            updated = await memoryService.UpdateImportanceAsync(id, importance.Value, cancellationToken) || updated;
+            updated = await memoryService.UpdateImportanceAsync(indexerOptions.Value.DefaultUserId, id, importance.Value, cancellationToken) || updated;
         }
 
         return new UpdateMemoryResult
@@ -272,10 +272,10 @@ public sealed class MemoryTools(
         MemoryUnit? memoryForTracking = null;
         if (usageTracker != null)
         {
-            memoryForTracking = await memoryStore.GetByIdAsync(id, cancellationToken);
+            memoryForTracking = await memoryStore.GetByIdAsync(indexerOptions.Value.DefaultUserId, id, cancellationToken);
         }
 
-        var deleted = await memoryService.DeleteAsync(id, permanent, cancellationToken);
+        var deleted = await memoryService.DeleteAsync(indexerOptions.Value.DefaultUserId, id, permanent, cancellationToken);
 
         // Record deletion in usage tracker (Phase v0.6.0-γ)
         if (deleted && usageTracker != null && memoryForTracking != null)
@@ -315,7 +315,7 @@ public sealed class MemoryTools(
             };
         }
 
-        var memory = await memoryService.GetByIdAsync(id, cancellationToken);
+        var memory = await memoryService.GetByIdAsync(indexerOptions.Value.DefaultUserId, id, cancellationToken);
 
         if (memory is null)
         {
@@ -376,6 +376,7 @@ public sealed class MemoryTools(
 
         var result = await memoryPrimitives.ConfirmAsync(new ConfirmRequest
         {
+            UserId = indexerOptions.Value.DefaultUserId,
             MemoryId = id,
             ConfidenceBoost = confidenceBoost,
             Source = source ?? "mcp_tool"

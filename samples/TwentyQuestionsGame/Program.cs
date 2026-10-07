@@ -303,7 +303,7 @@ static async Task ClearUserMemoriesAsync(IMemoryStore store, string userId, stri
     var memories = await store.GetAllAsync(userId, new MemoryFilterOptions { SessionId = sessionId });
     foreach (var memory in memories)
     {
-        await store.DeleteAsync(memory.Id, hardDelete: true);
+        await store.DeleteAsync(userId, memory.Id, hardDelete: true);
     }
 }
 

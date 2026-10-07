@@ -2,6 +2,37 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.28.0] - Unreleased
+
+### Changed
+- **Breaking** — **one user cannot read, change or delete another user's memory through any path.** Every operation
+  that addresses a memory by ID now takes the user it must belong to: `IMemoryStore.GetByIdAsync(userId, id)`,
+  `GetByIdsAsync(userId, ids)`, `DeleteAsync(userId, id, hardDelete)`; `UpdateAsync` only updates a memory stored under
+  its `UserId` and can no longer move it to another user. Another user's ID is "not found". `MemorySearchOptions.UserId`
+  is `required` and a search without a user throws (it used to search every user); `GetAllAsync` requires a user. The
+  memory graph (`FindRelatedMemoriesAsync`, `ExtractSubgraphAsync`, `GetMemoryNodeAsync`, `UnlinkMemoryFromGraphAsync`)
+  takes the user and never follows a shared entity into another user's memories. The id-addressed requests of
+  `IMemoryPrimitives` (`UpdateRequest`, `DeleteRequest`, `MergeRequest`, ...) carry a required `UserId`; service methods
+  that took only an ID take the user first.
+  Migration: pass the user you already have (the memory's `UserId`, the request's user, the server's configured user).
+- **Breaking** — **automatic cleanup is off by default.** `AutoCleanupOldMemoriesDays` (was 90) and
+  `MaxDatabaseSizeMb` (was 500) default to 0: a memory store no longer deletes memories on its own unless the
+  application sets a retention policy. When set, they apply to the whole store — use them in single-user stores.
+  Migration: set them explicitly to keep the old retention.
+- **Memory content no longer reaches logs.** Log lines carry IDs, counts, lengths and types; queries, memory text,
+  model responses, extracted facts and fact keys are not written at any level (fact keys appear as a 12-digit
+  fingerprint, `LogRedaction.Fingerprint`). A convention test fails any log template that names content.
+
+### Added
+- `IMemoryStore.GetUserIdsAsync()` — the users that have memories, so store-wide jobs (promotion, cleanup) visit users
+  one at a time instead of reading across them.
+- **`MemoryIndexer:Storage:Type`** (`InMemory` default, `SqliteVec`) chooses the built-in store `AddMemoryIndexer`
+  registers; an unknown value stops the host at startup. The MCP server honours it — its bundled configuration keeps
+  memories in `memories.db` across restarts (it ran on the in-memory store whatever the configuration said) — and
+  checks the store and the embedding service when it starts, so an embedding provider without an implementation stops
+  it with that message instead of failing the first tool call. The production example configuration no longer names a
+  Qdrant store or an Ollama embedder that do not exist here.
+
 ## [v0.27.0] - 2026-10-06
 
 ### Removed

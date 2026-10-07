@@ -521,13 +521,13 @@ public class OptimizedRecallServiceTests : IDisposable
         public Task<IReadOnlyList<MemoryUnit>> StoreBatchAsync(IEnumerable<MemoryUnit> memories, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<MemoryUnit>>(memories.ToList());
 
-        public Task<MemoryUnit?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        public Task<MemoryUnit?> GetByIdAsync(string userId, Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult<MemoryUnit?>(null);
 
-        public Task<IReadOnlyList<MemoryUnit>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<MemoryUnit>> GetByIdsAsync(string userId, IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<MemoryUnit>>(Array.Empty<MemoryUnit>());
 
-        public Task<bool> DeleteAsync(Guid id, bool hardDelete = false, CancellationToken cancellationToken = default)
+        public Task<bool> DeleteAsync(string userId, Guid id, bool hardDelete = false, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 
         public Task<int> DeleteByUserAsync(string userId, bool hardDelete = false, CancellationToken cancellationToken = default)
@@ -547,6 +547,9 @@ public class OptimizedRecallServiceTests : IDisposable
 
         public Task<long> GetCountAsync(string userId, CancellationToken cancellationToken = default)
             => Task.FromResult(0L);
+
+        public Task<IReadOnlyList<string>> GetUserIdsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<string>>([]);
 
         public Task<IReadOnlyDictionary<MemoryType, int>> GetTypeCountsAsync(string userId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyDictionary<MemoryType, int>>(new Dictionary<MemoryType, int>());

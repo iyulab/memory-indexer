@@ -66,7 +66,7 @@ public sealed partial class GraphQueryExpander : IGraphQueryExpander
         options ??= new QueryExpansionOptions();
         var stopwatch = Stopwatch.StartNew();
 
-        LogExpandingQueryUserUserIdQuery(_logger, userId, query);
+        LogExpandingQueryUserUserIdQuery(_logger, userId, query.Length);
 
         // Step 1: Extract entities from query
         var mentionedEntities = await ExtractQueryEntitiesAsync(query, userId, cancellationToken);
@@ -479,8 +479,8 @@ public sealed partial class GraphQueryExpander : IGraphQueryExpander
 
     #endregion
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Expanding query for user {UserId}: '{Query}'")]
-    private static partial void LogExpandingQueryUserUserIdQuery(ILogger logger, string userId, string query);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Expanding query for user {UserId} (query length {QueryLength})")]
+    private static partial void LogExpandingQueryUserUserIdQuery(ILogger logger, string userId, int queryLength);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Query expanded: {MentionedCount} mentioned, {RelatedCount} related, {FactCount} facts in {Duration}ms")]
     private static partial void LogQueryExpandedMentionedCountMentionedRelatedCount(ILogger logger, int mentionedCount, int relatedCount, int factCount, long duration);

@@ -247,7 +247,7 @@ public class MemoryService(
                         if (!string.IsNullOrEmpty(resolution.TargetMemoryId))
                         {
                             var targetId = Guid.Parse(resolution.TargetMemoryId);
-                            var existing = await memoryStore.GetByIdAsync(targetId, cancellationToken);
+                            var existing = await memoryStore.GetByIdAsync(userId, targetId, cancellationToken);
                             if (existing != null)
                             {
                                 existing.Content = content;
@@ -271,7 +271,7 @@ public class MemoryService(
                         if (!string.IsNullOrEmpty(resolution.TargetMemoryId))
                         {
                             var targetId = Guid.Parse(resolution.TargetMemoryId);
-                            var existing = await memoryStore.GetByIdAsync(targetId, cancellationToken);
+                            var existing = await memoryStore.GetByIdAsync(userId, targetId, cancellationToken);
                             if (existing != null)
                             {
                                 // Use UpdatedContent if provided, otherwise append
@@ -295,7 +295,7 @@ public class MemoryService(
                         if (!string.IsNullOrEmpty(resolution.TargetMemoryId))
                         {
                             var targetId = Guid.Parse(resolution.TargetMemoryId);
-                            var existing = await memoryStore.GetByIdAsync(targetId, cancellationToken);
+                            var existing = await memoryStore.GetByIdAsync(userId, targetId, cancellationToken);
                             if (existing != null)
                             {
                                 // Mark existing as archived
@@ -435,27 +435,30 @@ public class MemoryService(
     /// <summary>
     /// Gets a memory by ID.
     /// </summary>
+    /// <param name="userId">The user whose memory it is. Another user's memory with this ID is not found.</param>
     /// <param name="id">The memory ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The memory if found.</returns>
-    public Task<MemoryUnit?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    /// <returns>The memory if found for this user.</returns>
+    public Task<MemoryUnit?> GetByIdAsync(string userId, Guid id, CancellationToken cancellationToken = default)
     {
-        return memoryStore.GetByIdAsync(id, cancellationToken);
+        return memoryStore.GetByIdAsync(userId, id, cancellationToken);
     }
 
     /// <summary>
     /// Updates a memory's content with new embedding.
     /// </summary>
+    /// <param name="userId">The user whose memory it is. Another user's memory with this ID is not found.</param>
     /// <param name="id">The memory ID.</param>
     /// <param name="content">The new content.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if updated.</returns>
     public async Task<bool> UpdateContentAsync(
+        string userId,
         Guid id,
         string content,
         CancellationToken cancellationToken = default)
     {
-        var memory = await memoryStore.GetByIdAsync(id, cancellationToken);
+        var memory = await memoryStore.GetByIdAsync(userId, id, cancellationToken);
         if (memory is null)
         {
             return false;
@@ -472,16 +475,18 @@ public class MemoryService(
     /// <summary>
     /// Updates a memory's importance score.
     /// </summary>
+    /// <param name="userId">The user whose memory it is. Another user's memory with this ID is not found.</param>
     /// <param name="id">The memory ID.</param>
     /// <param name="importance">The new importance score.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if updated.</returns>
     public async Task<bool> UpdateImportanceAsync(
+        string userId,
         Guid id,
         float importance,
         CancellationToken cancellationToken = default)
     {
-        var memory = await memoryStore.GetByIdAsync(id, cancellationToken);
+        var memory = await memoryStore.GetByIdAsync(userId, id, cancellationToken);
         if (memory is null)
         {
             return false;
@@ -496,16 +501,18 @@ public class MemoryService(
     /// <summary>
     /// Deletes a memory.
     /// </summary>
+    /// <param name="userId">The user whose memory it is. Another user's memory with this ID is not deleted.</param>
     /// <param name="id">The memory ID.</param>
     /// <param name="hardDelete">If true, permanently removes.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if deleted.</returns>
     public Task<bool> DeleteAsync(
+        string userId,
         Guid id,
         bool hardDelete = false,
         CancellationToken cancellationToken = default)
     {
-        return memoryStore.DeleteAsync(id, hardDelete, cancellationToken);
+        return memoryStore.DeleteAsync(userId, id, hardDelete, cancellationToken);
     }
 
     /// <summary>

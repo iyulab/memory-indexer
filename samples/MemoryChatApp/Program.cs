@@ -239,7 +239,7 @@ app.MapDelete("/api/sessions/{sessionId}", async (string sessionId) =>
     var allMemories = await memoryStore.GetAllAsync(session.UserId);
     var sessionMemories = allMemories.Where(m => m.SessionId == sessionId).ToList();
     foreach (var m in sessionMemories)
-        await memoryStore.DeleteAsync(m.Id);
+        await memoryStore.DeleteAsync(m.UserId, m.Id);
 
     sessions.Remove(sessionId);
     Console.WriteLine($"[API] DELETE /api/sessions/{sessionId} -> Deleted {sessionMemories.Count} memories");

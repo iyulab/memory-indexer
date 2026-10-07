@@ -2,6 +2,7 @@ using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
+using MemoryIndexer.Utilities;
 
 namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 
@@ -350,7 +351,7 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
 
         await _archiveStore.SetAsync(userId, entry, cancellationToken);
 
-        LogFastTrackedToArchive(_logger, key, fact.Category, fact.Confidence);
+        LogFastTrackedToArchive(_logger, new FingerprintedValue(key), fact.Category, fact.Confidence);
     }
 
     private async Task ReplaceInArchiveAsync(
@@ -371,7 +372,7 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
 
         await _archiveStore.SetAsync(userId, entry, cancellationToken);
 
-        LogReplacedInArchive(_logger, key, fact.Category, fact.Confidence);
+        LogReplacedInArchive(_logger, new FingerprintedValue(key), fact.Category, fact.Confidence);
     }
 
     private static string GenerateFactKey(UserFact fact)
@@ -441,11 +442,11 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get existing facts for validation")]
     private static partial void LogFailedGetExistingFacts(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Fast-tracked fact to Archive: Key={Key}, Category={Category}, Confidence={Confidence}")]
-    private static partial void LogFastTrackedToArchive(ILogger logger, string key, FactCategory category, float confidence);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Fast-tracked fact to Archive: Key={KeyHash}, Category={Category}, Confidence={Confidence}")]
+    private static partial void LogFastTrackedToArchive(ILogger logger, FingerprintedValue keyHash, FactCategory category, float confidence);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Replaced fact in Archive: Key={Key}, Category={Category}, Confidence={Confidence}")]
-    private static partial void LogReplacedInArchive(ILogger logger, string key, FactCategory category, float confidence);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Replaced fact in Archive: Key={KeyHash}, Category={Category}, Confidence={Confidence}")]
+    private static partial void LogReplacedInArchive(ILogger logger, FingerprintedValue keyHash, FactCategory category, float confidence);
 
     /// <summary>
     /// Maps FactCategory to SemanticStoreCategory.

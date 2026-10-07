@@ -244,7 +244,7 @@ public sealed partial class DuplicateDetector : IDeduplicationService
         // Delete duplicates
         foreach (var duplicate in group.Duplicates.Where(d => d.Id != primary.Id))
         {
-            await _memoryStore.DeleteAsync(duplicate.Id, hardDelete: true, cancellationToken: cancellationToken);
+            await _memoryStore.DeleteAsync(primary.UserId, duplicate.Id, hardDelete: true, cancellationToken: cancellationToken);
         }
 
         LogMergedDuplicates(_logger, group.Duplicates.Count, primary.Id);

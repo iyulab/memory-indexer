@@ -173,6 +173,14 @@ public sealed class WorkingMemoryOptions
 public sealed class StorageOptions
 {
     /// <summary>
+    /// Which store <c>AddMemoryIndexer</c> registers when the application registers none of its own.
+    /// Default <see cref="StorageType.InMemory"/> (lost when the process ends); <see cref="StorageType.SqliteVec"/>
+    /// keeps memories in the SQLite file at <see cref="ConnectionString"/>. Configuration key
+    /// <c>MemoryIndexer:Storage:Type</c>; a value that is not one of these fails the host at startup.
+    /// </summary>
+    public StorageType Type { get; set; } = StorageType.InMemory;
+
+    /// <summary>
     /// Connection string for the storage provider.
     /// For SQLite: file path (e.g., "memory.db")
     /// </summary>
@@ -192,6 +200,18 @@ public sealed class StorageOptions
     /// SQLite-specific configuration options.
     /// </summary>
     public SqliteOptions Sqlite { get; set; } = new();
+}
+
+/// <summary>
+/// The built-in memory stores.
+/// </summary>
+public enum StorageType
+{
+    /// <summary>In-process store; memories are lost when the process ends.</summary>
+    InMemory = 0,
+
+    /// <summary>SQLite with vector search (sqlite-vec) and full-text search; memories persist in a file.</summary>
+    SqliteVec = 1,
 }
 
 /// <summary>
@@ -243,16 +263,16 @@ public sealed class SqliteOptions
     public int MaintenanceIntervalMinutes { get; set; } = 30;
 
     /// <summary>
-    /// Maximum database size in MB. When exceeded, old memories are automatically deleted.
-    /// Set to 0 for unlimited. Default: 500MB.
+    /// Maximum database size in MB. When exceeded, the oldest memories in the whole store are deleted — across users,
+    /// so set it only for a single-user store. Default 0 (no limit): the store does not delete memories on its own.
     /// </summary>
-    public long MaxDatabaseSizeMb { get; set; } = 500;
+    public long MaxDatabaseSizeMb { get; set; }
 
     /// <summary>
-    /// Automatically delete memories older than this many days.
-    /// Set to 0 to disable. Default: 90 days.
+    /// Delete memories older than this many days, in the whole store. Default 0 (off): retention is the application's
+    /// decision, not the store's.
     /// </summary>
-    public int AutoCleanupOldMemoriesDays { get; set; } = 90;
+    public int AutoCleanupOldMemoriesDays { get; set; }
 
     /// <summary>
     /// WAL checkpoint interval (minutes). Default: 10 minutes.

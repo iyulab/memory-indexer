@@ -27,39 +27,44 @@ public interface IMemoryStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves a memory by its ID.
+    /// Retrieves a memory by its ID, within one user's memories.
     /// </summary>
+    /// <param name="userId">The user whose memory it must be. Another user's memory with this ID is not found.</param>
     /// <param name="id">The memory ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The memory if found, null otherwise.</returns>
-    Task<MemoryUnit?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    /// <returns>The memory if found for this user, null otherwise.</returns>
+    Task<MemoryUnit?> GetByIdAsync(string userId, Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves multiple memories by their IDs.
+    /// Retrieves multiple memories by their IDs, within one user's memories.
     /// </summary>
+    /// <param name="userId">The user whose memories they must be. Other users' IDs are not returned.</param>
     /// <param name="ids">The memory IDs.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The found memories.</returns>
     Task<IReadOnlyList<MemoryUnit>> GetByIdsAsync(
+        string userId,
         IEnumerable<Guid> ids,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates an existing memory.
+    /// Updates an existing memory. Only a memory stored under <see cref="MemoryUnit.UserId"/> is updated —
+    /// an update cannot move a memory to another user or change another user's memory.
     /// </summary>
     /// <param name="memory">The memory to update.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>True if updated, false if not found.</returns>
+    /// <returns>True if updated, false if not found for that user.</returns>
     Task<bool> UpdateAsync(MemoryUnit memory, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Deletes a memory by its ID.
+    /// Deletes a memory by its ID, within one user's memories.
     /// </summary>
+    /// <param name="userId">The user whose memory it must be. Another user's memory with this ID is not deleted.</param>
     /// <param name="id">The memory ID.</param>
     /// <param name="hardDelete">If true, permanently removes; if false, soft delete.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>True if deleted, false if not found.</returns>
-    Task<bool> DeleteAsync(Guid id, bool hardDelete = false, CancellationToken cancellationToken = default);
+    /// <returns>True if deleted, false if not found for this user.</returns>
+    Task<bool> DeleteAsync(string userId, Guid id, bool hardDelete = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes all memories for a user.
@@ -123,6 +128,14 @@ public interface IMemoryStore
     Task<long> GetCountAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the users that have at least one memory that is not deleted — the way a store-wide job
+    /// (promotion, cleanup) visits users one at a time instead of reading across them.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Distinct user IDs.</returns>
+    Task<IReadOnlyList<string>> GetUserIdsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the count of memories by type for a user.
     /// Phase 23.1: Memory Type Distribution Balancing.
     /// </summary>
@@ -152,9 +165,9 @@ public interface IMemoryStore
 public sealed class MemorySearchOptions
 {
     /// <summary>
-    /// The user ID to filter by.
+    /// The user whose memories are searched. Required: a search never spans users.
     /// </summary>
-    public string? UserId { get; set; }
+    public required string UserId { get; set; }
 
     /// <summary>
     /// The session ID to filter by.

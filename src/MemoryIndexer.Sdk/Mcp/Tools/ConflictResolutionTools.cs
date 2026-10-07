@@ -137,7 +137,7 @@ public sealed class ConflictResolutionTools
             };
         }
 
-        var existingMemory = await _memoryService.GetByIdAsync(memoryId, cancellationToken);
+        var existingMemory = await _memoryService.GetByIdAsync(_defaultUserId, memoryId, cancellationToken);
         if (existingMemory == null)
         {
             return new ResolveContradictionResult
@@ -275,7 +275,7 @@ public sealed class ConflictResolutionTools
         {
             if (resolution.SupersededItem != null)
             {
-                await _memoryService.DeleteAsync(resolution.SupersededItem.Id, false, cancellationToken);
+                await _memoryService.DeleteAsync(_defaultUserId, resolution.SupersededItem.Id, false, cancellationToken);
                 result.ActionsApplied = [$"Deleted superseded memory: {resolution.SupersededItem.Id}"];
             }
 

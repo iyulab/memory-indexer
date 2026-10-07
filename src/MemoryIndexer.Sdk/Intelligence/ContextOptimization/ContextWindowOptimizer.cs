@@ -144,7 +144,7 @@ public sealed partial class ContextWindowOptimizer : IContextOptimizer
         // Average the embeddings for enhanced retrieval
         var enhancedEmbedding = AverageEmbeddings(originalEmbedding, hydeEmbedding);
 
-        LogHyDEGeneratedQueryQuery(_logger, query);
+        LogHyDEGeneratedQueryQuery(_logger, query.Length);
 
         return new HyDEResult
         {
@@ -397,8 +397,8 @@ public sealed partial class ContextWindowOptimizer : IContextOptimizer
     [LoggerMessage(Level = LogLevel.Debug, Message = "MMR applied: selected {Selected} from {Total} memories (lambda={Lambda})")]
     private static partial void LogMMRAppliedSelectedSelectedTotal(ILogger logger, int selected, int total, float lambda);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE generated for query: {Query}")]
-    private static partial void LogHyDEGeneratedQueryQuery(ILogger logger, string query);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "HyDE generated for query (length {QueryLength})")]
+    private static partial void LogHyDEGeneratedQueryQuery(ILogger logger, int queryLength);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Expanded chunk context: {Before} before, {After} after")]
     private static partial void LogExpandedChunkContextBeforeBefore(ILogger logger, int before, int after);

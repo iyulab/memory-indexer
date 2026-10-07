@@ -245,7 +245,7 @@ public sealed partial class LabelPropagationCommunityDetector : ICommunityDetect
                 {
                     seenMemories.Add(triple.SourceMemoryId.Value);
 
-                    var memory = await _memoryStore.GetByIdAsync(triple.SourceMemoryId.Value, cancellationToken);
+                    var memory = await _memoryStore.GetByIdAsync(userId, triple.SourceMemoryId.Value, cancellationToken);
                     if (memory != null && memory.UserId == userId)
                     {
                         memories.Add(memory);

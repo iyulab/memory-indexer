@@ -279,7 +279,7 @@ public sealed class GraphTraversalTools
         }
 
         var related = await _graphService.FindRelatedMemoriesAsync(
-            id, Math.Clamp(maxHops, 1, 5), Math.Clamp(topK, 1, 50), cancellationToken);
+            _defaultUserId, id, Math.Clamp(maxHops, 1, 5), Math.Clamp(topK, 1, 50), cancellationToken);
 
         return new FindRelatedMemoriesToolResult
         {
@@ -337,7 +337,7 @@ public sealed class GraphTraversalTools
             MaxMemories = Math.Clamp(maxMemories, 1, 100)
         };
 
-        var subgraph = await _graphService.ExtractSubgraphAsync(ids, options, cancellationToken);
+        var subgraph = await _graphService.ExtractSubgraphAsync(_defaultUserId, ids, options, cancellationToken);
 
         return new ExtractSubgraphToolResult
         {

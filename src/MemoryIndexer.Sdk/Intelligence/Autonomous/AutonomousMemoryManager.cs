@@ -146,16 +146,19 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
 
     /// <inheritdoc />
     public async Task<PageInResponse> AutonomousPageInAsync(
+        string userId,
         string query,
         QueryIntent? intent = null,
         CancellationToken cancellationToken = default)
     {
-        LogAutonomousPageIn(_logger, query, intent);
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        LogAutonomousPageIn(_logger, userId, query?.Length ?? 0, intent);
 
         var pagedInMemories = new List<MemoryWithScore>();
 
         var searchOptions = new MemorySearchOptions
         {
+            UserId = userId,
             Limit = 5
         };
 
@@ -410,7 +413,7 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
 
         foreach (var memoryId in request.TargetMemoryIds)
         {
-            var memory = await _memoryStore.GetByIdAsync(memoryId, cancellationToken);
+            var memory = await _memoryStore.GetByIdAsync(request.UserId, memoryId, cancellationToken);
             if (memory != null)
             {
                 await RecordAccessAsync(memory.Id, MemoryAccessType.Read, null, cancellationToken);
@@ -441,6 +444,7 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
         CancellationToken cancellationToken)
     {
         var response = await AutonomousPageInAsync(
+            request.UserId,
             request.Query ?? "",
             null,
             cancellationToken);
@@ -488,7 +492,7 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
 
         foreach (var memoryId in request.TargetMemoryIds)
         {
-            var memory = await _memoryStore.GetByIdAsync(memoryId, cancellationToken);
+            var memory = await _memoryStore.GetByIdAsync(request.UserId, memoryId, cancellationToken);
             if (memory != null)
             {
                 await _tieredStore.DemoteAsync(memory, cancellationToken);
@@ -523,7 +527,7 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
 
         foreach (var memoryId in request.TargetMemoryIds)
         {
-            var success = await _memoryStore.DeleteAsync(memoryId, false, cancellationToken);
+            var success = await _memoryStore.DeleteAsync(request.UserId, memoryId, false, cancellationToken);
             if (success)
             {
                 deleted++;
@@ -596,8 +600,8 @@ public sealed partial class AutonomousMemoryManager : IAutonomousMemoryManager
     [LoggerMessage(Level = LogLevel.Debug, Message = "Memory heartbeat with context length: {Length}")]
     private static partial void LogHeartbeat(ILogger logger, int length);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Autonomous page-in: query={Query}, intent={Intent}")]
-    private static partial void LogAutonomousPageIn(ILogger logger, string query, QueryIntent? intent);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Autonomous page-in: user={UserId}, queryLength={QueryLength}, intent={Intent}")]
+    private static partial void LogAutonomousPageIn(ILogger logger, string userId, int queryLength, QueryIntent? intent);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Autonomous page-out: tokens={Tokens}")]
     private static partial void LogAutonomousPageOut(ILogger logger, int tokens);

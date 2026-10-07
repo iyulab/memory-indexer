@@ -187,15 +187,16 @@ public partial class MemoryController : ControllerBase
     /// Get a specific memory by ID.
     /// </summary>
     /// <param name="id">Memory ID</param>
+    /// <param name="userId">User ID (default: "default"). Another user's memory with this ID is not found.</param>
     /// <returns>Memory details</returns>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(MemoryResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetMemory(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetMemory(Guid id, [FromQuery] string? userId = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var memory = await _memoryService.GetByIdAsync(id, cancellationToken);
+            var memory = await _memoryService.GetByIdAsync(userId ?? DefaultUserId, id, cancellationToken);
             if (memory == null)
             {
                 return NotFound(new { error = "Memory not found", id });
@@ -224,11 +225,12 @@ public partial class MemoryController : ControllerBase
     /// </summary>
     /// <param name="id">Memory ID</param>
     /// <param name="request">Updated memory data</param>
+    /// <param name="userId">User ID (default: "default"). Another user's memory with this ID is not found.</param>
     /// <returns>Success status</returns>
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdateMemory(Guid id, [FromBody] MemoryUpdateRequest request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> UpdateMemory(Guid id, [FromBody] MemoryUpdateRequest request, [FromQuery] string? userId = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -236,12 +238,12 @@ public partial class MemoryController : ControllerBase
 
             if (!string.IsNullOrWhiteSpace(request.Content))
             {
-                updated = await _memoryService.UpdateContentAsync(id, request.Content, cancellationToken);
+                updated = await _memoryService.UpdateContentAsync(userId ?? DefaultUserId, id, request.Content, cancellationToken);
             }
 
             if (request.Importance.HasValue)
             {
-                updated = await _memoryService.UpdateImportanceAsync(id, request.Importance.Value, cancellationToken) || updated;
+                updated = await _memoryService.UpdateImportanceAsync(userId ?? DefaultUserId, id, request.Importance.Value, cancellationToken) || updated;
             }
 
             if (!updated)
@@ -263,15 +265,16 @@ public partial class MemoryController : ControllerBase
     /// Delete a memory.
     /// </summary>
     /// <param name="id">Memory ID</param>
+    /// <param name="userId">User ID (default: "default"). Another user's memory with this ID is not found.</param>
     /// <returns>Success status</returns>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteMemory(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> DeleteMemory(Guid id, [FromQuery] string? userId = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var success = await _memoryService.DeleteAsync(id, hardDelete: false, cancellationToken);
+            var success = await _memoryService.DeleteAsync(userId ?? DefaultUserId, id, hardDelete: false, cancellationToken);
             if (!success)
             {
                 return NotFound(new { error = "Memory not found", id });

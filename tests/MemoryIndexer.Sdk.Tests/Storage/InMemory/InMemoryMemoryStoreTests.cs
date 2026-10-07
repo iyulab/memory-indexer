@@ -39,7 +39,7 @@ public class InMemoryMemoryStoreTests
         var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var result = await _store.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -50,7 +50,7 @@ public class InMemoryMemoryStoreTests
     public async Task GetByIdAsync_NonExistingMemory_ShouldReturnNull()
     {
         // Act
-        var result = await _store.GetByIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await _store.GetByIdAsync("test-user", Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
@@ -69,7 +69,7 @@ public class InMemoryMemoryStoreTests
         // Assert
         result.Should().BeTrue();
 
-        var updated = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var updated = await _store.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         updated!.Content.Should().Be("Updated content");
     }
 
@@ -80,12 +80,12 @@ public class InMemoryMemoryStoreTests
         var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.DeleteAsync(memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _store.DeleteAsync(memory.UserId, memory.Id, hardDelete: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var deleted = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var deleted = await _store.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         deleted!.IsDeleted.Should().BeTrue();
     }
 
@@ -96,12 +96,12 @@ public class InMemoryMemoryStoreTests
         var memory = await _store.StoreAsync(TestHelpers.CreateTestMemory(), TestContext.Current.CancellationToken);
 
         // Act
-        var result = await _store.DeleteAsync(memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _store.DeleteAsync(memory.UserId, memory.Id, hardDelete: true, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeTrue();
 
-        var deleted = await _store.GetByIdAsync(memory.Id, TestContext.Current.CancellationToken);
+        var deleted = await _store.GetByIdAsync(memory.UserId, memory.Id, TestContext.Current.CancellationToken);
         deleted.Should().BeNull();
     }
 
@@ -271,4 +271,109 @@ public class InMemoryMemoryStoreTests
         results.Should().HaveCount(1);
         results[0].Role.Should().Be("moderator");
     }
+
+    #region User Isolation
+
+    private async Task<(MemoryUnit Alice, MemoryUnit Bob)> StoreAliceAndBobAsync()
+    {
+        var alice = await _store.StoreAsync(
+            TestHelpers.CreateTestMemory("alice", "Alice's memory"), TestContext.Current.CancellationToken);
+        var bob = await _store.StoreAsync(
+            TestHelpers.CreateTestMemory("bob", "Bob's memory"), TestContext.Current.CancellationToken);
+        return (alice, bob);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_AnotherUsersId_ReturnsNull()
+    {
+        var (alice, _) = await StoreAliceAndBobAsync();
+
+        var asBob = await _store.GetByIdAsync("bob", alice.Id, TestContext.Current.CancellationToken);
+        var asAlice = await _store.GetByIdAsync("alice", alice.Id, TestContext.Current.CancellationToken);
+
+        asBob.Should().BeNull();
+        asAlice.Should().NotBeNull();
+        asAlice!.Id.Should().Be(alice.Id);
+        asAlice.Content.Should().Be("Alice's memory");
+    }
+
+    [Fact]
+    public async Task GetByIdsAsync_MixedUsers_ReturnsOnlyTheCallersMemories()
+    {
+        var (alice, bob) = await StoreAliceAndBobAsync();
+
+        var results = await _store.GetByIdsAsync("bob", [alice.Id, bob.Id], TestContext.Current.CancellationToken);
+
+        results.Should().ContainSingle().Which.Id.Should().Be(bob.Id);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AnotherUsersId_DeletesNothing()
+    {
+        var (alice, _) = await StoreAliceAndBobAsync();
+
+        var deleted = await _store.DeleteAsync("bob", alice.Id, hardDelete: true, TestContext.Current.CancellationToken);
+
+        deleted.Should().BeFalse();
+        var stillThere = await _store.GetByIdAsync("alice", alice.Id, TestContext.Current.CancellationToken);
+        stillThere.Should().NotBeNull();
+        stillThere!.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithAnotherUserAsOwner_ChangesNothing()
+    {
+        var (alice, _) = await StoreAliceAndBobAsync();
+
+        // A fresh object: the in-memory store holds references, so mutating the stored one would bypass the store
+        var tampered = new MemoryUnit
+        {
+            Id = alice.Id,
+            UserId = "bob",
+            Content = "Tampered by bob"
+        };
+
+        var updated = await _store.UpdateAsync(tampered, TestContext.Current.CancellationToken);
+
+        updated.Should().BeFalse();
+        var stored = await _store.GetByIdAsync("alice", alice.Id, TestContext.Current.CancellationToken);
+        stored.Should().NotBeNull();
+        stored!.UserId.Should().Be("alice");
+        stored.Content.Should().Be("Alice's memory");
+        (await _store.GetByIdAsync("bob", alice.Id, TestContext.Current.CancellationToken)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithoutUser_Throws()
+    {
+        await StoreAliceAndBobAsync();
+        var options = new MemorySearchOptions { UserId = "", Limit = 10 };
+
+        var act = () => _store.SearchAsync(TestHelpers.CreateTestEmbedding(3, 1), options, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task GetUserIdsAsync_ListsEachUserOnce()
+    {
+        await StoreAliceAndBobAsync();
+        await _store.StoreAsync(TestHelpers.CreateTestMemory("alice", "Second"), TestContext.Current.CancellationToken);
+
+        var users = await _store.GetUserIdsAsync(TestContext.Current.CancellationToken);
+
+        users.Should().Equal("alice", "bob");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithoutAUser_Throws()
+    {
+        await StoreAliceAndBobAsync();
+
+        var act = () => _store.GetAllAsync("", cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    #endregion
 }

@@ -107,7 +107,7 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
                 cancellationToken);
         classifyStopwatch.Stop();
 
-        LogQueryQueryClassifiedIntentConfidence(_logger, request.Query, intent.Intent, intent.Confidence);
+        LogQueryQueryClassifiedIntentConfidence(_logger, request.Query.Length, intent.Intent, intent.Confidence);
 
         // Step 2: Estimate budget allocation
         var budget = await EstimateBudgetAsync(
@@ -518,8 +518,8 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
 
     private sealed record TierWeights(float Working, float Session, float User, float Graph);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Query '{Query}' classified as {Intent} (confidence: {Confidence:F2})")]
-    private static partial void LogQueryQueryClassifiedIntentConfidence(ILogger logger, string query, QueryIntent intent, float confidence);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Query (length {QueryLength}) classified as {Intent} (confidence: {Confidence:F2})")]
+    private static partial void LogQueryQueryClassifiedIntentConfidence(ILogger logger, int queryLength, QueryIntent intent, float confidence);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Tiered retrieval completed: {ResultCount} results from {TierCount} tiers in {Duration}ms")]
     private static partial void LogTieredRetrievalCompletedResultCountResults(ILogger logger, int resultCount, int tierCount, long duration);
