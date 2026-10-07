@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.30.0] - Unreleased
+## [v0.30.0] - 2026-10-08
 
 ### Changed
 - **Breaking** — **`EmbeddingProvider` and `CompletionProvider` name only what exists: `Ollama` is removed from both.**
