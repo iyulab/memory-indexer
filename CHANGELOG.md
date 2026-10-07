@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.29.0] - Unreleased
+## [v0.29.0] - 2026-10-07
 
 ### Changed
 - **Breaking** — **hybrid search keeps its sparse (BM25) half per user.** One shared index held every user's documents, so
