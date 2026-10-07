@@ -138,7 +138,7 @@ public sealed partial class ContextWindowOptimizer : IContextOptimizer
         var hypotheticalDocument = GenerateHypotheticalDocument(query);
 
         // Generate embeddings
-        var originalEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        var originalEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
         var hydeEmbedding = await _embeddingService.GenerateEmbeddingAsync(hypotheticalDocument, cancellationToken);
 
         // Average the embeddings for enhanced retrieval

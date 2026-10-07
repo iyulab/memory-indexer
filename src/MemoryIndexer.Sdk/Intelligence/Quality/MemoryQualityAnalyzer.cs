@@ -165,7 +165,7 @@ public sealed partial class MemoryQualityAnalyzer : IMemoryQualityService
     {
         try
         {
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+            var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
             var similarity = CalculateCosineSimilarity(memory.Embedding!.Value, queryEmbedding);
             return Math.Clamp(similarity, 0f, 1f);
         }

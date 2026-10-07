@@ -368,7 +368,7 @@ public class MemoryService(
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
 
         // Generate query embedding
-        var queryEmbedding = await embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        var queryEmbedding = await embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
 
         // Search for similar memories
         var searchOptions = new MemorySearchOptions

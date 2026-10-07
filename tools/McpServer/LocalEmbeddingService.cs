@@ -18,7 +18,9 @@ namespace McpServer;
 /// </summary>
 /// <remarks>
 /// The model is downloaded on first use; <see cref="WarmUpAsync"/> starts that at server start so the first tool call
-/// does not wait for it. A catalog model whose dimensions differ from <c>Embedding:Dimensions</c> stops the server at
+/// does not wait for it. Memories are embedded with the model's passage convention and recall queries with its query
+/// convention (the E5 family's <c>passage: </c>/<c>query: </c> prefixes); a model without one — <c>bge-m3</c> — embeds
+/// both the same way. A catalog model whose dimensions differ from <c>Embedding:Dimensions</c> stops the server at
 /// start (the store's vector size is fixed by that setting); a model outside the catalog is checked on its first embedding.
 /// </remarks>
 public sealed partial class LocalEmbeddingService : CachedEmbeddingServiceBase, IAsyncDisposable, IDisposable
@@ -73,7 +75,16 @@ public sealed partial class LocalEmbeddingService : CachedEmbeddingServiceBase, 
         var model = await _model.Value.WaitAsync(cancellationToken);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_timeout);
-        return await model.EmbedAsync(text, timeout.Token);
+        return await model.EmbedPassageAsync(text, timeout.Token);
+    }
+
+    /// <inheritdoc />
+    protected override async Task<ReadOnlyMemory<float>> GenerateSingleQueryEmbeddingAsync(string query, CancellationToken cancellationToken)
+    {
+        var model = await _model.Value.WaitAsync(cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(_timeout);
+        return await model.EmbedQueryAsync(query, timeout.Token);
     }
 
     /// <inheritdoc />
@@ -88,7 +99,7 @@ public sealed partial class LocalEmbeddingService : CachedEmbeddingServiceBase, 
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(_timeout);
-            var vectors = await model.EmbedAsync([.. batch.Select(item => item.Text)], timeout.Token);
+            var vectors = await model.EmbedPassageAsync([.. batch.Select(item => item.Text)], timeout.Token);
             for (var i = 0; i < batch.Length; i++)
             {
                 results[batch[i].Index] = vectors[i];

@@ -109,7 +109,8 @@ services.AddMemoryIndexer();  // Uses defaults
 
 **With External Embedding Service:**
 ```csharp
-// 1. Register your embedding service FIRST
+// 1. Register your embedding service FIRST. Memories are embedded with GenerateEmbeddingAsync and queries with
+//    GenerateQueryEmbeddingAsync (defaults to the former); a model with a query convention overrides the latter.
 services.AddSingleton<IEmbeddingService, MyOpenAIEmbeddingService>();
 
 // 2. Then add Memory Indexer

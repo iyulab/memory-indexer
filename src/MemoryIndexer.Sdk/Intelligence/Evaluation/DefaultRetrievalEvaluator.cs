@@ -40,7 +40,7 @@ public sealed partial class DefaultRetrievalEvaluator : IRetrievalEvaluator
         }
 
         // Generate embeddings for query and contexts
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
         var contextEmbeddings = new List<ReadOnlyMemory<float>>();
 
         foreach (var context in retrievedContexts)
@@ -245,7 +245,7 @@ public sealed partial class DefaultRetrievalEvaluator : IRetrievalEvaluator
 
             // Search for needle
             var searchQuery = GenerateSearchQuery(needleContent, random);
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(searchQuery, cancellationToken);
+            var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(searchQuery, cancellationToken);
 
             // Rank by similarity
             var ranked = contextEmbeddings

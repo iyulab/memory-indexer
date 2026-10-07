@@ -171,6 +171,7 @@ dotnet add package MemoryIndexer.Sdk
 
 ```csharp
 // Register your embedding service BEFORE AddMemoryIndexer()
+// (an asymmetric model - E5, BGE, Qwen3-Embedding - also overrides GenerateQueryEmbeddingAsync)
 services.AddSingleton<IEmbeddingService>(myEmbeddingService);
 
 // InMemory storage (default)

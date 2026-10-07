@@ -235,7 +235,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         if (_options.EnableSemanticSearch)
         {
             // Semantic search using embeddings
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+            var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
 
             var scoredEntries = entries
                 .Where(e => e.Embedding.HasValue)

@@ -2,6 +2,25 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.31.0] - Unreleased
+
+### Added
+- **`IEmbeddingService.GenerateQueryEmbeddingAsync` — the query side of an asymmetric embedding model.** Recall,
+  context building, hybrid and tiered retrieval, graph and archive search, evaluators and the other places that embed a
+  query to compare it with stored memories now call it. It defaults to `GenerateEmbeddingAsync`, so a symmetric model
+  needs no change; a service for an E5, BGE or Qwen3-Embedding style model overrides it to apply its query convention
+  (and applies its document convention in `GenerateEmbeddingAsync`). `CachedEmbeddingServiceBase` has the matching
+  `GenerateSingleQueryEmbeddingAsync`; the caching services forward the role and cache queries apart from documents.
+
+### Changed
+- **Breaking** (test doubles) — **a mocking-library substitute of `IEmbeddingService` returns an empty vector for
+  queries** until it is told what to return: NSubstitute/Moq intercept the new interface method instead of running its
+  default. Migration: configure `GenerateQueryEmbeddingAsync` alongside `GenerateEmbeddingAsync` (or assert on it where a
+  test checked that the query was embedded). Hand-written implementations are unaffected.
+- **The bundled MCP server embeds memories with the model's passage convention and queries with its query convention**
+  (LMSupply `EmbedPassageAsync` / `EmbedQueryAsync`). The default model, `bge-m3`, has neither and is unaffected. A store
+  embedded with an E5-family model by an earlier server version mixes conventions after the upgrade — re-embed it.
+
 ## [v0.30.0] - 2026-10-08
 
 ### Changed

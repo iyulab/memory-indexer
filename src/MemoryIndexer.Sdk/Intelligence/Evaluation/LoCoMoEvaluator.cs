@@ -107,7 +107,7 @@ public sealed partial class LoCoMoEvaluator : ILoCoMoEvaluator
         var stopwatch = Stopwatch.StartNew();
 
         // Generate embedding for query
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(testQuery.Query, cancellationToken);
+        var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(testQuery.Query, cancellationToken);
 
         // Search for relevant memories
         var searchOptions = new MemorySearchOptions

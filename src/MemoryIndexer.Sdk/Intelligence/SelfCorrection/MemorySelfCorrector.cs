@@ -535,7 +535,7 @@ public sealed partial class MemorySelfCorrector : IMemorySelfCorrector
         if (!string.IsNullOrEmpty(options.FocusQuery))
         {
             // Use embedding-based search
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(options.FocusQuery, cancellationToken);
+            var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(options.FocusQuery, cancellationToken);
             var searchResults = await _memoryStore.SearchAsync(
                 queryEmbedding,
                 new MemorySearchOptions { UserId = userId, Limit = options.MaxMemoriesToAnalyze },

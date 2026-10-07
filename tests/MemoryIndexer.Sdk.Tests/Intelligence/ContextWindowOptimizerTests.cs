@@ -19,6 +19,8 @@ public class ContextWindowOptimizerTests
         _embeddingServiceMock = Substitute.For<IEmbeddingService>();
         _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => GenerateMockEmbedding(callInfo.ArgAt<string>(0)));
+        _embeddingServiceMock.GenerateQueryEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => GenerateMockEmbedding(callInfo.ArgAt<string>(0)));
 
         _memoryStoreMock = Substitute.For<IMemoryStore>();
         _memoryStoreMock.SearchAsync(

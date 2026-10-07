@@ -149,7 +149,7 @@ public partial class ContextBuilder : IContextBuilder
         try
         {
             // Generate embedding for the query
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, ct);
+            var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, ct);
 
             // Recall by relevance across the user's sessions: Semantic/Fact, and Episodic from earlier sessions too —
             // something said in one conversation ("remember that ...") is exactly what a later conversation asks about.

@@ -302,7 +302,7 @@ public sealed partial class InMemoryGraphRetriever : IGraphRetriever
         LogHybridRetrievalQueryQuery(_logger, userId, query.Length);
 
         // Step 1: Semantic search for relevant memories
-        var embedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        var embedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
         var searchOptions = new MemorySearchOptions
         {
             UserId = userId,

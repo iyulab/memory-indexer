@@ -37,16 +37,31 @@ public sealed partial class CachedEmbeddingService : IEmbeddingService
 
     public int Dimensions => _inner.Dimensions;
 
-    public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
+    public Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
         string text,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        GenerateAsync(text, query: false, cancellationToken);
+
+    /// <inheritdoc />
+    /// <remarks>Forwarded to the inner service's query method and cached apart from document embeddings of the same text.</remarks>
+    public Task<ReadOnlyMemory<float>> GenerateQueryEmbeddingAsync(
+        string query,
+        CancellationToken cancellationToken = default) =>
+        GenerateAsync(query, query: true, cancellationToken);
+
+    private async Task<ReadOnlyMemory<float>> GenerateAsync(
+        string text,
+        bool query,
+        CancellationToken cancellationToken)
     {
         if (!_options.EmbeddingCacheEnabled)
         {
-            return await _inner.GenerateEmbeddingAsync(text, cancellationToken);
+            return query
+                ? await _inner.GenerateQueryEmbeddingAsync(text, cancellationToken)
+                : await _inner.GenerateEmbeddingAsync(text, cancellationToken);
         }
 
-        var cacheKey = ComputeHash(text);
+        var cacheKey = query ? "q:" + ComputeHash(text) : ComputeHash(text);
 
         // Check cache first
         if (_cache.TryGetValue(cacheKey, out var entry))
@@ -80,7 +95,9 @@ public sealed partial class CachedEmbeddingService : IEmbeddingService
         }
 
         LogCacheMiss(_logger, cacheKey);
-        var embedding = await _inner.GenerateEmbeddingAsync(text, cancellationToken);
+        var embedding = query
+            ? await _inner.GenerateQueryEmbeddingAsync(text, cancellationToken)
+            : await _inner.GenerateEmbeddingAsync(text, cancellationToken);
 
         // Add to cache with LRU eviction
         AddToCache(cacheKey, embedding);

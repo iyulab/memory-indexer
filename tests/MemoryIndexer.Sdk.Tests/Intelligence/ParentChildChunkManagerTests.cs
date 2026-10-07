@@ -18,6 +18,8 @@ public sealed class ParentChildChunkManagerTests
         // Setup mock embedding service to return deterministic embeddings
         _mockEmbeddingService.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => CreateMockEmbedding(callInfo.ArgAt<string>(0)));
+        _mockEmbeddingService.GenerateQueryEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => CreateMockEmbedding(callInfo.ArgAt<string>(0)));
 
         _mockEmbeddingService.GenerateBatchEmbeddingsAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => callInfo.ArgAt<IEnumerable<string>>(0).Select(CreateMockEmbedding).ToList());

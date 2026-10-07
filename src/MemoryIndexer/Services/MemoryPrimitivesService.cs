@@ -598,7 +598,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         LogRetrievingMemories(_logger, request.UserId, request.Query.Length);
 
         // Generate query embedding
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(request.Query, cancellationToken);
+        var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(request.Query, cancellationToken);
 
         // Determine candidate limit based on re-ranking configuration
         var candidateMultiplier = _searchOptions.EnableReranking && _rerankerService != null

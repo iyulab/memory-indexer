@@ -116,7 +116,7 @@ public sealed partial class OptimizedRecallService : IDisposable
         {
             // Generate embedding (cached via CachedEmbeddingService)
             var embeddingStart = Stopwatch.GetTimestamp();
-            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+            var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
             var embeddingMs = Stopwatch.GetElapsedTime(embeddingStart).TotalMilliseconds;
             componentLatencies["Embedding"] = embeddingMs;
 

@@ -66,16 +66,31 @@ public sealed partial class CachingEmbeddingService : IEmbeddingService, IDispos
     public int CacheCount => _cache.Count;
 
     /// <inheritdoc />
-    public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
+    public Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
         string text,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        GenerateAsync(text, query: false, cancellationToken);
+
+    /// <inheritdoc />
+    /// <remarks>Forwarded to the inner service's query method and cached apart from document embeddings of the same text.</remarks>
+    public Task<ReadOnlyMemory<float>> GenerateQueryEmbeddingAsync(
+        string query,
+        CancellationToken cancellationToken = default) =>
+        GenerateAsync(query, query: true, cancellationToken);
+
+    private async Task<ReadOnlyMemory<float>> GenerateAsync(
+        string text,
+        bool query,
+        CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
         {
-            return await _inner.GenerateEmbeddingAsync(text, cancellationToken);
+            return query
+                ? await _inner.GenerateQueryEmbeddingAsync(text, cancellationToken)
+                : await _inner.GenerateEmbeddingAsync(text, cancellationToken);
         }
 
-        var key = ComputeCacheKey(text);
+        var key = query ? "q:" + ComputeCacheKey(text) : ComputeCacheKey(text);
 
         // Check cache
         if (_cache.TryGetValue(key, out var entry) && !entry.IsExpired(_options.Ttl))
@@ -85,7 +100,9 @@ public sealed partial class CachingEmbeddingService : IEmbeddingService, IDispos
         }
 
         // Generate embedding
-        var embedding = await _inner.GenerateEmbeddingAsync(text, cancellationToken);
+        var embedding = query
+            ? await _inner.GenerateQueryEmbeddingAsync(text, cancellationToken)
+            : await _inner.GenerateEmbeddingAsync(text, cancellationToken);
 
         // Cache result
         CacheEmbedding(key, embedding);

@@ -48,12 +48,26 @@ public abstract partial class CachedEmbeddingServiceBase : IEmbeddingService
     }
 
     /// <inheritdoc />
-    public async Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
+    public Task<ReadOnlyMemory<float>> GenerateEmbeddingAsync(
         string text,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        GenerateCachedAsync(text, query: false, cancellationToken);
+
+    /// <inheritdoc />
+    /// <remarks>Cached apart from document embeddings of the same text, since an asymmetric model embeds them differently.</remarks>
+    public Task<ReadOnlyMemory<float>> GenerateQueryEmbeddingAsync(
+        string query,
+        CancellationToken cancellationToken = default) =>
+        GenerateCachedAsync(query, query: true, cancellationToken);
+
+    private async Task<ReadOnlyMemory<float>> GenerateCachedAsync(
+        string text,
+        bool query,
+        CancellationToken cancellationToken)
     {
         using var activity = MemoryIndexerTelemetry.StartOperation("EmbeddingGenerate", "embedding");
         activity?.SetTag("embedding.provider", CacheKeyPrefix);
+        activity?.SetTag("embedding.role", query ? "query" : "document");
         activity?.SetTag("embedding.dimensions", Dimensions);
         activity?.SetTag("embedding.text_length", text?.Length ?? 0);
 
@@ -68,7 +82,7 @@ public abstract partial class CachedEmbeddingServiceBase : IEmbeddingService
                 return new float[Dimensions];
             }
 
-            var cacheKey = GetCacheKey(text);
+            var cacheKey = query ? GetQueryCacheKey(text) : GetCacheKey(text);
 
             if (CacheTtl > TimeSpan.Zero && Cache.TryGetValue(cacheKey, out ReadOnlyMemory<float> cached))
             {
@@ -81,7 +95,9 @@ public abstract partial class CachedEmbeddingServiceBase : IEmbeddingService
             }
 
             activity?.SetTag("embedding.cache_hit", false);
-            var embedding = await GenerateSingleEmbeddingAsync(text, cancellationToken);
+            var embedding = query
+                ? await GenerateSingleQueryEmbeddingAsync(text, cancellationToken)
+                : await GenerateSingleEmbeddingAsync(text, cancellationToken);
 
             if (CacheTtl > TimeSpan.Zero)
             {
@@ -199,6 +215,16 @@ public abstract partial class CachedEmbeddingServiceBase : IEmbeddingService
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Generates a single query embedding. Default: <see cref="GenerateSingleEmbeddingAsync"/> (a symmetric model).
+    /// Override to apply an asymmetric model's query convention — together with its document convention in
+    /// <see cref="GenerateSingleEmbeddingAsync"/> and <see cref="ProcessUncachedBatchAsync"/>.
+    /// </summary>
+    protected virtual Task<ReadOnlyMemory<float>> GenerateSingleQueryEmbeddingAsync(
+        string query,
+        CancellationToken cancellationToken) =>
+        GenerateSingleEmbeddingAsync(query, cancellationToken);
+
+    /// <summary>
     /// Processes uncached texts in batches. Override for providers with native batch support.
     /// Default implementation processes items sequentially.
     /// </summary>
@@ -245,6 +271,12 @@ public abstract partial class CachedEmbeddingServiceBase : IEmbeddingService
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(text));
         return $"emb:{CacheKeyPrefix}:{Convert.ToHexString(hash)}";
+    }
+
+    private string GetQueryCacheKey(string query)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(query));
+        return $"emb:{CacheKeyPrefix}:q:{Convert.ToHexString(hash)}";
     }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Cache hit for embedding")]

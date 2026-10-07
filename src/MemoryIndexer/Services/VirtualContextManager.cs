@@ -107,7 +107,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
         LogPagingIn(_logger, query.Length);
 
         // Generate query embedding
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
 
         // Search for relevant memories not in working memory
         var searchOptions = new MemorySearchOptions
@@ -669,7 +669,7 @@ public sealed partial class VirtualContextManager : IVirtualContextManager
         LogOptimizingWorkingMemory(_logger);
 
         // Generate context embedding
-        var contextEmbedding = await _embeddingService.GenerateEmbeddingAsync(currentContext, cancellationToken);
+        var contextEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(currentContext, cancellationToken);
 
         // Get current working memories
         var workingMemories = await _workingMemory.GetAllAsync(cancellationToken);

@@ -116,7 +116,7 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
             cancellationToken);
 
         // Step 3: Generate query embedding
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(
+        var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(
             request.Query,
             cancellationToken);
 

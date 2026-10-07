@@ -138,7 +138,7 @@ public sealed partial class ParentChildChunkManager : IParentChildChunkManager
         }
 
         // Generate query embedding
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
 
         // Search child chunks for precise matching
         var childResults = hierarchy.ChildChunks
@@ -364,7 +364,7 @@ public sealed partial class ParentChildChunkManager : IParentChildChunkManager
         int topK,
         CancellationToken cancellationToken)
     {
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+        var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
 
         return hierarchy.ParentChunks
             .Select(p => new ParentChildSearchResult

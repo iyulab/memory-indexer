@@ -364,7 +364,8 @@ public enum EmbeddingProvider
     Mock = 0,
 
     // 1 was Ollama, removed in 0.30.0: the library has built no Ollama client since the built-in providers were
-    // removed. The number is not reused, so a setting stored as 1 fails to bind instead of meaning something else.
+    // removed. The number is not reused, so a setting stored as 1 binds to an undefined value and resolving the
+    // embedding service fails, instead of meaning something else; the name "Ollama" fails to bind.
 
     /// <summary>
     /// The application's own <c>IEmbeddingService</c> (OpenAI, Azure, Ollama, a local model - whatever it registers).

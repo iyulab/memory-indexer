@@ -303,7 +303,7 @@ public sealed partial class HybridSearchService : IHybridSearchService
         // Check if HyDE should be used based on query characteristics
         if (!useHyde || _hydeExpander is null)
         {
-            return await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+            return await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
         }
 
         // Check minimum query length for HyDE
@@ -311,7 +311,7 @@ public sealed partial class HybridSearchService : IHybridSearchService
         if (wordCount < _options.HydeMinQueryWords)
         {
             LogQueryTooShortForHyde(_logger, wordCount);
-            return await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+            return await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
         }
 
         // Use HyDE: Generate hypothetical documents and average their embeddings
@@ -328,7 +328,7 @@ public sealed partial class HybridSearchService : IHybridSearchService
         if (hydeEmbeddings.Count == 0)
         {
             LogHydeNoEmbeddings(_logger);
-            return await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+            return await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
         }
 
         if (hydeEmbeddings.Count == 1)

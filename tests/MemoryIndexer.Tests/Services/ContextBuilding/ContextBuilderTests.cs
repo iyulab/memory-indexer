@@ -33,6 +33,8 @@ public class ContextBuilderTests
         // Setup default embedding service behavior
         _embeddingServiceMock.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new float[1024]);
+        _embeddingServiceMock.GenerateQueryEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new float[1024]);
 
         _builder = new ContextBuilder(
             _bufferMock,
@@ -247,7 +249,7 @@ public class ContextBuilderTests
         result[0].Source.Should().Be(ContextItemSource.Semantic);
         result[0].Score.Should().Be(0.9f);
 
-        await _embeddingServiceMock.Received(1).GenerateEmbeddingAsync(query, Arg.Any<CancellationToken>());
+        await _embeddingServiceMock.Received(1).GenerateQueryEmbeddingAsync(query, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -324,6 +326,7 @@ public class ContextBuilderTests
         var store = new MemoryIndexer.InMemory.InMemoryMemoryStore(NullLogger<MemoryIndexer.InMemory.InMemoryMemoryStore>.Instance);
         var embedder = Substitute.For<IEmbeddingService>();
         embedder.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(UnitVector());
+        embedder.GenerateQueryEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(UnitVector());
         _bufferMock.GetPendingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new List<SensoryMemory>());
         _shortTermMemoryMock.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<MemoryUnit>());
         return (new ContextBuilder(_bufferMock, _shortTermMemoryMock, store, embedder, _tokenCounter,
