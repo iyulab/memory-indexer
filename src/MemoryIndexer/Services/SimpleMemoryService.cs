@@ -20,6 +20,7 @@ namespace MemoryIndexer.Services;
 public sealed partial class SimpleMemoryService : IMemoryService
 {
     private readonly IMemoryPrimitives _primitives;
+    private readonly IMemoryStore _store;
     private readonly IMemoryClassifier _classifier;
     private readonly IScopeManager _scopeManager;
     private readonly ILogger<SimpleMemoryService> _logger;
@@ -31,9 +32,11 @@ public sealed partial class SimpleMemoryService : IMemoryService
         IMemoryPrimitives primitives,
         IMemoryClassifier classifier,
         IScopeManager scopeManager,
+        IMemoryStore store,
         ILogger<SimpleMemoryService> logger)
     {
         _primitives = primitives;
+        _store = store;
         _classifier = classifier;
         _scopeManager = scopeManager;
         _logger = logger;
@@ -215,36 +218,14 @@ public sealed partial class SimpleMemoryService : IMemoryService
 
         LogForgetUserAsync(_logger, userId);
 
-        // Retrieve all user memories
-        var retrieveRequest = new RetrieveRequest
-        {
-            UserId = userId,
-            Query = "*", // Wildcard to retrieve all
-            Limit = 10000, // High limit to get all memories
-            MinScore = 0.0f
-        };
-
-        var results = await _primitives.RetrieveAsync(retrieveRequest, cancellationToken);
-
-        LogFoundMemoriesForUser(_logger, results.Count, userId);
-
-        // Delete all memories
-        foreach (var result in results)
-        {
-            var deleteRequest = new DeleteRequest
-            {
-                UserId = userId,
-                MemoryId = result.Memory.Id,
-                HardDelete = true // GDPR requires permanent deletion
-            };
-
-            await _primitives.DeleteAsync(deleteRequest, cancellationToken);
-        }
+        // Every memory of the user, locked ones included, removed from the store itself — not the results of a search,
+        // which is capped and ranked and skips what it does not match
+        var deleted = await _store.DeleteByUserAsync(userId, hardDelete: true, cancellationToken);
 
         // Remove implicit session
         _implicitSessions.TryRemove(userId, out _);
 
-        LogDeletedMemoriesForUser(_logger, results.Count, userId);
+        LogDeletedMemoriesForUser(_logger, deleted, userId);
     }
 
     /// <inheritdoc />
@@ -281,7 +262,8 @@ public sealed partial class SimpleMemoryService : IMemoryService
             {
                 UserId = userId,
                 MemoryId = result.Memory.Id,
-                HardDelete = false // Soft delete for session cleanup
+                HardDelete = true, // Forgetting removes the text; a soft delete only hides it
+                ForceLocked = true
             };
 
             await _primitives.DeleteAsync(deleteRequest, cancellationToken);
@@ -384,8 +366,6 @@ public sealed partial class SimpleMemoryService : IMemoryService
     [LoggerMessage(Level = LogLevel.Warning, Message = "ForgetUserAsync: UserId={UserId} (GDPR deletion)")]
     private static partial void LogForgetUserAsync(ILogger logger, string userId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Found {Count} memories for user {UserId}")]
-    private static partial void LogFoundMemoriesForUser(ILogger logger, int count, string userId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Deleted {Count} memories for user {UserId}")]
     private static partial void LogDeletedMemoriesForUser(ILogger logger, int count, string userId);

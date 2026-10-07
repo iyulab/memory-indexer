@@ -4,6 +4,7 @@ using MemoryIndexer.Models;
 using MemoryIndexer.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using MemoryIndexer.InMemory;
 
 namespace MemoryIndexer.Tests.Services;
 
@@ -15,6 +16,7 @@ public class SimpleMemoryServiceTests
     private readonly MockMemoryPrimitives _primitives;
     private readonly MockMemoryClassifier _classifier;
     private readonly MockScopeManager _scopeManager;
+    private readonly InMemoryMemoryStore _store = new(NullLogger<InMemoryMemoryStore>.Instance);
     private readonly SimpleMemoryService _service;
 
     public SimpleMemoryServiceTests()
@@ -26,6 +28,7 @@ public class SimpleMemoryServiceTests
             _primitives,
             _classifier,
             _scopeManager,
+            _store,
             NullLogger<SimpleMemoryService>.Instance);
     }
 
@@ -407,20 +410,21 @@ public class SimpleMemoryServiceTests
     #region ForgetUserAsync Tests
 
     [Fact]
-    public async Task ForgetUserAsync_ShouldDeleteAllUserMemories()
+    public async Task ForgetUserAsync_RemovesEveryMemoryOfTheUser_LockedOnesIncluded_AndNoOtherUsers()
     {
         // Arrange
-        const string userId = "user-1";
-
-        _primitives.AddMemory(userId, null, Scope.User, "Memory 1");
-        _primitives.AddMemory(userId, "session-1", Scope.Session, "Memory 2");
+        var ct = TestContext.Current.CancellationToken;
+        var locked = new MemoryUnit { UserId = "user-1", Content = "Locked", IsLocked = true };
+        await _store.StoreAsync(new MemoryUnit { UserId = "user-1", Content = "Memory 1" }, ct);
+        await _store.StoreAsync(locked, ct);
+        await _store.StoreAsync(new MemoryUnit { UserId = "user-2", Content = "Someone else" }, ct);
 
         // Act
-        await _service.ForgetUserAsync(userId, TestContext.Current.CancellationToken);
+        await _service.ForgetUserAsync("user-1", ct);
 
         // Assert
-        _primitives.DeletedMemories.Should().HaveCount(2);
-        _primitives.DeletedMemories.Should().OnlyContain(d => d.HardDelete == true);
+        (await _store.GetAllAsync("user-1", new MemoryFilterOptions { IncludeDeleted = true }, ct)).Should().BeEmpty();
+        (await _store.GetAllAsync("user-2", cancellationToken: ct)).Should().ContainSingle();
     }
 
     #endregion
@@ -443,7 +447,9 @@ public class SimpleMemoryServiceTests
         // Assert
         _primitives.DeletedMemories.Should().ContainSingle();
         _primitives.DeletedMemories[0].MemoryId.Should().Be(sessionMemory.Id);
-        _primitives.DeletedMemories[0].HardDelete.Should().BeFalse();
+        // Forgetting removes the text (a soft delete only hides it), locked memories included
+        _primitives.DeletedMemories[0].HardDelete.Should().BeTrue();
+        _primitives.DeletedMemories[0].ForceLocked.Should().BeTrue();
     }
 
     #endregion

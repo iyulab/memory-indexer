@@ -27,16 +27,26 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
     private Timer? _maintenanceTimer;
     private Timer? _checkpointTimer;
 
+    private readonly Action<SqliteConnection>? _connectionOpened;
+
     private const string TableName = "memories";
-    private const string VectorTableName = "memory_vectors";
     private const string FtsTableName = "memories_fts";
 
+    /// <param name="databasePath">The database file.</param>
+    /// <param name="vectorDimensions">Embedding dimensions.</param>
+    /// <param name="options">SQLite settings.</param>
+    /// <param name="logger">Logger.</param>
+    /// <param name="connectionOpened">Runs on the connection right after it opens, before the store issues any statement —
+    /// the place to supply an encryption key (<c>PRAGMA key</c>) when the application runs on an encrypting SQLite build
+    /// such as SQLCipher, or to set other connection-level pragmas.</param>
     public SqliteVecMemoryStore(
         string databasePath,
         int vectorDimensions = 1024,
         SqliteOptions? options = null,
-        ILogger<SqliteVecMemoryStore>? logger = null)
+        ILogger<SqliteVecMemoryStore>? logger = null,
+        Action<SqliteConnection>? connectionOpened = null)
     {
+        _connectionOpened = connectionOpened;
         _options = options ?? new SqliteOptions();
         _connectionString = BuildConnectionString(databasePath);
         _vectorDimensions = vectorDimensions;
@@ -66,6 +76,7 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
 
             _connection = new SqliteConnection(_connectionString);
             await _connection.OpenAsync(cancellationToken);
+            _connectionOpened?.Invoke(_connection);
 
             // Configure SQLite settings
             await ConfigureSqliteAsync(cancellationToken);
@@ -126,6 +137,11 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         // Optimize for performance
         await ExecuteNonQueryAsync("PRAGMA synchronous = NORMAL;", cancellationToken);
         await ExecuteNonQueryAsync("PRAGMA temp_store = MEMORY;", cancellationToken);
+
+        if (_options.SecureDelete)
+        {
+            await ExecuteNonQueryAsync("PRAGMA secure_delete = ON;", cancellationToken);
+        }
 
         LogSQLiteConfiguredWALWalModeCacheSize(_logger, _options.UseWalMode, _options.CacheSizeKb, _options.AutoVacuum);
     }
@@ -330,6 +346,12 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         ";
 
         await ExecuteNonQueryAsync(triggersSql, cancellationToken);
+
+        if (_options.SecureDelete)
+        {
+            // Without it, FTS5 keeps a deleted row's tokens in its index segments until they are merged
+            await ExecuteNonQueryAsync($"INSERT INTO {FtsTableName}({FtsTableName}, rank) VALUES('secure-delete', 1);", cancellationToken);
+        }
 
         LogFTSTableCreatedTokenizerTokenizer(_logger, tokenizer);
     }
@@ -781,6 +803,13 @@ public sealed partial class SqliteVecMemoryStore : IMemoryStore, IAsyncDisposabl
         }
 
         var rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+
+        // The write-ahead log still holds the deleted pages until a checkpoint copies them back; forgetting a user
+        // should not leave their text there
+        if (hardDelete && rowsAffected > 0 && _options.UseWalMode)
+        {
+            await ExecuteNonQueryAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
+        }
 
         var deleteTypeValue = hardDelete ? "Hard" : "Soft";
         LogDeleteTypeDeletedCountMemoriesUser(_logger, deleteTypeValue, rowsAffected, userId);

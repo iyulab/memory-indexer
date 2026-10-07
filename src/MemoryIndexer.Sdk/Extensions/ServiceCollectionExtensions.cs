@@ -427,9 +427,12 @@ public static class ServiceCollectionExtensions
     /// <param name="builder">The Memory Indexer builder.</param>
     /// <param name="databasePath">Optional database path. If not specified, uses Storage.ConnectionString from options or "memories.db".</param>
     /// <returns>The builder for chaining.</returns>
+    /// <param name="connectionOpened">Runs on the connection right after it opens (an encryption key, other pragmas).
+    /// See <see cref="SqliteVecMemoryStore"/>.</param>
     public static IMemoryIndexerBuilder WithSqliteVec(
         this IMemoryIndexerBuilder builder,
-        string? databasePath = null)
+        string? databasePath = null,
+        Action<Microsoft.Data.Sqlite.SqliteConnection>? connectionOpened = null)
     {
         // Remove default InMemory registration and replace with SqliteVec
         var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(IMemoryStore));
@@ -439,12 +442,14 @@ public static class ServiceCollectionExtensions
         }
 
         builder.Services.AddSingleton<IMemoryStore>(sp =>
-            CreateSqliteVecStore(sp, sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value, databasePath));
+            CreateSqliteVecStore(sp, sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value, databasePath, connectionOpened));
 
         return builder;
     }
 
-    private static SqliteVecMemoryStore CreateSqliteVecStore(IServiceProvider sp, MemoryIndexerOptions options, string? databasePath)
+    private static SqliteVecMemoryStore CreateSqliteVecStore(
+        IServiceProvider sp, MemoryIndexerOptions options, string? databasePath,
+        Action<Microsoft.Data.Sqlite.SqliteConnection>? connectionOpened = null)
     {
         var resolvedPath = databasePath ?? options.Storage.ConnectionString ?? "memories.db";
         var dimensions = options.Storage.VectorDimensions > 0
@@ -455,6 +460,7 @@ public static class ServiceCollectionExtensions
             databasePath: resolvedPath,
             vectorDimensions: dimensions,
             options: options.Storage.Sqlite,
-            logger: sp.GetRequiredService<ILogger<SqliteVecMemoryStore>>());
+            logger: sp.GetRequiredService<ILogger<SqliteVecMemoryStore>>(),
+            connectionOpened: connectionOpened);
     }
 }

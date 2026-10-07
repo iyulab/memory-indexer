@@ -19,11 +19,21 @@ All notable changes to Memory Indexer are documented here.
   `MaxDatabaseSizeMb` (was 500) default to 0: a memory store no longer deletes memories on its own unless the
   application sets a retention policy. When set, they apply to the whole store — use them in single-user stores.
   Migration: set them explicitly to keep the old retention.
+- **Breaking** — **forgetting removes the text.** `ForgetUserAsync` deletes every memory of the user through the
+  store (it searched and deleted at most 10,000 ranked results and skipped locked memories); `ForgetSessionAsync`
+  hard-deletes (it soft-deleted, which only hid the text) and includes locked memories; the MCP `delete_memory` tool
+  removes the memory by default (`permanent: false` keeps the old soft delete). With SQLite, `SqliteOptions.SecureDelete`
+  (default on) overwrites deleted content (`PRAGMA secure_delete`, the full-text index's secure-delete mode) and a user's
+  hard delete truncates the write-ahead log, so the text is not left in free pages or the log.
+  Migration: code that relied on a forgotten session staying in the database as soft-deleted rows reads nothing now.
 - **Memory content no longer reaches logs.** Log lines carry IDs, counts, lengths and types; queries, memory text,
   model responses, extracted facts and fact keys are not written at any level (fact keys appear as a 12-digit
   fingerprint, `LogRedaction.Fingerprint`). A convention test fails any log template that names content.
 
 ### Added
+- **A seam for an encrypted SQLite store**: `SqliteVecMemoryStore(..., connectionOpened:)` and
+  `WithSqliteVec(path, connectionOpened:)` run your code on the connection right after it opens, before the store issues
+  any statement — the place for `PRAGMA key` when the application ships an encrypting SQLite build such as SQLCipher.
 - `IMemoryStore.GetUserIdsAsync()` — the users that have memories, so store-wide jobs (promotion, cleanup) visit users
   one at a time instead of reading across them.
 - **`MemoryIndexer:Storage:Type`** (`InMemory` default, `SqliteVec`) chooses the built-in store `AddMemoryIndexer`

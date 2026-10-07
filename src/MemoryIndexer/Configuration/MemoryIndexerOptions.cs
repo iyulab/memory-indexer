@@ -245,6 +245,13 @@ public sealed class SqliteOptions
     /// </summary>
     public int BusyTimeoutMs { get; set; } = 5000;
 
+    /// <summary>
+    /// Overwrite deleted content instead of leaving it in free pages (<c>PRAGMA secure_delete</c>, and the full-text
+    /// index's secure-delete mode). Default true: a deleted memory's text is not recoverable from the database file.
+    /// Costs extra writes on delete.
+    /// </summary>
+    public bool SecureDelete { get; set; } = true;
+
     // ===== Zero-Config Auto-Management Settings =====
 
     /// <summary>

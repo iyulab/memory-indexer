@@ -249,14 +249,14 @@ public sealed class MemoryTools(
     /// Deletes a memory by its ID.
     /// </summary>
     /// <param name="memoryId">The ID of the memory to delete.</param>
-    /// <param name="permanent">If true, permanently removes. If false, soft delete.</param>
+    /// <param name="permanent">If true (default), the memory and its text are removed. If false, it is only hidden (soft delete).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Delete result.</returns>
     [McpServerTool]
     [Description("Delete a memory by its ID. Use this to remove outdated or incorrect information.")]
     public async Task<DeleteMemoryResult> DeleteMemory(
         [Description("Memory ID to delete")] string memoryId,
-        [Description("Permanently delete (true) or soft delete (false)")] bool permanent = false,
+        [Description("Remove the memory and its text (true, default) or only hide it (false)")] bool permanent = true,
         CancellationToken cancellationToken = default)
     {
         if (!Guid.TryParse(memoryId, out var id))
