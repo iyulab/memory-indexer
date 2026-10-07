@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.31.0] - Unreleased
+## [v0.31.0] - 2026-10-08
 
 ### Added
 - **`IEmbeddingService.GenerateQueryEmbeddingAsync` — the query side of an asymmetric embedding model.** Recall,
