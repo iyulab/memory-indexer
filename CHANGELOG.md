@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.28.0] - Unreleased
+## [v0.28.0] - 2026-10-07
 
 ### Changed
 - **Breaking** — **one user cannot read, change or delete another user's memory through any path.** Every operation
