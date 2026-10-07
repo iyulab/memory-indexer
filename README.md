@@ -146,9 +146,11 @@ embedding provider lets the server start with no configuration for local use; it
 deterministic, non-semantic vectors (a startup warning is logged). Text completion is off unless you
 register an `ITextCompletionService`: summaries keep the memories' own text, and LLM fact extraction
 returns nothing. Without it,
-the server loads `appsettings.Production.json`, which requires you to register your own
-`IEmbeddingService` / `ITextCompletionService` (see [As SDK](#as-sdk)) for real search relevance —
-otherwise startup fails fast with an actionable error. Both configurations keep memories in `memories.db`
+the server loads `appsettings.Production.json`, which embeds with the server's own in-process LMSupply model
+(`Embedding:Provider: Custom`, `Model: default` = BAAI/bge-m3, 1024 dimensions; any LMSupply model id or alias works,
+with `Dimensions` and `Storage:VectorDimensions` set to its size). The model is downloaded on first run — the server
+starts loading it at startup — and needs no external embedding service. A catalog model whose size differs from
+`Dimensions` stops the server at start with both numbers in the message. Both configurations keep memories in `memories.db`
 (`MemoryIndexer:Storage:Type: SqliteVec`); set `InMemory` for a store that forgets on restart.
 ```
 

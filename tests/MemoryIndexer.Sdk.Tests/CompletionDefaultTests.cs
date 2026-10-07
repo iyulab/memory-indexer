@@ -116,7 +116,7 @@ public class CompletionDefaultTests
     public void The_enum_keeps_its_numbers_and_None_is_the_default()
     {
         Assert.Equal(0, (int)CompletionProvider.Mock);
-        Assert.Equal(1, (int)CompletionProvider.Ollama);
+        Assert.False(Enum.IsDefined(typeof(CompletionProvider), 1), "1 was Ollama; it is not reused");
         Assert.Equal(2, (int)CompletionProvider.Custom);
         Assert.Equal(3, (int)CompletionProvider.None);
         Assert.Equal(CompletionProvider.None, new CompletionOptions().Provider);

@@ -320,38 +320,22 @@ public enum SqliteAutoVacuumMode
 public sealed class EmbeddingOptions
 {
     /// <summary>
-    /// Embedding provider type.
+    /// Embedding provider type. Default: <see cref="EmbeddingProvider.Custom"/> - the library builds no embedding
+    /// client, so the application registers its <c>IEmbeddingService</c> (before or after <c>AddMemoryIndexer()</c>);
+    /// without one, resolving the service throws <see cref="NotSupportedException"/>.
     /// </summary>
-    public EmbeddingProvider Provider { get; set; } = EmbeddingProvider.Ollama;
+    public EmbeddingProvider Provider { get; set; } = EmbeddingProvider.Custom;
 
     /// <summary>
-    /// Model name/ID to use for embeddings.
+    /// The embedding model, as the application's <c>IEmbeddingService</c> names it - the library itself does not read
+    /// it. The bundled MCP server loads it as an LMSupply model id or alias (for example <c>"default"</c>).
     /// </summary>
-    /// <remarks>
-    /// The model ID format depends on the provider:
-    /// <list type="bullet">
-    /// <item><term>Ollama</term><description>Model name (e.g., "nomic-embed-text")</description></item>
-    /// <item><term>OpenAI</term><description>Model name (e.g., "text-embedding-3-small")</description></item>
-    /// <item><term>AzureOpenAI</term><description>Deployment name</description></item>
-    /// <item><term>Custom</term><description>Provider-specific model ID</description></item>
-    /// </list>
-    /// </remarks>
     public string Model { get; set; } = "nomic-embed-text";
 
     /// <summary>
     /// Embedding dimensions (must match model output).
     /// </summary>
     public int Dimensions { get; set; } = 768;
-
-    /// <summary>
-    /// Endpoint URL for the embedding service.
-    /// </summary>
-    public string Endpoint { get; set; } = "http://localhost:11434";
-
-    /// <summary>
-    /// API key (for OpenAI or other cloud providers).
-    /// </summary>
-    public string? ApiKey { get; set; }
 
     /// <summary>
     /// Batch size for embedding generation.
@@ -375,20 +359,17 @@ public sealed class EmbeddingOptions
 public enum EmbeddingProvider
 {
     /// <summary>
-    /// Mock provider for testing (returns random embeddings).
+    /// Mock provider for tests and local development (deterministic, non-semantic embeddings).
     /// </summary>
-    Mock,
+    Mock = 0,
+
+    // 1 was Ollama, removed in 0.30.0: the library has built no Ollama client since the built-in providers were
+    // removed. The number is not reused, so a setting stored as 1 fails to bind instead of meaning something else.
 
     /// <summary>
-    /// Ollama local inference.
+    /// The application's own <c>IEmbeddingService</c> (OpenAI, Azure, Ollama, a local model - whatever it registers).
     /// </summary>
-    Ollama,
-
-    /// <summary>
-    /// Custom externally-configured provider (OpenAI, Azure, Anthropic, etc.).
-    /// Register your own IEmbeddingService implementation via DI.
-    /// </summary>
-    Custom
+    Custom = 2,
 }
 
 /// <summary>
@@ -879,8 +860,8 @@ public sealed class CompletionOptions
     /// and log that no completion service is configured. A direct <c>CompleteAsync</c> call throws
     /// <see cref="InvalidOperationException"/>.
     /// <see cref="CompletionProvider.Mock"/> is a test double: its fixed placeholder text would be stored as memory
-    /// content by a merge. <see cref="CompletionProvider.Ollama"/> and <see cref="CompletionProvider.Custom"/> without a
-    /// registered service throw <see cref="NotSupportedException"/> on resolution.
+    /// content by a merge. <see cref="CompletionProvider.Custom"/> without a registered service throws
+    /// <see cref="NotSupportedException"/> on resolution.
     /// </summary>
     public CompletionProvider Provider { get; set; } = CompletionProvider.None;
 }
@@ -895,10 +876,7 @@ public enum CompletionProvider
     /// </summary>
     Mock = 0,
 
-    /// <summary>
-    /// Ollama local inference. Not built in: register your own ITextCompletionService implementation via DI.
-    /// </summary>
-    Ollama = 1,
+    // 1 was Ollama, removed in 0.30.0: not built in, it meant the same as Custom. The number is not reused.
 
     /// <summary>
     /// Custom externally-configured provider (OpenAI, Azure, Anthropic, etc.).

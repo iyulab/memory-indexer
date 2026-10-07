@@ -21,6 +21,8 @@
     <PackageReference Include="Microsoft.OpenApi" />
     <!-- Swagger -->
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <!-- The server's own embedder for Embedding:Provider = Custom (in-process ONNX; the library builds none) -->
+    <PackageReference Include="LMSupply.Embedder" />
   </ItemGroup>
 
   <ItemGroup>

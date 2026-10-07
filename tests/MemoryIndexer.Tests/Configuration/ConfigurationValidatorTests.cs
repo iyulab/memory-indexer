@@ -90,25 +90,26 @@ public class ConfigurationValidatorTests
         Assert.Contains(result.Errors, e => e.PropertyPath == "Embedding.Model");
     }
 
+    // The library builds no embedding client: the default (Custom, the application's own service) is a valid
+    // configuration with nothing about endpoints or keys to check
     [Fact]
-    public void Validate_CustomProviderWithoutApiKey_ShouldReturnWarning()
+    public void Validate_DefaultEmbeddingOptions_AreValid_WithoutWarnings()
     {
-        // Arrange
-        var options = new MemoryIndexerOptions
-        {
-            Embedding = new EmbeddingOptions
-            {
-                Provider = EmbeddingProvider.Custom,
-                ApiKey = null
-            }
-        };
+        var options = new MemoryIndexerOptions();
 
-        // Act
         var result = _validator.Validate(options);
 
-        // Assert
-        Assert.True(result.IsValid); // Warning, not error
-        Assert.Contains(result.Warnings, w => w.PropertyPath == "Embedding.ApiKey");
+        Assert.Equal(EmbeddingProvider.Custom, options.Embedding.Provider);
+        Assert.True(result.IsValid);
+        Assert.DoesNotContain(result.Warnings, w => w.PropertyPath.StartsWith("Embedding.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void EmbeddingProvider_KeepsItsNumbers_AndOneIsNotReused()
+    {
+        Assert.Equal(0, (int)EmbeddingProvider.Mock);
+        Assert.Equal(2, (int)EmbeddingProvider.Custom);
+        Assert.False(Enum.IsDefined(typeof(EmbeddingProvider), 1));
     }
 
     [Fact]

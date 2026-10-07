@@ -82,9 +82,9 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
 | *(root)* | **DefaultUserId** | string | `"default"` | Fallback user ID used by MCP tools and REST controllers when no explicit user ID is provided in a request. Override to isolate single-user deployments or set a meaningful default identity. |
 | **Storage** | Type | string | "InMemory" | Storage provider: `InMemory`, `SqliteVec` |
 | | ConnectionString | string | "memories.db" | Database path for SqliteVec |
-| **Embedding** | Provider | string | "Mock" | `Mock`, `Ollama`, `Custom` (inject your own IEmbeddingService for `Custom`) |
+| **Embedding** | Provider | string | "Custom" | `Mock` (tests, local development) or `Custom` — the application's own `IEmbeddingService` (the library builds no embedding client; the bundled MCP server supplies an LMSupply model) |
 | | Dimensions | int | 1024 | Vector dimensions (must match your embedding model) |
-| **Completion** | Provider | string | "None" | Used only when the application registers no `ITextCompletionService` of its own (the library builds no LLM client — register one that wraps your model, before or after `AddMemoryIndexer()`). `None`: no completion — merge/summarize and virtual-context consolidation use their non-LLM fallbacks; fact/knowledge extraction and conflict detection return empty or default results and log why. `Mock`: fixed placeholder text, for tests only (a merge would store it as memory content). `Ollama`/`Custom` without a registration throw when the service is resolved |
+| **Completion** | Provider | string | "None" | Used only when the application registers no `ITextCompletionService` of its own (the library builds no LLM client — register one that wraps your model, before or after `AddMemoryIndexer()`). `None`: no completion — merge/summarize and virtual-context consolidation use their non-LLM fallbacks; fact/knowledge extraction and conflict detection return empty or default results and log why. `Mock`: fixed placeholder text, for tests only (a merge would store it as memory content). `Custom` without a registration throws when the service is resolved |
 | **WorkingMemory** | Capacity | int | 9 | Short tier capacity (7±2 rule); excess items are promoted to Long when `EnableCapacityEnforcement` is true |
 | | IdleTimeout | TimeSpan | 00:10:00 | Archive working memory to Long after this idle time |
 | | TokenThreshold | int | 2000 | Archive when accumulated tokens reach this count |
@@ -651,9 +651,9 @@ public class ReflectionService
       "ConnectionString": "staging_memory.db"
     },
     "Embedding": {
-      "Provider": "Ollama",
+      "Provider": "Custom",       // your IEmbeddingService - e.g. one that calls your Ollama server
       "Model": "bge-m3",
-      "Endpoint": "http://ollama-staging:11434"
+      "Dimensions": 1024
     }
   }
 }
@@ -669,9 +669,9 @@ public class ReflectionService
       "ApiKey": "${QDRANT_API_KEY}"  // From environment
     },
     "Embedding": {
-      "Provider": "Custom",
+      "Provider": "Custom",       // your IEmbeddingService holds its endpoint and key
       "Model": "text-embedding-3-large",
-      "ApiKey": "${OPENAI_API_KEY}"
+      "Dimensions": 3072
     },
     "VCM": {
       "WorkingMemory": { "Capacity": 10 },  // Larger for production

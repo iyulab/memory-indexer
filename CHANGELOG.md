@@ -2,6 +2,25 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.30.0] - Unreleased
+
+### Changed
+- **Breaking** — **`EmbeddingProvider` and `CompletionProvider` name only what exists: `Ollama` is removed from both.**
+  The library has built no Ollama (or OpenAI) client since the built-in providers were removed, so `Ollama` meant the
+  same as `Custom` — and `EmbeddingProvider.Ollama` was the default. The default is now `Custom` (the application's own
+  `IEmbeddingService`); numbers are kept (`Mock` 0, `Custom` 2) and 1 is not reused. Migration: `"Provider": "Ollama"`
+  → `"Custom"` with your `IEmbeddingService` / `ITextCompletionService` registered.
+- **Breaking** — **`EmbeddingOptions.Endpoint` and `ApiKey` are removed.** Nothing used them (the configuration validator
+  required an endpoint for every non-Mock provider and warned about a missing key, so a correct `Custom` setup was
+  reported as invalid). Migration: your `IEmbeddingService` holds its own endpoint and key.
+
+### Added
+- **The bundled MCP server embeds with a real model by default.** `appsettings.Production.json` uses
+  `Embedding:Provider: Custom` and the server answers it with an in-process LMSupply model (`Model: default` =
+  BAAI/bge-m3, 1024 dimensions; any LMSupply id or alias), loaded at startup in the background and downloaded on first
+  run — no external embedding service. A catalog model whose size differs from `Embedding:Dimensions` stops the server
+  at start with both numbers.
+
 ## [v0.29.0] - 2026-10-07
 
 ### Changed

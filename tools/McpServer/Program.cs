@@ -81,6 +81,7 @@ static async Task RunStdioServer(string[] args)
         builder.Environment.IsDevelopment() ? LogLevel.Debug : LogLevel.Information);
 
     // Add Memory Indexer services
+    builder.Services.AddServerEmbedder(builder.Configuration);
     builder.Services.AddMemoryIndexer();
 
     // Configure MCP Server with stdio transport
@@ -100,6 +101,7 @@ static async Task RunStdioServer(string[] args)
     // Build, check what the first request would need, and run
     var app = builder.Build();
     ResolveRequiredServices(app.Services);
+    LocalEmbeddingRegistration.StartEmbedderWarmUp(app.Services);
     await app.RunAsync();
 }
 
@@ -124,6 +126,7 @@ static async Task RunHttpServer(string[] args, int port)
         builder.Environment.IsDevelopment() ? LogLevel.Debug : LogLevel.Information);
 
     // Add Memory Indexer services
+    builder.Services.AddServerEmbedder(builder.Configuration);
     builder.Services.AddMemoryIndexer();
 
     // Add Health Checks
@@ -156,6 +159,7 @@ static async Task RunHttpServer(string[] args, int port)
 
     var app = builder.Build();
     ResolveRequiredServices(app.Services);
+    LocalEmbeddingRegistration.StartEmbedderWarmUp(app.Services);
 
     // Enable Swagger middleware
     app.UseSwagger();

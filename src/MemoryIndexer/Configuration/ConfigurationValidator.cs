@@ -112,18 +112,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
             });
         }
 
-        if (options.Provider != EmbeddingProvider.Mock &&
-            string.IsNullOrWhiteSpace(options.Endpoint))
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Embedding.Endpoint",
-                Message = "Endpoint is required for non-mock embedding providers",
-                CurrentValue = options.Endpoint,
-                ExpectedConstraint = "valid URL"
-            });
-        }
-
         if (options.BatchSize <= 0)
         {
             result.Errors.Add(new ConfigurationError
@@ -143,18 +131,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
                 Message = "Timeout must be positive",
                 CurrentValue = options.TimeoutSeconds,
                 ExpectedConstraint = "> 0"
-            });
-        }
-
-        // API key validation for custom (externally-configured) providers
-        if (options.Provider == EmbeddingProvider.Custom &&
-            string.IsNullOrWhiteSpace(options.ApiKey))
-        {
-            result.Warnings.Add(new ConfigurationWarning
-            {
-                PropertyPath = "Embedding.ApiKey",
-                Message = "API key not configured for custom embedding provider",
-                Suggestion = "Set API key if your provider requires authentication"
             });
         }
     }

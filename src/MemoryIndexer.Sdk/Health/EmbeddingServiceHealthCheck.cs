@@ -4,7 +4,7 @@ using MemoryIndexer.Interfaces;
 namespace MemoryIndexer.Sdk.Health;
 
 /// <summary>
-/// Health check for Embedding Service (Ollama / OpenAI / Local).
+/// Health check for the registered embedding service.
 /// Monitors service availability and embedding generation performance.
 /// </summary>
 public class EmbeddingServiceHealthCheck : IHealthCheck

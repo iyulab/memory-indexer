@@ -183,9 +183,8 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient();
 
         // Register embedding service based on configuration
-        // Note: Only Mock is built-in. For Ollama/OpenAI/Azure/Local,
-        // register your own IEmbeddingService before calling AddMemoryIndexer() or use
-        // an external adapter package (e.g., MemoryIndexer.Ollama, MemoryIndexer.OpenAI).
+        // Only Mock is built in. Custom (the default) is the application's own IEmbeddingService, registered before or
+        // after AddMemoryIndexer() - this registration yields to it.
         services.TryAddSingleton<IEmbeddingService>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<MemoryIndexerOptions>>();
