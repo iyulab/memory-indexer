@@ -2,6 +2,21 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.29.0] - Unreleased
+
+### Changed
+- **Breaking** — **hybrid search keeps its sparse (BM25) half per user.** One shared index held every user's documents, so
+  another user's text set the term statistics and could fill the sparse top-k, pushing the caller's own matches out;
+  now each user has an index, built from the store the first time that user searches (and replaced by
+  `RebuildIndexAsync`). `IHybridSearchService.IndexDocument`/`RemoveDocument` take the user first.
+  Migration: pass the memory's `UserId`.
+
+### Fixed
+- **Hybrid search no longer returns a soft-deleted memory, or one outside the requested session, type or date range,
+  through its sparse half.** Sparse-only hits were fetched by ID without the filters the dense search applied.
+- **The sparse half finds memories without a manual rebuild.** It was empty until `RebuildIndexAsync` was called, so
+  hybrid search was dense-only in practice.
+
 ## [v0.28.0] - 2026-10-07
 
 ### Changed

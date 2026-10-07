@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -16,7 +17,8 @@ public sealed partial class HybridSearchService : IHybridSearchService
     private readonly IMemoryStore _memoryStore;
     private readonly IEmbeddingService _embeddingService;
     private readonly IHydeQueryExpander? _hydeExpander;
-    private readonly BM25Index _bm25Index;
+    // One sparse index per user: term statistics and the sparse top-k are each user's own
+    private readonly ConcurrentDictionary<string, BM25Index> _indexes = new(StringComparer.Ordinal);
     private readonly ILogger<HybridSearchService> _logger;
     private readonly SearchOptions _options;
 
@@ -32,7 +34,6 @@ public sealed partial class HybridSearchService : IHybridSearchService
         _hydeExpander = hydeExpander;
         _options = options.Value.Search;
         _logger = logger;
-        _bm25Index = new BM25Index();
     }
 
     /// <inheritdoc />
@@ -70,7 +71,8 @@ public sealed partial class HybridSearchService : IHybridSearchService
         };
 
         var denseResultsTask = _memoryStore.SearchAsync(queryEmbedding, denseSearchOptions, cancellationToken);
-        var sparseResults = _bm25Index.Search(query, limit * 3);
+        var sparseIndex = await GetIndexAsync(options.UserId, cancellationToken);
+        var sparseResults = sparseIndex.Search(query, limit * 3);
 
         var denseResults = await denseResultsTask;
 
@@ -108,9 +110,9 @@ public sealed partial class HybridSearchService : IHybridSearchService
             }
             else
             {
-                // Need to fetch memory for sparse-only results
+                // Need to fetch memory for sparse-only results; it must pass the same filters the dense search applied
                 var memory = await _memoryStore.GetByIdAsync(options.UserId, id, cancellationToken);
-                if (memory != null)
+                if (memory != null && MatchesFilters(memory, options))
                 {
                     fusedScores[id] = new FusionScore
                     {
@@ -151,33 +153,65 @@ public sealed partial class HybridSearchService : IHybridSearchService
     }
 
     /// <inheritdoc />
-    public void IndexDocument(Guid id, string content)
+    public void IndexDocument(string userId, Guid id, string content)
     {
-        _bm25Index.AddDocument(id, content);
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        _indexes.GetOrAdd(userId, _ => new BM25Index()).AddDocument(id, content);
         LogIndexedDocument(_logger, id);
     }
 
     /// <inheritdoc />
-    public void RemoveDocument(Guid id)
+    public void RemoveDocument(string userId, Guid id)
     {
-        _bm25Index.RemoveDocument(id);
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        if (_indexes.TryGetValue(userId, out var index))
+        {
+            index.RemoveDocument(id);
+        }
+
         LogRemovedDocument(_logger, id);
     }
 
     /// <inheritdoc />
     public async Task RebuildIndexAsync(string userId, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+        _indexes[userId] = await BuildIndexAsync(userId, cancellationToken);
+    }
+
+    // The user's index, built from the store the first time that user searches
+    private async Task<BM25Index> GetIndexAsync(string userId, CancellationToken cancellationToken)
+    {
+        if (_indexes.TryGetValue(userId, out var index))
+        {
+            return index;
+        }
+
+        var built = await BuildIndexAsync(userId, cancellationToken);
+        return _indexes.GetOrAdd(userId, built);
+    }
+
+    private async Task<BM25Index> BuildIndexAsync(string userId, CancellationToken cancellationToken)
+    {
         LogRebuildingBm25Index(_logger, userId);
 
+        var index = new BM25Index();
         var memories = await _memoryStore.GetAllAsync(userId, cancellationToken: cancellationToken);
-
         foreach (var memory in memories)
         {
-            _bm25Index.AddDocument(memory.Id, memory.Content);
+            index.AddDocument(memory.Id, memory.Content);
         }
 
         LogIndexedDocuments(_logger, memories.Count);
+        return index;
     }
+
+    private static bool MatchesFilters(MemoryUnit memory, HybridSearchOptions options)
+        => (options.IncludeDeleted || !memory.IsDeleted)
+           && (string.IsNullOrEmpty(options.SessionId) || memory.SessionId == options.SessionId)
+           && (options.Types is not { Length: > 0 } types || types.Contains(memory.Type))
+           && (options.CreatedAfter is not { } after || memory.CreatedAt >= after)
+           && (options.CreatedBefore is not { } before || memory.CreatedAt <= before);
 
     /// <summary>
     /// Applies Maximal Marginal Relevance (MMR) for result diversity.
@@ -392,17 +426,18 @@ public interface IHybridSearchService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Indexes a document in the sparse index.
+    /// Indexes a document in the user's sparse index. Each user has their own index (term statistics and sparse
+    /// top-k never mix users); a user's index is built from the store the first time that user searches.
     /// </summary>
-    void IndexDocument(Guid id, string content);
+    void IndexDocument(string userId, Guid id, string content);
 
     /// <summary>
-    /// Removes a document from the sparse index.
+    /// Removes a document from the user's sparse index.
     /// </summary>
-    void RemoveDocument(Guid id);
+    void RemoveDocument(string userId, Guid id);
 
     /// <summary>
-    /// Rebuilds the sparse index from stored memories.
+    /// Rebuilds the user's sparse index from the store, replacing what it held.
     /// </summary>
     Task RebuildIndexAsync(string userId, CancellationToken cancellationToken = default);
 }

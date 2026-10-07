@@ -307,7 +307,7 @@ public class EnhancedSearchQualityTests : IAsyncLifetime
         var allMemories = await _memoryStore.GetAllAsync("test-user", cancellationToken: TestContext.Current.CancellationToken);
         foreach (var memory in allMemories)
         {
-            _hybridSearch.IndexDocument(memory.Id, memory.Content);
+            _hybridSearch.IndexDocument(memory.UserId, memory.Id, memory.Content);
         }
 
         var query = "Python machine learning";
