@@ -8,6 +8,8 @@ All notable changes to Memory Indexer are documented here.
 - **Breaking** — `MemoryIndexer.Models.MemoryRelation` and its `MemoryRelationType`: nothing used them. The relation type the lineage tracker records is
   `MemoryIndexer.Sdk.Intelligence.Security.MemoryRelation`. Migration: a `using MemoryIndexer.Models;` that named
   `MemoryRelation` imports `MemoryIndexer.Sdk.Intelligence.Security` instead.
+- **Breaking** — `MemoryIndexer.Models.PromotionResult`: nothing used it; no tier-promotion API returned it. Migration: delete
+  the reference; `PromotionTriggerType` is unchanged.
 
 ## [v0.31.0] - 2026-10-08
 
