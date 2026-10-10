@@ -4,6 +4,11 @@ All notable changes to Memory Indexer are documented here.
 
 ## [Unreleased]
 
+### Changed
+- **The packages from this repository depend on each other at exactly the same version** (`[x.y.z]`), not a floor.
+  A consumer that moves one of them while another resolves at an older version now gets restore warning NU1608 naming
+  the pair (an error where warnings are errors) — before, the mixed versions restored silently and could fail at run time.
+
 ### Removed
 - **Breaking** — `MemoryIndexer.Models.MemoryRelation` and its `MemoryRelationType`: nothing used them. The relation type the lineage tracker records is
   `MemoryIndexer.Sdk.Intelligence.Security.MemoryRelation`. Migration: a `using MemoryIndexer.Models;` that named
