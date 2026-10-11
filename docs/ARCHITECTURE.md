@@ -552,23 +552,17 @@ Category-specific retention with GDPR-aligned defaults:
 | Skill | 730 days | Stable over time |
 | Goal | 180 days | Time-sensitive |
 
-### Metrics Dashboard
+### Metrics
 
-Real-time operational metrics via `IMetricsDashboard`:
+Operational metrics and traces go through OpenTelemetry. `MemoryIndexerTelemetry` owns the `Meter` and
+`ActivitySource` (both named `MemoryIndexer`), and `AddMemoryIndexerObservability()` registers the exporters:
 
 ```csharp
-var health = await dashboard.GetHealthSummaryAsync();
-var ops = await dashboard.GetOperationStatisticsAsync(since, until);
-var perf = await dashboard.GetPerformanceMetricsAsync();
+services.AddMemoryIndexerObservability();
 ```
 
-| Metric Category | Includes |
-|----------------|----------|
-| Health | Component status, alerts, uptime |
-| Operations | Success rate, throughput, ops/second |
-| Performance | Latency percentiles (P50/P95/P99), cache hit rate |
-| Storage | Memory counts, sizes, growth rates |
-| Security | PII detections, injection attempts, security score |
+Store, recall, embedding and health-check measurements arrive in whatever backend the exporter feeds
+(Prometheus, OTLP, console).
 
 ## 3-Axis Mental Model
 

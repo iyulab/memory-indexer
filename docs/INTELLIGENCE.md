@@ -206,7 +206,7 @@ TieredRecall(
 public class SmartRetrievalService
 {
     private readonly IQueryIntentClassifier _classifier;
-    private readonly TieredMemoryRetriever _retriever;
+    private readonly ITieredRetrievalStrategy _retriever;   // registered by AddMemoryIndexer()
 
     public async Task<List<MemoryUnit>> GetRelevantContext(
         string userId,

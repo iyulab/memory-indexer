@@ -357,15 +357,9 @@ When new facts conflict with existing ones, stricter resolution criteria are nee
 - [x] Query strategies: CombinedQuery, SeparateQueries, SequentialQueries
 - [x] `RunMultiNeedleTestAsync` in NiahTestRunner
 
-**Operational Metrics Dashboard:**
-- [x] `InMemoryMetricsDashboard` implementing `IMetricsDashboard`
-- [x] Health summary with component status and active alerts
-- [x] Operation statistics (success rate, throughput, ops/second)
-- [x] Performance metrics (latency percentiles P50/P95/P99, cache hit rates)
-- [x] Storage statistics (memory counts, sizes, growth rates)
-- [x] Security metrics (PII detections, injection attempts, security score)
-- [x] Time-series data for trend visualization
-- [x] MCP tools: `get_health_summary`, `get_operation_stats`, `get_performance_metrics`, `get_storage_stats`, `get_security_metrics`, `get_metric_time_series`, `get_dashboard_overview`
+**Operational Metrics:**
+- [x] OpenTelemetry `Meter`/`ActivitySource` (`MemoryIndexerTelemetry`) with `AddMemoryIndexerObservability()`
+- ~~In-memory metrics dashboard and its MCP tools~~ removed: nothing fed it, so it always reported zero
 
 *Note: UI dashboards and LLM benchmarks (LongBench, InfiniteBench) are out of scope for the library. These belong in samples or separate packages.*
 

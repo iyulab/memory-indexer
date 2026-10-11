@@ -806,35 +806,6 @@ public sealed partial class ReflectionEngine : IReflectionEngine
         return patterns.OrderByDescending(p => p.Confidence).Take(10).ToList();
     }
 
-    private async Task<Guid?> StoreInsightAsMemoryAsync(
-        string userId,
-        MemoryInsight insight,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var memory = new MemoryUnit
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                Content = $"[Insight] {insight.Content}",
-                Type = MemoryType.Semantic,
-                Tier = Tier.Long,
-                Stability = MemoryStability.Stable,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            await _memoryStore.StoreAsync(memory, cancellationToken);
-            return memory.Id;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-        {
-            LogFailedStoreInsightMemory(_logger, ex);
-            return null;
-        }
-    }
-
     private static string GenerateReflectionSummary(ReflectionResult result)
     {
         var sb = new StringBuilder();
@@ -974,6 +945,4 @@ public sealed partial class ReflectionEngine : IReflectionEngine
     [LoggerMessage(Level = LogLevel.Debug, Message = "Discovered {Count} links from {MemoryCount} memories")]
     private static partial void LogDiscoveredCountLinksMemoryCountMemories(ILogger logger, int count, int memoryCount);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to store insight as memory")]
-    private static partial void LogFailedStoreInsightMemory(ILogger logger, Exception ex);
 }

@@ -248,6 +248,32 @@ public sealed class ConsolidationResult
 }
 
 /// <summary>
+/// Result of a tier migration operation.
+/// </summary>
+public sealed class TierMigrationResult
+{
+    /// <summary>
+    /// Number of memories migrated.
+    /// </summary>
+    public int MigratedCount { get; init; }
+
+    /// <summary>
+    /// Number of memories discarded (below retention threshold).
+    /// </summary>
+    public int DiscardedCount { get; init; }
+
+    /// <summary>
+    /// Number of memories that were already at target tier.
+    /// </summary>
+    public int SkippedCount { get; init; }
+
+    /// <summary>
+    /// IDs of migrated memories.
+    /// </summary>
+    public IReadOnlyList<Guid> MigratedIds { get; init; } = [];
+}
+
+/// <summary>
 /// Result of session end operation.
 /// </summary>
 public sealed class SessionEndResult

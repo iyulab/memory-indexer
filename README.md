@@ -276,6 +276,14 @@ services.AddMemoryIndexer(options => options.Embedding.Dimensions = 1536);
 
 See [Custom IMemoryStore Implementation Guide](docs/GUIDES.md#custom-imemorystore-implementation) for complete patterns including hybrid PostgreSQL+Qdrant setups.
 
+**Moving to a new store**: `MemoryStoreMigrator.MigrateAsync(source, destination)` copies every user's memories
+(or only the `userIds` you pass), skips memories the destination already has, and reports per-memory failures in the
+result. Cancellation and any other failure throw.
+
+**Your own embedding model**: derive from `CachedEmbeddingServiceBase` and implement `GenerateSingleEmbeddingAsync`
+(plus `Dimensions` and `CacheKeyPrefix`) to get caching and batching for free; register it as the `IEmbeddingService`.
+The bundled MCP server's local embedder is built this way.
+
 ## Documentation
 
 | Document | Description |

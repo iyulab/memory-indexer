@@ -594,29 +594,32 @@ public class ChatService
 ```csharp
 public class ReflectionService
 {
-    private readonly IReflectionEngine _reflection;
+    private readonly IReflectionEngine _reflection;   // registered by AddMemoryIndexer()
+    private readonly IMemoryStore _store;
 
-    public async Task PerformDailyReflection(string userId)
+    public async Task PerformDailyReflection(string userId, CancellationToken ct)
     {
-        // Check if reflection is needed (importance threshold)
-        var shouldReflect = await _reflection.ShouldReflectAsync(
-            userId: userId,
-            importanceThreshold: 0.7f
-        );
+        // Is there enough new, important material to reflect on?
+        var trigger = await _reflection.ShouldReflectAsync(userId, ct);
+        if (!trigger.ShouldReflect)
+            return;
 
-        if (shouldReflect)
+        var result = await _reflection.ReflectAsync(
+            userId,
+            new ReflectionOptions { TimeWindow = TimeSpan.FromDays(7), MinImportance = 0.7f },
+            ct);
+
+        // Reflection returns insights; it does not store them. Keep the ones you want as memories.
+        foreach (var insight in result.Insights)
         {
-            var insights = await _reflection.ReflectAsync(
-                userId: userId,
-                lookbackDays: 7,
-                maxInsights: 5
-            );
-
-            foreach (var insight in insights)
+            await _store.StoreAsync(new MemoryUnit
             {
-                // Insights are automatically stored as Semantic memories
-                Console.WriteLine($"Insight: {insight.Content}");
-            }
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Content = insight.Content,
+                Type = MemoryType.Semantic,
+                Tier = Tier.Long
+            }, ct);
         }
     }
 }

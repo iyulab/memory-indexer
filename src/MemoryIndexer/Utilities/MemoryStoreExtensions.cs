@@ -166,16 +166,19 @@ public static class MemoryStoreExtensions
         this IEnumerable<MemoryUnit> memories,
         MemoryFilterOptions? options)
     {
-        if (options == null)
-        {
-            return memories.Where(m => !m.IsDeleted);
-        }
+        // No options means the defaults: live memories, newest first
+        options ??= new MemoryFilterOptions();
 
         var query = memories.AsEnumerable();
 
         if (!string.IsNullOrEmpty(options.SessionId))
         {
             query = query.Where(m => m.SessionId == options.SessionId);
+        }
+
+        if (!string.IsNullOrEmpty(options.Namespace))
+        {
+            query = query.Where(m => m.Namespace == options.Namespace);
         }
 
         if (options.Types is { Length: > 0 })

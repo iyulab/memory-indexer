@@ -239,52 +239,12 @@ public sealed partial class InMemoryMemoryStore(ILogger<InMemoryMemoryStore> log
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        // The shared filter is the one every option is read by; a copy here drifted (tiers, scopes and metadata
+        // filters were ignored)
         var query = _memories.Values
-            .Where(m => m.UserId == userId);
-
-        if (options is not null)
-        {
-            if (!string.IsNullOrEmpty(options.SessionId))
-                query = query.Where(m => m.SessionId == options.SessionId);
-
-            if (!string.IsNullOrEmpty(options.Namespace))
-                query = query.Where(m => m.Namespace == options.Namespace);
-
-            if (options.Types is { Length: > 0 })
-                query = query.Where(m => options.Types.Contains(m.Type));
-
-            if (options.Roles is { Length: > 0 })
-                query = query.Where(m => m.Role != null && options.Roles.Contains(m.Role));
-
-            if (options.CreatedAfter.HasValue)
-                query = query.Where(m => m.CreatedAt >= options.CreatedAfter.Value);
-
-            if (options.CreatedBefore.HasValue)
-                query = query.Where(m => m.CreatedAt <= options.CreatedBefore.Value);
-
-            if (!options.IncludeDeleted)
-                query = query.Where(m => !m.IsDeleted);
-
-            query = options.OrderBy switch
-            {
-                MemoryOrderBy.CreatedAtAsc => query.OrderBy(m => m.CreatedAt),
-                MemoryOrderBy.UpdatedAtDesc => query.OrderByDescending(m => m.UpdatedAt),
-                MemoryOrderBy.UpdatedAtAsc => query.OrderBy(m => m.UpdatedAt),
-                MemoryOrderBy.ImportanceDesc => query.OrderByDescending(m => m.ImportanceScore),
-                MemoryOrderBy.AccessCountDesc => query.OrderByDescending(m => m.AccessCount),
-                _ => query.OrderByDescending(m => m.CreatedAt)
-            };
-
-            if (options.Skip > 0)
-                query = query.Skip(options.Skip);
-
-            if (options.Limit.HasValue)
-                query = query.Take(options.Limit.Value);
-        }
-        else
-        {
-            query = query.Where(m => !m.IsDeleted).OrderByDescending(m => m.CreatedAt);
-        }
+            .Where(m => m.UserId == userId)
+            .ApplyFilter(options);
 
         return Task.FromResult<IReadOnlyList<MemoryUnit>>(query.ToList());
     }

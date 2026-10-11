@@ -22,11 +22,14 @@ public sealed partial class MemoryStoreMigrator
     /// </summary>
     /// <param name="source">Source memory store.</param>
     /// <param name="destination">Destination memory store.</param>
-    /// <param name="userIds">User IDs to migrate. If null, discovers all users.</param>
+    /// <param name="userIds">User IDs to migrate. If null, every user the source store holds memories for
+    /// (<see cref="IMemoryStore.GetUserIdsAsync"/>).</param>
     /// <param name="batchSize">Number of memories to process per batch.</param>
     /// <param name="progress">Optional progress callback (current, total).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Migration result with statistics.</returns>
+    /// <returns>Migration result with statistics. A memory that fails to copy is counted in
+    /// <see cref="MigrationResult.TotalFailed"/> and the run continues; anything else that fails, and cancellation,
+    /// throws.</returns>
     public async Task<MigrationResult> MigrateAsync(
         IMemoryStore source,
         IMemoryStore destination,
@@ -42,108 +45,91 @@ public sealed partial class MemoryStoreMigrator
         var destinationValue = destination.GetType().Name;
         LogStartingMigrationSourceDestination(_logger, sourceValue, destinationValue);
 
-        try
+        // Ensure destination collection exists
+        await destination.EnsureCollectionExistsAsync(cancellationToken);
+
+        // Get user list
+        var users = userIds?.ToList() ?? [.. await source.GetUserIdsAsync(cancellationToken)];
+        if (users.Count == 0)
         {
-            // Ensure destination collection exists
-            await destination.EnsureCollectionExistsAsync(cancellationToken);
+            LogNoUsersToMigrate(_logger);
+            result.Status = MigrationStatus.Skipped;
+            result.Message = "No users to migrate.";
+            return result;
+        }
 
-            // Get user list
-            var users = userIds?.ToList();
-            if (users == null || users.Count == 0)
-            {
-                LogUserIDsProvidedMigrationWill(_logger);
-                result.Status = MigrationStatus.Skipped;
-                result.Message = "No user IDs provided for migration.";
-                return result;
-            }
+        long totalMigrated = 0;
+        long totalFailed = 0;
+        long totalSkipped = 0;
 
-            long totalMigrated = 0;
-            long totalFailed = 0;
-            long totalSkipped = 0;
-
-            // Pre-compute total count for progress reporting (avoid sync-over-async in loop)
-            long totalCount = 0;
-            if (progress != null)
-            {
-                foreach (var userId in users)
-                {
-                    totalCount += await source.GetCountAsync(userId, cancellationToken);
-                }
-            }
-
+        // Pre-compute total count for progress reporting (avoid sync-over-async in loop)
+        long totalCount = 0;
+        if (progress != null)
+        {
             foreach (var userId in users)
+            {
+                totalCount += await source.GetCountAsync(userId, cancellationToken);
+            }
+        }
+
+        foreach (var userId in users)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            LogMigratingMemoriesUserUserId(_logger, userId);
+
+            var userMemories = await source.GetAllAsync(userId, cancellationToken: cancellationToken);
+            var memoryList = userMemories.ToList();
+
+            LogFoundCountMemoriesUserUserId(_logger, memoryList.Count, userId);
+
+            // Process in batches
+            for (var i = 0; i < memoryList.Count; i += batchSize)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                LogMigratingMemoriesUserUserId(_logger, userId);
+                var batch = memoryList.Skip(i).Take(batchSize).ToList();
 
-                var userMemories = await source.GetAllAsync(userId, cancellationToken: cancellationToken);
-                var memoryList = userMemories.ToList();
-
-                LogFoundCountMemoriesUserUserId(_logger, memoryList.Count, userId);
-
-                // Process in batches
-                for (var i = 0; i < memoryList.Count; i += batchSize)
+                foreach (var memory in batch)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var batch = memoryList.Skip(i).Take(batchSize).ToList();
-
-                    foreach (var memory in batch)
+                    try
                     {
-                        try
+                        // Check if already exists in destination
+                        var existing = await destination.GetByIdAsync(userId, memory.Id, cancellationToken);
+                        if (existing != null)
                         {
-                            // Check if already exists in destination
-                            var existing = await destination.GetByIdAsync(userId, memory.Id, cancellationToken);
-                            if (existing != null)
-                            {
-                                totalSkipped++;
-                                LogMemoryMemoryIdAlreadyExistsDestination(_logger, memory.Id);
-                                continue;
-                            }
+                            totalSkipped++;
+                            LogMemoryMemoryIdAlreadyExistsDestination(_logger, memory.Id);
+                            continue;
+                        }
 
-                            // Store in destination
-                            await destination.StoreAsync(memory, cancellationToken);
-                            totalMigrated++;
-                        }
-                        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-                        {
-                            totalFailed++;
-                            LogFailedMigrateMemoryMemoryId(_logger, ex, memory.Id);
-                            result.FailedMemoryIds.Add(memory.Id);
-                        }
+                        // Store in destination
+                        await destination.StoreAsync(memory, cancellationToken);
+                        totalMigrated++;
                     }
-
-                    // Report progress
-                    progress?.Invoke(totalMigrated + totalFailed + totalSkipped, totalCount);
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                    {
+                        totalFailed++;
+                        LogFailedMigrateMemoryMemoryId(_logger, ex, memory.Id);
+                        result.FailedMemoryIds.Add(memory.Id);
+                    }
                 }
 
-                result.UsersMigrated.Add(userId);
+                // Report progress
+                progress?.Invoke(totalMigrated + totalFailed + totalSkipped, totalCount);
             }
 
-            result.TotalMigrated = totalMigrated;
-            result.TotalFailed = totalFailed;
-            result.TotalSkipped = totalSkipped;
-            result.Duration = DateTime.UtcNow - startTime;
-            result.Status = totalFailed == 0 ? MigrationStatus.Success : MigrationStatus.PartialSuccess;
-            result.Message = $"Migrated {totalMigrated} memories, {totalSkipped} skipped, {totalFailed} failed.";
+            result.UsersMigrated.Add(userId);
+        }
 
-            LogMigrationCompletedMigratedMigratedSkipped(_logger, totalMigrated, totalSkipped, totalFailed, result.Duration);
-        }
-        catch (OperationCanceledException)
-        {
-            result.Status = MigrationStatus.Cancelled;
-            result.Message = "Migration was cancelled.";
-            result.Duration = DateTime.UtcNow - startTime;
-            LogMigrationCancelled(_logger);
-        }
-        catch (Exception ex)
-        {
-            result.Status = MigrationStatus.Failed;
-            result.Message = $"Migration failed: {ex.Message}";
-            result.Duration = DateTime.UtcNow - startTime;
-            LogMigrationFailed(_logger, ex);
-        }
+        result.TotalMigrated = totalMigrated;
+        result.TotalFailed = totalFailed;
+        result.TotalSkipped = totalSkipped;
+        result.Duration = DateTime.UtcNow - startTime;
+        result.Status = totalFailed == 0 ? MigrationStatus.Success : MigrationStatus.PartialSuccess;
+        result.Message = $"Migrated {totalMigrated} memories, {totalSkipped} skipped, {totalFailed} failed.";
+
+        LogMigrationCompletedMigratedMigratedSkipped(_logger, totalMigrated, totalSkipped, totalFailed, result.Duration);
 
         return result;
     }
@@ -191,8 +177,8 @@ public sealed partial class MemoryStoreMigrator
     [LoggerMessage(Level = LogLevel.Information, Message = "Starting migration from {Source} to {Destination}")]
     private static partial void LogStartingMigrationSourceDestination(ILogger logger, string source, string destination);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "No user IDs provided. Migration will be skipped.")]
-    private static partial void LogUserIDsProvidedMigrationWill(ILogger logger);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No users to migrate. Migration will be skipped.")]
+    private static partial void LogNoUsersToMigrate(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Migrating memories for user {UserId}")]
     private static partial void LogMigratingMemoriesUserUserId(ILogger logger, string userId);
@@ -208,12 +194,6 @@ public sealed partial class MemoryStoreMigrator
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Migration completed: {Migrated} migrated, {Skipped} skipped, {Failed} failed in {Duration}")]
     private static partial void LogMigrationCompletedMigratedMigratedSkipped(ILogger logger, long migrated, long skipped, long failed, TimeSpan duration);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Migration was cancelled")]
-    private static partial void LogMigrationCancelled(ILogger logger);
-
-    [LoggerMessage(Level = LogLevel.Error, Message = "Migration failed")]
-    private static partial void LogMigrationFailed(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Count mismatch for user {UserId}: source={Source}, destination={Dest}")]
     private static partial void LogCountMismatchUserUserIdSource(ILogger logger, string userId, long source, long dest);
@@ -270,12 +250,12 @@ public sealed class MigrationResult
 /// </summary>
 public enum MigrationStatus
 {
-    Pending,
-    Success,
-    PartialSuccess,
-    Failed,
-    Cancelled,
-    Skipped
+    // Explicit values: Failed (3) and Cancelled (4) were removed - a failed or cancelled migration throws - and a
+    // number stored or bound before then keeps its meaning
+    Pending = 0,
+    Success = 1,
+    PartialSuccess = 2,
+    Skipped = 5
 }
 
 /// <summary>

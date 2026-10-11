@@ -18,7 +18,9 @@ using MemoryIndexer.Sdk.Intelligence.Deduplication;
 using MemoryIndexer.Sdk.Intelligence.Evaluation;
 using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
 using MemoryIndexer.Sdk.Intelligence.Operations;
+using MemoryIndexer.Sdk.Intelligence.Reflection;
 using MemoryIndexer.Sdk.Intelligence.Retrieval;
+using MemoryIndexer.Sdk.Intelligence.SelfCorrection;
 using MemoryIndexer.Scoring;
 using MemoryIndexer.Sdk.Intelligence.Scoring;
 using MemoryIndexer.Sdk.Intelligence.Search;
@@ -288,6 +290,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IQueryExpander, QueryExpander>();
         services.TryAddSingleton<IHydeQueryExpander, HydeQueryExpander>();
         services.TryAddSingleton<IDeduplicationService, DeduplicationService>();
+        // Finding and merging duplicate groups across stored memories (backs the advanced memory tools)
+        services.TryAddSingleton<DuplicateDetector>();
         services.TryAddSingleton<IMemoryQualityService, MemoryQualityAnalyzer>();
         services.TryAddSingleton<ImportanceAnalyzer>();
         services.TryAddSingleton<TopicSegmenter>();
@@ -355,6 +359,14 @@ public static class ServiceCollectionExtensions
 
         // Register query intent classification (Phase v0.5.0)
         services.TryAddSingleton<IQueryIntentClassifier, LocalQueryIntentClassifier>();
+
+        // Tier-weighted retrieval by query intent (backs the adaptive retrieval tools)
+        services.TryAddSingleton<TieredMemoryRetriever>();
+        services.TryAddSingleton<ITieredRetrievalStrategy>(sp => sp.GetRequiredService<TieredMemoryRetriever>());
+
+        // Reflection and self-correction (back the memory reflection tools)
+        services.TryAddSingleton<IReflectionEngine, ReflectionEngine>();
+        services.TryAddSingleton<IMemorySelfCorrector, MemorySelfCorrector>();
 
         // Register graph intelligence services (Phase v0.5.0)
         services.TryAddSingleton<IMemoryGraphService, MemoryGraphService>();

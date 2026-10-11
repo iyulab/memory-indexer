@@ -91,18 +91,51 @@ public sealed class MemoryStoreMigratorTests
     }
 
     [Fact]
-    public async Task MigrateAsync_ShouldReturnSkippedWhenNoUserIds()
+    public async Task MigrateAsync_WithoutUserIds_MigratesEveryUserTheSourceHolds()
     {
-        // Arrange
         var source = CreateInMemoryStore();
         var destination = CreateInMemoryStore();
+        await source.StoreAsync(CreateTestMemory("alice", "Alice memory"), TestContext.Current.CancellationToken);
+        await source.StoreAsync(CreateTestMemory("bob", "Bob memory"), TestContext.Current.CancellationToken);
 
-        // Act
         var result = await _migrator.MigrateAsync(source, destination, userIds: null, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert
+        result.Status.Should().Be(MigrationStatus.Success);
+        result.UsersMigrated.Should().BeEquivalentTo(["alice", "bob"]);
+        (await destination.GetCountAsync("alice", TestContext.Current.CancellationToken)).Should().Be(1);
+        (await destination.GetCountAsync("bob", TestContext.Current.CancellationToken)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task MigrateAsync_WithoutUserIds_FromAnEmptySource_IsSkipped()
+    {
+        var result = await _migrator.MigrateAsync(CreateInMemoryStore(), CreateInMemoryStore(), userIds: null, cancellationToken: TestContext.Current.CancellationToken);
+
         result.Status.Should().Be(MigrationStatus.Skipped);
-        result.Message.Should().Contain("No user IDs");
+        result.Message.Should().Contain("No users");
+    }
+
+    [Fact]
+    public async Task MigrateAsync_WhenCancelled_Throws()
+    {
+        var source = CreateInMemoryStore();
+        await source.StoreAsync(CreateTestMemory("alice", "Alice memory"), TestContext.Current.CancellationToken);
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var act = () => _migrator.MigrateAsync(source, CreateInMemoryStore(), userIds: ["alice"], cancellationToken: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    // Stored or bound numbers keep their meaning after Failed (3) and Cancelled (4) were removed
+    [Fact]
+    public void MigrationStatus_values_are_fixed()
+    {
+        ((int)MigrationStatus.Pending).Should().Be(0);
+        ((int)MigrationStatus.Success).Should().Be(1);
+        ((int)MigrationStatus.PartialSuccess).Should().Be(2);
+        ((int)MigrationStatus.Skipped).Should().Be(5);
     }
 
     [Fact]
@@ -185,34 +218,6 @@ public sealed class MemoryStoreMigratorTests
         // Assert
         result.Status.Should().Be(MigrationStatus.Success);
         result.TotalMigrated.Should().Be(10);
-    }
-
-    [Fact]
-    public async Task MigrateAsync_ShouldHandleCancellation()
-    {
-        // Arrange
-        var source = CreateInMemoryStore();
-        var destination = CreateInMemoryStore();
-        var userId = "user-123";
-
-        for (var i = 0; i < 10; i++)
-        {
-            await source.StoreAsync(CreateTestMemory(userId, $"Memory {i}"), TestContext.Current.CancellationToken);
-        }
-
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
-
-        // Act
-        var result = await _migrator.MigrateAsync(
-            source,
-            destination,
-            userIds: [userId],
-            cancellationToken: cts.Token);
-
-        // Assert
-        result.Status.Should().Be(MigrationStatus.Cancelled);
-        result.Message.Should().Contain("cancelled");
     }
 
     [Fact]

@@ -445,26 +445,6 @@ public class IntelligenceIntegrationTests : IDisposable
 
     #endregion
 
-    #region Tiered Retrieval Tests
-
-    [Fact(Skip = "ITieredMemoryStore implementation pending - TieredMemoryRetriever not registered")]
-    public async Task TieredRetriever_RetrievesFromMultipleTiers()
-    {
-        // This test requires ITieredMemoryStore implementation
-        // Currently, tier-based retrieval uses individual tier services (IShortTermMemory, ILongTermStore, IArchiveStore)
-        // TieredMemoryRetriever will be registered when ITieredMemoryStore is implemented
-        await Task.CompletedTask;
-    }
-
-    [Fact(Skip = "ITieredMemoryStore implementation pending - TieredMemoryRetriever not registered")]
-    public async Task TieredRetriever_CustomTierPriority_RespectsOrder()
-    {
-        // This test requires ITieredMemoryStore implementation
-        await Task.CompletedTask;
-    }
-
-    #endregion
-
     #region Full Pipeline Integration Test
 
     [Fact]

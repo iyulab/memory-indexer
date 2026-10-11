@@ -90,7 +90,7 @@ public static class McpServerExtensions
             .WithTools<ProfileEvolutionTools>()
             .WithTools<RetentionPolicyTools>()
             .WithTools<AdvancedMemoryTools>()
-            .WithTools<AutonomousMemoryTools>()
+            .WithTools<MemoryReflectionTools>()
             .WithTools<BackupRestoreTools>()
             .WithTools<ConflictResolutionTools>()
             .WithTools<AdaptiveRetrievalTools>()

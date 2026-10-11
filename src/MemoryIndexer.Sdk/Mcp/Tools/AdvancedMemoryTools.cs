@@ -21,6 +21,7 @@ public sealed class AdvancedMemoryTools
 {
     private readonly MemoryService _memoryService;
     private readonly IHybridSearchService _hybridSearch;
+    private readonly IDeduplicationService _deduplication;
     private readonly DuplicateDetector _duplicateDetector;
     private readonly ImportanceAnalyzer _importanceAnalyzer;
     private readonly ISummarizationService _summarizationService;
@@ -29,6 +30,7 @@ public sealed class AdvancedMemoryTools
     public AdvancedMemoryTools(
         MemoryService memoryService,
         IHybridSearchService hybridSearch,
+        IDeduplicationService deduplication,
         DuplicateDetector duplicateDetector,
         ImportanceAnalyzer importanceAnalyzer,
         ISummarizationService summarizationService,
@@ -36,6 +38,7 @@ public sealed class AdvancedMemoryTools
     {
         _memoryService = memoryService;
         _hybridSearch = hybridSearch;
+        _deduplication = deduplication;
         _duplicateDetector = duplicateDetector;
         _importanceAnalyzer = importanceAnalyzer;
         _summarizationService = summarizationService;
@@ -188,7 +191,7 @@ public sealed class AdvancedMemoryTools
         [Description("Similarity threshold (0.0-1.0)")] float threshold = 0.8f,
         CancellationToken cancellationToken = default)
     {
-        var result = await _duplicateDetector.CheckForDuplicateAsync(
+        var result = await _deduplication.CheckForDuplicateAsync(
             content,
             _defaultUserId,
             similarityThreshold: Math.Clamp(threshold, 0.5f, 0.99f),

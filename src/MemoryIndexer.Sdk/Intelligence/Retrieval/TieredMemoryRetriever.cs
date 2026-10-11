@@ -20,7 +20,7 @@ namespace MemoryIndexer.Sdk.Intelligence.Retrieval;
 /// </remarks>
 public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
 {
-    private readonly ITieredMemoryStore _store;
+    private readonly IMemoryStore _store;
     private readonly IQueryIntentClassifier _intentClassifier;
     private readonly IShortTermMemory _workingMemory;
     private readonly IGraphRetriever? _graphRetriever;
@@ -73,7 +73,7 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
     };
 
     public TieredMemoryRetriever(
-        ITieredMemoryStore store,
+        IMemoryStore store,
         IQueryIntentClassifier intentClassifier,
         IShortTermMemory workingMemory,
         IEmbeddingService embeddingService,
@@ -237,17 +237,18 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
         QueryIntentResult intent,
         CancellationToken cancellationToken)
     {
-        // Working memory uses different interface
+        // Working memory is held in process; it can hold more than one user's memories, so keep the requester's
         if (tier == Tier.Short)
         {
             var workingMemories = await _workingMemory.GetAllAsync(cancellationToken);
-            return workingMemories;
+            return workingMemories.Where(m => m.UserId == request.UserId).ToList();
         }
 
-        // Session and User tiers use ITieredMemoryStore
+        // Long and Archive tiers come from the store, filtered by tier
         var options = new MemoryFilterOptions
         {
             SessionId = tier == Tier.Long ? request.SessionId : null,
+            Tiers = [tier],
             Limit = 50
         };
 
@@ -257,9 +258,8 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
             options = ApplyTemporalFilter(options, intent.TemporalReference);
         }
 
-        var memories = await _store.GetByTierAsync(
+        var memories = await _store.GetAllAsync(
             request.UserId,
-            tier,
             options,
             cancellationToken);
 

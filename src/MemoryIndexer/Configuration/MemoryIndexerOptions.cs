@@ -448,15 +448,11 @@ public sealed class SearchOptions
     public float MmrLambda { get; set; } = 0.7f;
 
     /// <summary>
-    /// Similarity threshold for duplicate detection.
+    /// Similarity at or above which two stored memories are grouped as duplicates when scanning for duplicate groups
+    /// (the advanced memory tools' find and merge). The check made when a memory is written is configured under
+    /// <see cref="MemoryIndexerOptions.Deduplication"/>.
     /// </summary>
     public float DuplicateThreshold { get; set; } = 0.80f;
-
-    /// <summary>
-    /// Number of recent memories to check for duplicates on encode.
-    /// 0 = check all memories (expensive). Recommended: 20-50.
-    /// </summary>
-    public int DuplicateLookbackWindow { get; set; } = 20;
 
     /// <summary>
     /// RRF k parameter for rank fusion.

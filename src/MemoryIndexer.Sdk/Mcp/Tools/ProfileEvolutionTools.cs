@@ -9,6 +9,7 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 /// MCP tools for profile evolution features.
 /// Phase v0.10.0: User Profile Evolution.
 /// </summary>
+[McpServerToolType]
 public class ProfileEvolutionTools
 {
     private readonly IFactInferenceEngine _inferenceEngine;

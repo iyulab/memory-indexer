@@ -4,16 +4,27 @@ All notable changes to Memory Indexer are documented here.
 
 ## [Unreleased]
 
-### Removed
-- **Breaking: components nothing registered or called are gone** — `IAdaptiveContextAssembler`/`AdaptiveContextAssembler`
-  (with `AssembledContext`, `ContextAssemblyOptions`, `ContextAssemblyStatistics`, `ContextFormat`; context building is the
-  registered `IContextBuilder`), `IGraphQueryExpander`/`GraphQueryExpander` (with `QueryExpansionOptions`, `SubQueryOptions`,
-  `ExpandedQuery`, `QueryEntity`, `GraphSubQuery`, `SubQueryType`, `ExpansionStatistics`; graph context comes from
-  `IGraphRetriever`), and `IMemoryTypeBalancer`/`MemoryTypeBalancer` with the `MemoryIndexerOptions.TypeBalancing` option
-  (`TypeBalancerOptions`): the option was validated and documented as a retrieval boost, but no recall path applied it.
-  Migration: delete the use; remove a `TypeBalancing` configuration section (it never changed ranking).
+### Fixed
+- **Every MCP tool `WithAllMemoryIndexerTools()` registers can now be called.** `AdvancedMemoryTools`, `AdaptiveRetrievalTools`
+  and the reflection and self-correction tools were listed but failed on their first call, because `AddMemoryIndexer()` did not
+  register what they need. It now registers `IReflectionEngine`, `IMemorySelfCorrector`, `ITieredRetrievalStrategy`
+  (`TieredMemoryRetriever`) and `DuplicateDetector`. `ProfileEvolutionTools` now carries `[McpServerToolType]`, so
+  `WithToolsFromAssembly` finds it.
+- **The default in-memory store applies every `MemoryFilterOptions` filter.** `InMemoryMemoryStore.GetAllAsync` ignored
+  `Tiers`, `Scopes` and `MetadataFilter`. It now uses the shared `MemoryStoreExtensions.ApplyFilter`, which also gained the
+  `Namespace` filter.
+- **Tiered recall returns only the requesting user's working memories.** Before, the Short tier returned every working
+  memory held in the process.
+- **The `check_duplicate` tool gives the same verdict as storing a memory.** It now uses the registered
+  `IDeduplicationService` and its `Deduplication` options.
 
 ### Changed
+- **Breaking** — **`MemoryStoreMigrator.MigrateAsync` with no `userIds` migrates every user the source store holds.** Before,
+  it returned `Skipped`, although its documentation said it discovered users.
+- **Breaking** — **a cancelled or failed migration throws.** It no longer returns a result with `Status` `Cancelled` or
+  `Failed`, and those two `MigrationStatus` values are removed; the remaining values keep their numbers. A memory that fails
+  to copy is still counted in `TotalFailed`, and the run continues.
+  Migration: catch `OperationCanceledException` and other exceptions where you checked `Status`.
 - **The packages from this repository depend on each other at exactly the same version** (`[x.y.z]`), not a floor.
   A consumer that moves one of them while a family member it depends on resolves at an older version now gets restore warning NU1608 naming
   the pair (an error where warnings are errors) — before, the mixed versions restored silently and could fail at run time.
@@ -21,6 +32,30 @@ All notable changes to Memory Indexer are documented here.
 - **The nuget.org «Release Notes» of every package link to the GitHub release of its version**, whose notes are this CHANGELOG's section for that version.
 
 ### Removed
+- **Breaking** — **the autonomous memory manager and its six MCP tools** are gone: `IAutonomousMemoryManager`,
+  `AutonomousMemoryManager` and their request/response types, and the `memory_heartbeat`, `memory_page_in`, `memory_page_out`,
+  `memory_optimize`, `memory_activity_summary` and `memory_suggestions` tools. None of them could work as shipped.
+  Heartbeat and page-out needed a per-session virtual context manager that nothing in the package initializes, page-in searched with an empty query
+  vector (so it returned memories unrelated to the query), and optimize always read user `"default"`.
+  `IVirtualContextManager` is unchanged.
+- **Breaking** — **`AutonomousMemoryTools` is now `MemoryReflectionTools`.** It keeps the analyze, correct, update-confidence,
+  reflect and should-reflect tools, and their MCP tool names are unchanged.
+- **Breaking** — **`ITieredMemoryStore`** (with `TierStorageStatistics` and `TierStatistics`) is gone. No store implemented it.
+  Tier reads use `IMemoryStore.GetAllAsync` with `MemoryFilterOptions.Tiers`, and demotion uses `IMemoryPrimitives.DemoteAsync`.
+  `TierMigrationResult` moved next to `IVirtualContextManager`, in the same namespace.
+- **Breaking** — **the in-memory metrics dashboard** is gone: `IMetricsDashboard`, `InMemoryMetricsDashboard` and
+  `MetricsTools`. Nothing recorded into it, so it always reported zero. Metrics come from OpenTelemetry instead
+  (`MemoryIndexerTelemetry`, `AddMemoryIndexerObservability()`).
+- **Breaking** — **`DuplicateDetector` no longer implements `IDeduplicationService`.** Its `CheckForDuplicateAsync` and
+  `ComputeContentHash` are removed, and so is `SearchOptions.DuplicateLookbackWindow`, which only they read. The check is
+  `IDeduplicationService` (configured under `Deduplication`); `DuplicateDetector` keeps finding and merging duplicate groups.
+- **Breaking: components nothing registered or called are gone** — `IAdaptiveContextAssembler`/`AdaptiveContextAssembler`
+  (with `AssembledContext`, `ContextAssemblyOptions`, `ContextAssemblyStatistics`, `ContextFormat`; context building is the
+  registered `IContextBuilder`), `IGraphQueryExpander`/`GraphQueryExpander` (with `QueryExpansionOptions`, `SubQueryOptions`,
+  `ExpandedQuery`, `QueryEntity`, `GraphSubQuery`, `SubQueryType`, `ExpansionStatistics`; graph context comes from
+  `IGraphRetriever`), and `IMemoryTypeBalancer`/`MemoryTypeBalancer` with the `MemoryIndexerOptions.TypeBalancing` option
+  (`TypeBalancerOptions`): the option was validated and documented as a retrieval boost, but no recall path applied it.
+  Migration: delete the use; remove a `TypeBalancing` configuration section (it never changed ranking).
 - **Breaking** — `MemoryIndexer.Models.MemoryRelation` and its `MemoryRelationType`: nothing used them. The relation type the lineage tracker records is
   `MemoryIndexer.Sdk.Intelligence.Security.MemoryRelation`. Migration: a `using MemoryIndexer.Models;` that named
   `MemoryRelation` imports `MemoryIndexer.Sdk.Intelligence.Security` instead.
