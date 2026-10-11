@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.32.0] - 2026-10-11
 
 ### Fixed
 - **Every MCP tool class `WithAllMemoryIndexerTools()` registers can now be built from `AddMemoryIndexer()`.**
