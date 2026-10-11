@@ -336,46 +336,31 @@ public class LocalEmbeddingIntegrationTests
     }
 
     [Fact]
-    public async Task PerformanceTest_BatchEmbeddingGeneration()
+    public async Task BatchEmbedding_MatchesIndividualEmbeddings()
     {
         _fixture.EnsureAvailable();
 
-        // Arrange
         var texts = Enumerable.Range(1, 20)
-            .Select(i => $"Sample text number {i} for testing batch embedding generation performance.")
+            .Select(i => $"Sample text number {i} for testing batch embedding generation.")
             .ToArray();
 
-        // Act - Individual embeddings
-        var sw1 = System.Diagnostics.Stopwatch.StartNew();
-        var individualEmbeddings = new List<float[]>();
+        var individual = new List<float[]>();
         foreach (var text in texts)
         {
-            individualEmbeddings.Add(await _fixture.EmbeddingModel!.EmbedAsync(text, TestContext.Current.CancellationToken));
+            individual.Add(await _fixture.EmbeddingModel!.EmbedAsync(text, TestContext.Current.CancellationToken));
         }
-        sw1.Stop();
-        var individualTime = sw1.ElapsedMilliseconds;
 
-        // Act - Batch embeddings
-        var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var batchEmbeddings = await _fixture.EmbeddingModel!.EmbedAsync(texts, TestContext.Current.CancellationToken);
-        sw2.Stop();
-        var batchTime = sw2.ElapsedMilliseconds;
+        var batch = await _fixture.EmbeddingModel!.EmbedAsync(texts, TestContext.Current.CancellationToken);
 
-        // Assert
-        individualEmbeddings.Should().HaveCount(20);
-        batchEmbeddings.Should().HaveCount(20);
-
-        _output.WriteLine($"Individual requests ({texts.Length} texts): {individualTime}ms ({individualTime / texts.Length}ms avg)");
-        _output.WriteLine($"Batch request ({texts.Length} texts): {batchTime}ms");
-        _output.WriteLine($"Batch is {(float)individualTime / Math.Max(batchTime, 1):F2}x faster");
-
-        // Batch should be roughly competitive with individual calls — not a strict "never slower"
-        // bound, which is flaky on single-sample CPU wall-clock timing (measured: batch 4440ms vs
-        // individual 4256ms, a ~4% difference well within scheduling noise). A generous tolerance
-        // catches a real regression (batching accidentally serializing with per-call overhead) while
-        // not asserting on noise.
-        batchTime.Should().BeLessThanOrEqualTo((long)(individualTime * 1.5),
-            "batch processing should not be dramatically slower than individual calls");
+        // The batch path returns one vector per text, in order, and each is the vector the single-text path gives
+        // (padding in a batch may move the last digits, not the direction). How long either takes is not asserted
+        // here: wall-clock comparisons live in LocalEmbeddingPerformanceTests (Category=Performance).
+        batch.Should().HaveCount(texts.Length);
+        for (var i = 0; i < texts.Length; i++)
+        {
+            var cosine = LocalEmbedder.CosineSimilarity(individual[i], batch[i]);
+            cosine.Should().BeGreaterThan(0.999f, $"batch vector {i} should match the single-text vector for the same text");
+        }
     }
 
     [Fact]
