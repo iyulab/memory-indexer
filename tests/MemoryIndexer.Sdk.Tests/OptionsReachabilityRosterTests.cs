@@ -50,7 +50,7 @@ public class OptionsReachabilityRosterTests
     /// <c>ConfidenceDecayOptions.DefaultStrategy</c>, <c>InferenceOptions.MaxDepth</c>,
     /// <c>LinkDiscoveryOptions.FindCausalLinks</c>, <c>OptimizationOptions.EnableCompression</c> and
     /// <c>EnableConsolidation</c>, <c>OutdatedDetectionOptions.FocusEntityTypes</c>,
-    /// <c>ProfileExportOptions.IncludeAuditTrail</c>, <c>SubQueryOptions.IncludeCommunityQueries</c>,
+    /// <c>ProfileExportOptions.IncludeAuditTrail</c>,
     /// <c>ContextOptimizationOptions.MaxTokens</c>, <c>ExpansionOptions.OnlyAmbiguous</c>,
     /// <c>HybridGraphOptions.SemanticWeight</c>, <c>SummarizationOptions.Style</c> and
     /// <c>VCMOptions.ConsolidationInterval</c>. Options that were only validated and then used by nothing

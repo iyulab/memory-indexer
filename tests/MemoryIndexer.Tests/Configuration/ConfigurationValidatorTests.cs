@@ -215,31 +215,6 @@ public class ConfigurationValidatorTests
     }
 
     [Fact]
-    public void Validate_TypeBalancerDistributionNotSumTo1_ShouldReturnWarning()
-    {
-        // Arrange
-        var options = new MemoryIndexerOptions
-        {
-            TypeBalancing = new TypeBalancerOptions
-            {
-                TargetDistribution = new()
-                {
-                    [MemoryType.Episodic] = 0.5f,
-                    [MemoryType.Semantic] = 0.5f,
-                    [MemoryType.Procedural] = 0.5f // Sum = 1.5
-                }
-            }
-        };
-
-        // Act
-        var result = _validator.Validate(options);
-
-        // Assert
-        Assert.True(result.IsValid); // Warning, not error
-        Assert.Contains(result.Warnings, w => w.PropertyPath == "TypeBalancing.TargetDistribution");
-    }
-
-    [Fact]
     public void ValidateAndThrow_InvalidOptions_ShouldThrowException()
     {
         // Arrange

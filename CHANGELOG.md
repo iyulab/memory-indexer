@@ -4,6 +4,15 @@ All notable changes to Memory Indexer are documented here.
 
 ## [Unreleased]
 
+### Removed
+- **Breaking: components nothing registered or called are gone** — `IAdaptiveContextAssembler`/`AdaptiveContextAssembler`
+  (with `AssembledContext`, `ContextAssemblyOptions`, `ContextAssemblyStatistics`, `ContextFormat`; context building is the
+  registered `IContextBuilder`), `IGraphQueryExpander`/`GraphQueryExpander` (with `QueryExpansionOptions`, `SubQueryOptions`,
+  `ExpandedQuery`, `QueryEntity`, `GraphSubQuery`, `SubQueryType`, `ExpansionStatistics`; graph context comes from
+  `IGraphRetriever`), and `IMemoryTypeBalancer`/`MemoryTypeBalancer` with the `MemoryIndexerOptions.TypeBalancing` option
+  (`TypeBalancerOptions`): the option was validated and documented as a retrieval boost, but no recall path applied it.
+  Migration: delete the use; remove a `TypeBalancing` configuration section (it never changed ranking).
+
 ### Changed
 - **The packages from this repository depend on each other at exactly the same version** (`[x.y.z]`), not a floor.
   A consumer that moves one of them while a family member it depends on resolves at an older version now gets restore warning NU1608 naming

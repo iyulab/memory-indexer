@@ -19,7 +19,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         ValidateDeduplicationOptions(options.Deduplication, result);
         ValidateMemoryGrowthOptions(options.MemoryGrowth, result);
         ValidateLatencyOptions(options.Latency, result);
-        ValidateTypeBalancerOptions(options.TypeBalancing, result);
         ValidateWorkingMemoryOptions(options.WorkingMemory, result);
 
         return result;
@@ -391,34 +390,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
         }
 
         ValidateThreshold(options.EarlyTerminationConfidence, "Latency.EarlyTerminationConfidence", result);
-    }
-
-    private static void ValidateTypeBalancerOptions(TypeBalancerOptions options, ConfigurationValidationResult result)
-    {
-        if (options.BoostSensitivity < 0)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "TypeBalancing.BoostSensitivity",
-                Message = "Boost sensitivity must be non-negative",
-                CurrentValue = options.BoostSensitivity,
-                ExpectedConstraint = ">= 0"
-            });
-        }
-
-        ValidateThreshold(options.MaxBoost, "TypeBalancing.MaxBoost", result);
-
-        // Validate target distribution sums to approximately 1.0
-        var sum = options.TargetDistribution.Values.Sum();
-        if (sum < 0.95f || sum > 1.05f)
-        {
-            result.Warnings.Add(new ConfigurationWarning
-            {
-                PropertyPath = "TypeBalancing.TargetDistribution",
-                Message = $"Target distribution sum is {sum:F2}, should be close to 1.0",
-                Suggestion = "Adjust distribution values to sum to 1.0"
-            });
-        }
     }
 
     private static void ValidateWorkingMemoryOptions(WorkingMemoryOptions options, ConfigurationValidationResult result)
