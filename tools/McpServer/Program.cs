@@ -283,6 +283,7 @@ static string GetServerInstructions() => """
     - update_memory: Update existing memory content or importance
     - delete_memory: Delete a memory by ID
     - get_memory: Get detailed information about a specific memory
+    - confirm_memory: Confirm a memory is still true (repeated confirmations make it eligible for the Archive tier)
 
     Memory types:
     - episodic: Specific events and experiences with temporal context

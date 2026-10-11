@@ -320,17 +320,21 @@ public class ArchiveStoreOptions
 
 ## MCP Tools
 
-Tools registered via `[McpServerTool]` attribute:
+The core tools (`MemoryTools`, registered by `WithMemoryTools()`; the bundled server registers only these). MCP tool names are the
+method names in snake_case:
 
 | Tool | Operation |
 |------|-----------|
-| `memory_store` | Store with auto-embedding |
-| `memory_recall` | Semantic similarity search |
-| `memory_get` | Get by ID |
-| `memory_list` | List with filters |
-| `memory_update` | Update content/importance |
-| `memory_delete` | Soft or hard delete |
-| `memory_confirm` | Confirm memory (Phase 53: increments ConfirmCount for Archive eligibility) |
+| `store_memory` | Store with auto-embedding |
+| `recall_memory` | Semantic similarity search |
+| `get_memory` | Get by ID |
+| `get_all_memories` | List with filters |
+| `update_memory` | Update content/importance |
+| `delete_memory` | Soft or hard delete |
+| `confirm_memory` | Confirm memory (increments ConfirmCount for Archive eligibility) |
+
+`WithAllMemoryIndexerTools()` registers every tool class the SDK ships, these included; each `With…Tools()` extension in
+`McpServerExtensions` registers one group on its own.
 
 ## Dependency Injection
 

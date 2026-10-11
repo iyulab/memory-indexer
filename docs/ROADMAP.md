@@ -82,9 +82,9 @@ Focus: Expose existing SDK intelligence features via MCP tools and production po
 - Long → Archive: Confidence ≥ 0.8 AND Confirms ≥ 3
 
 **MCP Tools:**
-- `memory_store` / `memory_recall` / `memory_update` / `memory_delete`
-- `memory_confirm` - Explicit confirmation for Archive promotion
-- `memory_get_all` - Filtered retrieval by tier/type
+- `store_memory` / `recall_memory` / `update_memory` / `delete_memory`
+- `confirm_memory` - Explicit confirmation for Archive promotion
+- `get_all_memories` - Filtered retrieval by tier/type
 
 **Performance:**
 - Store: ~2.2μs (460K ops/sec)
