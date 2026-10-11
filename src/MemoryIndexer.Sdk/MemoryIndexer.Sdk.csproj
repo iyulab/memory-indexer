@@ -13,31 +13,6 @@
     <PackageId>MemoryIndexer.Sdk</PackageId>
     <Title>Memory Indexer SDK</Title>
     <PackageProjectUrl>https://github.com/iyulab/memory-indexer</PackageProjectUrl>
-    <PackageReleaseNotes>
-v0.14.0:
-- Add Namespace dimension for sub-user memory isolation
-- SQLite schema migration (namespace column + indexes, backward-compatible)
-- MCP tools: StoreMemory/RecallMemory/GetAllMemories support namespace parameter
-- VirtualContextManager namespace-aware pageIn/consolidate/endSession
-
-v0.4.0:
-- Removed LMSupply dependency - embedding/completion services are now externally injected
-- Pure interface-based design for IEmbeddingService, ITextCompletionService, IRerankerService
-- Consumers provide their own implementations or use adapter packages
-
-v0.3.0:
-- Major restructuring: SDK now includes all implementations
-- Consolidated Storage, Embedding, Intelligence, MCP into single package
-- InMemory and SQLite-vec storage backends
-- Full MCP tool suite
-- OpenTelemetry observability
-
-v0.2.0:
-- Hybrid scoring with keyword matching and content-type boosting
-
-v0.1.0:
-- Initial release with core memory management features
-    </PackageReleaseNotes>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EmbedAllSources>true</EmbedAllSources>

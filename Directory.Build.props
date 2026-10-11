@@ -22,6 +22,8 @@
 
   <PropertyGroup>
     <Version>0.31.0</Version>
+    <!-- nuget.org «Release Notes»: the GitHub release of this version (its notes are the CHANGELOG section). -->
+    <PackageReleaseNotes>https://github.com/iyulab/memory-indexer/releases/tag/v$(Version)</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- PackageReadmeFile is set per project where README exists -->
     <IsPackable>false</IsPackable> <!-- Default: only SDK is packable -->
