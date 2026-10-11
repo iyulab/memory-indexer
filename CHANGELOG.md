@@ -5,9 +5,9 @@ All notable changes to Memory Indexer are documented here.
 ## [Unreleased]
 
 ### Fixed
-- **Every MCP tool `WithAllMemoryIndexerTools()` registers can now be called.** `AdvancedMemoryTools`, `AdaptiveRetrievalTools`
-  and the reflection and self-correction tools were listed but failed on their first call, because `AddMemoryIndexer()` did not
-  register what they need. It now registers `IReflectionEngine`, `IMemorySelfCorrector`, `ITieredRetrievalStrategy`
+- **Every MCP tool class `WithAllMemoryIndexerTools()` registers can now be built from `AddMemoryIndexer()`.**
+  `AdvancedMemoryTools`, `AdaptiveRetrievalTools` and the reflection and self-correction tools were listed, but their tool class
+  could not be built, because `AddMemoryIndexer()` did not register what they need. It now registers `IReflectionEngine`, `IMemorySelfCorrector`, `ITieredRetrievalStrategy`
   (`TieredMemoryRetriever`) and `DuplicateDetector`. `ProfileEvolutionTools` now carries `[McpServerToolType]`, so
   `WithToolsFromAssembly` finds it.
 - **The default in-memory store applies every `MemoryFilterOptions` filter.** `InMemoryMemoryStore.GetAllAsync` ignored
@@ -16,7 +16,8 @@ All notable changes to Memory Indexer are documented here.
 - **Tiered recall returns only the requesting user's working memories.** Before, the Short tier returned every working
   memory held in the process.
 - **The `check_duplicate` tool gives the same verdict as storing a memory.** It now uses the registered
-  `IDeduplicationService` and its `Deduplication` options.
+  `IDeduplicationService` and its `Deduplication` options. With `Deduplication.Enabled = false`, it reports «not a duplicate»,
+  as the write path does.
 
 ### Changed
 - **Breaking** — **`MemoryStoreMigrator.MigrateAsync` with no `userIds` migrates every user the source store holds.** Before,

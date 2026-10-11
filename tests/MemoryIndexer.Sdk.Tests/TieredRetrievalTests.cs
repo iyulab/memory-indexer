@@ -75,6 +75,9 @@ public class TieredRetrievalTests
         var working = await StoreAsync(sp, "bob", "Bob is making tea right now.", Tier.Short);
         await sp.GetRequiredService<IShortTermMemory>().PromoteAsync(working, Ct);
 
+        // Positive control: the working memory is really held, and its owner gets it from the Short tier
+        Assert.Contains(working.Id, IdsIn(await RetrieveAsync(sp, "bob"), Tier.Short));
+
         var result = await RetrieveAsync(sp, "alice");
         var all = result.TierResults.Values.SelectMany(v => v).Select(s => s.Memory.Id).ToList();
 
