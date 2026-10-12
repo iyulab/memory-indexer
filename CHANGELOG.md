@@ -2,6 +2,28 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [v0.33.0] - Unreleased
+
+### Changed
+- **Breaking** — **`SearchOptions.MaxLimit` caps a hybrid search.** A request whose `Limit` is larger than `MaxLimit`
+  (default 100) now returns at most `MaxLimit` results. Before, the option was range-checked and then used by nothing.
+  Migration: a caller that needs more results than 100 raises `MaxLimit`.
+
+### Removed
+- **Breaking** — **`StorageOptions.CollectionName`.** Nothing read it: the SQLite store uses fixed table names and the
+  in-memory store has none. Migration: delete the property from configuration; a `MemoryIndexer:Storage:CollectionName`
+  key is now ignored by the binder, as it was in effect before.
+- **The `deploy/` directory** (Dockerfile, docker-compose, Kubernetes manifests, production checklist) and
+  `samples/appsettings.qdrant-production.json`. They configured a Qdrant storage type and an Ollama embedding provider
+  that the library does not have: the storage type fails the host at startup, and the Ollama provider fails at the first
+  embedding. Storage is `InMemory` or `SqliteVec`, or
+  your own `IMemoryStore`; the docs no longer list Qdrant as built in.
+
+### Dependencies
+- Test-only: `Iyu.Conventions.Testing` 0.7.0. The options roster names `ConfigurationValidator` as a validator, so an option
+  only it reads is reported unread, and the completion request (`TextCompletionOptions`) is checked the other way round:
+  every field is filled by the library.
+
 ## [v0.32.0] - 2026-10-11
 
 ### Fixed

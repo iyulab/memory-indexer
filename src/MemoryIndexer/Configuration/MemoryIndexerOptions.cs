@@ -181,11 +181,6 @@ public sealed class StorageOptions
     public string ConnectionString { get; set; } = "memory.db";
 
     /// <summary>
-    /// Collection/table name for memories.
-    /// </summary>
-    public string CollectionName { get; set; } = "memories";
-
-    /// <summary>
     /// Vector dimensions for storage.
     /// </summary>
     public int VectorDimensions { get; set; } = 768;
@@ -422,7 +417,8 @@ public sealed class SearchOptions
     public int DefaultLimit { get; set; } = 5;
 
     /// <summary>
-    /// Maximum number of results allowed.
+    /// Maximum number of results one hybrid search returns. A request whose <c>Limit</c> is larger gets at most this many.
+    /// Default: 100.
     /// </summary>
     public int MaxLimit { get; set; } = 100;
 

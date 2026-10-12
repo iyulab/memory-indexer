@@ -47,17 +47,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
             });
         }
 
-        if (string.IsNullOrWhiteSpace(options.CollectionName))
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Storage.CollectionName",
-                Message = "Collection name cannot be empty",
-                CurrentValue = options.CollectionName,
-                ExpectedConstraint = "non-empty string"
-            });
-        }
-
         // SQLite options are validated if configured (storage provider is determined by DI)
         ValidateSqliteOptions(options.Sqlite, result);
     }

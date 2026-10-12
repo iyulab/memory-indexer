@@ -46,7 +46,8 @@ public sealed partial class HybridSearchService : IHybridSearchService
 
         var denseWeight = options.DenseWeight ?? _options.DenseWeight;
         var sparseWeight = options.SparseWeight ?? _options.SparseWeight;
-        var limit = options.Limit ?? _options.DefaultLimit;
+        // SearchOptions.MaxLimit caps what one request can ask for; a larger Limit returns at most MaxLimit results.
+        var limit = Math.Min(options.Limit ?? _options.DefaultLimit, _options.MaxLimit);
         var rrfK = options.RrfK ?? _options.RrfK;
 
         // Determine if HyDE should be used

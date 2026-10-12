@@ -84,18 +84,43 @@ public class OptionsReachabilityRosterTests
     /// </summary>
     private static readonly Dictionary<string, string[]> KnownUnread = new()
     {
-        // Request fields the library populates and the consumer's ITextCompletionService
-        // implementation reads - so they are read, just not inside these assemblies. The three that
-        // nothing populated (TopP, FrequencyPenalty, PresencePenalty) were removed in 0.18.0.
-        ["MemoryIndexer.Interfaces.TextCompletionOptions"] =
-        [
-            "MaxTokens", "StopSequences", "Temperature",
-        ],
-
+        // Read by the bundled MCP server (tools/McpServer LocalEmbeddingService), which loads the model and applies the
+        // timeout; the library itself builds no embedding client, so nothing in these assemblies reads them.
+        ["MemoryIndexer.Configuration.EmbeddingOptions"] = ["Model", "TimeoutSeconds"],
     };
 
+    // A request the library fills and hands to the application's ITextCompletionService - nothing here reads it, so it is
+    // judged the other way round (EveryCompletionRequestField_IsSent).
+    private static bool IsOutboundRequest(Type type) => type == typeof(MemoryIndexer.Interfaces.TextCompletionOptions);
+
+    /// <remarks>
+    /// <c>ConfigurationValidator</c> is named as a validator (Iyu.Conventions.Testing 0.7.0): it range-checks settings, and
+    /// before 0.7.0 its reads counted as uses. Naming it surfaced four options only it read -
+    /// <c>Storage.CollectionName</c> (nothing used it; removed), <c>Search.MaxLimit</c> (now caps hybrid search) and the two
+    /// embedding settings above.
+    /// </remarks>
     [Fact]
     public void EveryPublicOption_IsRead() =>
-        OptionsReachability.Scan(Libraries, OptionsTypes.WithNestedSettings(Libraries, OptionsTypes.NamedWith("Options", "Config", "Configuration")))
+        OptionsReachability.Scan(
+                Libraries,
+                t => !IsOutboundRequest(t)
+                     && OptionsTypes.WithNestedSettings(Libraries, OptionsTypes.NamedWith("Options", "Config", "Configuration"))(t),
+                OptionsValidation.DeclaredIn(typeof(MemoryIndexer.Configuration.ConfigurationValidator)))
             .ShouldMatchRoster(KnownUnread);
+
+    /// <summary>
+    /// Every field of the completion request is filled by the library somewhere - a field it never sets is a parameter an
+    /// implementation always reads as the default. (TopP, FrequencyPenalty and PresencePenalty were exactly that until
+    /// 0.18.0 removed them.)
+    /// </summary>
+    [Fact]
+    public void EveryCompletionRequestField_IsSent()
+    {
+        var report = OutboundAssignment.Scan(Libraries, IsOutboundRequest);
+
+        // An empty roster also matches a scan that found no request type at all.
+        Assert.Equal([typeof(MemoryIndexer.Interfaces.TextCompletionOptions)], report.OutboundTypes);
+        Assert.Contains("MemoryIndexer.Interfaces.TextCompletionOptions.Temperature", report.Assigned);
+        report.ShouldMatchRoster(new Dictionary<string, string[]>());
+    }
 }

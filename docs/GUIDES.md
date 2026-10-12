@@ -668,9 +668,8 @@ public class ReflectionService
 {
   "MemoryIndexer": {
     "Storage": {
-      "Type": "Qdrant",
-      "Endpoint": "https://qdrant.production:6333",
-      "ApiKey": "${QDRANT_API_KEY}"  // From environment
+      "Type": "SqliteVec",          // or register your own IMemoryStore (see "Custom IMemoryStore Implementation")
+      "ConnectionString": "/var/lib/memory-indexer/memory.db"
     },
     "Embedding": {
       "Provider": "Custom",       // your IEmbeddingService holds its endpoint and key

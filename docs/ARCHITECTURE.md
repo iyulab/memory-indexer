@@ -14,7 +14,7 @@ src/
 │   └── Configuration/           # Options and settings
 │
 └── MemoryIndexer.Sdk/           # Full implementation (heavy package)
-    ├── Storage/                 # Sqlite, Qdrant
+    ├── Storage/                 # SQLite (sqlite-vec)
     ├── Embedding/               # Local (LMSupply), Mock
     ├── Completion/              # Local (LMSupply), Mock
     ├── Intelligence/            # All AI/ML features
@@ -88,7 +88,7 @@ Storage location based on persistence and lifespan.
 |------|---------------|---------|-----------------|
 | `Buffer` (T0) | 60s idle OR 500 tokens OR 3 turns | In-memory | Atkinson-Shiffrin sensory memory |
 | `Short` (T1) | 10min OR 2K tokens OR topic change | Memory cache | Baddeley's working memory |
-| `Long` (T2) | Session duration | Vector DB (SQLite-vec, Qdrant) | Tulving's episodic memory |
+| `Long` (T2) | Session duration | Vector DB (SQLite-vec, or your own `IMemoryStore`) | Tulving's episodic memory |
 | `Archive` (T3) | Confidence ≥ 0.8 AND Confirms ≥ 3 | Vector DB (persistent) | Tulving's semantic memory |
 
 ## Memory Flow Diagram
@@ -123,7 +123,7 @@ Storage location based on persistence and lifespan.
 │  LONG (T2)                                                              │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │ Session experiences • Temporal events • Compressed episodes       │  │
-│  │ Storage: Vector DB (SQLite-vec or Qdrant)                         │  │
+│  │ Storage: Vector DB (SQLite-vec or custom)                         │  │
 │  │ Scope: Session (S1)                                               │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────┬─────────────────────────────────────────┘
@@ -202,7 +202,7 @@ Storage location based on persistence and lifespan.
 │  │  Embedding │ │  Storage   │ │  Scoring   │      │
 │  │  Service   │ │   Store    │ │  Service   │      │
 │  └────────────┘ └────────────┘ └────────────┘      │
-│  Providers: Mock, Custom (your IEmbeddingService), SQLite, Qdrant │
+│  Providers: Mock, Custom (your IEmbeddingService), SQLite         │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -391,7 +391,7 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
 {
   "MemoryIndexer": {
     "Storage": {
-      "Type": "InMemory | SqliteVec | Qdrant",
+      "Type": "InMemory | SqliteVec",
       "ConnectionString": "memory.db",
       "VectorDimensions": 1024
     },
