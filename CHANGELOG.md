@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.33.0] - Unreleased
+## [v0.33.0] - 2026-10-12
 
 ### Changed
 - **Breaking** — **`SearchOptions.MaxLimit` caps a hybrid search.** A request whose `Limit` is larger than `MaxLimit`
