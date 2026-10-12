@@ -15,8 +15,8 @@ All notable changes to Memory Indexer are documented here.
   key is now ignored by the binder, as it was in effect before.
 - **The `deploy/` directory** (Dockerfile, docker-compose, Kubernetes manifests, production checklist) and
   `samples/appsettings.qdrant-production.json`. They configured a Qdrant storage type and an Ollama embedding provider
-  that the library does not have: the storage type fails the host at startup, and the Ollama provider fails at the first
-  embedding. Storage is `InMemory` or `SqliteVec`, or
+  that the library does not have: neither `Storage:Type = Qdrant` nor `Embedding:Provider = Ollama` binds (the Ollama value
+  was removed in 0.30.0), so a host configured from them failed at startup. Storage is `InMemory` or `SqliteVec`, or
   your own `IMemoryStore`; the docs no longer list Qdrant as built in.
 
 ### Dependencies
