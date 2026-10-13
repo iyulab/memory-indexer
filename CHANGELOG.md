@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [v0.34.0] - Unreleased
+## [v0.34.0] - 2026-10-14
 
 ### Changed
 - **Breaking** — **`AddMemoryIndexer()` runs the configuration rules at startup.** The registered `IConfigurationValidator`
