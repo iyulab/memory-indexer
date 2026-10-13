@@ -25,6 +25,21 @@ public class ConfigurationValidationAtStartupTests
         Assert.True(result.IsValid, string.Join("; ", result.Errors.Select(e => $"{e.PropertyPath}: {e.Message}")));
     }
 
+    /// <summary>The sample configuration files a reader copies pass the rules the host now runs at startup.</summary>
+    [Theory]
+    [InlineData("appsettings.mcp-server.json")]
+    [InlineData("appsettings.sdk-embedded.json")]
+    public void TheSampleConfigurations_PassTheRules(string file)
+    {
+        var path = Path.Combine(RepositoryRoot(), "samples", file);
+        var options = new MemoryIndexerOptions();
+        new ConfigurationBuilder().AddJsonFile(path).Build().GetSection(MemoryIndexerOptions.SectionName).Bind(options);
+
+        var result = new ConfigurationValidator().Validate(options);
+
+        Assert.True(result.IsValid, string.Join("; ", result.Errors.Select(e => $"{e.PropertyPath}: {e.Message}")));
+    }
+
     [Fact]
     public async Task AValueOutOfRange_FailsTheHostAtStartup_NamingTheSetting()
     {
@@ -74,6 +89,14 @@ public class ConfigurationValidationAtStartupTests
 
         Assert.Contains(MemoryIndexerTelemetry.EvaluationMeterName, meters);
         Assert.All(meters, name => Assert.Contains(name, MemoryIndexerTelemetry.MeterNames));
+    }
+
+    private static string RepositoryRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "MemoryIndexer.slnx")))
+            dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("MemoryIndexer.slnx not found above the test output directory");
     }
 
     private static IHost HostWith(Dictionary<string, string?> settings)
