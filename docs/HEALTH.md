@@ -226,26 +226,20 @@ builder.Services.AddHealthChecks()
 
 ### OpenTelemetry
 
-Health check metrics are automatically exported when OpenTelemetry is configured:
+Health check results are not metrics: they are served by the endpoints above and are not exported through
+OpenTelemetry. `AddMemoryIndexerObservability()` exports the library's operation metrics and traces (store, recall,
+embedding — the `MemoryIndexer` meter and activity source):
 
 ```csharp
-builder.Services.AddOpenTelemetry()
-    .WithMetrics(metrics => metrics
-        .AddAspNetCoreInstrumentation()
-        .AddHealthCheckPublisher());
+builder.Services.AddMemoryIndexerObservability(options =>
+    options.OtlpEndpoint = "http://localhost:4317");
 ```
 
 ### Prometheus
 
-Health check results can be scraped via the `/metrics` endpoint:
-
-```
-# HELP health_check_status Health check status (1=healthy, 0=unhealthy)
-# TYPE health_check_status gauge
-health_check_status{name="Buffer"} 1
-health_check_status{name="Short-Term Memory"} 1
-health_check_status{name="Vector Database"} 1
-```
+To scrape health status, point the probe or a blackbox exporter at `/health/ready` (or `/health`) — the JSON
+response above carries each component's status. The operation metrics reach Prometheus through your
+OpenTelemetry collector or exporter.
 
 ## Troubleshooting
 
@@ -283,4 +277,4 @@ health_check_status{name="Vector Database"} 1
 
 - [Architecture](ARCHITECTURE.md) - 4-tier memory architecture
 - [Configuration](GUIDES.md) - Health check configuration options
-- [Observability](ARCHITECTURE.md#observability) - OpenTelemetry integration
+- [Observability](ARCHITECTURE.md#metrics) - OpenTelemetry integration

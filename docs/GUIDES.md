@@ -18,7 +18,8 @@ Practical patterns and best practices for Memory Indexer in production applicati
 
 ### Full Configuration Schema
 
-Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the complete schema with default values:
+Memory Indexer uses `MemoryIndexerOptions` (section `MemoryIndexer`) for configuration, plus the tier services' own
+sections under `MemoryIndexer:VCM`. Below are the sections this guide covers, with their default values:
 
 ```json
 {
@@ -26,31 +27,35 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
     "DefaultUserId": "default",
     "Storage": {
       "Type": "InMemory",
-      "ConnectionString": "memories.db"
+      "ConnectionString": "memory.db"
     },
     "Embedding": {
-      "Provider": "Mock",
-      "Model": "bge-m3",
-      "Endpoint": "http://localhost:11434",
-      "ApiKey": null,
-      "Dimensions": 1024
+      "Provider": "Custom",
+      "Model": "nomic-embed-text",
+      "Dimensions": 768
+    },
+    "Completion": {
+      "Provider": "None"
+    },
+    "SensoryBuffer": {
+      "IdleTimeout": "00:01:00",
+      "TokenThreshold": 500,
+      "TurnThreshold": 3
+    },
+    "ArchivePromotion": {
+      "MinConfirmationCount": 3,
+      "MinConfidenceThreshold": 0.8
     },
     "VCM": {
-      "Buffer": {
-        "MaxIdleSeconds": 60,
-        "TokenThreshold": 500,
-        "TurnThreshold": 3
+      "WorkingMemory": {
+        "Capacity": 7,
+        "SlidingExpiration": "00:30:00"
       },
-      "ShortTermMemory": {
-        "Capacity": 9,
-        "DefaultTtl": "00:10:00"
-      },
-      "LongTermStore": {
-        "MaxSessionMemories": 1000
-      },
-      "ArchiveStore": {
+      "SemanticStore": {
         "MinConfirmationCount": 3,
-        "MinConfidenceThreshold": 0.8
+        "MinConfidenceThreshold": 0.8,
+        "ConfidenceBoostPerConfirmation": 0.1,
+        "MaxEntriesPerUser": 500
       }
     },
     "WorkingMemory": {
@@ -81,9 +86,9 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
 |---------|--------|------|---------|-------------|
 | *(root)* | **DefaultUserId** | string | `"default"` | Fallback user ID used by MCP tools and REST controllers when no explicit user ID is provided in a request. Override to isolate single-user deployments or set a meaningful default identity. |
 | **Storage** | Type | string | "InMemory" | Storage provider: `InMemory`, `SqliteVec` |
-| | ConnectionString | string | "memories.db" | Database path for SqliteVec |
+| | ConnectionString | string | "memory.db" | Database path for SqliteVec |
 | **Embedding** | Provider | string | "Custom" | `Mock` (tests, local development) or `Custom` — the application's own `IEmbeddingService` (the library builds no embedding client; the bundled MCP server supplies an LMSupply model) |
-| | Dimensions | int | 1024 | Vector dimensions (must match your embedding model) |
+| | Dimensions | int | 768 | Vector dimensions (must match your embedding model) |
 | **Completion** | Provider | string | "None" | Used only when the application registers no `ITextCompletionService` of its own (the library builds no LLM client — register one that wraps your model, before or after `AddMemoryIndexer()`). `None`: no completion — merge/summarize and virtual-context consolidation use their non-LLM fallbacks; fact/knowledge extraction and conflict detection return empty or default results and log why. `Mock`: fixed placeholder text, for tests only (a merge would store it as memory content). `Custom` without a registration throws when the service is resolved |
 | **WorkingMemory** | Capacity | int | 9 | Short tier capacity (7±2 rule); excess items are promoted to Long when `EnableCapacityEnforcement` is true |
 | | IdleTimeout | TimeSpan | 00:10:00 | Archive working memory to Long after this idle time |
@@ -92,19 +97,24 @@ Memory Indexer uses `MemoryIndexerOptions` for configuration. Below is the compl
 | | EnableTopicChangeDetection | bool | true | Whether a topic change (similarity below `TopicChangeSimilarityThreshold`, default 0.5) triggers archival |
 | | SummarizeBeforeArchival | bool | true | Write an extractive session summary when archiving |
 | **Intelligence** | ClassificationEnabled | bool | true | Classify a new memory whose type or importance was not given |
-| **VCM.Buffer** | MaxIdleSeconds | int | 60 | Promote to Short after idle timeout |
+| **SensoryBuffer** | IdleTimeout | TimeSpan | 00:01:00 | Promote to Short after idle timeout |
 | | TokenThreshold | int | 500 | Promote when buffer exceeds token count |
 | | TurnThreshold | int | 3 | Promote after N turns |
-| **VCM.ShortTermMemory** | Capacity | int | 9 | Working memory capacity (7±2 rule) |
-| | DefaultTtl | TimeSpan | 00:10:00 | Time-to-live before promotion to Long |
-| **VCM.ArchiveStore** | MinConfirmationCount | int | 3 | Required confirmations for Archive promotion |
+| **ArchivePromotion** | MinConfirmationCount | int | 3 | Required confirmations for Archive promotion |
 | | MinConfidenceThreshold | float | 0.8 | Required confidence for Archive promotion |
+| **VCM.WorkingMemory** | Capacity | int | 7 | Capacity of the Short tier's session cache |
+| | SlidingExpiration | TimeSpan | 00:30:00 | Evict an idle Short-tier entry after this time |
+| **VCM.SemanticStore** | MinConfirmationCount | int | 3 | Confirmations the Long → Archive promoter requires |
+| | MinConfidenceThreshold | float | 0.8 | Confidence the Long → Archive promoter requires |
+| | MaxEntriesPerUser | int | 500 | Archive entries kept per user |
 
 ### DI Registration Patterns
 
 **Basic (InMemory + Mock Embedding):**
 ```csharp
-services.AddMemoryIndexer();  // Uses defaults
+// InMemory storage is the default; Mock embeddings are deterministic but not semantic (development, tests).
+// Without this line the default provider is Custom: register your own IEmbeddingService (next pattern).
+services.AddMemoryIndexer(options => options.Embedding.Provider = EmbeddingProvider.Mock);
 ```
 
 **With External Embedding Service:**
@@ -168,14 +178,19 @@ This setting was previously a private hardcoded constant inside individual MCP t
 
 ### Configuration Validation
 
-Memory Indexer includes built-in configuration validation (21 rules). Validation runs automatically at startup and logs warnings for common issues:
+Memory Indexer registers an `IConfigurationValidator` that checks the options for common issues (dimension
+mismatches, thresholds out of range, contradictory settings). It is not run for you — the host only fails at
+startup when a configuration value does not bind. Run it once the provider is built:
 
 ```csharp
-// Enable detailed validation logging
-services.AddMemoryIndexer(options =>
-{
-    // ...
-}).ValidateOnStart();  // Throws if critical config issues found
+var options = serviceProvider.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
+var validation = serviceProvider.GetRequiredService<IConfigurationValidator>().Validate(options);
+
+foreach (var warning in validation.Warnings)
+    Console.WriteLine($"{warning.PropertyPath}: {warning.Message} ({warning.Suggestion})");
+
+if (!validation.IsValid)
+    throw new ConfigurationValidationException(validation);  // or call ValidateAndThrow(options)
 ```
 
 ---
@@ -201,6 +216,7 @@ public interface IMemoryStore
     // Bulk operations
     Task<int> DeleteByUserAsync(string userId, bool hardDelete = false, CancellationToken ct = default);
     Task<int> DeleteBySessionAsync(string userId, string sessionId, bool hardDelete = false, CancellationToken ct = default);
+    Task<int> DeleteByNamespaceAsync(string userId, string namespaceName, bool hardDelete = false, CancellationToken ct = default);
 
     // Search & retrieval - MemorySearchOptions.UserId is required; throw ArgumentException when it is empty
     Task<IReadOnlyList<MemorySearchResult>> SearchAsync(ReadOnlyMemory<float> queryEmbedding, MemorySearchOptions options, CancellationToken ct = default);
@@ -208,6 +224,7 @@ public interface IMemoryStore
 
     // Statistics
     Task<long> GetCountAsync(string userId, CancellationToken ct = default);
+    Task<IReadOnlyList<string>> GetUserIdsAsync(CancellationToken ct = default);
     Task<IReadOnlyDictionary<MemoryType, int>> GetTypeCountsAsync(string userId, CancellationToken ct = default);
 
     // Lifecycle
@@ -268,14 +285,16 @@ public class MyPostgresMemoryStore : IMemoryStore
     }
 
     public Task<IReadOnlyList<MemoryUnit>> GetByIdsAsync(
-        IEnumerable<Guid> ids, CancellationToken ct)
+        string userId, IEnumerable<Guid> ids, CancellationToken ct)
     {
-        // Option 1: Default implementation
-        return this.GetByIdsDefaultAsync(ids, ct);
+        // Option 1: Default implementation (iterates GetByIdAsync for this user)
+        return this.GetByIdsDefaultAsync(userId, ids, ct);
 
         // Option 2: Native multi-get (recommended)
-        // return _db.Memories.Where(m => ids.Contains(m.Id)).ToListAsync(ct);
+        // return _db.Memories.Where(m => m.UserId == userId && ids.Contains(m.Id)).ToListAsync(ct);
     }
+
+    // ... the other IMemoryStore members
 }
 ```
 
@@ -354,6 +373,8 @@ public class HybridMemoryStore : IMemoryStore
             })
             .ToList();
     }
+
+    // ... the other IMemoryStore members
 }
 ```
 
@@ -486,9 +507,10 @@ public class RelationshipTracker
         await _graph.LinkMemoryToGraphAsync(memory, [triple]);
     }
 
-    public async Task<List<string>> FindRelatedMemories(Guid memoryId)
+    public async Task<List<string>> FindRelatedMemories(string userId, Guid memoryId)
     {
         var related = await _graph.FindRelatedMemoriesAsync(
+            userId,
             memoryId,
             maxHops: 2,
             topK: 10);
@@ -551,6 +573,9 @@ public class SessionManager
 public class ChatService
 {
     private readonly IContextBuilder _contextBuilder;
+    private readonly IChatClient _chat;   // your model, through Microsoft.Extensions.AI
+
+    public ChatService(IContextBuilder contextBuilder, IChatClient chat) => (_contextBuilder, _chat) = (contextBuilder, chat);
 
     public async Task<string> GenerateResponse(
         string userId, string sessionId, string userMessage)
@@ -570,13 +595,13 @@ public class ChatService
         var bundle = await _contextBuilder.BuildAsync(request, "RecentHeavy");
 
         // Send to LLM - NO conversation history needed!
-        var response = await _llm.GenerateAsync(new
-        {
-            system = $"Context from memory:\n{bundle.Content}",
-            user = userMessage
-        });
+        var response = await _chat.GetResponseAsync(
+        [
+            new ChatMessage(ChatRole.System, $"Context from memory:\n{bundle.Content}"),
+            new ChatMessage(ChatRole.User, userMessage)
+        ]);
 
-        return response;
+        return response.Text;
     }
 }
 ```
@@ -669,7 +694,8 @@ public class ReflectionService
   "MemoryIndexer": {
     "Storage": {
       "Type": "SqliteVec",          // or register your own IMemoryStore (see "Custom IMemoryStore Implementation")
-      "ConnectionString": "/var/lib/memory-indexer/memory.db"
+      "ConnectionString": "/var/lib/memory-indexer/memory.db",
+      "Sqlite": { "EnableAutoMaintenance": true }
     },
     "Embedding": {
       "Provider": "Custom",       // your IEmbeddingService holds its endpoint and key
@@ -677,8 +703,7 @@ public class ReflectionService
       "Dimensions": 3072
     },
     "VCM": {
-      "WorkingMemory": { "Capacity": 10 },  // Larger for production
-      "EnableAutoMaintenance": true
+      "WorkingMemory": { "Capacity": 10 }   // Larger for production
     }
   }
 }
@@ -686,24 +711,20 @@ public class ReflectionService
 
 ### Secrets Management
 
+The library builds no embedding or completion client, so it holds no API key: the key belongs to the
+`IEmbeddingService` / `IChatClient` you register.
+
 **❌ Wrong:**
 ```csharp
-options.Embedding.ApiKey = "sk-1234567890abcdef";  // Hardcoded
+var apiKey = "sk-1234567890abcdef";  // Hardcoded: in the binary and in source control
 ```
 
 **✅ Correct:**
 ```csharp
-// Use environment variables
-options.Embedding.ApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-
-// Or use .NET Secret Manager (development)
-builder.Configuration.AddUserSecrets<Program>();
-
-// Or use Azure Key Vault (production)
-builder.Configuration.AddAzureKeyVault(
-    new Uri("https://keyvault.vault.azure.net/"),
-    new DefaultAzureCredential()
-);
+// Environment variables, the .NET Secret Manager (development) and a vault provider such as Azure Key Vault
+// (production) all surface through IConfiguration, so the code reads the key the same way everywhere
+var apiKey = builder.Configuration["OpenAI:ApiKey"]
+    ?? throw new InvalidOperationException("OpenAI:ApiKey is not configured");
 ```
 
 ### Memory Type Selection
@@ -741,7 +762,8 @@ builder.Configuration.AddAzureKeyVault(
 
 ## Anti-Patterns
 
-> In these snippets `memory` is an `IMemoryService`, `primitives` an `IMemoryPrimitives` and `store` an `IMemoryStore`, all resolved from DI.
+> In these snippets `memory` is an `IMemoryService`, `primitives` an `IMemoryPrimitives` and `store` an `IMemoryStore`, all resolved from DI;
+> `userId`, `content`, `query` and `items` (a list of texts) are the caller's strings, and `_logger` its `ILogger`.
 
 ### ❌ Anti-Pattern 1: Storing Everything
 
@@ -816,17 +838,20 @@ catch (Exception ex) when (ex is not OperationCanceledException)
 // Storing duplicates
 foreach (var item in items)
 {
-    await memory.RememberAsync(userId, null, item.Content);  // May create duplicates
+    await memory.RememberAsync(userId, null, item);  // May create duplicates
 }
 ```
 
 **Solution:**
 ```csharp
 // Deduplication is automatic in SDK, but you can pre-check:
-var existing = await primitives.RetrieveAsync(new RetrieveRequest { UserId = userId, Query = item.Content, Limit = 1 });
-if (existing.FirstOrDefault() is not { Score: >= 0.95f })  // Not an exact duplicate
+foreach (var item in items)
 {
-    await memory.RememberAsync(userId, null, item.Content);
+    var existing = await primitives.RetrieveAsync(new RetrieveRequest { UserId = userId, Query = item, Limit = 1 });
+    if (existing.FirstOrDefault() is not { Score: >= 0.95f })  // Not an exact duplicate
+    {
+        await memory.RememberAsync(userId, null, item);
+    }
 }
 ```
 
@@ -973,48 +998,61 @@ var results = await primitives.RetrieveAsync(new RetrieveRequest
 
 ### Unit Testing
 
+Test your own code against the library's interfaces — here the `ConversationService` from
+[Conversation History Management](#1-conversation-history-management), with an NSubstitute substitute for `IMemoryService`:
+
 ```csharp
-[Fact]
-public async Task StoreAsync_ShouldStoreMemory()
+using NSubstitute;
+using Xunit;
+
+public class ConversationServiceTests
 {
-    // Arrange
-    var mockStore = new Mock<IMemoryStore>();
-    var service = new MemoryService(mockStore.Object, ...);
+    [Fact]
+    public async Task ProcessUserMessage_RemembersTheTurnWithItsRole()
+    {
+        // Arrange
+        var memory = Substitute.For<IMemoryService>();
+        var conversations = new ConversationService(memory);
 
-    // Act
-    var result = await service.StoreAsync("user1", "test content");
+        // Act
+        await conversations.ProcessUserMessage("user1", "session1", "I like apples");
 
-    // Assert
-    Assert.NotNull(result);
-    mockStore.Verify(x => x.AddAsync(It.IsAny<MemoryUnit>(), default), Times.Once);
+        // Assert
+        await memory.Received(1).RememberAsync("user1", "session1", "I like apples", role: "user");
+    }
 }
 ```
 
 ### Integration Testing
 
 ```csharp
-[Fact]
-public async Task EndToEnd_StoreAndRecall()
+using Xunit;
+
+public class MemoryIndexerIntegrationTests
 {
-    // Use InMemory providers for fast tests (InMemory is the default)
-    var services = new ServiceCollection();
-    services.AddMemoryIndexer(options =>
+    [Fact]
+    public async Task EndToEnd_RememberAndRecall()
     {
-        options.Embedding.Provider = EmbeddingProvider.Mock;
-    });
+        // Use InMemory providers for fast tests (InMemory is the default); the Mock embedder needs no model
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddMemoryIndexer(options =>
+        {
+            options.Embedding.Provider = EmbeddingProvider.Mock;
+        });
 
-    var provider = services.BuildServiceProvider();
-    var memory = provider.GetRequiredService<MemoryService>();
+        await using var provider = services.BuildServiceProvider();
+        var memory = provider.GetRequiredService<IMemoryService>();
 
-    // Store
-    await memory.StoreAsync("user1", "I like apples", importance: 0.8f);
+        // Store
+        await memory.RememberAsync("user1", "session1", "I like apples");
 
-    // Recall
-    var results = await memory.RecallAsync("user1", "fruit preferences");
+        // Recall (the Mock embedder is not semantic: query with the stored text)
+        var context = await memory.RecallAsync("user1", "session1", "I like apples");
 
-    // Assert
-    Assert.Single(results);
-    Assert.Contains("apples", results[0].Memory.Content);
+        // Assert
+        Assert.Contains(context.AllMemories(), m => m.Content.Contains("apples"));
+    }
 }
 ```
 
@@ -1026,14 +1064,14 @@ var scenario = Scenario.Create("memory_operations", async context =>
 {
     var step1 = await Step.Run("store", context, async () =>
     {
-        await memory.StoreAsync($"user{context.ScenarioInfo.ThreadId}",
+        await memory.RememberAsync($"user{context.ScenarioInfo.ThreadId}", sessionId: null,
             $"Test content {context.InvocationNumber}");
         return Response.Ok();
     });
 
     var step2 = await Step.Run("recall", context, async () =>
     {
-        await memory.RecallAsync($"user{context.ScenarioInfo.ThreadId}", "test");
+        await memory.RecallAsync($"user{context.ScenarioInfo.ThreadId}", sessionId: null, "test");
         return Response.Ok();
     });
 

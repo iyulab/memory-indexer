@@ -24,7 +24,7 @@ dotnet add package MemoryIndexer.Sdk
 
 ```csharp
 using Microsoft.SemanticKernel;
-using MemoryIndexer;
+using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Extensions;
 
 var builder = Kernel.CreateBuilder();
@@ -50,8 +50,11 @@ var kernel = builder.Build();
 ### Memory-Enhanced Chat Function
 
 ```csharp
+using System.ComponentModel;
 using MemoryIndexer.Interfaces;
+using MemoryIndexer.Models;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
 
 public class MemoryChatPlugin
 {
@@ -145,6 +148,7 @@ using LangChain.Chains;
 using LangChain.Providers;
 using LangChain.Providers.OpenAI;
 using MemoryIndexer.Interfaces;
+using MemoryIndexer.Models;
 
 public class MemoryConversationChain
 {
@@ -254,6 +258,7 @@ dotnet add package MemoryIndexer.Sdk
 using AutoGen.Core;
 using AutoGen.OpenAI;
 using MemoryIndexer.Interfaces;
+using MemoryIndexer.Models;
 
 public class MemoryAgent : IAgent
 {
@@ -339,13 +344,17 @@ public class MemoryMultiAgentSystem
 {
     private readonly IMemoryService _memory;
     private readonly string _userId;
+    private readonly string _apiKey;
+
+    public MemoryMultiAgentSystem(IMemoryService memory, string userId, string apiKey) =>
+        (_memory, _userId, _apiKey) = (memory, userId, apiKey);
 
     public async Task RunCollaborativeTaskAsync(string task)
     {
         // Create agents with shared memory
-        var planner = new MemoryAgent(_memory, _userId, apiKey);
-        var executor = new MemoryAgent(_memory, _userId, apiKey);
-        var reviewer = new MemoryAgent(_memory, _userId, apiKey);
+        var planner = new MemoryAgent(_memory, _userId, _apiKey);
+        var executor = new MemoryAgent(_memory, _userId, _apiKey);
+        var reviewer = new MemoryAgent(_memory, _userId, _apiKey);
 
         // Sequential conversation
         var planMessage = await planner.GenerateReplyAsync(
@@ -406,10 +415,15 @@ public class MemoryIndexerProvider : IMemoryProvider
 ### Custom Chat Loop with Memory
 
 ```csharp
+using System.Net.Http.Json;
+
 public class CustomMemoryChatLoop
 {
     private readonly IMemoryProvider _memory;
     private readonly HttpClient _httpClient;
+
+    public CustomMemoryChatLoop(IMemoryProvider memory, HttpClient httpClient) =>
+        (_memory, _httpClient) = (memory, httpClient);
 
     public async Task<string> ChatAsync(string userId, string message)
     {
@@ -446,11 +460,16 @@ public class CustomMemoryChatLoop
         return result!.Message;
     }
 }
+
+// The shape of your LLM API's reply
+public sealed record LlmResponse(string Message);
 ```
 
 ### Middleware Pattern
 
 ```csharp
+using Microsoft.AspNetCore.Http;
+
 public class MemoryMiddleware
 {
     private readonly RequestDelegate _next;
@@ -507,7 +526,7 @@ public class MemoryMiddleware
     }
 }
 
-// Register in Startup.cs
+// Register in Program.cs
 app.UseMiddleware<MemoryMiddleware>();
 ```
 
@@ -518,11 +537,19 @@ app.UseMiddleware<MemoryMiddleware>();
 ### 1. Separation of Concerns
 
 ```csharp
+// Your model client, behind an interface of your own
+public interface ILlmService
+{
+    Task<string> GenerateAsync(string context, string message);
+}
+
 // Good: Separate memory management from business logic
 public class ChatService
 {
     private readonly IMemoryProvider _memory;
     private readonly ILlmService _llm;
+
+    public ChatService(IMemoryProvider memory, ILlmService llm) => (_memory, _llm) = (memory, llm);
 
     public async Task<string> ProcessMessageAsync(string userId, string message)
     {
@@ -538,46 +565,70 @@ public class ChatService
 ### 2. Token Budget Management
 
 ```csharp
-// Limit context size to fit model's token limit
-public async Task<string> GetContextAsync(string userId, string query, int maxTokens = 1000)
+using System.Text;
+
+public class BudgetedMemoryProvider
 {
-    var memories = await _memory.RecallAsync(userId, sessionId: null, query, limit: 50);
+    private readonly IMemoryService _memory;
 
-    // Estimate tokens (rough approximation: 1 token ≈ 4 characters)
-    var tokenBudget = maxTokens * 4;
-    var builder = new StringBuilder();
-    var currentLength = 0;
+    public BudgetedMemoryProvider(IMemoryService memory) => _memory = memory;
 
-    foreach (var memory in memories.AllMemories())
+    // Limit context size to fit model's token limit
+    public async Task<string> GetContextAsync(string userId, string query, int maxTokens = 1000)
     {
-        var line = $"[{memory.Type}] {memory.Content}\n";
-        if (currentLength + line.Length > tokenBudget) break;
+        var memories = await _memory.RecallAsync(userId, sessionId: null, query, limit: 50);
 
-        builder.AppendLine(line);
-        currentLength += line.Length;
+        // Estimate tokens (rough approximation: 1 token ≈ 4 characters)
+        var tokenBudget = maxTokens * 4;
+        var builder = new StringBuilder();
+        var currentLength = 0;
+
+        foreach (var memory in memories.AllMemories())
+        {
+            var line = $"[{memory.Type}] {memory.Content}";
+            if (currentLength + line.Length > tokenBudget) break;
+
+            builder.AppendLine(line);
+            currentLength += line.Length + 1;
+        }
+
+        return builder.ToString();
     }
-
-    return builder.ToString();
 }
 ```
+
+For a budget measured in tokens rather than characters, `IContextBuilder.BuildAsync` with a `ContextBudget`
+assembles the context for you (see [Architecture](ARCHITECTURE.md#context-budget-api-v090)).
 
 ### 3. Error Handling and Fallback
 
 ```csharp
-public async Task<string> ChatWithFallbackAsync(string userId, string message)
+public class ResilientChatService
 {
-    try
-    {
-        // Try with memory context
-        var context = await _memory.GetContextAsync(userId, message);
-        return await _llm.GenerateAsync(context, message);
-    }
-    catch (Exception ex)
-    {
-        _logger.LogWarning(ex, "Memory retrieval failed, using stateless mode");
+    private readonly IMemoryProvider _memory;
+    private readonly ILlmService _llm;
+    private readonly ILogger<ResilientChatService> _logger;
 
-        // Fallback to stateless chat
-        return await _llm.GenerateAsync(string.Empty, message);
+    public ResilientChatService(IMemoryProvider memory, ILlmService llm, ILogger<ResilientChatService> logger) =>
+        (_memory, _llm, _logger) = (memory, llm, logger);
+
+    public async Task<string> ChatWithFallbackAsync(string userId, string message)
+    {
+        string context;
+        try
+        {
+            // Try with memory context
+            context = await _memory.GetContextAsync(userId, message);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Memory retrieval failed, using stateless mode");
+
+            // Fallback to stateless chat
+            context = string.Empty;
+        }
+
+        return await _llm.GenerateAsync(context, message);
     }
 }
 ```
@@ -585,11 +636,18 @@ public async Task<string> ChatWithFallbackAsync(string userId, string message)
 ### 4. Async Batch Processing
 
 ```csharp
+using System.Threading.Channels;
+using Microsoft.Extensions.Hosting;
+
 // Good: Process memory storage asynchronously
 public class BackgroundMemoryProcessor : BackgroundService
 {
-    private readonly Channel<MemoryItem> _channel;
+    private readonly Channel<MemoryItem> _channel = Channel.CreateUnbounded<MemoryItem>();
     private readonly IMemoryService _memory;
+    private readonly ILogger<BackgroundMemoryProcessor> _logger;
+
+    public BackgroundMemoryProcessor(IMemoryService memory, ILogger<BackgroundMemoryProcessor> logger) =>
+        (_memory, _logger) = (memory, logger);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -604,7 +662,7 @@ public class BackgroundMemoryProcessor : BackgroundService
                     role: item.Role,
                     cancellationToken: stoppingToken);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "Failed to process memory");
             }
@@ -627,23 +685,32 @@ public sealed record MemoryItem(string UserId, string Content, string? Role);
 ### Caching Frequently Retrieved Context
 
 ```csharp
+using Microsoft.Extensions.Caching.Memory;
+
 public class CachedMemoryProvider : IMemoryProvider
 {
     private readonly IMemoryCache _cache;
     private readonly IMemoryService _memory;
 
+    public CachedMemoryProvider(IMemoryCache cache, IMemoryService memory) => (_cache, _memory) = (cache, memory);
+
     public async Task<string> GetContextAsync(string userId, string query)
     {
-        var cacheKey = $"memory:{userId}:{query.GetHashCode()}";
+        var cacheKey = $"memory:{userId}:{query}";
 
-        return await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        var context = await _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
             var memories = await _memory.RecallAsync(userId, sessionId: null, query);
-            return BuildContext(memories.AllMemories());
+            return string.Join("\n\n", memories.AllMemories().Select(m => $"[{m.Type}] {m.Content}"));
         });
+
+        return context ?? string.Empty;
     }
+
+    public Task StoreInteractionAsync(string userId, string role, string content) =>
+        _memory.RememberAsync(userId, null, content, role: role);
 }
 ```
 
@@ -653,16 +720,24 @@ Graph traversal starts from a memory, so recall first and then expand every hit 
 through `IMemoryGraphService`:
 
 ```csharp
-public async Task<string> GetMultiSourceContextAsync(string userId, string query)
+public class GraphExpandedContext
 {
-    var recalled = await _memory.RecallAsync(userId, sessionId: null, query, limit: 5);
-    var hits = recalled.AllMemories().ToList();
+    private readonly IMemoryService _memory;
+    private readonly IMemoryGraphService _graph;
 
-    var expansions = await Task.WhenAll(hits.Select(m =>
-        _graph.FindRelatedMemoriesAsync(m.Id, maxHops: 2, topK: 3)));
+    public GraphExpandedContext(IMemoryService memory, IMemoryGraphService graph) => (_memory, _graph) = (memory, graph);
 
-    var related = expansions.SelectMany(r => r).Select(r => r.Memory);
-    return CombineContext(hits, related);
+    public async Task<string> GetMultiSourceContextAsync(string userId, string query)
+    {
+        var recalled = await _memory.RecallAsync(userId, sessionId: null, query, limit: 5);
+        var hits = recalled.AllMemories().ToList();
+
+        var expansions = await Task.WhenAll(hits.Select(m =>
+            _graph.FindRelatedMemoriesAsync(userId, m.Id, maxHops: 2, topK: 3)));
+
+        var related = expansions.SelectMany(r => r).Select(r => r.Memory);
+        return string.Join("\n\n", hits.Concat(related).DistinctBy(m => m.Id).Select(m => m.Content));
+    }
 }
 ```
 

@@ -94,6 +94,10 @@ public class ConflictAwareService
     private readonly IMemoryPrimitives _memory;
     private readonly IMemoryStore _store;
 
+    public ConflictAwareService(
+        IContradictionDetector detector, IContradictionResolver resolver, IMemoryPrimitives memory, IMemoryStore store) =>
+        (_detector, _resolver, _memory, _store) = (detector, resolver, memory, store);
+
     public async Task<bool> SafeStore(string userId, string content)
     {
         // Get existing related memories
@@ -125,7 +129,7 @@ public class ConflictAwareService
 
         // Apply resolution
         if (resolution.SupersededItem != null)
-            await _store.DeleteAsync(resolution.SupersededItem.Id);
+            await _store.DeleteAsync(userId, resolution.SupersededItem.Id);
 
         await _memory.EncodeAsync(new EncodeRequest { UserId = userId, Content = content, Type = MemoryType.Fact });
         return true;
@@ -205,8 +209,11 @@ TieredRecall(
 ```csharp
 public class SmartRetrievalService
 {
-    private readonly IQueryIntentClassifier _classifier;
-    private readonly ITieredRetrievalStrategy _retriever;   // registered by AddMemoryIndexer()
+    private readonly ITieredRetrievalStrategy _retriever;   // registered by AddMemoryIndexer(); classifies the query itself
+    private readonly ILogger<SmartRetrievalService> _logger;
+
+    public SmartRetrievalService(ITieredRetrievalStrategy retriever, ILogger<SmartRetrievalService> logger) =>
+        (_retriever, _logger) = (retriever, logger);
 
     public async Task<List<MemoryUnit>> GetRelevantContext(
         string userId,
@@ -324,11 +331,15 @@ ExtractSubgraph(
 ### Programmatic Usage
 
 ```csharp
+using System.Text;
+
 public class KnowledgeExplorer
 {
-    private readonly IMemoryGraphService _graph;
     private readonly ICommunityDetector _community;
     private readonly IImportancePropagator _importance;
+
+    public KnowledgeExplorer(ICommunityDetector community, IImportancePropagator importance) =>
+        (_community, _importance) = (community, importance);
 
     public async Task<string> GetUserKnowledgeSummary(string userId)
     {
@@ -391,16 +402,18 @@ services.AddMemoryIndexer(options =>
 Detects inefficient usage patterns for optimization.
 
 ```csharp
+var patternAnalyzer = serviceProvider.GetRequiredService<IRecallPatternAnalyzer>();   // registered by AddMemoryIndexer()
+
 // Get statistics
-var stats = _patternAnalyzer.GetStatistics(userId);
+var stats = patternAnalyzer.GetStatistics(userId);
 // Returns: DuplicateQueries, RapidFireCount, UniqueQueries
 
 // Get active alerts
-var alerts = _patternAnalyzer.GetAlerts(userId);
+var alerts = patternAnalyzer.GetAlerts(userId);
 // Returns: AlertType, Message, Severity
 
 // Get recommendations
-var recommendations = _patternAnalyzer.GetRecommendations(userId);
+var recommendations = patternAnalyzer.GetRecommendations(userId);
 // Returns: Caching suggestions, Batching opportunities, Query consolidation
 ```
 
@@ -417,8 +430,12 @@ Track and manage token consumption per session.
 public class TokenAwareService
 {
     private readonly ITokenBudgetMonitor _monitor;
+    private readonly ILogger<TokenAwareService> _logger;
 
-    public async Task StartConversation(string sessionId, string userId)
+    public TokenAwareService(ITokenBudgetMonitor monitor, ILogger<TokenAwareService> logger) =>
+        (_monitor, _logger) = (monitor, logger);
+
+    public void StartConversation(string sessionId, string userId)
     {
         // Start monitoring with 8000 token budget
         _monitor.StartSession(sessionId, userId, maxTokenBudget: 8000, warningThreshold: 0.8f);
@@ -435,7 +452,7 @@ public class TokenAwareService
         };
     }
 
-    public async Task<string> ProcessMessage(string sessionId, string content)
+    public string ProcessMessage(string sessionId, string content)
     {
         // Estimate tokens
         var estimated = _monitor.EstimateTokens(content);
@@ -483,9 +500,10 @@ services.AddMemoryIndexer(options =>
     // ... configure options ...
 });
 
-// Validate at startup
+// Validate at startup, once the provider is built (the library does not run the validator for you)
+var indexerOptions = serviceProvider.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
 var validator = serviceProvider.GetRequiredService<IConfigurationValidator>();
-var result = validator.Validate(options);
+var result = validator.Validate(indexerOptions);
 
 if (!result.IsValid)
 {
@@ -515,7 +533,6 @@ foreach (var warning in result.Warnings)
 
 **Warnings (non-blocking):**
 - Working memory capacity outside Baddeley's 7±2 range
-- Missing API keys for cloud providers
 - Suboptimal configurations
 
 ### Example Validation Output
@@ -526,16 +543,16 @@ foreach (var warning in result.Warnings)
   "errors": [
     {
       "propertyPath": "Embedding.Dimensions",
-      "message": "Dimensions must be positive",
+      "message": "Embedding dimensions must be positive",
       "currentValue": 0,
       "expectedConstraint": "> 0"
     }
   ],
   "warnings": [
     {
-      "propertyPath": "VCM.WorkingMemory.Capacity",
-      "message": "Capacity outside Baddeley's 7±2 range may reduce cognitive compliance",
-      "suggestion": "Use value between 5 and 11"
+      "propertyPath": "WorkingMemory.Capacity",
+      "message": "Capacity outside Baddeley's 7±2 model range (5-11)",
+      "suggestion": "Recommended: 7-9 for cognitive compliance"
     }
   ]
 }
@@ -552,12 +569,12 @@ Comprehensive observability for intelligence operations.
 **Counters:**
 | Metric | Description |
 |--------|-------------|
-| `memory_indexer.classifications` | Classification operations |
-| `memory_indexer.summarizations` | Summarization operations |
-| `memory_indexer.deduplications` | Deduplication operations |
-| `memory_indexer.conflict_detections` | Conflict detection operations |
-| `memory_indexer.entity_extractions` | Entity extraction operations |
-| `memory_indexer.rerankings` | Reranking operations |
+| `memory_indexer.intelligence.classifications` | Classification operations |
+| `memory_indexer.intelligence.summarizations` | Summarization operations |
+| `memory_indexer.intelligence.deduplications` | Deduplication operations |
+| `memory_indexer.intelligence.conflict_detections` | Conflict detection operations |
+| `memory_indexer.intelligence.entity_extractions` | Entity extraction operations |
+| `memory_indexer.intelligence.rerankings` | Reranking operations |
 | `memory_indexer.tier_promotions` | Tier promotion events |
 | `memory_indexer.query_cache_hits` | Query cache hits |
 | `memory_indexer.duplicate_recalls` | Duplicate recall queries |
@@ -569,21 +586,23 @@ Comprehensive observability for intelligence operations.
 **Histograms:**
 | Metric | Description |
 |--------|-------------|
-| `memory_indexer.classification_latency` | Classification duration |
-| `memory_indexer.summarization_latency` | Summarization duration |
-| `memory_indexer.deduplication_latency` | Deduplication duration |
-| `memory_indexer.reranking_latency` | Reranking duration |
-| `memory_indexer.graph_query_latency` | Graph query duration |
-| `memory_indexer.token_budget_usage_ratio` | Token usage ratio distribution |
+| `memory_indexer.intelligence.classification_latency` | Classification duration |
+| `memory_indexer.intelligence.summarization_latency` | Summarization duration |
+| `memory_indexer.intelligence.deduplication_latency` | Deduplication duration |
+| `memory_indexer.intelligence.reranking_latency` | Reranking duration |
+| `memory_indexer.intelligence.graph_query_latency` | Graph query duration |
+| `memory_indexer.token_budget_usage` | Token usage ratio distribution |
 
 ### Configuration
 
 ```csharp
+using OpenTelemetry.Metrics;
+
 services.AddOpenTelemetry()
     .WithMetrics(builder =>
     {
         builder.AddMeter("MemoryIndexer");  // MemoryIndexerTelemetry.ServiceName — all metrics above
-        builder.AddPrometheusExporter();
+        builder.AddOtlpExporter();          // or the exporter your backend reads (Prometheus, Azure Monitor, ...)
     });
 ```
 
@@ -593,18 +612,17 @@ Traces use an `ActivitySource` of the same name (`.WithTracing(b => b.AddSource(
 ### Prometheus Example
 
 ```
-# Query cache performance
-memory_indexer_query_cache_hits_total{user_id="user1"} 145
-memory_indexer_query_cache_misses_total{user_id="user1"} 23
-# Hit ratio: 145 / (145 + 23) = 86%
+# Query cache hits against recalls
+memory_indexer_query_cache_hits_total 145
+memory_indexer_recalls_total 168
 
 # Intelligence operations
-memory_indexer_classifications_total{result="success"} 500
-memory_indexer_classification_latency_seconds_bucket{le="0.1"} 485
+memory_indexer_intelligence_classifications_total 500
+memory_indexer_intelligence_classification_latency_milliseconds_bucket{le="100"} 485
 
 # Token budget
 memory_indexer_token_budget_warnings_total 12
-memory_indexer_token_budget_usage_ratio_bucket{le="0.8"} 95
+memory_indexer_token_budget_usage_bucket{le="0.8"} 95
 ```
 
 ### Dashboard Recommendations

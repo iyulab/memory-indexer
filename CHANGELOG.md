@@ -2,6 +2,15 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Documentation
+- **The guides under `docs/` now compile against the current API, and are checked on every build.** They showed
+  `.ValidateOnStart()` on `AddMemoryIndexer()` (resolve `IConfigurationValidator` and call `Validate`; it is not run for
+  you), `Embedding.ApiKey` (the key belongs to your `IEmbeddingService`), `AddHealthCheckPublisher()` (health results are
+  not metrics), graph and store calls without the user id, `ArchiveStoreOptions` (`SemanticStoreOptions`) and
+  configuration sections that do not bind.
+
 ## [v0.33.0] - 2026-10-12
 
 ### Changed

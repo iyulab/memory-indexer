@@ -271,6 +271,7 @@ public class MemoryUnit
 // Encode with explicit Scope
 var memory = await memoryPrimitives.EncodeAsync(new EncodeRequest
 {
+    UserId = userId,
     Content = "User prefers dark mode",
     Type = MemoryType.Fact,
     Scope = Scope.User,  // Cross-session preference
@@ -280,6 +281,7 @@ var memory = await memoryPrimitives.EncodeAsync(new EncodeRequest
 // Retrieve filtered by Scope
 var results = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
 {
+    UserId = userId,
     Query = "user preferences",
     Scopes = new[] { Scope.User, Scope.Session }
 });
@@ -306,10 +308,10 @@ public enum PromotionTriggerType
 
 ### AND Logic (Archive Tier)
 
-Long → Archive uses AND logic for conservative promotion:
+Long → Archive uses AND logic for conservative promotion (`SemanticStoreOptions`, section `MemoryIndexer:VCM:SemanticStore`):
 
 ```csharp
-public class ArchiveStoreOptions
+public sealed class SemanticStoreOptions
 {
     public int MinConfirmationCount { get; set; } = 3;
     public float MinConfidenceThreshold { get; set; } = 0.8f;
@@ -400,17 +402,17 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
       "Model": "bge-m3",
       "Dimensions": 1024
     },
+    "SensoryBuffer": {
+      "IdleTimeout": "00:01:00",
+      "TokenThreshold": 500,
+      "TurnThreshold": 3
+    },
     "VCM": {
-      "ShortTermMemory": {
+      "WorkingMemory": {
         "Capacity": 7,
-        "DefaultTtl": "00:10:00"
+        "SlidingExpiration": "00:30:00"
       },
-      "Buffer": {
-        "MaxIdleSeconds": 60,
-        "TokenThreshold": 500,
-        "TurnThreshold": 3
-      },
-      "ArchiveStore": {
+      "SemanticStore": {
         "MinConfirmationCount": 3,
         "MinConfidenceThreshold": 0.8
       }
@@ -423,11 +425,11 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
       "SummarizeBeforeArchival": true
     },
     "Scoring": {
-      "RecencyDecayFactor": 0.99,
+      "DecayFactor": 0.99,
       "ImportanceWeight": 1.0
     },
     "Search": {
-      "DefaultLimit": 10,
+      "DefaultLimit": 5,
       "MinScore": 0.0
     }
   }
@@ -524,9 +526,9 @@ AI-based detection distinguishes real user facts from quoted/fictional content:
 Bi-temporal model for conflicting facts:
 
 ```csharp
-// Temporal queries
-var currentFacts = await factStore.GetValidAtAsync(userId, DateTimeOffset.UtcNow);
-var historicalFacts = await factStore.GetValidAtAsync(userId, someDate);
+// Temporal queries against the Archive tier (IArchiveStore)
+var currentFacts = await archiveStore.GetValidAtAsync(userId, DateTime.UtcNow);
+var historicalFacts = await archiveStore.GetValidAtAsync(userId, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 ```
 
 | Resolution Strategy | When Applied |
@@ -565,7 +567,7 @@ Operational metrics and traces go through OpenTelemetry. `MemoryIndexerTelemetry
 services.AddMemoryIndexerObservability();
 ```
 
-Store, recall, embedding and health-check measurements arrive in whatever backend the exporter feeds
+Store, recall and embedding measurements arrive in whatever backend the exporter feeds
 (Prometheus, OTLP, console).
 
 ## 3-Axis Mental Model

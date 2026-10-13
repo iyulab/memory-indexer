@@ -72,7 +72,7 @@ Reference: [gkamradt/LLMTest_NeedleInAHaystack](https://github.com/gkamradt/LLMT
 ### Usage
 
 ```csharp
-var runner = services.GetRequiredService<NiahTestRunner>();
+var runner = serviceProvider.GetRequiredService<NiahTestRunner>();
 
 var result = await runner.RunTestAsync(new NiahTestConfig
 {
@@ -90,9 +90,15 @@ Console.WriteLine($"Needle Found: {result.NeedleFound}");
 
 ### Test Suite
 
-Run multiple positions:
+Run the same needle at several positions:
 
 ```csharp
+var baseConfig = new NiahTestConfig
+{
+    Needle = "The secret code is ALPHA-BRAVO-CHARLIE",
+    NeedleQuery = "secret code"
+};
+
 var suite = await runner.RunTestSuiteAsync(
     baseConfig,
     positions: [0.25, 0.50, 0.75]
@@ -118,7 +124,7 @@ Reference: [RULER](https://arxiv.org/abs/2404.06654) - Multi-hop retrieval bench
 ### Usage
 
 ```csharp
-var runner = services.GetRequiredService<NiahTestRunner>();
+var runner = serviceProvider.GetRequiredService<NiahTestRunner>();
 
 var result = await runner.RunMultiNeedleTestAsync(new MultiNeedleTestConfig
 {
@@ -129,7 +135,7 @@ var result = await runner.RunMultiNeedleTestAsync(new MultiNeedleTestConfig
         new NeedleInfo { Content = "Password is XYZ123", Query = "password", Position = 0.75 }
     },
     TargetHaystackTokens = 100_000,
-    QueryStrategy = QueryStrategy.SeparateQueries
+    QueryStrategy = MultiNeedleQueryStrategy.SeparateQueries
 });
 
 Console.WriteLine($"Recovery Rate: {result.RecoveryRate:P1}");
@@ -162,7 +168,7 @@ Tests handling of conflicting information updates.
 - `OlderPrioritized`: System returns older fact (problematic)
 
 ```csharp
-var tests = services.GetRequiredService<CognitiveScenarioTests>();
+var tests = serviceProvider.GetRequiredService<CognitiveScenarioTests>();
 
 var result = await tests.RunFalseMemoryTestAsync(new FalseMemoryTestConfig
 {
@@ -218,7 +224,7 @@ Validates proper memory distribution:
 - Long ≥ 1 item (for active sessions)
 
 ```csharp
-var evaluator = services.GetRequiredService<IEvaluationService>();
+var evaluator = serviceProvider.GetRequiredService<IEvaluationService>();
 
 var compliance = await evaluator.GetCognitiveComplianceAsync(userId, sessionId);
 
@@ -229,7 +235,13 @@ Console.WriteLine($"Short Tier Count: {compliance.ShortTierCount}");
 
 ## OpenTelemetry Integration
 
-Evaluation metrics are exported via OpenTelemetry:
+Evaluation metrics are recorded on the meter `MemoryIndexer.Evaluation`. `AddMemoryIndexerObservability()`
+subscribes the library's `MemoryIndexer` meter only, so add this one to export them:
+
+```csharp
+services.AddMemoryIndexerObservability(options =>
+    options.ConfigureMetrics = metrics => metrics.AddMeter("MemoryIndexer.Evaluation"));
+```
 
 | Metric | Type | Unit |
 |--------|------|------|
