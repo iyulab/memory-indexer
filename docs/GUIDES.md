@@ -178,9 +178,12 @@ This setting was previously a private hardcoded constant inside individual MCP t
 
 ### Configuration Validation
 
-Memory Indexer registers an `IConfigurationValidator` that checks the options for common issues (dimension
-mismatches, thresholds out of range, contradictory settings). It is not run for you — the host only fails at
-startup when a configuration value does not bind. Run it once the provider is built:
+`AddMemoryIndexer()` checks the options when they are first built — at host start — with the registered
+`IConfigurationValidator` (dimension mismatches, thresholds out of range, contradictory settings). An error stops the
+host with an `OptionsValidationException` that names each setting (`MemoryIndexer:Storage:VectorDimensions: Vector
+dimensions must be positive (current: 0, expected: > 0)`); a warning is logged. Without a host, the first
+`IOptions<MemoryIndexerOptions>.Value` read throws the same exception. To see the result yourself — in a health
+endpoint, say — call the validator:
 
 ```csharp
 var options = serviceProvider.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
@@ -188,10 +191,9 @@ var validation = serviceProvider.GetRequiredService<IConfigurationValidator>().V
 
 foreach (var warning in validation.Warnings)
     Console.WriteLine($"{warning.PropertyPath}: {warning.Message} ({warning.Suggestion})");
-
-if (!validation.IsValid)
-    throw new ConfigurationValidationException(validation);  // or call ValidateAndThrow(options)
 ```
+
+Register your own `IConfigurationValidator` before `AddMemoryIndexer()` to change the rules.
 
 ---
 

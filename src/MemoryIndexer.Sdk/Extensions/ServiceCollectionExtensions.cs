@@ -102,8 +102,10 @@ public static class ServiceCollectionExtensions
             services.Configure(configure);
         }
 
-        // Register configuration validator (Phase v0.5.0)
+        // The rules (ranges, consistency between settings) run when the options are first built - at host start through
+        // ValidateOnStart above - so a value out of range fails startup with its setting named, not a later request.
         services.TryAddSingleton<IConfigurationValidator, ConfigurationValidator>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<MemoryIndexerOptions>, ConfigurationValidationAtStartup>());
 
         // Register core services
         services.TryAddSingleton<MemoryService>();

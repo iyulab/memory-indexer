@@ -2,12 +2,24 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.34.0] - Unreleased
+
+### Changed
+- **Breaking** — **`AddMemoryIndexer()` runs the configuration rules at startup.** The registered `IConfigurationValidator`
+  (ranges, consistency between settings) was registered but never called, so a value out of range surfaced later, if at
+  all. Now an error stops the host with an `OptionsValidationException` naming each setting
+  (`MemoryIndexer:Storage:VectorDimensions: Vector dimensions must be positive (current: 0, expected: > 0)`), and a
+  warning is logged. The defaults pass. Migration: a host that started with an out-of-range value now fails at start —
+  fix the value the message names, or register your own `IConfigurationValidator` before `AddMemoryIndexer()`.
+
+### Added
+- **`AddMemoryIndexerObservability()` exports the evaluation metrics.** They were recorded on the `MemoryIndexer.Evaluation`
+  meter, which it did not subscribe. `MemoryIndexerTelemetry.MeterNames` lists every meter the packages record on (for a
+  host that wires OpenTelemetry itself), `MemoryIndexerTelemetry.EvaluationMeterName` the evaluation one.
 
 ### Documentation
 - **The guides under `docs/` now compile against the current API, and are checked on every build.** They showed
-  `.ValidateOnStart()` on `AddMemoryIndexer()` (resolve `IConfigurationValidator` and call `Validate`; it is not run for
-  you), `Embedding.ApiKey` (the key belongs to your `IEmbeddingService`), `AddHealthCheckPublisher()` (health results are
+  `.ValidateOnStart()` on `AddMemoryIndexer()` (the rules now run at startup — above), `Embedding.ApiKey` (the key belongs to your `IEmbeddingService`), `AddHealthCheckPublisher()` (health results are
   not metrics), graph and store calls without the user id, `ArchiveStoreOptions` (`SemanticStoreOptions`) and
   configuration sections that do not bind.
 

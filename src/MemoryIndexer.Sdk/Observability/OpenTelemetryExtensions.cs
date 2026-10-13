@@ -74,7 +74,7 @@ public static class OpenTelemetryExtensions
                 {
                     builder
                         .SetResourceBuilder(resourceBuilder)
-                        .AddMeter(MemoryIndexerTelemetry.ServiceName)
+                        .AddMeter([.. MemoryIndexerTelemetry.MeterNames])
                         .AddHttpClientInstrumentation();
 
                     if (options.EnableConsoleExporter)

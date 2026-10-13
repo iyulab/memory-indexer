@@ -20,6 +20,17 @@ public static class MemoryIndexerTelemetry
     public const string ServiceVersion = "1.0.0";
 
     /// <summary>
+    /// Name of the meter the evaluation runs (<c>IEvaluationService</c>) record on.
+    /// </summary>
+    public const string EvaluationMeterName = "MemoryIndexer.Evaluation";
+
+    /// <summary>
+    /// Every meter Memory Indexer records on — what <c>AddMemoryIndexerObservability</c> subscribes, and what a host that
+    /// wires OpenTelemetry itself should pass to <c>AddMeter</c>.
+    /// </summary>
+    public static IReadOnlyList<string> MeterNames { get; } = [ServiceName, EvaluationMeterName];
+
+    /// <summary>
     /// ActivitySource for distributed tracing.
     /// </summary>
     public static readonly ActivitySource ActivitySource = new(ServiceName, ServiceVersion);

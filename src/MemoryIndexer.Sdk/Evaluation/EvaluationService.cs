@@ -16,7 +16,7 @@ public class EvaluationService : IEvaluationService
     private readonly ConcurrentDictionary<string, TierPromotionLatencyTracker> _latencyTrackers = new();
 
     // OpenTelemetry metrics
-    private static readonly Meter EvaluationMeter = new("MemoryIndexer.Evaluation", "1.0.0");
+    private static readonly Meter EvaluationMeter = new(MemoryIndexerTelemetry.EvaluationMeterName, MemoryIndexerTelemetry.ServiceVersion);
 
     private static readonly Histogram<double> CcrHistogram = EvaluationMeter.CreateHistogram<double>(
         "memory.evaluation.ccr",

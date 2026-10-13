@@ -490,30 +490,21 @@ public class TokenAwareService
 
 ## Configuration Validation
 
-Validate configuration at startup with structured errors and warnings.
+The configuration is validated at startup with structured errors and warnings: `AddMemoryIndexer()` runs the
+registered `IConfigurationValidator` when the options are first built. An error stops the host with an
+`OptionsValidationException` naming each setting; a warning is logged.
 
 ### Usage
 
 ```csharp
 services.AddMemoryIndexer(options =>
 {
-    // ... configure options ...
+    options.Search.DefaultLimit = 0; // out of range: the host does not start
 });
 
-// Validate at startup, once the provider is built (the library does not run the validator for you)
-var indexerOptions = serviceProvider.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value;
-var validator = serviceProvider.GetRequiredService<IConfigurationValidator>();
-var result = validator.Validate(indexerOptions);
-
-if (!result.IsValid)
-{
-    foreach (var error in result.Errors)
-    {
-        logger.LogError("Config error: {Path} - {Message}",
-            error.PropertyPath, error.Message);
-    }
-    throw new ConfigurationValidationException(result);
-}
+// The same result, read yourself (e.g. for a diagnostics endpoint)
+var indexerOptions = new MemoryIndexerOptions();
+var result = serviceProvider.GetRequiredService<IConfigurationValidator>().Validate(indexerOptions);
 
 foreach (var warning in result.Warnings)
 {

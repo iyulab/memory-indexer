@@ -235,12 +235,12 @@ Console.WriteLine($"Short Tier Count: {compliance.ShortTierCount}");
 
 ## OpenTelemetry Integration
 
-Evaluation metrics are recorded on the meter `MemoryIndexer.Evaluation`. `AddMemoryIndexerObservability()`
-subscribes the library's `MemoryIndexer` meter only, so add this one to export them:
+Evaluation metrics are recorded on the meter `MemoryIndexer.Evaluation`
+(`MemoryIndexerTelemetry.EvaluationMeterName`), which `AddMemoryIndexerObservability()` subscribes with the library's
+`MemoryIndexer` meter. A host that configures OpenTelemetry itself subscribes `MemoryIndexerTelemetry.MeterNames`:
 
 ```csharp
-services.AddMemoryIndexerObservability(options =>
-    options.ConfigureMetrics = metrics => metrics.AddMeter("MemoryIndexer.Evaluation"));
+services.AddOpenTelemetry().WithMetrics(metrics => metrics.AddMeter([.. MemoryIndexerTelemetry.MeterNames]));
 ```
 
 | Metric | Type | Unit |
