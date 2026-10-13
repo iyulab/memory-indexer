@@ -25,18 +25,19 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
 {
     private readonly IMemoryStore _memoryStore;
     private readonly ITierManager _tierManager;
-    private readonly SemanticStoreOptions _archiveOptions;
+    private readonly ArchivePromotionOptions _archiveOptions;
     private readonly ILogger<LongTermPromoterService> _logger;
 
     public LongTermPromoterService(
         IMemoryStore memoryStore,
         ITierManager tierManager,
-        IOptions<SemanticStoreOptions> archiveOptions,
+        IOptions<MemoryIndexerOptions> options,
         ILogger<LongTermPromoterService> logger)
     {
         _memoryStore = memoryStore;
         _tierManager = tierManager;
-        _archiveOptions = archiveOptions.Value;
+        // The same Long -> Archive gate TierManager applies (MemoryIndexer:ArchivePromotion).
+        _archiveOptions = options.Value.ArchivePromotion;
         _logger = logger;
     }
 

@@ -2,6 +2,20 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Changed
+- **Breaking** — **one setting per concept for the Short tier capacity and the Long → Archive gate.** The Short tier's
+  session cache (`IShortTermMemory`) had its own capacity (`MemoryIndexer:VCM:WorkingMemory:Capacity`, default 7) next to the
+  tier limit the store enforces (`MemoryIndexer:WorkingMemory:Capacity`, default 9), and the Long → Archive promoter read
+  its confidence/confirmation gate from `MemoryIndexer:VCM:SemanticStore` while the tier manager read
+  `MemoryIndexer:ArchivePromotion` — setting one left the other path on its default. Now `WorkingMemory:Capacity` sizes
+  both (the cache follows the tier: 9 by default, was 7) and `ArchivePromotion` is the only gate. A configuration that
+  still sets one of the three old keys stops the host at startup naming the new key. Migration: move those keys;
+  `MemoryIndexer.Services.WorkingMemoryOptions` is now `WorkingMemoryCacheOptions` (no `Capacity`);
+  `SemanticStoreOptions` loses `MinConfirmationCount`/`MinConfidenceThreshold`; `ShortTermMemoryService` and
+  `LongTermPromoterService` take `IOptions<MemoryIndexerOptions>` for the values that moved.
+
 ## [v0.34.0] - 2026-10-14
 
 ### Changed

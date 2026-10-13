@@ -72,6 +72,27 @@ public class ConfigurationValidationAtStartupTests
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public void OneCapacitySetting_SizesTheShortTierCache()
+    {
+        using var host = HostWith(new Dictionary<string, string?> { ["MemoryIndexer:WorkingMemory:Capacity"] = "5" });
+
+        Assert.Equal(5, host.Services.GetRequiredService<MemoryIndexer.Interfaces.IShortTermMemory>().Capacity);
+    }
+
+    [Theory]
+    [InlineData("MemoryIndexer:VCM:WorkingMemory:Capacity", "MemoryIndexer:WorkingMemory:Capacity")]
+    [InlineData("MemoryIndexer:VCM:SemanticStore:MinConfirmationCount", "MemoryIndexer:ArchivePromotion:MinConfirmationCount")]
+    [InlineData("MemoryIndexer:VCM:SemanticStore:MinConfidenceThreshold", "MemoryIndexer:ArchivePromotion:MinConfidenceThreshold")]
+    public async Task ASettingThatMoved_FailsTheHostAtStartup_NamingWhereItLivesNow(string old, string now)
+    {
+        using var host = HostWith(new Dictionary<string, string?> { [old] = "3" });
+
+        var ex = await Assert.ThrowsAsync<OptionsValidationException>(() => host.StartAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains($"{old} is no longer read: set {now} instead", ex.Message, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// Every meter the packages record on is in <see cref="MemoryIndexerTelemetry.MeterNames"/>, which
     /// <c>AddMemoryIndexerObservability</c> subscribes — the evaluation meter was recorded on and never exported.

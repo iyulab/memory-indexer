@@ -432,17 +432,6 @@ public sealed class SemanticStoreStats
 /// </summary>
 public sealed class SemanticStoreOptions
 {
-    /// <summary>
-    /// Minimum confirmations required for an entry to be considered confirmed.
-    /// Default: 3
-    /// </summary>
-    public int MinConfirmationCount { get; set; } = 3;
-
-    /// <summary>
-    /// Minimum confidence required for an entry to be considered confirmed.
-    /// Default: 0.8
-    /// </summary>
-    public float MinConfidenceThreshold { get; set; } = 0.8f;
 
     /// <summary>
     /// Confidence boost per confirmation.

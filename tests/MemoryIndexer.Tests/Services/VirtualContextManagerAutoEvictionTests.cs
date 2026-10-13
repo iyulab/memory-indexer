@@ -72,7 +72,8 @@ public class VirtualContextManagerAutoEvictionTests
         {
             WorkingMemory = new ShortTermMemoryService(
                 new MemoryCache(new MemoryCacheOptions()),
-                Options.Create(new WorkingMemoryOptions { Capacity = 7 }));
+                Options.Create(new WorkingMemoryCacheOptions()),
+                Options.Create(new MemoryIndexer.Configuration.MemoryIndexerOptions { WorkingMemory = { Capacity = 7 } }));
 
             _candidates = Enumerable.Range(0, PagedInCount)
                 .Select(i => TestHelpers.CreateTestMemory(

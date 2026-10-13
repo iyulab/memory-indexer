@@ -21,17 +21,27 @@ public sealed class ShortTermMemoryService : IShortTermMemory
 {
     private readonly IMemoryCache _cache;
     private readonly ConcurrentDictionary<Guid, WorkingMemoryEntry> _entries;
-    private readonly WorkingMemoryOptions _options;
+    private readonly WorkingMemoryCacheOptions _options;
+    private readonly int _capacity;
     private readonly IMemoryPressureMonitor? _pressureMonitor;
     private readonly object _lock = new();
 
+    /// <param name="cache">The cache that holds the entries.</param>
+    /// <param name="options">Expiration and loading of the cached entries.</param>
+    /// <param name="indexerOptions">
+    /// Supplies the capacity: <see cref="MemoryIndexer.Configuration.MemoryIndexerOptions.WorkingMemory"/>
+    /// (<c>MemoryIndexer:WorkingMemory:Capacity</c>), the same Short tier limit the store enforces.
+    /// </param>
+    /// <param name="pressureMonitor">Shrinks the capacity under memory pressure, when given.</param>
     public ShortTermMemoryService(
         IMemoryCache cache,
-        IOptions<WorkingMemoryOptions> options,
+        IOptions<WorkingMemoryCacheOptions> options,
+        IOptions<MemoryIndexer.Configuration.MemoryIndexerOptions> indexerOptions,
         IMemoryPressureMonitor? pressureMonitor = null)
     {
         _cache = cache;
         _options = options.Value;
+        _capacity = indexerOptions.Value.WorkingMemory.Capacity;
         _pressureMonitor = pressureMonitor;
         _entries = new ConcurrentDictionary<Guid, WorkingMemoryEntry>();
     }
@@ -40,7 +50,7 @@ public sealed class ShortTermMemoryService : IShortTermMemory
     public int Count => _entries.Count;
 
     /// <inheritdoc />
-    public int Capacity => _options.Capacity;
+    public int Capacity => _capacity;
 
     /// <inheritdoc />
     public Task<MemoryUnit?> PromoteAsync(MemoryUnit memory, CancellationToken cancellationToken = default)
@@ -288,15 +298,12 @@ public sealed class ShortTermMemoryService : IShortTermMemory
 }
 
 /// <summary>
-/// Configuration options for Short-Term Memory.
+/// How <see cref="ShortTermMemoryService"/> keeps its cached entries (<c>MemoryIndexer:VCM:WorkingMemory</c>). Its capacity is
+/// the Short tier's, <see cref="MemoryIndexer.Configuration.WorkingMemoryOptions.Capacity"/>
+/// (<c>MemoryIndexer:WorkingMemory:Capacity</c>).
 /// </summary>
-public sealed class WorkingMemoryOptions
+public sealed class WorkingMemoryCacheOptions
 {
-    /// <summary>
-    /// Maximum number of items in working memory.
-    /// Default: 7 (Baddeley's Working Memory Model).
-    /// </summary>
-    public int Capacity { get; set; } = 7;
 
     /// <summary>
     /// Sliding expiration for cache entries.

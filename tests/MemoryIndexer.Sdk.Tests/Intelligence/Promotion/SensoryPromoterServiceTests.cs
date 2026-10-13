@@ -51,10 +51,10 @@ public class SensoryPromoterServiceTests
             NullLogger<BufferService>.Instance);
 
         // Setup working memory
-        var workingOptions = new MemoryIndexer.Services.WorkingMemoryOptions { Capacity = 7 };
         _workingMemory = new ShortTermMemoryService(
             new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(workingOptions));
+            Options.Create(new MemoryIndexer.Services.WorkingMemoryCacheOptions()),
+            Options.Create(new MemoryIndexerOptions { WorkingMemory = { Capacity = 7 } }));
 
         // Setup topic segmenter
         _topicSegmenter = new TopicSegmenter(
@@ -355,10 +355,10 @@ public class SensoryPromoterServiceTests
     public async Task PromoteAsync_AtCapacity_EvictsOldest()
     {
         // Arrange - fill working memory to capacity
-        var smallWorkingOptions = new MemoryIndexer.Services.WorkingMemoryOptions { Capacity = 2 };
         var smallWorkingMemory = new ShortTermMemoryService(
             new MemoryCache(new MemoryCacheOptions()),
-            Options.Create(smallWorkingOptions));
+            Options.Create(new MemoryIndexer.Services.WorkingMemoryCacheOptions()),
+            Options.Create(new MemoryIndexerOptions { WorkingMemory = { Capacity = 2 } }));
 
         var promoter = new SensoryPromoterService(
             _recentlyBuffer,

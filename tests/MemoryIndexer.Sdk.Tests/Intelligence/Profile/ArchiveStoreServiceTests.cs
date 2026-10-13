@@ -22,8 +22,6 @@ public class ArchiveStoreServiceTests
 
         _options = new SemanticStoreOptions
         {
-            MinConfirmationCount = 3,
-            MinConfidenceThreshold = 0.8f,
             ConfidenceBoostPerConfirmation = 0.1f,
             MaxEntriesPerUser = 500,
             EnableSemanticSearch = true

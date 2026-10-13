@@ -48,12 +48,9 @@ sections under `MemoryIndexer:VCM`. Below are the sections this guide covers, wi
     },
     "VCM": {
       "WorkingMemory": {
-        "Capacity": 7,
         "SlidingExpiration": "00:30:00"
       },
       "SemanticStore": {
-        "MinConfirmationCount": 3,
-        "MinConfidenceThreshold": 0.8,
         "ConfidenceBoostPerConfirmation": 0.1,
         "MaxEntriesPerUser": 500
       }
@@ -100,13 +97,10 @@ sections under `MemoryIndexer:VCM`. Below are the sections this guide covers, wi
 | **SensoryBuffer** | IdleTimeout | TimeSpan | 00:01:00 | Promote to Short after idle timeout |
 | | TokenThreshold | int | 500 | Promote when buffer exceeds token count |
 | | TurnThreshold | int | 3 | Promote after N turns |
-| **ArchivePromotion** | MinConfirmationCount | int | 3 | Required confirmations for Archive promotion |
-| | MinConfidenceThreshold | float | 0.8 | Required confidence for Archive promotion |
-| **VCM.WorkingMemory** | Capacity | int | 7 | Capacity of the Short tier's session cache |
-| | SlidingExpiration | TimeSpan | 00:30:00 | Evict an idle Short-tier entry after this time |
-| **VCM.SemanticStore** | MinConfirmationCount | int | 3 | Confirmations the Long → Archive promoter requires |
-| | MinConfidenceThreshold | float | 0.8 | Confidence the Long → Archive promoter requires |
-| | MaxEntriesPerUser | int | 500 | Archive entries kept per user |
+| **ArchivePromotion** | MinConfirmationCount | int | 3 | Required confirmations for Long → Archive promotion |
+| | MinConfidenceThreshold | float | 0.8 | Required confidence for Long → Archive promotion |
+| **VCM.WorkingMemory** | SlidingExpiration | TimeSpan | 00:30:00 | Evict an idle Short-tier entry after this time (its capacity is `WorkingMemory.Capacity`) |
+| **VCM.SemanticStore** | MaxEntriesPerUser | int | 500 | Archive entries kept per user |
 
 ### DI Registration Patterns
 
@@ -704,9 +698,7 @@ public class ReflectionService
       "Model": "text-embedding-3-large",
       "Dimensions": 3072
     },
-    "VCM": {
-      "WorkingMemory": { "Capacity": 10 }   // Larger for production
-    }
+    "WorkingMemory": { "Capacity": 10 }   // Larger for production (Baddeley's 7±2 is the 5–11 the validator accepts)
   }
 }
 ```

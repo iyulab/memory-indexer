@@ -114,8 +114,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IMemoryService, SimpleMemoryService>();
 
         // Register VCM services (Phase 5)
-        // Note: MemoryIndexer.Services.WorkingMemoryOptions is for ShortTermMemoryService cache configuration
-        services.AddOptions<MemoryIndexer.Services.WorkingMemoryOptions>()
+        // How ShortTermMemoryService keeps its entries; its capacity is MemoryIndexer:WorkingMemory:Capacity (the Short tier's)
+        services.AddOptions<MemoryIndexer.Services.WorkingMemoryCacheOptions>()
             .BindConfigurationIfPresent("MemoryIndexer:VCM:WorkingMemory");
         services.AddOptions<VCMOptions>()
             .BindConfigurationIfPresent("MemoryIndexer:VCM");

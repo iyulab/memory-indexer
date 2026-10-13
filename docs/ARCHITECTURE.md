@@ -308,15 +308,14 @@ public enum PromotionTriggerType
 
 ### AND Logic (Archive Tier)
 
-Long → Archive uses AND logic for conservative promotion (`SemanticStoreOptions`, section `MemoryIndexer:VCM:SemanticStore`):
+Long → Archive uses AND logic for conservative promotion (`ArchivePromotionOptions`, section `MemoryIndexer:ArchivePromotion`
+— read by both the tier manager and the Long → Archive promoter):
 
 ```csharp
-public sealed class SemanticStoreOptions
+public sealed class ArchivePromotionOptions
 {
-    public int MinConfirmationCount { get; set; } = 3;
     public float MinConfidenceThreshold { get; set; } = 0.8f;
-    public float ConfidenceBoostPerConfirmation { get; set; } = 0.1f;
-    public int MaxEntriesPerUser { get; set; } = 500;
+    public int MinConfirmationCount { get; set; } = 3;
 }
 ```
 
@@ -407,17 +406,17 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
       "TokenThreshold": 500,
       "TurnThreshold": 3
     },
+    "ArchivePromotion": {
+      "MinConfirmationCount": 3,
+      "MinConfidenceThreshold": 0.8
+    },
     "VCM": {
       "WorkingMemory": {
-        "Capacity": 7,
         "SlidingExpiration": "00:30:00"
-      },
-      "SemanticStore": {
-        "MinConfirmationCount": 3,
-        "MinConfidenceThreshold": 0.8
       }
     },
     "WorkingMemory": {
+      "Capacity": 9,
       "IdleTimeout": "00:10:00",
       "TokenThreshold": 2000,
       "TurnThreshold": 10,
