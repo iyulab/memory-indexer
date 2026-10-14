@@ -4,6 +4,10 @@ All notable changes to Memory Indexer are documented here.
 
 ## [Unreleased]
 
+### Documentation
+- **`docs/QUALITY-BENCHMARKS.md` names the public benchmark for recall quality**: LongMemEval, retrieval only
+  (session- and turn-level Recall@k / NDCG@10, by question type), and what no public benchmark isolates.
+
 ### Changed
 - **Breaking** — **one setting per concept for the Short tier capacity and the Long → Archive gate.** The Short tier's
   session cache (`IShortTermMemory`) had its own capacity (`MemoryIndexer:VCM:WorkingMemory:Capacity`, default 7) next to the

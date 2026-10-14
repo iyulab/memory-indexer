@@ -293,6 +293,7 @@ The bundled MCP server's local embedder is built this way.
 | [Evaluation](docs/EVALUATION.md) | KPIs, NIAH tests, multi-needle scenarios |
 | [Health](docs/HEALTH.md) | Health checks, Kubernetes probes |
 | [Benchmarks](docs/BENCHMARKS.md) | Performance measurements |
+| [Quality Benchmarks](docs/QUALITY-BENCHMARKS.md) | The public benchmark that measures recall quality (LongMemEval, retrieval only) |
 | [Guides](docs/GUIDES.md) | Configuration, custom storage, usage patterns |
 | [Roadmap](docs/ROADMAP.md) | Feature timeline and status |
 
