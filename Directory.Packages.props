@@ -13,7 +13,7 @@
     <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.12" />
     <!-- Vector Data -->
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.6.0" />
+    <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.11.0" />
     <!-- Database -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <!-- Explicit lift: Microsoft.Data.Sqlite 10.0.8 pulls SQLitePCLRaw 2.1.11
@@ -33,6 +33,11 @@
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="Iyu.Conventions.Testing" Version="0.13.0" />
+    <!-- Real-connector contract run of VectorStoreMemoryStore (test-only). The maintained connectors are the .NET
+         Community Toolkit ones (Microsoft.SemanticKernel.Connectors.* 1.74 previews are built against VectorData 10.1 and
+         fail with TypeLoadException on 10.6+). Never reaches a package. -->
+    <PackageVersion Include="CommunityToolkit.VectorData.Qdrant" Version="1.0.1" />
+    <PackageVersion Include="Testcontainers.Qdrant" Version="4.16.0" />
     <!-- Benchmarking -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <!-- LMSupply (iyulab-rnd open source) -->

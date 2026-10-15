@@ -255,7 +255,10 @@ dotnet run -- --local         # Use local ONNX model (no API key)
 **Any database with a Microsoft.Extensions.VectorData connector** (Qdrant, PostgreSQL/pgvector, Azure AI Search, …):
 `VectorStoreMemoryStore` is an `IMemoryStore` over the connector's `VectorStore`, sized from the embedding service's
 `Dimensions` — no store code of your own. Filters (user, session, namespace, type, role, tier, scope, dates, metadata) run in
-the database; counts, the user list and bulk deletes read the matching records page by page.
+the database; counts, the user list and bulk deletes read the matching records page by page. The collection is created
+on first use. A memory without an embedding is kept (with a placeholder vector the search filters out). The contract
+suite runs on a real Qdrant through `CommunityToolkit.VectorData.Qdrant` — the maintained connectors are the .NET
+Community Toolkit's `CommunityToolkit.VectorData.*` packages.
 
 ```csharp
 using MemoryIndexer.Sdk.Extensions;

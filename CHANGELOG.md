@@ -18,10 +18,17 @@ All notable changes to Memory Indexer are documented here.
   dimension set in `VectorStoreMemoryStoreOptions.Dimensions` (also `CollectionName`, `DistanceFunction`, `PageSize`).
   Rows are `MemoryRecord`s (enums by name, times as UTC ticks, metadata as JSON plus `key=value` entries); every filter runs
   in the database; search scores are the cosine similarity of the stored vectors, as in the other stores. Counts, the user
-  list and bulk deletes walk the matching records page by page.
+  list and bulk deletes walk the matching records page by page. The collection is created on first use (a read before
+  any write used to fail on Qdrant with «collection not found»). A memory without an embedding is stored with a
+  placeholder vector and `MemoryRecord.HasEmbedding = false`, which every search filters out — Qdrant refuses a point
+  without a vector, and the library stores some memories (imports, summaries, backups) before or without embedding them.
+  The store contract runs on a real Qdrant (`CommunityToolkit.VectorData.Qdrant` 1.0.1, Testcontainers).
 - **`MemoryIndexer:Storage:Type` = `VectorStore` and `WithVectorStore(collectionName)`** register that store on the
   `VectorStore` the application registered (collection `MemoryIndexer:Storage:CollectionName`, default `memories`;
   dimension as for SQLite). Without one, resolving the store fails with a message that names it.
+
+### Dependencies
+- `Microsoft.Extensions.VectorData.Abstractions` 10.6.0 → 10.11.0 (the maintained connectors require 10.8.2 or later).
 
 ### Documentation
 - **`docs/QUALITY-BENCHMARKS.md` names the public benchmark for recall quality**: LongMemEval, retrieval only

@@ -38,8 +38,14 @@ public sealed class MemoryRecord
     /// <summary>Memory text.</summary>
     public string Content { get; set; } = string.Empty;
 
-    /// <summary>Embedding (the vector property).</summary>
+    /// <summary>
+    /// Embedding (the vector property). <see cref="VectorStoreMemoryStore"/> writes a placeholder for a memory without one
+    /// (some connectors refuse a point without a vector) and marks it with <see cref="HasEmbedding"/>.
+    /// </summary>
     public ReadOnlyMemory<float>? Embedding { get; set; }
+
+    /// <summary>Whether <see cref="Embedding"/> is the memory's own (indexed — a search only matches those).</summary>
+    public bool HasEmbedding { get; set; }
 
     /// <summary>Creation time, UTC ticks (indexed — date filters and ordering).</summary>
     public long CreatedAtTicks { get; set; }
@@ -160,6 +166,7 @@ public sealed class MemoryRecord
                 Data<List<string>>(nameof(Entities)),
                 Data<string>(nameof(MetadataJson)),
                 Data<List<string>>(nameof(MetadataPairs), indexed: true),
+                Data<bool>(nameof(HasEmbedding), indexed: true),
                 Data<bool>(nameof(IsDeleted), indexed: true),
                 Data<bool>(nameof(IsLocked)),
                 Data<long?>(nameof(ExpiresAtTicks)),
@@ -182,6 +189,7 @@ public sealed class MemoryRecord
             Role = memory.Role,
             Content = memory.Content,
             Embedding = memory.Embedding,
+            HasEmbedding = memory.Embedding is not null,
             CreatedAtTicks = Ticks(memory.CreatedAt),
             UpdatedAtTicks = Ticks(memory.UpdatedAt),
             LastAccessedAtTicks = memory.LastAccessedAt is { } accessed ? Ticks(accessed) : null,
@@ -218,7 +226,7 @@ public sealed class MemoryRecord
         Namespace = Namespace,
         Role = Role,
         Content = Content,
-        Embedding = Embedding,
+        Embedding = HasEmbedding ? Embedding : null,
         CreatedAt = FromTicks(CreatedAtTicks),
         UpdatedAt = FromTicks(UpdatedAtTicks),
         LastAccessedAt = LastAccessedAtTicks is { } accessed ? FromTicks(accessed) : null,

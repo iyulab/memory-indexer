@@ -55,6 +55,8 @@
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="CommunityToolkit.VectorData.Qdrant" />
+    <PackageReference Include="Testcontainers.Qdrant" />
     <!-- README snippet compile teeth -->
     <PackageReference Include="Iyu.Conventions.Testing.Snippets" />
     <!-- LMSupply embedding for integration tests (iyulab open source) -->

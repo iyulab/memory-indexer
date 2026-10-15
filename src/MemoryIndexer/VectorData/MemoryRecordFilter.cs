@@ -25,9 +25,13 @@ internal static class MemoryRecordFilter
         DateTime? createdAfter,
         DateTime? createdBefore,
         bool includeDeleted,
-        IReadOnlyDictionary<string, string>? metadata)
+        IReadOnlyDictionary<string, string>? metadata,
+        bool embeddedOnly = false)
     {
         var body = Equal(nameof(MemoryRecord.UserId), userId);
+
+        if (embeddedOnly)
+            body = Expression.AndAlso(body, Expression.Equal(Property(nameof(MemoryRecord.HasEmbedding)), Expression.Constant(true)));
 
         if (!string.IsNullOrEmpty(sessionId))
             body = Expression.AndAlso(body, Equal(nameof(MemoryRecord.SessionId), sessionId));

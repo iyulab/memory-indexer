@@ -131,6 +131,27 @@ public abstract class MemoryStoreContractTests
         results[0].Score.Should().BeApproximately(1.0f, 0.01f); // Same embedding = similarity 1.0
     }
 
+    /// <summary>
+    /// A memory stored without an embedding is kept — read back without one — and a search never returns it, even when
+    /// the query lies exactly where a stored placeholder would.
+    /// </summary>
+    [Fact]
+    public async Task AMemoryWithoutAnEmbedding_IsKept_ButNeverSearched()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var plain = await _store.StoreAsync(TestHelpers.CreateTestMemory(content: "no vector"), ct);
+        var embedded = await _store.StoreAsync(TestHelpers.CreateTestMemory(content: "vector", embedding: TestHelpers.CreateTestEmbedding(768, 3)), ct);
+        var axis = new float[768];
+        axis[0] = 1f;
+
+        var readBack = await _store.GetByIdAsync(plain.UserId, plain.Id, ct);
+        var results = await _store.SearchAsync(axis, new MemorySearchOptions { UserId = "test-user", Limit = 10, MinScore = -1f }, ct);
+
+        readBack.Should().NotBeNull();
+        readBack!.Embedding.Should().BeNull();
+        results.Select(r => r.Memory.Id).Should().Equal(embedded.Id);
+    }
+
     [Fact]
     public async Task GetAllAsync_ShouldReturnUserMemories()
     {

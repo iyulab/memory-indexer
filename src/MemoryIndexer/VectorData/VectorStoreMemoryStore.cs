@@ -39,14 +39,17 @@ public sealed class VectorStoreMemoryStoreOptions
 /// on indexed properties — the subset the connectors translate.</para>
 /// <para>Counts, the user list and bulk deletes walk the matching records page by page (vector databases have no
 /// aggregates); they cost one request per <see cref="VectorStoreMemoryStoreOptions.PageSize"/> records.</para>
-/// <para>A memory needs an embedding to be found by <see cref="SearchAsync"/>; whether one without an embedding can be
-/// stored at all depends on the connector.</para>
+/// <para>A memory needs an embedding to be found by <see cref="SearchAsync"/>. One without an embedding is still stored, read,
+/// listed and deleted on every connector: the record carries a fixed placeholder vector and
+/// <see cref="MemoryRecord.HasEmbedding"/> = false, which every search filters out.</para>
 /// </remarks>
 public sealed partial class VectorStoreMemoryStore : IMemoryStore
 {
     private readonly VectorStoreCollection<Guid, MemoryRecord> _collection;
     private readonly VectorStoreMemoryStoreOptions _options;
     private readonly ILogger<VectorStoreMemoryStore> _logger;
+    private Task? _ready;
+    private readonly ReadOnlyMemory<float> _placeholder;
 
     /// <summary>Creates the store over <paramref name="vectorStore"/>.</summary>
     public VectorStoreMemoryStore(VectorStore vectorStore, VectorStoreMemoryStoreOptions options, ILogger<VectorStoreMemoryStore> logger)
@@ -61,6 +64,9 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
 
         _options = options;
         _logger = logger;
+        var placeholder = new float[options.Dimensions];
+        placeholder[0] = 1f;
+        _placeholder = placeholder;
         _collection = vectorStore.GetCollection<Guid, MemoryRecord>(
             options.CollectionName, MemoryRecord.CreateDefinition(options.Dimensions, options.DistanceFunction));
     }
@@ -70,7 +76,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
     {
         ArgumentNullException.ThrowIfNull(memory);
         Prepare(memory);
-        await _collection.UpsertAsync(MemoryRecord.From(memory), cancellationToken).ConfigureAwait(false);
+        await (await ReadyAsync(cancellationToken).ConfigureAwait(false)).UpsertAsync(ToRecord(memory), cancellationToken).ConfigureAwait(false);
         LogStored(_logger, memory.Id, memory.UserId);
         return memory;
     }
@@ -83,7 +89,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
         foreach (var memory in list)
             Prepare(memory);
         if (list.Count > 0)
-            await _collection.UpsertAsync(list.Select(MemoryRecord.From), cancellationToken).ConfigureAwait(false);
+            await (await ReadyAsync(cancellationToken).ConfigureAwait(false)).UpsertAsync(list.Select(ToRecord), cancellationToken).ConfigureAwait(false);
         return list;
     }
 
@@ -91,7 +97,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
     public async Task<MemoryUnit?> GetByIdAsync(string userId, Guid id, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
-        var record = await _collection.GetAsync(id, new RecordRetrievalOptions { IncludeVectors = true }, cancellationToken).ConfigureAwait(false);
+        var record = await (await ReadyAsync(cancellationToken).ConfigureAwait(false)).GetAsync(id, new RecordRetrievalOptions { IncludeVectors = true }, cancellationToken).ConfigureAwait(false);
         return record is not null && record.UserId == userId ? record.ToMemory() : null;
     }
 
@@ -105,7 +111,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
             return [];
 
         var found = new List<MemoryUnit>();
-        await foreach (var record in _collection.GetAsync(wanted, new RecordRetrievalOptions { IncludeVectors = true }, cancellationToken).ConfigureAwait(false))
+        await foreach (var record in (await ReadyAsync(cancellationToken).ConfigureAwait(false)).GetAsync(wanted, new RecordRetrievalOptions { IncludeVectors = true }, cancellationToken).ConfigureAwait(false))
         {
             if (record.UserId == userId)
                 found.Add(record.ToMemory());
@@ -122,12 +128,12 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
         ArgumentNullException.ThrowIfNull(memory);
 
         // The stored owner is part of the key: an update never moves a memory to another user.
-        var existing = await _collection.GetAsync(memory.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var existing = await (await ReadyAsync(cancellationToken).ConfigureAwait(false)).GetAsync(memory.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (existing is null || existing.UserId != memory.UserId)
             return false;
 
         memory.UpdatedAt = DateTime.UtcNow;
-        await _collection.UpsertAsync(MemoryRecord.From(memory), cancellationToken).ConfigureAwait(false);
+        await (await ReadyAsync(cancellationToken).ConfigureAwait(false)).UpsertAsync(ToRecord(memory), cancellationToken).ConfigureAwait(false);
         LogUpdated(_logger, memory.Id);
         return true;
     }
@@ -136,7 +142,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
     public async Task<bool> DeleteAsync(string userId, Guid id, bool hardDelete = false, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
-        var record = await _collection.GetAsync(id, new RecordRetrievalOptions { IncludeVectors = true }, cancellationToken).ConfigureAwait(false);
+        var record = await (await ReadyAsync(cancellationToken).ConfigureAwait(false)).GetAsync(id, new RecordRetrievalOptions { IncludeVectors = true }, cancellationToken).ConfigureAwait(false);
         if (record is null || record.UserId != userId)
             return false;
 
@@ -181,11 +187,11 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
 
         var filter = MemoryRecordFilter.For(
             options.UserId, options.SessionId, options.Namespace, options.Types, options.Roles, tiers: null, scopes: null,
-            options.CreatedAfter, options.CreatedBefore, options.IncludeDeleted, options.MetadataFilter);
+            options.CreatedAfter, options.CreatedBefore, options.IncludeDeleted, options.MetadataFilter, embeddedOnly: true);
 
         var results = new List<MemorySearchResult>();
         var search = new VectorSearchOptions<MemoryRecord> { Filter = filter, IncludeVectors = true };
-        await foreach (var hit in _collection.SearchAsync(queryEmbedding, options.Limit, search, cancellationToken).ConfigureAwait(false))
+        await foreach (var hit in (await ReadyAsync(cancellationToken).ConfigureAwait(false)).SearchAsync(queryEmbedding, options.Limit, search, cancellationToken).ConfigureAwait(false))
         {
             if (hit.Record.Embedding is not { } embedding)
                 continue;
@@ -226,7 +232,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
         {
             if (limit <= 0)
                 return [];
-            await foreach (var record in _collection.GetAsync(filter, limit, retrieval, cancellationToken).ConfigureAwait(false))
+            await foreach (var record in (await ReadyAsync(cancellationToken).ConfigureAwait(false)).GetAsync(filter, limit, retrieval, cancellationToken).ConfigureAwait(false))
                 memories.Add(record.ToMemory());
             return memories;
         }
@@ -270,14 +276,39 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
     }
 
     /// <inheritdoc />
-    public Task EnsureCollectionExistsAsync(CancellationToken cancellationToken = default)
-        => _collection.EnsureCollectionExistsAsync(cancellationToken);
+    public async Task EnsureCollectionExistsAsync(CancellationToken cancellationToken = default)
+        => await ReadyAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async Task DeleteCollectionAsync(CancellationToken cancellationToken = default)
     {
         await _collection.EnsureCollectionDeletedAsync(cancellationToken).ConfigureAwait(false);
+        _ready = null;
         LogCollectionDeleted(_logger, _options.CollectionName);
+    }
+
+    // Creates the collection on first use (once per store, retried after a failure): a database that has never seen
+    // the collection answers a read with «not found» instead of an empty result (Qdrant), so reads need it too.
+    private async ValueTask<VectorStoreCollection<Guid, MemoryRecord>> ReadyAsync(CancellationToken cancellationToken)
+    {
+        var ready = _ready;
+        if (ready is null || ready.IsFaulted || ready.IsCanceled)
+        {
+            // Shared by every caller, so no caller's token cancels it; each caller waits with its own.
+            var created = _collection.EnsureCollectionExistsAsync(CancellationToken.None);
+            ready = Interlocked.CompareExchange(ref _ready, created, ready) == ready ? created : _ready!;
+        }
+        await ready.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return _collection;
+    }
+
+    // A memory without an embedding is stored with a fixed unit vector and HasEmbedding = false: it can be read, listed
+    // and deleted on every connector (Qdrant refuses a point without a vector), and a search never matches it.
+    private MemoryRecord ToRecord(MemoryUnit memory)
+    {
+        var record = MemoryRecord.From(memory);
+        record.Embedding ??= _placeholder;
+        return record;
     }
 
     private static void Prepare(MemoryUnit memory)
@@ -305,7 +336,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
             };
 
             var read = 0;
-            await foreach (var record in _collection.GetAsync(filter, _options.PageSize, page, cancellationToken).ConfigureAwait(false))
+            await foreach (var record in (await ReadyAsync(cancellationToken).ConfigureAwait(false)).GetAsync(filter, _options.PageSize, page, cancellationToken).ConfigureAwait(false))
             {
                 read++;
                 yield return record;
@@ -336,7 +367,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
 
         if (hardDelete)
         {
-            await _collection.DeleteAsync(records.Select(r => r.Id), cancellationToken).ConfigureAwait(false);
+            await (await ReadyAsync(cancellationToken).ConfigureAwait(false)).DeleteAsync(records.Select(r => r.Id), cancellationToken).ConfigureAwait(false);
             return;
         }
 
@@ -347,7 +378,7 @@ public sealed partial class VectorStoreMemoryStore : IMemoryStore
             record.UpdatedAtTicks = now;
         }
 
-        await _collection.UpsertAsync(records, cancellationToken).ConfigureAwait(false);
+        await (await ReadyAsync(cancellationToken).ConfigureAwait(false)).UpsertAsync(records, cancellationToken).ConfigureAwait(false);
     }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Stored memory {MemoryId} for user {UserId}")]
