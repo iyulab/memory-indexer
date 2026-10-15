@@ -380,4 +380,103 @@ public abstract class MemoryStoreContractTests
     }
 
     #endregion
+
+    #region Filters and bulk operations
+
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    private static MemoryUnit Memory(string content, string? session = null, string? ns = null, int seed = 1)
+    {
+        var memory = TestHelpers.CreateTestMemory("alice", content, embedding: TestHelpers.CreateTestEmbedding(768, seed));
+        memory.SessionId = session;
+        memory.Namespace = ns;
+        return memory;
+    }
+
+    [Fact]
+    public async Task GetAllAsync_FiltersByMetadataTierAndScope_AndTheMetadataRoundTrips()
+    {
+        var match = Memory("match");
+        match.Metadata = new() { ["project"] = "apollo", ["lang"] = "ko" };
+        match.Tier = Tier.Long;
+        match.Scope = Scope.User;
+        var otherMetadata = Memory("other metadata", seed: 2);
+        otherMetadata.Metadata = new() { ["project"] = "gemini" };
+        otherMetadata.Tier = Tier.Long;
+        otherMetadata.Scope = Scope.User;
+        var otherTier = Memory("other tier", seed: 3);
+        otherTier.Metadata = new() { ["project"] = "apollo" };
+        otherTier.Tier = Tier.Short;
+        otherTier.Scope = Scope.User;
+        await _store.StoreBatchAsync([match, otherMetadata, otherTier], Ct);
+
+        var found = await _store.GetAllAsync("alice", new MemoryFilterOptions
+        {
+            MetadataFilter = new() { ["project"] = "apollo" }, Tiers = [Tier.Long], Scopes = [Scope.User]
+        }, Ct);
+
+        found.Should().ContainSingle().Which.Content.Should().Be("match");
+        found[0].Metadata.Should().BeEquivalentTo(match.Metadata);
+    }
+
+    [Fact]
+    public async Task DeleteBySessionAsync_SoftDeletesThatSessionOnly()
+    {
+        await _store.StoreBatchAsync([Memory("s1 a", session: "s1"), Memory("s1 b", session: "s1", seed: 2), Memory("s2", session: "s2", seed: 3)], Ct);
+
+        var deleted = await _store.DeleteBySessionAsync("alice", "s1", cancellationToken: Ct);
+
+        deleted.Should().Be(2);
+        (await _store.GetAllAsync("alice", cancellationToken: Ct)).Should().ContainSingle().Which.Content.Should().Be("s2");
+        (await _store.GetAllAsync("alice", new MemoryFilterOptions { IncludeDeleted = true }, Ct)).Should().HaveCount(3);
+        (await _store.GetCountAsync("alice", Ct)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DeleteByNamespaceAsync_HardDelete_RemovesThatNamespaceOnly()
+    {
+        await _store.StoreBatchAsync([Memory("n1", ns: "n1"), Memory("n2", ns: "n2", seed: 2)], Ct);
+
+        var deleted = await _store.DeleteByNamespaceAsync("alice", "n1", hardDelete: true, Ct);
+
+        deleted.Should().Be(1);
+        (await _store.GetAllAsync("alice", new MemoryFilterOptions { IncludeDeleted = true }, Ct))
+            .Should().ContainSingle().Which.Content.Should().Be("n2");
+    }
+
+    [Fact]
+    public async Task GetTypeCountsAsync_CountsLiveMemoriesByType()
+    {
+        var episodic = Memory("e");
+        var semantic = Memory("s", seed: 2);
+        semantic.Type = MemoryType.Semantic;
+        var deleted = Memory("d", seed: 3);
+        deleted.Type = MemoryType.Semantic;
+        await _store.StoreBatchAsync([episodic, semantic, deleted], Ct);
+        await _store.DeleteAsync("alice", deleted.Id, cancellationToken: Ct);
+
+        var counts = await _store.GetTypeCountsAsync("alice", Ct);
+
+        counts.Should().BeEquivalentTo(new Dictionary<MemoryType, int> { [MemoryType.Episodic] = 1, [MemoryType.Semantic] = 1 });
+    }
+
+    [Fact]
+    public async Task SearchAsync_LeavesSoftDeletedMemoriesOut_UnlessAsked()
+    {
+        var kept = Memory("kept");
+        var removed = Memory("removed", seed: 2);
+        await _store.StoreBatchAsync([kept, removed], Ct);
+        await _store.DeleteAsync("alice", removed.Id, cancellationToken: Ct);
+        var query = TestHelpers.CreateTestEmbedding(768, 2);
+
+        var live = await _store.SearchAsync(query, new MemorySearchOptions { UserId = "alice", Limit = 10, MinScore = -1 }, Ct);
+        var all = await _store.SearchAsync(query, new MemorySearchOptions { UserId = "alice", Limit = 10, MinScore = -1, IncludeDeleted = true }, Ct);
+
+        live.Select(r => r.Memory.Content).Should().Equal("kept");
+        all.Select(r => r.Memory.Content).Should().BeEquivalentTo(["kept", "removed"]);
+        all[0].Memory.Content.Should().Be("removed", "the query is its embedding");
+        all[0].Score.Should().BeApproximately(1f, 1e-4f);
+    }
+
+    #endregion
 }

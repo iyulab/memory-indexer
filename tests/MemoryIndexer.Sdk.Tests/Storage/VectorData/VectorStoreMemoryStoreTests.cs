@@ -73,29 +73,6 @@ public sealed class VectorStoreMemoryStoreTests : MemoryStoreContractTests, IDis
     }
 
     [Fact]
-    public async Task MetadataTiersAndScopes_AreFilteredByTheDatabase()
-    {
-        var store = CreateStore(pageSize: 2);
-        var match = TestHelpers.CreateTestMemory("alice", "match", embedding: TestHelpers.CreateTestEmbedding(Dimensions, 1));
-        match.Metadata = new() { ["project"] = "apollo", ["lang"] = "ko" };
-        match.Tier = Tier.Long;
-        match.Scope = Scope.User;
-        var otherMetadata = TestHelpers.CreateTestMemory("alice", "other", embedding: TestHelpers.CreateTestEmbedding(Dimensions, 2));
-        otherMetadata.Metadata = new() { ["project"] = "gemini" };
-        otherMetadata.Tier = Tier.Long;
-        otherMetadata.Scope = Scope.User;
-        await store.StoreBatchAsync([match, otherMetadata], Ct);
-
-        var found = await store.GetAllAsync("alice", new MemoryFilterOptions
-        {
-            MetadataFilter = new() { ["project"] = "apollo" }, Tiers = [Tier.Long], Scopes = [Scope.User]
-        }, Ct);
-
-        found.Should().ContainSingle().Which.Content.Should().Be("match");
-        found[0].Metadata.Should().BeEquivalentTo(match.Metadata, "the dictionary round-trips");
-    }
-
-    [Fact]
     public async Task TheDimension_ComesFromTheOptions()
     {
         var store = new VectorStoreMemoryStore(
