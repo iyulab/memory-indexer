@@ -5,6 +5,14 @@ All notable changes to Memory Indexer are documented here.
 ## [Unreleased]
 
 ### Added
+- **Memory Indexer takes a `Microsoft.Extensions.AI` embedding generator directly.** `AddMemoryIndexer(...)
+  .WithEmbeddingGenerator(queriesServiceKey)` embeds with the container's `IEmbeddingGenerator<string, Embedding<float>>`
+  (OpenAI, Azure OpenAI, Ollama, LMSupply, IronHive) — no `IEmbeddingService` to write; it replaces any embedding service
+  registered before it. A keyed generator embeds recall queries (an asymmetric model's query side); without one the
+  documents generator does. `EmbeddingGeneratorEmbeddingService` is the same thing without DI. The dimension is the
+  generator's (`EmbeddingGeneratorMetadata.DefaultModelDimensions`) or the one passed; neither known, or the two
+  disagreeing, throws; batches are one generator call and a short result or a vector of another size throws.
+  `MemoryIndexer` now references `Microsoft.Extensions.AI.Abstractions` (it was already in the dependency closure).
 - **`VectorStoreMemoryStore` stores memories in any Microsoft.Extensions.VectorData database** — Qdrant, PostgreSQL
   (pgvector), Azure AI Search and the other connectors — through the connector's `VectorStore`, with the embedding
   dimension set in `VectorStoreMemoryStoreOptions.Dimensions` (also `CollectionName`, `DistanceFunction`, `PageSize`).

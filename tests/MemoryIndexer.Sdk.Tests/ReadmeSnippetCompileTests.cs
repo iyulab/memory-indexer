@@ -39,6 +39,8 @@ public partial class ReadmeSnippetCompileTests
         ["services"] = "IServiceCollection services = null!;",
         ["serviceProvider"] = "IServiceProvider serviceProvider = null!;",
         ["myEmbeddingService"] = "MemoryIndexer.Interfaces.IEmbeddingService myEmbeddingService = null!;",
+        ["embeddingGenerator"] = "Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>> embeddingGenerator = null!;",
+        ["queryGenerator"] = "Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>> queryGenerator = null!;",
     };
 
     private static readonly IReadOnlyList<Microsoft.CodeAnalysis.MetadataReference> References = SnippetCompiler.ReferencesFor(
@@ -46,6 +48,7 @@ public partial class ReadmeSnippetCompileTests
         {
             "MemoryIndexer", "MemoryIndexer.Sdk", "ModelContextProtocol", "Microsoft.Extensions.Hosting",
             "Microsoft.Extensions.DependencyInjection", "Microsoft.Extensions.DependencyInjection.Abstractions",
+            "Microsoft.Extensions.AI.Abstractions",
         }.Select(Assembly.Load)]);
 
     private static readonly IReadOnlyList<DocSnippet> Snippets = [.. Documents().SelectMany(d => DocSnippets.Read(d.Path, d.Name))];

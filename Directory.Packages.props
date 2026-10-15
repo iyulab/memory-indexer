@@ -12,6 +12,7 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.12" />
     <!-- Vector Data -->
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.6.0" />
     <!-- Database -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />

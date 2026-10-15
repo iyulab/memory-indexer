@@ -202,6 +202,16 @@ await memoryService.RememberAsync("user123", sessionId: null, "My car plate is 1
 MemoryContext context = await memoryService.RecallAsync("user123", sessionId: null, "UI preferences", limit: 5);
 ```
 
+No `IEmbeddingService` to write when you already hold a `Microsoft.Extensions.AI` generator (OpenAI, Azure OpenAI, Ollama,
+LMSupply, IronHive): register it and call `WithEmbeddingGenerator`. The dimension is the one the generator reports (or
+`dimensions:`); an asymmetric model's query side is a keyed generator.
+
+```csharp
+services.AddSingleton(embeddingGenerator);            // IEmbeddingGenerator<string, Embedding<float>> — embeds memories
+services.AddKeyedSingleton("query", queryGenerator);  // optional — embeds recall queries
+services.AddMemoryIndexer().WithEmbeddingGenerator(queriesServiceKey: "query");
+```
+
 `IContextBuilder.BuildAsync` recalls the same way: its query slot searches Semantic, Fact and earlier sessions' Episodic
 memories of the user in the request's namespace, and its episodic slot returns the current session's in order.
 

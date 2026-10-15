@@ -464,6 +464,34 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Embeds with the <c>Microsoft.Extensions.AI</c> <c>IEmbeddingGenerator&lt;string, Embedding&lt;float&gt;&gt;</c> the
+    /// application registered (OpenAI, Azure OpenAI, Ollama, LMSupply, IronHive) instead of an <see cref="IEmbeddingService"/>
+    /// it writes — <see cref="EmbeddingGeneratorEmbeddingService"/>. Replaces any embedding service registered so far.
+    /// </summary>
+    /// <param name="builder">The Memory Indexer builder.</param>
+    /// <param name="queriesServiceKey">
+    /// The key of a keyed generator that embeds queries (an asymmetric model's query side); null embeds queries with the
+    /// unkeyed generator.
+    /// </param>
+    /// <param name="dimensions">The vector size, when the generator does not report one.</param>
+    /// <returns>The builder for chaining.</returns>
+    public static IMemoryIndexerBuilder WithEmbeddingGenerator(
+        this IMemoryIndexerBuilder builder,
+        object? queriesServiceKey = null,
+        int? dimensions = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        builder.Services.RemoveAll<IEmbeddingService>();
+        builder.Services.AddSingleton<IEmbeddingService>(sp => new EmbeddingGeneratorEmbeddingService(
+            sp.GetRequiredService<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>>(),
+            queriesServiceKey is null
+                ? null
+                : sp.GetRequiredKeyedService<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>>(queriesServiceKey),
+            dimensions));
+        return builder;
+    }
+
+    /// <summary>
     /// Configures Memory Indexer to keep memories in the Microsoft.Extensions.VectorData <c>VectorStore</c> the application
     /// registers (Qdrant, PostgreSQL/pgvector, …) — <see cref="VectorStoreMemoryStore"/>. The embedding dimension is
     /// <c>MemoryIndexer:Storage:VectorDimensions</c> (or <c>Embedding:Dimensions</c> when that is 0), as for SQLite.
