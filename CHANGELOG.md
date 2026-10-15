@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.35.0] - 2026-10-15
 
 ### Added
 - **Memory Indexer takes a `Microsoft.Extensions.AI` embedding generator directly.** `AddMemoryIndexer(...)
