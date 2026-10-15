@@ -62,7 +62,7 @@ public sealed class QdrantContainerFixture : IAsyncLifetime
 /// <see cref="VectorStoreMemoryStore"/> passes the store contract on a real Qdrant through the .NET Community Toolkit's
 /// Qdrant connector — the translation the guard fake in <see cref="VectorStoreMemoryStoreTests"/> only approximates
 /// (filters, the Guid key, list properties, paging, scores, a missing collection, a point without a vector). Needs
-/// Docker; without it every test is skipped with the reason, and <c>scripts/run-integration-tests.ps1</c> counts that
+/// Docker; without it every test is skipped with the reason, so a run that must exercise Qdrant should treat that
 /// skip as a failure.
 /// </summary>
 [Trait("Category", "Integration")]
