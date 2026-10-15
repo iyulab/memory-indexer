@@ -2,6 +2,14 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Changed
+- **`EmbeddingGeneratorEmbeddingService` says why the dimension is needed up front.** Its XML doc and the error for an
+  unknown dimension now state that the dimension sizes the memory stores' vector schema, so it is fixed when the service
+  is created (a host that picks its model at run time passes the dimension its stores are built with); the model itself
+  may change as long as its vectors keep that size.
+
 ## [v0.35.0] - 2026-10-15
 
 ### Added

@@ -13,6 +13,12 @@ namespace MemoryIndexer.Services;
 /// <c>documents</c> generator embeds what is stored and, for an asymmetric model (E5, BGE, Qwen3-Embedding), the
 /// <c>queries</c> generator applies the query convention. Without <c>queries</c>, queries are embedded by <c>documents</c>.
 /// The service does not dispose the generators.
+/// <para>
+/// The dimension is fixed when the service is created, unlike FluxIndex's intake, which reads its identity at each use:
+/// the memory stores build their vector schema from <see cref="Dimensions"/>, and a different dimension is a different
+/// schema. The generator's model may change while the host runs as long as its vectors keep that size; every vector is
+/// checked against it.
+/// </para>
 /// </remarks>
 public sealed class EmbeddingGeneratorEmbeddingService : IEmbeddingService
 {
@@ -45,7 +51,9 @@ public sealed class EmbeddingGeneratorEmbeddingService : IEmbeddingService
                 $"The dimension given is {set} but the generator reports {known} for model '{model}'.", nameof(dimensions));
         }
         Dimensions = dimensions ?? reported ?? throw new ArgumentException(
-            $"The embedding generator does not report a dimension for model '{model}'; pass the model's dimension.",
+            $"The embedding generator does not report a dimension for model '{model}'; pass the model's dimension. " +
+            "It sizes the memory store's vectors, so it has to be known when the service is created - a host that picks " +
+            "its model at run time passes the dimension its stores are built with.",
             nameof(dimensions));
         if (Dimensions <= 0)
             throw new ArgumentException($"The dimension must be positive (got {Dimensions}).", nameof(dimensions));
