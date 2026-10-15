@@ -26,11 +26,8 @@ var builder = Host.CreateApplicationBuilder(args);
 // Register your embedding service BEFORE AddMemoryIndexer()
 builder.Services.AddSingleton<IEmbeddingService>(myEmbeddingService);
 
-// Add Memory Indexer with SQLite-vec storage
-builder.Services.AddMemoryIndexer(options =>
-{
-    options.Embedding.Dimensions = 1536;  // Match your embedding model
-}).WithSqliteVec();
+// Add Memory Indexer with SQLite-vec storage (sized from your service's Dimensions)
+builder.Services.AddMemoryIndexer().WithSqliteVec();
 
 // Optional: Add OpenTelemetry observability
 builder.Services.AddMemoryIndexerOtlpObservability("http://localhost:4317");
@@ -52,7 +49,6 @@ await host.RunAsync();
       "ConnectionString": "memories.db"
     },
     "Embedding": {
-      "Dimensions": 1536,
       "CacheEnabled": true
     },
     "Search": {

@@ -17,7 +17,7 @@ public sealed class SqliteVecSyncDisposeTests : IDisposable
     public void Container_WithSqliteStoreResolved_DisposesSynchronously()
     {
         var services = new ServiceCollection();
-        services.AddMemoryIndexer(_ => { }).WithSqliteVec(_dbPath);
+        services.AddMemoryIndexer(o => o.Embedding.Provider = MemoryIndexer.Configuration.EmbeddingProvider.Mock).WithSqliteVec(_dbPath);
         var provider = services.BuildServiceProvider();
         _ = provider.GetRequiredService<IMemoryStore>();
 

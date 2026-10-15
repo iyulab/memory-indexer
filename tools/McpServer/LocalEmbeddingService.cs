@@ -42,7 +42,7 @@ public sealed partial class LocalEmbeddingService : CachedEmbeddingServiceBase, 
         {
             throw new InvalidOperationException(
                 $"Embedding:Model '{_modelId}' produces {known.Dimensions}-dimensional vectors but Embedding:Dimensions is " +
-                $"{Dimensions}. Set Embedding:Dimensions (and the store's vector dimensions) to {known.Dimensions}, or choose " +
+                $"{Dimensions}. Set Embedding:Dimensions to {known.Dimensions}, or choose " +
                 "a model of that size.");
         }
 
@@ -129,7 +129,7 @@ public sealed partial class LocalEmbeddingService : CachedEmbeddingServiceBase, 
             await model.DisposeAsync();
             throw new InvalidOperationException(
                 $"Embedding:Model '{_modelId}' produces {model.Dimensions}-dimensional vectors but Embedding:Dimensions is " +
-                $"{Dimensions}. Set Embedding:Dimensions (and the store's vector dimensions) to {model.Dimensions}.");
+                $"{Dimensions}. Set Embedding:Dimensions to {model.Dimensions}.");
         }
 
         LogModelLoaded(Logger, _modelId, model.Dimensions);

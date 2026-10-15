@@ -56,7 +56,8 @@ public class StorageTypeConfigurationTests : IDisposable
         {
             ["MemoryIndexer:Storage:Type"] = "SqliteVec",
             ["MemoryIndexer:Storage:ConnectionString"] = _db,
-            ["MemoryIndexer:Storage:VectorDimensions"] = "8",
+            ["MemoryIndexer:Embedding:Provider"] = "Mock",
+            ["MemoryIndexer:Embedding:Dimensions"] = "8",
         });
 
         var store = provider.GetRequiredService<IMemoryStore>();
@@ -73,7 +74,8 @@ public class StorageTypeConfigurationTests : IDisposable
         {
             ["MemoryIndexer:Storage:Type"] = "VectorStore",
             ["MemoryIndexer:Storage:CollectionName"] = "agent-memories",
-            ["MemoryIndexer:Storage:VectorDimensions"] = "4",
+            ["MemoryIndexer:Embedding:Provider"] = "Mock",
+            ["MemoryIndexer:Embedding:Dimensions"] = "4",
         }, services => services.AddSingleton<VectorStore>(vectorStore));
 
         var store = provider.GetRequiredService<IMemoryStore>();
@@ -100,7 +102,7 @@ public class StorageTypeConfigurationTests : IDisposable
         services.AddLogging();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         services.AddSingleton<VectorStore>(vectorStore);
-        services.AddMemoryIndexer().WithVectorStore("notes");
+        services.AddMemoryIndexer(o => o.Embedding.Provider = EmbeddingProvider.Mock).WithVectorStore("notes");
         using var provider = services.BuildServiceProvider();
 
         Assert.IsType<VectorStoreMemoryStore>(provider.GetRequiredService<IMemoryStore>());

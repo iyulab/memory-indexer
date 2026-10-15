@@ -182,11 +182,6 @@ public sealed class StorageOptions
     public string ConnectionString { get; set; } = "memory.db";
 
     /// <summary>
-    /// Vector dimensions for storage.
-    /// </summary>
-    public int VectorDimensions { get; set; } = 768;
-
-    /// <summary>
     /// SQLite-specific configuration options.
     /// </summary>
     public SqliteOptions Sqlite { get; set; } = new();
@@ -334,7 +329,9 @@ public sealed class EmbeddingOptions
     public string Model { get; set; } = "nomic-embed-text";
 
     /// <summary>
-    /// Embedding dimensions (must match model output).
+    /// The vector size the built-in embedders produce — the Mock provider, and the bundled MCP server's local model (which
+    /// refuses a model of another size). An application's own <c>IEmbeddingService</c> reports its size through
+    /// <c>IEmbeddingService.Dimensions</c>; the built-in stores size their vectors from that, whichever embedder it is.
     /// </summary>
     public int Dimensions { get; set; } = 768;
 

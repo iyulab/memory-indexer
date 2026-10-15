@@ -41,7 +41,6 @@ builder.Services.AddSingleton<IEmbeddingService>(myEmbeddingService);
 builder.Services.AddMemoryIndexer(options =>
 {
     options.Storage.ConnectionString = "memories.db";
-    options.Embedding.Dimensions = 1536;  // Match your embedding model
 }).WithSqliteVec();
 
 var kernel = builder.Build();

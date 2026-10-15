@@ -28,6 +28,15 @@ All notable changes to Memory Indexer are documented here.
   (session- and turn-level Recall@k / NDCG@10, by question type), and what no public benchmark isolates.
 
 ### Changed
+- **Breaking** — **one vector size: the built-in stores take it from the embedding service.** The SQLite and
+  VectorData stores used `MemoryIndexer:Storage:VectorDimensions` (default 768, or `Embedding:Dimensions` when 0) while the
+  embedder reported its own `IEmbeddingService.Dimensions` — two settings for one number, and a third with a
+  `Microsoft.Extensions.AI` generator; a mismatch failed at the first write. The stores now read
+  `IEmbeddingService.Dimensions`, so a store cannot be resolved without an embedding service. `StorageOptions.VectorDimensions`
+  is removed, and a configuration that still sets `MemoryIndexer:Storage:VectorDimensions` stops the host at startup
+  naming where the size comes from. `Embedding:Dimensions` stays the size of the built-in embedders (Mock, the MCP
+  server's local model). Migration: delete `Storage:VectorDimensions`; with your own embedding service, its `Dimensions`
+  is the size.
 - **`MemoryUnit` no longer carries Microsoft.Extensions.VectorData attributes** (`[VectorStoreKey]`, `[VectorStoreData]`,
   `[VectorStoreVector(1024)]`). Nothing read them, and the vector attribute fixed a 1024 dimension in code; the schema is now
   `MemoryRecord.CreateDefinition(dimensions, …)`. Code that used `MemoryUnit` as a VectorData record type maps through

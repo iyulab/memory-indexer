@@ -43,11 +43,11 @@ public class ConfigurationValidationAtStartupTests
     [Fact]
     public async Task AValueOutOfRange_FailsTheHostAtStartup_NamingTheSetting()
     {
-        using var host = HostWith(new Dictionary<string, string?> { ["MemoryIndexer:Storage:VectorDimensions"] = "0" });
+        using var host = HostWith(new Dictionary<string, string?> { ["MemoryIndexer:Embedding:Dimensions"] = "0" });
 
         var ex = await Assert.ThrowsAsync<OptionsValidationException>(() => host.StartAsync(TestContext.Current.CancellationToken));
 
-        Assert.Contains("MemoryIndexer:Storage:VectorDimensions", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("MemoryIndexer:Embedding:Dimensions", ex.Message, StringComparison.Ordinal);
         Assert.Contains("must be positive", ex.Message, StringComparison.Ordinal);
     }
 
@@ -91,6 +91,17 @@ public class ConfigurationValidationAtStartupTests
         var ex = await Assert.ThrowsAsync<OptionsValidationException>(() => host.StartAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains($"{old} is no longer read: set {now} instead", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheRetiredStoreDimension_FailsTheHostAtStartup_NamingWhereTheSizeComesFrom()
+    {
+        using var host = HostWith(new Dictionary<string, string?> { ["MemoryIndexer:Storage:VectorDimensions"] = "1024" });
+
+        var ex = await Assert.ThrowsAsync<OptionsValidationException>(() => host.StartAsync(TestContext.Current.CancellationToken));
+
+        Assert.Contains("MemoryIndexer:Storage:VectorDimensions is no longer read", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("IEmbeddingService.Dimensions", ex.Message, StringComparison.Ordinal);
     }
 
     /// <summary>

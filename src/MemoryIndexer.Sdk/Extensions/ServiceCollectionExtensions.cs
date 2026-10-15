@@ -493,8 +493,8 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Configures Memory Indexer to keep memories in the Microsoft.Extensions.VectorData <c>VectorStore</c> the application
-    /// registers (Qdrant, PostgreSQL/pgvector, …) — <see cref="VectorStoreMemoryStore"/>. The embedding dimension is
-    /// <c>MemoryIndexer:Storage:VectorDimensions</c> (or <c>Embedding:Dimensions</c> when that is 0), as for SQLite.
+    /// registers (Qdrant, PostgreSQL/pgvector, …) — <see cref="VectorStoreMemoryStore"/>. The vector size is the registered
+    /// embedding service's <see cref="IEmbeddingService.Dimensions"/>, as for SQLite.
     /// </summary>
     /// <param name="builder">The Memory Indexer builder.</param>
     /// <param name="collectionName">Collection name; default <c>MemoryIndexer:Storage:CollectionName</c> («memories»).</param>
@@ -518,9 +518,7 @@ public static class ServiceCollectionExtensions
         var vectorStore = sp.GetService<VectorStore>() ?? throw new InvalidOperationException(
             "MemoryIndexer:Storage:Type is VectorStore, but no Microsoft.Extensions.VectorData VectorStore is registered. " +
             "Register the connector's VectorStore (e.g. Qdrant, PgVector) before resolving the memory store.");
-        var dimensions = options.Storage.VectorDimensions > 0
-            ? options.Storage.VectorDimensions
-            : options.Embedding.Dimensions;
+        var dimensions = sp.GetRequiredService<IEmbeddingService>().Dimensions;
 
         return new VectorStoreMemoryStore(
             vectorStore,
@@ -537,9 +535,7 @@ public static class ServiceCollectionExtensions
         Action<Microsoft.Data.Sqlite.SqliteConnection>? connectionOpened = null)
     {
         var resolvedPath = databasePath ?? options.Storage.ConnectionString ?? "memories.db";
-        var dimensions = options.Storage.VectorDimensions > 0
-            ? options.Storage.VectorDimensions
-            : options.Embedding.Dimensions;
+        var dimensions = sp.GetRequiredService<IEmbeddingService>().Dimensions;
 
         return new SqliteVecMemoryStore(
             databasePath: resolvedPath,

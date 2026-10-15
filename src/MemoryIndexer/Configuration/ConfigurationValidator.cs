@@ -36,17 +36,6 @@ public sealed class ConfigurationValidator : IConfigurationValidator
 
     private static void ValidateStorageOptions(StorageOptions options, ConfigurationValidationResult result)
     {
-        if (options.VectorDimensions <= 0)
-        {
-            result.Errors.Add(new ConfigurationError
-            {
-                PropertyPath = "Storage.VectorDimensions",
-                Message = "Vector dimensions must be positive",
-                CurrentValue = options.VectorDimensions,
-                ExpectedConstraint = "> 0"
-            });
-        }
-
         // SQLite options are validated if configured (storage provider is determined by DI)
         ValidateSqliteOptions(options.Sqlite, result);
     }

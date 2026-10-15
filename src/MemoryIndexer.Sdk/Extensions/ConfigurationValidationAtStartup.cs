@@ -19,12 +19,15 @@ internal sealed partial class ConfigurationValidationAtStartup(
 {
     private readonly ILogger _logger = logger ?? NullLogger<ConfigurationValidationAtStartup>.Instance;
 
-    // Settings 0.35.0 moved (one option per concept). TODO: drop an entry two minor releases after its move.
-    private static readonly (string Old, string New)[] Moved =
+    // Settings 0.35.0 moved or retired (one option per concept). TODO: drop an entry two minor releases after its move.
+    private static readonly (string Old, string Instead)[] Moved =
     [
-        ("MemoryIndexer:VCM:WorkingMemory:Capacity", "MemoryIndexer:WorkingMemory:Capacity"),
-        ("MemoryIndexer:VCM:SemanticStore:MinConfirmationCount", "MemoryIndexer:ArchivePromotion:MinConfirmationCount"),
-        ("MemoryIndexer:VCM:SemanticStore:MinConfidenceThreshold", "MemoryIndexer:ArchivePromotion:MinConfidenceThreshold"),
+        ("MemoryIndexer:VCM:WorkingMemory:Capacity", "set MemoryIndexer:WorkingMemory:Capacity instead"),
+        ("MemoryIndexer:VCM:SemanticStore:MinConfirmationCount", "set MemoryIndexer:ArchivePromotion:MinConfirmationCount instead"),
+        ("MemoryIndexer:VCM:SemanticStore:MinConfidenceThreshold", "set MemoryIndexer:ArchivePromotion:MinConfidenceThreshold instead"),
+        ("MemoryIndexer:Storage:VectorDimensions",
+            "the store takes its vector size from the embedding service (IEmbeddingService.Dimensions; " +
+            "MemoryIndexer:Embedding:Dimensions for the built-in Mock and the MCP server's local model)"),
     ];
 
     public ValidateOptionsResult Validate(string? name, MemoryIndexerOptions options)
@@ -33,7 +36,7 @@ internal sealed partial class ConfigurationValidationAtStartup(
         List<string> moved = configuration is null
             ? []
             : Moved.Where(m => configuration[m.Old] is not null)
-                .Select(m => $"{m.Old} is no longer read: set {m.New} instead")
+                .Select(m => $"{m.Old} is no longer read: {m.Instead}")
                 .ToList();
 
         foreach (var warning in result.Warnings)

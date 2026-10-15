@@ -117,20 +117,13 @@ services.AddMemoryIndexer(options => options.Embedding.Provider = EmbeddingProvi
 //    GenerateQueryEmbeddingAsync (defaults to the former); a model with a query convention overrides the latter.
 services.AddSingleton<IEmbeddingService, MyOpenAIEmbeddingService>();
 
-// 2. Then add Memory Indexer
-services.AddMemoryIndexer(options =>
-{
-    options.Embedding.Dimensions = 1536;  // Match your model
-});
+// 2. Then add Memory Indexer — the stores size their vectors from your service's Dimensions
+services.AddMemoryIndexer();
 ```
 
 **With SQLite Persistent Storage:**
 ```csharp
-services.AddMemoryIndexer(options =>
-{
-    options.Storage.ConnectionString = "myapp_memories.db";
-    options.Embedding.Dimensions = 1024;
-}).WithSqliteVec();
+services.AddMemoryIndexer(options => options.Storage.ConnectionString = "myapp_memories.db").WithSqliteVec();
 ```
 
 **With Custom IMemoryStore:**
@@ -139,10 +132,7 @@ services.AddMemoryIndexer(options =>
 services.AddSingleton<IMemoryStore, MyPostgresMemoryStore>();
 
 // 2. Add Memory Indexer (it will use your registered store)
-services.AddMemoryIndexer(options =>
-{
-    options.Embedding.Dimensions = 1536;
-});
+services.AddMemoryIndexer();
 ```
 
 ### DefaultUserId
@@ -174,7 +164,7 @@ This setting was previously a private hardcoded constant inside individual MCP t
 
 `AddMemoryIndexer()` checks the options when they are first built — at host start — with the registered
 `IConfigurationValidator` (dimension mismatches, thresholds out of range, contradictory settings). An error stops the
-host with an `OptionsValidationException` that names each setting (`MemoryIndexer:Storage:VectorDimensions: Vector
+host with an `OptionsValidationException` that names each setting (`MemoryIndexer:Embedding:Dimensions: Embedding
 dimensions must be positive (current: 0, expected: > 0)`); a warning is logged. Without a host, the first
 `IOptions<MemoryIndexerOptions>.Value` read throws the same exception. To see the result yourself — in a health
 endpoint, say — call the validator:

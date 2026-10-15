@@ -23,23 +23,6 @@ public class ConfigurationValidatorTests
     }
 
     [Fact]
-    public void Validate_NegativeVectorDimensions_ShouldReturnError()
-    {
-        // Arrange
-        var options = new MemoryIndexerOptions
-        {
-            Storage = new StorageOptions { VectorDimensions = -1 }
-        };
-
-        // Act
-        var result = _validator.Validate(options);
-
-        // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyPath == "Storage.VectorDimensions");
-    }
-
-    [Fact]
     public void Validate_NegativeEmbeddingDimensions_ShouldReturnError()
     {
         // Arrange

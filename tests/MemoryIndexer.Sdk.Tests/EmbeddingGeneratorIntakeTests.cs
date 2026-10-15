@@ -14,10 +14,25 @@ namespace MemoryIndexer.Sdk.Tests;
 /// Memory Indexer takes <c>Microsoft.Extensions.AI</c> embedding generators directly: the application registers its
 /// generator(s) and writes no <see cref="IEmbeddingService"/>. A keyed generator carries an asymmetric model's query side.
 /// </summary>
-public class EmbeddingGeneratorIntakeTests
+public sealed class EmbeddingGeneratorIntakeTests : IDisposable
 {
+    private readonly string _db = Path.Combine(Path.GetTempPath(), $"mi-meai-{Guid.NewGuid():N}.db");
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+    public void Dispose()
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        foreach (var file in new[] { _db, _db + "-wal", _db + "-shm" })
+        {
+            try { File.Delete(file); } catch (IOException) { }
+        }
+    }
+
+    /// <summary>
+    /// The SQLite store sizes its vector table from the embedding service — the generator's 4 dimensions, with no
+    /// dimension configured anywhere (the built-in default, 768, would refuse every write).
+    /// </summary>
     [Fact]
     public async Task Memories_are_stored_with_the_documents_generator_and_recalled_with_the_queries_generator()
     {
@@ -27,7 +42,8 @@ public class EmbeddingGeneratorIntakeTests
         services.AddLogging();
         services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(documents);
         services.AddKeyedSingleton<IEmbeddingGenerator<string, Embedding<float>>>("query", queries);
-        services.AddMemoryIndexer(o => o.Storage.VectorDimensions = RecordingGenerator.Dimensions)
+        services.AddMemoryIndexer()
+            .WithSqliteVec(_db)
             .WithEmbeddingGenerator(queriesServiceKey: "query");
         await using var provider = services.BuildServiceProvider();
         var memory = provider.GetRequiredService<IMemoryService>();

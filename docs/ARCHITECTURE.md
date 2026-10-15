@@ -393,8 +393,7 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
   "MemoryIndexer": {
     "Storage": {
       "Type": "InMemory | SqliteVec",
-      "ConnectionString": "memory.db",
-      "VectorDimensions": 1024
+      "ConnectionString": "memory.db"
     },
     "Embedding": {
       "Provider": "Mock | Custom",

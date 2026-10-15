@@ -111,7 +111,6 @@ builder.Services.AddMemoryIndexer(options =>
 {
     options.Storage.ConnectionString = "chat_memories.db";
     options.Embedding.Dimensions = embedDimensions;
-    options.Storage.VectorDimensions = embedDimensions;
 }).WithSqliteVec();
 
 // HTTP client for LLM (OpenAI-compatible API)

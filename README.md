@@ -148,7 +148,7 @@ register an `ITextCompletionService`: summaries keep the memories' own text, and
 returns nothing. Without it,
 the server loads `appsettings.Production.json`, which embeds with the server's own in-process LMSupply model
 (`Embedding:Provider: Custom`, `Model: default` = BAAI/bge-m3, 1024 dimensions; any LMSupply model id or alias works,
-with `Dimensions` and `Storage:VectorDimensions` set to its size). The model is downloaded on first run — the server
+with `Dimensions` set to its size). The model is downloaded on first run — the server
 starts loading it at startup — and needs no external embedding service. A catalog model whose size differs from
 `Dimensions` stops the server at start with both numbers in the message. Both configurations keep memories in `memories.db`
 (`MemoryIndexer:Storage:Type: SqliteVec`); set `InMemory` for a store that forgets on restart.
@@ -174,18 +174,11 @@ dotnet add package MemoryIndexer.Sdk
 // (an asymmetric model - E5, BGE, Qwen3-Embedding - also overrides GenerateQueryEmbeddingAsync)
 services.AddSingleton<IEmbeddingService>(myEmbeddingService);
 
-// InMemory storage (default)
-services.AddMemoryIndexer(options =>
-{
-    options.Embedding.Dimensions = 1536;  // Match your embedding model
-});
+// InMemory storage (default). The stores size their vectors from your service's Dimensions.
+services.AddMemoryIndexer();
 
 // Or with SQLite persistent storage
-services.AddMemoryIndexer(options =>
-{
-    options.Storage.ConnectionString = "memories.db";
-    options.Embedding.Dimensions = 1536;
-}).WithSqliteVec();
+services.AddMemoryIndexer(options => options.Storage.ConnectionString = "memories.db").WithSqliteVec();
 
 var memoryService = serviceProvider.GetRequiredService<IMemoryService>();
 
@@ -260,16 +253,15 @@ dotnet run -- --local         # Use local ONNX model (no API key)
 ## Custom Storage Backends
 
 **Any database with a Microsoft.Extensions.VectorData connector** (Qdrant, PostgreSQL/pgvector, Azure AI Search, …):
-`VectorStoreMemoryStore` is an `IMemoryStore` over the connector's `VectorStore`, with the embedding dimension you
-configure — no store code of your own. Filters (user, session, namespace, type, role, tier, scope, dates, metadata) run in
+`VectorStoreMemoryStore` is an `IMemoryStore` over the connector's `VectorStore`, sized from the embedding service's
+`Dimensions` — no store code of your own. Filters (user, session, namespace, type, role, tier, scope, dates, metadata) run in
 the database; counts, the user list and bulk deletes read the matching records page by page.
 
 ```csharp
 using MemoryIndexer.Sdk.Extensions;
 
 // Register the connector's VectorStore with its own package first (e.g. Qdrant, PgVector), then:
-services.AddMemoryIndexer(options => options.Storage.VectorDimensions = 1024)   // your model's dimension
-    .WithVectorStore("memories");
+services.AddMemoryIndexer().WithVectorStore("memories");
 ```
 
 Or from configuration: `MemoryIndexer:Storage:Type` = `VectorStore` (collection `MemoryIndexer:Storage:CollectionName`,
