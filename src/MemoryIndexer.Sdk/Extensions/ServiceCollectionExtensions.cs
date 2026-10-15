@@ -1,4 +1,6 @@
 
+using MemoryIndexer.VectorData;
+using Microsoft.Extensions.VectorData;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Services;
@@ -168,8 +170,9 @@ public static class ServiceCollectionExtensions
             {
                 StorageType.InMemory => new InMemoryMemoryStore(sp.GetRequiredService<ILogger<InMemoryMemoryStore>>()),
                 StorageType.SqliteVec => CreateSqliteVecStore(sp, options, databasePath: null),
+                StorageType.VectorStore => CreateVectorStoreStore(sp, options, collectionName: null),
                 _ => throw new InvalidOperationException(
-                    $"MemoryIndexer:Storage:Type '{options.Storage.Type}' is not a built-in store. Use InMemory or SqliteVec, " +
+                    $"MemoryIndexer:Storage:Type '{options.Storage.Type}' is not a built-in store. Use InMemory, SqliteVec or VectorStore, " +
                     "or register your own IMemoryStore before calling AddMemoryIndexer()."),
             };
         });
@@ -458,6 +461,47 @@ public static class ServiceCollectionExtensions
             CreateSqliteVecStore(sp, sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value, databasePath, connectionOpened));
 
         return builder;
+    }
+
+    /// <summary>
+    /// Configures Memory Indexer to keep memories in the Microsoft.Extensions.VectorData <c>VectorStore</c> the application
+    /// registers (Qdrant, PostgreSQL/pgvector, …) — <see cref="VectorStoreMemoryStore"/>. The embedding dimension is
+    /// <c>MemoryIndexer:Storage:VectorDimensions</c> (or <c>Embedding:Dimensions</c> when that is 0), as for SQLite.
+    /// </summary>
+    /// <param name="builder">The Memory Indexer builder.</param>
+    /// <param name="collectionName">Collection name; default <c>MemoryIndexer:Storage:CollectionName</c> («memories»).</param>
+    /// <returns>The builder for chaining.</returns>
+    public static IMemoryIndexerBuilder WithVectorStore(this IMemoryIndexerBuilder builder, string? collectionName = null)
+    {
+        var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(IMemoryStore));
+        if (descriptor != null)
+        {
+            builder.Services.Remove(descriptor);
+        }
+
+        builder.Services.AddSingleton<IMemoryStore>(sp =>
+            CreateVectorStoreStore(sp, sp.GetRequiredService<IOptions<MemoryIndexerOptions>>().Value, collectionName));
+
+        return builder;
+    }
+
+    private static VectorStoreMemoryStore CreateVectorStoreStore(IServiceProvider sp, MemoryIndexerOptions options, string? collectionName)
+    {
+        var vectorStore = sp.GetService<VectorStore>() ?? throw new InvalidOperationException(
+            "MemoryIndexer:Storage:Type is VectorStore, but no Microsoft.Extensions.VectorData VectorStore is registered. " +
+            "Register the connector's VectorStore (e.g. Qdrant, PgVector) before resolving the memory store.");
+        var dimensions = options.Storage.VectorDimensions > 0
+            ? options.Storage.VectorDimensions
+            : options.Embedding.Dimensions;
+
+        return new VectorStoreMemoryStore(
+            vectorStore,
+            new VectorStoreMemoryStoreOptions
+            {
+                CollectionName = collectionName ?? options.Storage.CollectionName,
+                Dimensions = dimensions
+            },
+            sp.GetRequiredService<ILogger<VectorStoreMemoryStore>>());
     }
 
     private static SqliteVecMemoryStore CreateSqliteVecStore(

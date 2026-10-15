@@ -255,18 +255,16 @@ configure — no store code of your own. Filters (user, session, namespace, type
 the database; counts, the user list and bulk deletes read the matching records page by page.
 
 ```csharp
-using MemoryIndexer.Interfaces;
-using MemoryIndexer.VectorData;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.VectorData;
+using MemoryIndexer.Sdk.Extensions;
 
-// Register the connector's VectorStore with its own package first (e.g. Qdrant, PgVector).
-services.AddSingleton<IMemoryStore>(sp => new VectorStoreMemoryStore(
-    sp.GetRequiredService<VectorStore>(),
-    new VectorStoreMemoryStoreOptions { CollectionName = "memories", Dimensions = 1024 },  // your model's dimension
-    sp.GetRequiredService<ILogger<VectorStoreMemoryStore>>()));
+// Register the connector's VectorStore with its own package first (e.g. Qdrant, PgVector), then:
+services.AddMemoryIndexer(options => options.Storage.VectorDimensions = 1024)   // your model's dimension
+    .WithVectorStore("memories");
 ```
+
+Or from configuration: `MemoryIndexer:Storage:Type` = `VectorStore` (collection `MemoryIndexer:Storage:CollectionName`,
+default `memories`). Without a registered `VectorStore` the store fails to resolve, naming what is missing. To build it
+yourself: `new VectorStoreMemoryStore(vectorStore, new VectorStoreMemoryStoreOptions { Dimensions = … }, logger)`.
 
 For anything else, implement `IMemoryStore` yourself:
 

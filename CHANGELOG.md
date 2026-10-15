@@ -11,6 +11,9 @@ All notable changes to Memory Indexer are documented here.
   Rows are `MemoryRecord`s (enums by name, times as UTC ticks, metadata as JSON plus `key=value` entries); every filter runs
   in the database; search scores are the cosine similarity of the stored vectors, as in the other stores. Counts, the user
   list and bulk deletes walk the matching records page by page.
+- **`MemoryIndexer:Storage:Type` = `VectorStore` and `WithVectorStore(collectionName)`** register that store on the
+  `VectorStore` the application registered (collection `MemoryIndexer:Storage:CollectionName`, default `memories`;
+  dimension as for SQLite). Without one, resolving the store fails with a message that names it.
 
 ### Documentation
 - **`docs/QUALITY-BENCHMARKS.md` names the public benchmark for recall quality**: LongMemEval, retrieval only

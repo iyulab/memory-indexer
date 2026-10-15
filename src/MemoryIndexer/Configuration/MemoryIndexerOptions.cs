@@ -169,7 +169,8 @@ public sealed class StorageOptions
     /// <summary>
     /// Which store <c>AddMemoryIndexer</c> registers when the application registers none of its own.
     /// Default <see cref="StorageType.InMemory"/> (lost when the process ends); <see cref="StorageType.SqliteVec"/>
-    /// keeps memories in the SQLite file at <see cref="ConnectionString"/>. Configuration key
+    /// keeps memories in the SQLite file at <see cref="ConnectionString"/>; <see cref="StorageType.VectorStore"/> in the
+    /// <c>VectorStore</c> the application registered, collection <see cref="CollectionName"/>. Configuration key
     /// <c>MemoryIndexer:Storage:Type</c>; a value that is not one of these fails the host at startup.
     /// </summary>
     public StorageType Type { get; set; } = StorageType.InMemory;
@@ -189,6 +190,11 @@ public sealed class StorageOptions
     /// SQLite-specific configuration options.
     /// </summary>
     public SqliteOptions Sqlite { get; set; } = new();
+
+    /// <summary>
+    /// Collection the memories live in with <see cref="StorageType.VectorStore"/>. Default <c>memories</c>.
+    /// </summary>
+    public string CollectionName { get; set; } = "memories";
 }
 
 /// <summary>
@@ -201,6 +207,12 @@ public enum StorageType
 
     /// <summary>SQLite with vector search (sqlite-vec) and full-text search; memories persist in a file.</summary>
     SqliteVec = 1,
+
+    /// <summary>
+    /// A Microsoft.Extensions.VectorData <c>VectorStore</c> the application registers (Qdrant, PostgreSQL/pgvector, …);
+    /// memories live in its <see cref="StorageOptions.CollectionName"/> collection (<c>VectorStoreMemoryStore</c>).
+    /// </summary>
+    VectorStore = 2,
 }
 
 /// <summary>

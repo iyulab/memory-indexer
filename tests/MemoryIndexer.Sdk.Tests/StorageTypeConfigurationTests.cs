@@ -3,11 +3,15 @@ using MemoryIndexer.InMemory;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Extensions;
 using MemoryIndexer.Sdk.Storage.Sqlite;
+using MemoryIndexer.Sdk.Tests.Storage.VectorData;
+using MemoryIndexer.Tests;
+using MemoryIndexer.VectorData;
 using MemoryIndexer.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.VectorData;
 using Xunit;
 
 namespace MemoryIndexer.Sdk.Tests;
@@ -62,6 +66,47 @@ public class StorageTypeConfigurationTests : IDisposable
     }
 
     [Fact]
+    public async Task StorageTypeVectorStore_RegistersTheVectorDataStore_OnTheRegisteredVectorStore()
+    {
+        using var vectorStore = new TranslatingInMemoryVectorStore();
+        using var provider = Build(new Dictionary<string, string?>
+        {
+            ["MemoryIndexer:Storage:Type"] = "VectorStore",
+            ["MemoryIndexer:Storage:CollectionName"] = "agent-memories",
+            ["MemoryIndexer:Storage:VectorDimensions"] = "4",
+        }, services => services.AddSingleton<VectorStore>(vectorStore));
+
+        var store = provider.GetRequiredService<IMemoryStore>();
+        await store.StoreAsync(TestHelpers.CreateTestMemory("alice", "x", embedding: TestHelpers.CreateTestEmbedding(4, 1)), TestContext.Current.CancellationToken);
+
+        Assert.IsType<VectorStoreMemoryStore>(store);
+        Assert.True(await vectorStore.CollectionExistsAsync("agent-memories", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void StorageTypeVectorStore_WithoutAVectorStore_SaysWhatIsMissing()
+    {
+        using var provider = Build(new Dictionary<string, string?> { ["MemoryIndexer:Storage:Type"] = "VectorStore" });
+
+        var error = Assert.Throws<InvalidOperationException>(() => provider.GetRequiredService<IMemoryStore>());
+        Assert.Contains("no Microsoft.Extensions.VectorData VectorStore is registered", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WithVectorStore_ReplacesTheDefaultStore()
+    {
+        using var vectorStore = new TranslatingInMemoryVectorStore();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddSingleton<VectorStore>(vectorStore);
+        services.AddMemoryIndexer().WithVectorStore("notes");
+        using var provider = services.BuildServiceProvider();
+
+        Assert.IsType<VectorStoreMemoryStore>(provider.GetRequiredService<IMemoryStore>());
+    }
+
+    [Fact]
     public async Task UnknownStorageType_FailsTheHostAtStartup()
     {
         var builder = Host.CreateApplicationBuilder();
@@ -87,11 +132,12 @@ public class StorageTypeConfigurationTests : IDisposable
         Assert.Equal(a, new FingerprintedValue("personal:alex:lives_in").ToString());
     }
 
-    private static ServiceProvider Build(Dictionary<string, string?> settings)
+    private static ServiceProvider Build(Dictionary<string, string?> settings, Action<IServiceCollection>? register = null)
     {
         var services = new ServiceCollection();
         services.AddLogging(b => b.SetMinimumLevel(LogLevel.Warning));
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
+        register?.Invoke(services);
         services.AddMemoryIndexer();
         return services.BuildServiceProvider();
     }
