@@ -249,7 +249,28 @@ dotnet run -- --local         # Use local ONNX model (no API key)
 
 ## Custom Storage Backends
 
-Memory Indexer provides `IMemoryStore` interface for custom storage implementations. Use this to integrate with PostgreSQL, Qdrant, Redis, Pinecone, or any other storage system.
+**Any database with a Microsoft.Extensions.VectorData connector** (Qdrant, PostgreSQL/pgvector, Azure AI Search, …):
+`VectorStoreMemoryStore` is an `IMemoryStore` over the connector's `VectorStore`, with the embedding dimension you
+configure — no store code of your own. Filters (user, session, namespace, type, role, tier, scope, dates, metadata) run in
+the database; counts, the user list and bulk deletes read the matching records page by page.
+
+```csharp
+using MemoryIndexer.Interfaces;
+using MemoryIndexer.VectorData;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.VectorData;
+
+// Register the connector's VectorStore with its own package first (e.g. Qdrant, PgVector).
+services.AddSingleton<IMemoryStore>(sp => new VectorStoreMemoryStore(
+    sp.GetRequiredService<VectorStore>(),
+    new VectorStoreMemoryStoreOptions { CollectionName = "memories", Dimensions = 1024 },  // your model's dimension
+    sp.GetRequiredService<ILogger<VectorStoreMemoryStore>>()));
+```
+
+For anything else, implement `IMemoryStore` yourself:
+
+Memory Indexer provides the `IMemoryStore` interface for custom storage implementations.
 
 ```csharp
 using MemoryIndexer.Utilities;

@@ -4,11 +4,23 @@ All notable changes to Memory Indexer are documented here.
 
 ## [Unreleased]
 
+### Added
+- **`VectorStoreMemoryStore` stores memories in any Microsoft.Extensions.VectorData database** — Qdrant, PostgreSQL
+  (pgvector), Azure AI Search and the other connectors — through the connector's `VectorStore`, with the embedding
+  dimension set in `VectorStoreMemoryStoreOptions.Dimensions` (also `CollectionName`, `DistanceFunction`, `PageSize`).
+  Rows are `MemoryRecord`s (enums by name, times as UTC ticks, metadata as JSON plus `key=value` entries); every filter runs
+  in the database; search scores are the cosine similarity of the stored vectors, as in the other stores. Counts, the user
+  list and bulk deletes walk the matching records page by page.
+
 ### Documentation
 - **`docs/QUALITY-BENCHMARKS.md` names the public benchmark for recall quality**: LongMemEval, retrieval only
   (session- and turn-level Recall@k / NDCG@10, by question type), and what no public benchmark isolates.
 
 ### Changed
+- **`MemoryUnit` no longer carries Microsoft.Extensions.VectorData attributes** (`[VectorStoreKey]`, `[VectorStoreData]`,
+  `[VectorStoreVector(1024)]`). Nothing read them, and the vector attribute fixed a 1024 dimension in code; the schema is now
+  `MemoryRecord.CreateDefinition(dimensions, …)`. Code that used `MemoryUnit` as a VectorData record type maps through
+  `MemoryRecord.From` / `ToMemory` instead.
 - **Breaking** — **one setting per concept for the Short tier capacity and the Long → Archive gate.** The Short tier's
   session cache (`IShortTermMemory`) had its own capacity (`MemoryIndexer:VCM:WorkingMemory:Capacity`, default 7) next to the
   tier limit the store enforces (`MemoryIndexer:WorkingMemory:Capacity`, default 9), and the Long → Archive promoter read
