@@ -239,37 +239,40 @@ public sealed partial class SimpleMemoryService : IMemoryService
 
         LogForgetSessionAsync(_logger, userId, sessionId);
 
-        // Retrieve session-scoped memories
-        var retrieveRequest = new RetrieveRequest
+        // The session's Session- and Topic-scoped memories, listed by the store itself — every one, soft-deleted ones included.
+        // A search was used before: it is capped, ranked and skips what does not score, so «forget» left memories behind.
+        // Checked again here: a store of the application's own that ignored a filter must not make forgetting a session
+        // delete the user's User-scoped memories or another session's.
+        var sessionMemories = (await _store.GetAllAsync(userId, new MemoryFilterOptions
         {
-            UserId = userId,
             SessionId = sessionId,
-            Query = "*", // Wildcard to retrieve all
-            Limit = 10000,
-            MinScore = 0.0f
-        };
+            Scopes = [Scope.Session, Scope.Topic],
+            IncludeDeleted = true
+        }, cancellationToken))
+            .Where(m => m.SessionId == sessionId && m.Scope is Scope.Session or Scope.Topic)
+            .ToList();
 
-        var results = await _primitives.RetrieveAsync(retrieveRequest, cancellationToken);
+        LogFoundSessionMemories(_logger, sessionMemories.Count);
 
-        LogFoundSessionMemories(_logger, results.Count);
-
-        // Delete session-scoped memories only
-        var sessionMemories = results.Where(r => r.Memory.Scope == Scope.Session || r.Memory.Scope == Scope.Topic).ToList();
-
-        foreach (var result in sessionMemories)
+        var deleted = 0;
+        foreach (var memory in sessionMemories)
         {
-            var deleteRequest = new DeleteRequest
-            {
-                UserId = userId,
-                MemoryId = result.Memory.Id,
-                HardDelete = true, // Forgetting removes the text; a soft delete only hides it
-                ForceLocked = true
-            };
-
-            await _primitives.DeleteAsync(deleteRequest, cancellationToken);
+            // Forgetting removes the text (a soft delete only hides it), locked memories included. A memory already
+            // soft-deleted is invisible to the primitives, so the store removes it directly.
+            var removed = memory.IsDeleted
+                ? await _store.DeleteAsync(userId, memory.Id, hardDelete: true, cancellationToken)
+                : await _primitives.DeleteAsync(new DeleteRequest
+                {
+                    UserId = userId,
+                    MemoryId = memory.Id,
+                    HardDelete = true,
+                    ForceLocked = true
+                }, cancellationToken);
+            if (removed)
+                deleted++;
         }
 
-        LogDeletedSessionMemories(_logger, sessionMemories.Count);
+        LogDeletedSessionMemories(_logger, deleted);
     }
 
     /// <inheritdoc />

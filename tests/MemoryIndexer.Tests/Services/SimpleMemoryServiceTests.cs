@@ -437,12 +437,15 @@ public class SimpleMemoryServiceTests
         // Arrange
         const string userId = "user-1";
         const string sessionId = "session-1";
+        var ct = TestContext.Current.CancellationToken;
 
-        var userMemory = _primitives.AddMemory(userId, null, Scope.User, "User memory");
-        var sessionMemory = _primitives.AddMemory(userId, sessionId, Scope.Session, "Session memory");
+        var userMemory = new MemoryUnit { UserId = userId, SessionId = sessionId, Scope = Scope.User, Content = "User memory" };
+        var sessionMemory = new MemoryUnit { UserId = userId, SessionId = sessionId, Scope = Scope.Session, Content = "Session memory" };
+        await _store.StoreAsync(userMemory, ct);
+        await _store.StoreAsync(sessionMemory, ct);
 
         // Act
-        await _service.ForgetSessionAsync(userId, sessionId, TestContext.Current.CancellationToken);
+        await _service.ForgetSessionAsync(userId, sessionId, ct);
 
         // Assert
         _primitives.DeletedMemories.Should().ContainSingle();

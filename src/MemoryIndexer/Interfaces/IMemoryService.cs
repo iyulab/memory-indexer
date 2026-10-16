@@ -136,8 +136,9 @@ public interface IMemoryService
     /// <returns>Task representing the async operation</returns>
     /// <remarks>
     /// Behavior:
-    /// - Deletes all session-scoped memories
-    /// - Preserves User-scoped memories
+    /// - Permanently deletes every Session- and Topic-scoped memory of the session, locked and soft-deleted ones included,
+    ///   listed from the store (not by a search, which is capped and skips what does not score)
+    /// - Preserves User-scoped memories and other sessions' memories
     /// - Useful for session reset or testing
     /// </remarks>
     Task ForgetSessionAsync(

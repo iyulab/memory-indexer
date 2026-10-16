@@ -2,6 +2,14 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Fixed
+- **`ForgetSessionAsync` removes every Session- and Topic-scoped memory of the session.** It collected them with a search
+  (wildcard query, at most 10,000 results), so a larger session, or a memory the search did not return, survived «forget».
+  The memories are now listed from the store — locked and soft-deleted ones included — and permanently deleted, as
+  `ForgetUserAsync` already does. User-scoped memories and other sessions are kept, as before.
+
 ## [v0.37.0] - 2026-10-16
 
 ### Fixed
