@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.37.0] - 2026-10-16
 
 ### Fixed
 - **Remembering a new memory embeds its content once, not twice.** With deduplication on (the default), the duplicate check
