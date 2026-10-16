@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.38.0] - 2026-10-17
 
 ### Fixed
 - **`RememberAsync` embeds a turn once.** 0.37.0 said so, but that fix covered only the duplicate check and the store: the
