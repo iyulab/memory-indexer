@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.37.1] - 2026-10-16
 
 ### Fixed
 - **`ForgetSessionAsync` removes every Session- and Topic-scoped memory of the session.** It collected them with a search
