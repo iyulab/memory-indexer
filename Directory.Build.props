@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>0.37.1</Version>
+    <Version>0.38.0</Version>
     <!-- nuget.org «Release Notes»: the GitHub release of this version (its notes are the CHANGELOG section). -->
     <PackageReleaseNotes>https://github.com/iyulab/memory-indexer/releases/tag/v$(Version)</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
