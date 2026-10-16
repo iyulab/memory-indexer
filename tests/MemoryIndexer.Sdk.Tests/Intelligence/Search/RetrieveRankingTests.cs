@@ -95,4 +95,29 @@ public class RetrieveRankingTests
 
         Assert.Equal("The parking permit renewal deadline is Friday.", Assert.Single(results).Memory.Content);
     }
+
+    [Fact]
+    public async Task QueryWordsMostCandidatesShare_DoNotOutweighTheWordOnlyTheAnswerHas()
+    {
+        // The answer shares only «sneezing» with the question; every other candidate shares «think», «my», «lately»,
+        // «might», «be», «it». Counted as a plain fraction those six beat the one; weighted by how few candidates contain a
+        // word, the rare one decides. Limit 3 searches 12 candidates.
+        var (provider, store, primitives) = Build([]);
+        using var _ = provider;
+        var now = DateTime.UtcNow;
+        const string answer = "Sneezing started after we moved the cat bed next to the sofa.";
+        await store.StoreAsync(Memory(answer, At(0.80f), now), Ct);
+        string[] things = ["TV", "knee", "plant", "laptop", "router", "car", "bike", "phone", "lamp", "printer", "fridge"];
+        foreach (var thing in things)
+        {
+            await store.StoreAsync(Memory($"I think my {thing} has been acting up lately, it might be old.", At(0.80f), now), Ct);
+        }
+
+        var results = await primitives.RetrieveAsync(
+            new RetrieveRequest { UserId = "u", Query = "I think my sneezing lately might be it", Limit = 3, RecordAccess = false }, Ct);
+
+        Assert.Equal(answer, results[0].Memory.Content);
+        Assert.True(results[0].Breakdown!.KeywordScore > results[1].Breakdown!.KeywordScore,
+            $"answer {results[0].Breakdown!.KeywordScore} vs {results[1].Breakdown!.KeywordScore}");
+    }
 }

@@ -682,15 +682,19 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         }
 
         // Calculate weights (DAT or manual)
-        var weights = request.Weights ?? GetDefaultWeights();
+        var weights = request.Weights ?? new RetrievalWeights();
 
         // Pre-tokenize query for keyword scoring
         var queryTokens = TokenizeForKeywordMatch(request.Query);
 
         // Build final results with combined scoring
-        var resultsSource = rerankedResults != null
+        var resultsSource = (rerankedResults != null
             ? rerankedResults.Select(rr => (rr.Result, RerankScore: (float?)rr.RerankScore))
-            : filtered.Select(r => (r, RerankScore: (float?)null));
+            : filtered.Select(r => (r, RerankScore: (float?)null))).ToList();
+
+        // Keyword weights come from the candidates themselves: a query word most candidates contain («my», «you», «lately»)
+        // says little about which one answers, a word few contain says much. Language-neutral - no stopword list.
+        var keywordWeights = KeywordWeights(queryTokens, resultsSource.Select(item => item.Item1.Memory.Content));
 
         var results = resultsSource
             .Select(item =>
@@ -701,7 +705,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
                 // Calculate individual scores
                 var semanticScore = rerankScore ?? vectorScore; // Use rerank score if available
-                var keywordScore = CalculateKeywordScore(memory.Content, queryTokens);
+                var keywordScore = CalculateKeywordScore(memory.Content, keywordWeights);
                 var recencyScore = CalculateRecencyScore(memory, _searchOptions.RecencyHalfLifeDays);
                 var importanceScore = memory.ImportanceScore;
                 var retentionScore = memory.CalculateRetention();
@@ -1086,19 +1090,47 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     private static readonly char[] TokenSeparators = [' ', '\t', '\n', '\r', '.', ',', ';', ':', '!', '?', '(', ')', '[', ']', '{', '}', '"', '\'', '/', '\\', '-', '_', '+', '=', '<', '>', '&', '|', '@', '#', '$', '%', '^', '*', '~', '`'];
 
     /// <summary>
-    /// Calculates keyword match score between memory content and pre-tokenized query.
-    /// Returns ratio of matched query tokens found in memory content (0.0 to 1.0).
+    /// The weight of each query token among <paramref name="candidates"/>: its inverse document frequency there (the BM25
+    /// form, <c>ln(1 + (N - df + 0.5) / (df + 0.5))</c>), so a token most candidates contain weighs little.
     /// </summary>
-    private static float CalculateKeywordScore(string memoryContent, HashSet<string> queryTokens)
+    private static Dictionary<string, float> KeywordWeights(HashSet<string> queryTokens, IEnumerable<string> candidates)
     {
-        if (queryTokens.Count == 0)
+        var documentFrequency = queryTokens.ToDictionary(t => t, _ => 0, StringComparer.Ordinal);
+        var count = 0;
+        foreach (var content in candidates)
+        {
+            count++;
+            var tokens = TokenizeForKeywordMatch(content);
+            foreach (var token in queryTokens)
+            {
+                if (tokens.Contains(token))
+                {
+                    documentFrequency[token]++;
+                }
+            }
+        }
+
+        return documentFrequency.ToDictionary(
+            kv => kv.Key,
+            kv => (float)Math.Log(1 + ((count - kv.Value + 0.5) / (kv.Value + 0.5))),
+            StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Keyword match between memory content and the query: the weight of the query tokens the content contains over the
+    /// weight of all query tokens (0.0 to 1.0), weights from <see cref="KeywordWeights"/>.
+    /// </summary>
+    private static float CalculateKeywordScore(string memoryContent, Dictionary<string, float> queryWeights)
+    {
+        var total = queryWeights.Values.Sum();
+        if (total <= 0f)
         {
             return 0f;
         }
 
         var contentTokens = TokenizeForKeywordMatch(memoryContent);
-        var matchCount = queryTokens.Count(token => contentTokens.Contains(token));
-        return (float)matchCount / queryTokens.Count;
+        var matched = queryWeights.Where(kv => contentTokens.Contains(kv.Key)).Sum(kv => kv.Value);
+        return matched / total;
     }
 
     private static float CalculateRecencyScore(MemoryUnit memory, double halfLifeDays)
@@ -1107,14 +1139,6 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         var daysSince = Math.Max(0, (DateTime.UtcNow - lastAccess).TotalDays);
         return halfLifeDays <= 0 ? 1f : (float)Math.Pow(0.5, daysSince / halfLifeDays);
     }
-
-    private static RetrievalWeights GetDefaultWeights() => new()
-    {
-        Semantic = 0.4f,
-        Keyword = 0.2f,
-        Recency = 0.2f,
-        Importance = 0.2f
-    };
 
     private static Tier GetHigherTier(Tier current) => current switch
     {

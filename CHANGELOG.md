@@ -42,6 +42,15 @@ All notable changes to Memory Indexer are documented here.
 - **Breaking: a candidate is no longer cut by vector rank before it is scored.** The reranking stage kept twice the limit
   (with the default pass-through reranker: the vector order), so a memory the vector ranked third for a limit of one never
   had its keyword and importance scores counted. Every searched candidate is now scored; the combined score takes the limit.
+- **Breaking: a query's common words no longer decide the keyword part of the score.** It was the share of the query's words a
+  memory contains, so words most memories share («my», «you», «lately») counted as much as the one word that identified the
+  answer, and long memories won by containing more of them. Each query word is now weighted by how few of the searched
+  candidates contain it (the BM25 inverse document frequency over the candidates — no stopword list, any language).
+- **Breaking: the default weights are semantic 0.6, keyword 0.2, recency 0.1, importance 0.1** (were 0.4 / 0.2 / 0.2 / 0.2).
+  With the stored importance (type, length, pronouns) at 0.2 a long, generic turn outranked the short one that answered; on
+  LongMemEval with a real embedder the old defaults ranked single-session preference questions below plain cosine order. The
+  defaults now live only on `RetrievalWeights` — a request that sets some weights gets these for the rest (it got
+  0.4 / 0.2 / 0.2 / 0.2 before).
 - **Breaking: `RetrieveRequest.MinScore` filters the vector similarity once.** It also filtered the combined score, which
   dropped close matches whose recency or keyword part was low (semantic 0.5, keyword 0, an old memory: 0.28 < 0.3).
 

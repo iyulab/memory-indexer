@@ -589,29 +589,33 @@ public sealed class RetrieveRequest
 }
 
 /// <summary>
-/// Weights for hybrid retrieval scoring.
+/// Weights for hybrid retrieval scoring. The defaults are what <see cref="IMemoryPrimitives.RetrieveAsync"/> uses when a
+/// request carries none — chosen on LongMemEval with a real embedder: the semantic similarity leads, and recency and the
+/// stored importance only break near ties (at higher weights they ranked long, generic turns above the short one that
+/// answered).
 /// </summary>
 public sealed class RetrievalWeights
 {
     /// <summary>
-    /// Weight for semantic similarity (0-1).
+    /// Weight for semantic similarity (0-1). Default 0.6.
     /// </summary>
-    public float Semantic { get; init; } = 0.4f;
+    public float Semantic { get; init; } = 0.6f;
 
     /// <summary>
-    /// Weight for keyword match (0-1).
+    /// Weight for keyword match (0-1): the share of the query's words the memory contains, each word weighted by how few of
+    /// the searched candidates contain it. Default 0.2.
     /// </summary>
     public float Keyword { get; init; } = 0.2f;
 
     /// <summary>
-    /// Weight for recency (0-1).
+    /// Weight for recency (0-1). Default 0.1.
     /// </summary>
-    public float Recency { get; init; } = 0.2f;
+    public float Recency { get; init; } = 0.1f;
 
     /// <summary>
-    /// Weight for importance score (0-1).
+    /// Weight for importance score (0-1). Default 0.1.
     /// </summary>
-    public float Importance { get; init; } = 0.2f;
+    public float Importance { get; init; } = 0.1f;
 }
 
 /// <summary>
