@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.36.0] - 2026-10-16
 
 ### Fixed
 - **Breaking: `RememberAsync` keeps every memory that is not identical to a recent one.** The default deduplication compared
