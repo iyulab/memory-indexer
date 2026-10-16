@@ -36,5 +36,17 @@ in-repository tests in [EVALUATION.md](EVALUATION.md) cover the rest.
 
 ## Status
 
-Not yet measured. Results will be added here with the package version, the embedding model and the storage configuration
-they were measured with.
+First measurement (2026-10-16): LongMemEval_S cleaned, the first 5 questions of each type (30, abstention left out),
+14,990 chat turns ingested turn by turn with `RememberAsync(user, session, content, role)` and recalled with
+`RecallAsync(…, limit: 10)` from a new session; in-memory store, `WithEmbeddingGenerator()` over LMSupply's bge-m3 GGUF
+(llama-server, file pooling and context).
+
+| version, registration | memories stored | session R@5 | session R@10 | turn R@5 | turn R@10 | turn NDCG@10 |
+|---|---|---|---|---|---|---|
+| 0.35.0, default | 1,888 (12.6 %) | 0.556 | 0.642 | 0.056 | 0.062 | 0.059 |
+| 0.35.0, deduplication off | 15,511 | 0.931 | 0.950 | 0.686 | 0.788 | 0.659 |
+| 0.36.0, default | 15,467 | 0.931 | 0.950 | 0.686 | 0.788 | 0.659 |
+
+By question type (0.36.0): knowledge-update session R@5 1.00 / turn R@10 0.93; multi-session 0.68 / 0.59;
+single-session-preference 1.00 / 0.47; temporal-reasoning 0.90 / 0.84. 0.35.0's default deduplication skipped, merged or
+overwrote most turns by similarity (see the 0.36.0 changelog).
