@@ -4,6 +4,16 @@ All notable changes to Memory Indexer are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **Breaking: `RememberAsync` keeps every memory that is not identical to a recent one.** The default deduplication compared
+  each new memory with the user's 20 newest (all sessions) and, by similarity alone, skipped it, merged it into the older
+  one, or **replaced the older memory's content with it**. The thresholds are on a `(cos + 1) / 2` scale, so «Update» fired
+  at a raw cosine of 0.5 — two turns of one conversation clear that routinely. Measured on LongMemEval_S (30 questions,
+  14,990 chat turns, bge-m3): the default kept 12.6 % of the turns and recall fell to session R@5 0.556 (0.931 with
+  deduplication off). Now only content identical to a recent memory (ignoring case and whitespace) is skipped; similar
+  content is stored with a relation to the memory it resembles. Migration: to keep merging and updating by similarity,
+  set `DeduplicationOptions.ActOnSimilarity = true` — and calibrate the thresholds for your embedder.
+
 ### Changed
 - **`EmbeddingGeneratorEmbeddingService` says why the dimension is needed up front.** Its XML doc and the error for an
   unknown dimension now state that the dimension sizes the memory stores' vector schema, so it is fixed when the service

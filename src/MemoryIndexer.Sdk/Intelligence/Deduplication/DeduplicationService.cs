@@ -73,7 +73,21 @@ public sealed partial class DeduplicationService : IDeduplicationService
             };
         }
 
-        // Step 2: Generate embedding for new content
+        // Step 2: Identical content (ignoring case and whitespace) is a repeated mention, whatever the embedder says.
+        var normalized = NormalizeForComparison(content);
+        if (recentMemories.FirstOrDefault(m => NormalizeForComparison(m.Content) == normalized) is { } identical)
+        {
+            return new DuplicateCheckResult
+            {
+                IsDuplicate = true,
+                DuplicateType = DuplicateType.Exact,
+                ExistingMemory = identical,
+                SimilarityScore = 1f,
+                RecommendedAction = DuplicateAction.Skip
+            };
+        }
+
+        // Generate embedding for new content
         var newEmbedding = await _embeddingService.GenerateEmbeddingAsync(content, cancellationToken);
 
         // Step 3: Find most similar memory
@@ -146,7 +160,13 @@ public sealed partial class DeduplicationService : IDeduplicationService
         var duplicateType = DuplicateType.Semantic;
         DuplicateAction recommendedAction;
 
-        if (highestSimilarity >= _options.ExactDuplicateThreshold)
+        if (!_options.ActOnSimilarity)
+        {
+            // Similar is not the same: store it, related to the memory it resembles.
+            recommendedAction = DuplicateAction.AddWithRelation;
+            LogLowSimilarityFoundSimilaritySimilarity(_logger, highestSimilarity);
+        }
+        else if (highestSimilarity >= _options.ExactDuplicateThreshold)
         {
             // Exact duplicate (>= 0.95): Skip
             duplicateType = DuplicateType.Exact;
@@ -182,6 +202,9 @@ public sealed partial class DeduplicationService : IDeduplicationService
             SimilarMemories = similarMemories
         };
     }
+
+    private static string NormalizeForComparison(string? text) =>
+        string.Join(' ', (text ?? string.Empty).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
 
     /// <summary>
     /// Gets recent memories for deduplication comparison.

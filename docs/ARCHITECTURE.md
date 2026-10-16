@@ -456,11 +456,11 @@ Uses `Microsoft.Extensions.VectorData.Abstractions` for backend-agnostic operati
 ### Memory Operations
 
 - **SemanticOperationDecider**: ADD/UPDATE/DELETE/MERGE decisions
-- **DeduplicationService**: Tiered semantic deduplication with content-type awareness
-  - Exact duplicates (≥0.95): Skip storage + implicit confirm (+0.10 confidence boost)
-  - High similarity (0.85-0.94): Merge content + implicit confirm (+0.05 confidence boost)
-  - Medium similarity (0.75-0.84): Update existing + implicit confirm (+0.02 confidence boost)
-  - Low similarity (0.65-0.74): Add with relation
+- **DeduplicationService**: deduplication with content-type awareness
+  - Default: content identical to one of the user's recent memories (ignoring case and whitespace) is skipped + implicit
+    confirm; similar content (≥0.65 on the [0, 1] similarity scale, `(cos + 1) / 2`) is stored with a relation
+  - Opt-in (`DeduplicationOptions.ActOnSimilarity`), on that scale: ≥0.95 Skip, 0.85-0.94 Merge, 0.75-0.84 Update (the
+    existing memory's content is replaced), 0.65-0.74 Add with relation — calibrate the thresholds for your embedder
   - **Phase 55**: Duplicate detection = repeated mention = implicit confirmation → enables Archive promotion
 - **ImportanceAnalyzer**: Value assessment scoring
 

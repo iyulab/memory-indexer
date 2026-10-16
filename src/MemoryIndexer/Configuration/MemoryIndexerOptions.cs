@@ -589,19 +589,30 @@ public sealed class DeduplicationOptions
     public int LookbackWindow { get; set; } = 20;
 
     /// <summary>
-    /// Exact duplicate threshold (>= 0.95): Skip.
+    /// Whether a similar — not identical — memory is skipped, merged or overwritten by the similarity tiers below
+    /// (<see cref="ExactDuplicateThreshold"/>, <see cref="HighSimilarityThreshold"/>, <see cref="MediumSimilarityThreshold"/>).
+    /// Default: false. Off, only content identical to a recent memory (ignoring case and whitespace) is skipped, and similar
+    /// content is stored with a relation to the memory it resembles: cosine similarity is not sameness — two turns of one
+    /// conversation routinely score above 0.75 with a current embedder while carrying different facts, and the thresholds
+    /// mean different things per embedding model. Turn it on only with thresholds calibrated for your embedder.
+    /// </summary>
+    public bool ActOnSimilarity { get; set; }
+
+    /// <summary>
+    /// Exact duplicate threshold (>= 0.95): Skip. Used only with <see cref="ActOnSimilarity"/>.
     /// Default: 0.95.
     /// </summary>
     public float ExactDuplicateThreshold { get; set; } = 0.95f;
 
     /// <summary>
-    /// High similarity threshold (0.85-0.94): Merge.
+    /// High similarity threshold (0.85-0.94): Merge. Used only with <see cref="ActOnSimilarity"/>.
     /// Default: 0.85.
     /// </summary>
     public float HighSimilarityThreshold { get; set; } = 0.85f;
 
     /// <summary>
-    /// Medium similarity threshold (0.75-0.84): Update.
+    /// Medium similarity threshold (0.75-0.84): Update — the existing memory's content is replaced by the new one. Used only
+    /// with <see cref="ActOnSimilarity"/>.
     /// Default: 0.75.
     /// </summary>
     public float MediumSimilarityThreshold { get; set; } = 0.75f;

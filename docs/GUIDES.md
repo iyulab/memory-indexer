@@ -828,7 +828,9 @@ foreach (var item in items)
 
 **Solution:**
 ```csharp
-// Deduplication is automatic in SDK, but you can pre-check:
+// Identical content is skipped automatically (ignoring case and whitespace); similar content is stored with a relation.
+// To also skip near-duplicates, pre-check — or set DeduplicationOptions.ActOnSimilarity with thresholds calibrated
+// for your embedder:
 foreach (var item in items)
 {
     var existing = await primitives.RetrieveAsync(new RetrieveRequest { UserId = userId, Query = item, Limit = 1 });
