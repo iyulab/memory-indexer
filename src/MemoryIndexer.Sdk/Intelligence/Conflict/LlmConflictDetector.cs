@@ -52,14 +52,26 @@ public sealed partial class LlmConflictDetector
             {
                 Temperature = 0.1f,  // Low temperature for deterministic analysis
                 MaxTokens = 300,
-                StopSequences = new[] { "###" }
+                StopSequences = new[] { "###" },
+                ResponseFormat = CompletionResponseFormat.Json,
             };
 
             LogAnalyzingConflictNEWNewCreatedAtVs(_logger, newMemory.CreatedAt, existingMemory.CreatedAt);
 
-            var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
+            var (dto, error) = await LlmJson.CompleteAsync<ConflictAnalysisDto>(_completionService, prompt, options, cancellationToken);
+            if (dto is null)
+            {
+                LogUnreadableConflictAnalysis(_logger, error);
+                return CreateFallbackAnalysis(error);
+            }
 
-            var analysis = ParseConflictAnalysis(response);
+            var analysis = new ConflictAnalysis
+            {
+                ConflictType = ParseConflictType(dto.ConflictType),
+                Confidence = dto.Confidence,
+                RecommendedAction = ParseMemoryAction(dto.RecommendedAction),
+                Reasoning = dto.Reasoning
+            };
 
             LogConflictAnalysisTypeConfidenceConfidence(_logger, analysis.ConflictType, analysis.Confidence);
 
@@ -127,55 +139,18 @@ public sealed partial class LlmConflictDetector
             - TEMPORAL → ARCHIVE (preserve old as historical, add new as current)
             - NONE → ADD (store as separate memory)
 
-            Respond ONLY with valid JSON:
+            Respond ONLY with one JSON object, no explanation and no code fence. conflictType is one of DUPLICATE, REFINEMENT,
+            UPDATE, CONTRADICTION, TEMPORAL, NONE; recommendedAction is one of NO_OP, MERGE, REPLACE, ARCHIVE, MARK_CONFLICT, ADD;
+            confidence is a number from 0.0 to 1.0; reasoning is one or two sentences. Example:
             {
-              "conflictType": "DUPLICATE|REFINEMENT|UPDATE|CONTRADICTION|TEMPORAL|NONE",
-              "confidence": 0.0-1.0,
-              "reasoning": "brief explanation in 1-2 sentences",
-              "recommendedAction": "NO_OP|MERGE|REPLACE|ARCHIVE|MARK_CONFLICT|ADD"
+              "conflictType": "UPDATE",
+              "confidence": 0.85,
+              "reasoning": "Both state where the user lives; B gives a newer value.",
+              "recommendedAction": "REPLACE"
             }
 
             ###
             """;
-    }
-
-    private ConflictAnalysis ParseConflictAnalysis(string response)
-    {
-        try
-        {
-            // Extract JSON from response (handle potential markdown code blocks)
-            var jsonStart = response.IndexOf('{');
-            var jsonEnd = response.LastIndexOf('}');
-
-            if (jsonStart == -1 || jsonEnd == -1)
-            {
-                LogJSONFoundConflictAnalysisResponse(_logger);
-                return CreateFallbackAnalysis();
-            }
-
-            var json = response.Substring(jsonStart, jsonEnd - jsonStart + 1);
-            var result = JsonSerializer.Deserialize<ConflictAnalysisDto>(json);
-
-            if (result == null)
-            {
-                LogFailedDeserializeConflictAnalysisJSON(_logger);
-                return CreateFallbackAnalysis();
-            }
-
-            // Map DTO to domain model
-            return new ConflictAnalysis
-            {
-                ConflictType = ParseConflictType(result.ConflictType),
-                Confidence = result.Confidence,
-                RecommendedAction = ParseMemoryAction(result.RecommendedAction),
-                Reasoning = result.Reasoning
-            };
-        }
-        catch (JsonException ex)
-        {
-            LogFailedParseConflictAnalysisJSON(_logger, ex, response.Length);
-            return CreateFallbackAnalysis();
-        }
     }
 
     private static ConflictType ParseConflictType(string value)
@@ -206,14 +181,14 @@ public sealed partial class LlmConflictDetector
         };
     }
 
-    private static ConflictAnalysis CreateFallbackAnalysis()
+    private static ConflictAnalysis CreateFallbackAnalysis(string? error)
     {
         return new ConflictAnalysis
         {
             ConflictType = ConflictType.None,
             Confidence = 0.5f,
             RecommendedAction = MemoryAction.Add,
-            Reasoning = "Unable to analyze conflict, treating as new memory"
+            Reasoning = $"Unable to analyze conflict, treating as new memory (parse error: {error})"
         };
     }
 
@@ -226,14 +201,8 @@ public sealed partial class LlmConflictDetector
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to analyze conflict")]
     private static partial void LogFailedAnalyzeConflict(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "No JSON found in conflict analysis response")]
-    private static partial void LogJSONFoundConflictAnalysisResponse(ILogger logger);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to deserialize conflict analysis JSON")]
-    private static partial void LogFailedDeserializeConflictAnalysisJSON(ILogger logger);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse conflict analysis as JSON (response length {ResponseLength})")]
-    private static partial void LogFailedParseConflictAnalysisJSON(ILogger logger, Exception ex, int responseLength);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Conflict analysis reply could not be read as JSON, also after one retry ({Reason}); treating the memory as new")]
+    private static partial void LogUnreadableConflictAnalysis(ILogger logger, string? reason);
 }
 
 #region DTOs

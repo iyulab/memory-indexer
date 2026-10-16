@@ -146,7 +146,8 @@ embedding provider lets the server start with no configuration for local use; it
 deterministic, non-semantic vectors (a startup warning is logged). Text completion is off unless you
 register an `ITextCompletionService`: summaries keep the memories' own text, and LLM fact extraction
 returns nothing. `RememberAsync` itself never calls a model — it classifies a turn by rules and stores the turn's own text;
-LLM fact extraction runs only when you call it (the `extract_facts` tool, the fast-track promoter). Without it,
+LLM fact extraction runs only when you call it (the `extract_facts` tool, the fast-track promoter). A request whose answer
+is read as JSON carries `TextCompletionOptions.ResponseFormat = Json` — map it to your model's JSON mode if it has one. Without `DOTNET_ENVIRONMENT=Development`,
 the server loads `appsettings.Production.json`, which embeds with the server's own in-process LMSupply model
 (`Embedding:Provider: Custom`, `Model: default` = BAAI/bge-m3, 1024 dimensions; any LMSupply model id or alias works,
 with `Dimensions` set to its size). The model is downloaded on first run — the server

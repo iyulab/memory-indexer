@@ -63,7 +63,10 @@ Reference: [gkamradt/LLMTest_NeedleInAHaystack](https://github.com/gkamradt/LLMT
 
 ### Test Methodology
 
-1. **Haystack Generation**: ~100K tokens from Project Gutenberg texts
+1. **Haystack Generation**: by default a synthetic haystack - ten fixed filler sentences (project meetings, release notes,
+   reviews) drawn at random, in `SegmentSize`-word segments, until `TargetHaystackTokens` (default 100,000) is reached. Pass
+   your own text in `HaystackContent` (for example a book from Project Gutenberg) for a natural-language haystack; it is cut
+   into segments of `SegmentSize` words.
 2. **Needle Insertion**: At configurable positions (25%, 50%, 75%)
 3. **Store Phase**: Store all segments as memories
 4. **Recall Phase**: Query for needle using semantic search
@@ -164,7 +167,7 @@ Tests handling of conflicting information updates.
 
 **Expected Outcomes**:
 - `NewerPrioritized`: System returns newer fact (preferred)
-- `ContradictionDetected`: System returns both (acceptable)
+- `BothRecalled`: System returns both (counted as a success; nothing marks the older fact as superseded)
 - `OlderPrioritized`: System returns older fact (problematic)
 
 ```csharp

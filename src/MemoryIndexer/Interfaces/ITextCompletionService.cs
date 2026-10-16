@@ -40,4 +40,23 @@ public sealed class TextCompletionOptions
 
     /// <summary>Sequences that stop generation.</summary>
     public IReadOnlyList<string>? StopSequences { get; init; }
+
+    /// <summary>
+    /// The form of answer the caller reads. <see cref="CompletionResponseFormat.Json"/>: the answer is read as one JSON object,
+    /// so an implementation that can constrain its output should (OpenAI <c>response_format: json_object</c>, Ollama
+    /// <c>format: "json"</c>, <c>ChatOptions.ResponseFormat = ChatResponseFormat.Json</c>). One that cannot may ignore it: the
+    /// prompt asks for JSON, and the library takes the object out of surrounding text and asks once more if it does not read.
+    /// Default: <see cref="CompletionResponseFormat.Text"/>.
+    /// </summary>
+    public CompletionResponseFormat ResponseFormat { get; init; }
+}
+
+/// <summary>The form of answer a completion request expects (<see cref="TextCompletionOptions.ResponseFormat"/>).</summary>
+public enum CompletionResponseFormat
+{
+    /// <summary>Free text.</summary>
+    Text = 0,
+
+    /// <summary>One JSON object.</summary>
+    Json = 1,
 }

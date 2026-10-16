@@ -24,8 +24,6 @@ namespace MemoryIndexer.Sdk.Intelligence.Extraction;
 /// </remarks>
 public sealed partial class LlmFactExtractor : IFactExtractor
 {
-    private static readonly JsonSerializerOptions s_caseInsensitiveJsonOptions = new() { PropertyNameCaseInsensitive = true };
-
     private readonly ITextCompletionService _completionService;
     private readonly IEmbeddingService? _embeddingService;
     private readonly ILogger<LlmFactExtractor> _logger;
@@ -68,14 +66,19 @@ public sealed partial class LlmFactExtractor : IFactExtractor
             {
                 Temperature = 0.1f,  // Low temperature for deterministic extraction
                 MaxTokens = 800,
-                StopSequences = ["###"]
+                StopSequences = ["###"],
+                ResponseFormat = CompletionResponseFormat.Json,
             };
 
             LogExtractingFacts(_logger, context.Content.Length);
 
-            var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
+            var (parsed, error) = await LlmJson.CompleteAsync<ExtractionResultJson>(_completionService, prompt, options, cancellationToken);
+            if (parsed is null)
+            {
+                LogUnreadableExtraction(_logger, error);
+            }
 
-            var result = ParseExtractionResponse(response);
+            var result = ToExtractionResult(parsed, error);
 
             var fastTrackCount = result.Facts.Count(f => f.PromotionPath == PromotionPath.FastTrack);
             var standardCount = result.Facts.Count(f => f.PromotionPath == PromotionPath.Standard);
@@ -123,14 +126,19 @@ public sealed partial class LlmFactExtractor : IFactExtractor
             {
                 Temperature = 0.1f,
                 MaxTokens = 500,
-                StopSequences = ["###"]
+                StopSequences = ["###"],
+                ResponseFormat = CompletionResponseFormat.Json,
             };
 
             LogValidatingFact(_logger, existingFacts.Count, fact.Content.Length);
 
-            var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
+            var (parsed, error) = await LlmJson.CompleteAsync<ValidationResultJson>(_completionService, prompt, options, cancellationToken);
+            if (parsed is null)
+            {
+                LogUnreadableValidation(_logger, error);
+            }
 
-            var result = ParseValidationResponse(response, existingFacts);
+            var result = ToValidationResult(parsed, error, existingFacts);
 
             LogValidationResult(_logger, result.ConflictType, result.RecommendedAction);
 
@@ -173,7 +181,7 @@ public sealed partial class LlmFactExtractor : IFactExtractor
                - importance (0.0-1.0): How valuable is this for future context?
                - category: identity, preference, relationship, location, temporal, skill, goal, health, professional, general
                - promotionPath: FastTrack (≥0.9 confidence), Standard (0.5-0.9), SessionOnly (<0.5 or context-dependent), Discard (fictional/irrelevant)
-            4. Return ONLY valid JSON, no explanations
+            4. Return ONLY one JSON object, no explanation and no code fence
 
             Context Detection Rules:
             - Direct: First-person statements ("My name is...", "I like...", "I am...")
@@ -192,10 +200,11 @@ public sealed partial class LlmFactExtractor : IFactExtractor
             - Hypothetical/uncertain: 0.30-0.50 (SessionOnly)
             - User role (not assistant): +0.10 bonus
 
-            Output format:
+            Output format (an example; contextType is one of Direct, Quoted, Hypothetical, Narrative, RolePlay, Question, Historical,
+            Unknown; promotionPath one of FastTrack, Standard, SessionOnly, Discard; scores are numbers from 0.0 to 1.0):
             {
-              "contextType": "Direct|Quoted|Hypothetical|Narrative|RolePlay|Question|Historical|Unknown",
-              "overallConfidence": 0.0-1.0,
+              "contextType": "Direct",
+              "overallConfidence": 0.9,
               "reasoning": "explanation of analysis",
               "facts": [
                 {
@@ -242,7 +251,7 @@ public sealed partial class LlmFactExtractor : IFactExtractor
             1. Check for conflicts with existing facts
             2. Determine conflict type and recommended action
             3. For contradictions, require stricter evidence (higher confidence wins)
-            4. Return ONLY valid JSON
+            4. Return ONLY one JSON object, no explanation and no code fence
 
             Conflict Types:
             - None: No overlap with existing facts
@@ -259,155 +268,96 @@ public sealed partial class LlmFactExtractor : IFactExtractor
             - Temporal: Check for temporal markers ("used to", "now", "since")
             - Equal confidence contradiction: RequireReview
 
-            Output format:
+            Output format (an example; isValid is true or false; conflictType is one of None, Duplicate, SemanticDuplicate,
+            Contradiction, ValueUpdate, TemporalConflict, Refinement; conflictingFactIndex is the [index] of the existing fact it
+            conflicts with, or null; recommendedAction is one of Add, Skip, Replace, Merge, ArchiveAndAdd, RequireReview;
+            confidence is a number from 0.0 to 1.0; mergedContent is set only when the action is Merge, otherwise null):
             {
-              "isValid": true|false,
-              "conflictType": "None|Duplicate|SemanticDuplicate|Contradiction|ValueUpdate|TemporalConflict|Refinement",
-              "conflictingFactIndex": null|-1|index,
-              "recommendedAction": "Add|Skip|Replace|Merge|ArchiveAndAdd|RequireReview",
-              "confidence": 0.0-1.0,
+              "isValid": true,
+              "conflictType": "ValueUpdate",
+              "conflictingFactIndex": 0,
+              "recommendedAction": "Replace",
+              "confidence": 0.85,
               "reasoning": "explanation",
-              "mergedContent": "optional merged content if action is Merge"
+              "mergedContent": null
             }
 
             ###
             """;
     }
 
-    private FactExtractionResult ParseExtractionResponse(string response)
+    private static FactExtractionResult ToExtractionResult(ExtractionResultJson? parsed, string? error)
     {
-        try
+        if (parsed == null)
         {
-            var jsonStart = response.IndexOf('{');
-            var jsonEnd = response.LastIndexOf('}');
-
-            if (jsonStart == -1 || jsonEnd == -1)
-            {
-                LogNoJsonInExtractionResponse(_logger);
-                return new FactExtractionResult
-                {
-                    Facts = [],
-                    OverallConfidence = 0f,
-                    ContextType = StatementContextType.Unknown
-                };
-            }
-
-            var json = response.Substring(jsonStart, jsonEnd - jsonStart + 1);
-            var parsed = JsonSerializer.Deserialize<ExtractionResultJson>(json,
-                s_caseInsensitiveJsonOptions);
-
-            if (parsed == null)
-            {
-                return new FactExtractionResult
-                {
-                    Facts = [],
-                    OverallConfidence = 0f,
-                    ContextType = StatementContextType.Unknown
-                };
-            }
-
-            var contextType = ParseContextType(parsed.ContextType);
-            var facts = parsed.Facts?.Select(f => new UserFact
-            {
-                Content = f.Content ?? "",
-                Category = ParseFactCategory(f.Category),
-                Confidence = f.Confidence,
-                Importance = f.Importance,
-                PromotionPath = DeterminePromotionPath(f.Confidence, f.PromotionPath, contextType),
-                Subject = f.Subject,
-                Predicate = f.Predicate,
-                Object = f.Object,
-                Entities = f.Entities,
-                Source = f.Source
-            }).ToList() ?? [];
-
-            return new FactExtractionResult
-            {
-                Facts = facts,
-                OverallConfidence = parsed.OverallConfidence,
-                ContextType = contextType,
-                Reasoning = parsed.Reasoning
-            };
-        }
-        catch (JsonException ex)
-        {
-            LogFailedToParseExtractionResponse(_logger, ex);
             return new FactExtractionResult
             {
                 Facts = [],
                 OverallConfidence = 0f,
                 ContextType = StatementContextType.Unknown,
-                Reasoning = $"Parse error: {ex.Message}"
+                Reasoning = $"Parse error: {error}"
             };
         }
+
+        var contextType = ParseContextType(parsed.ContextType);
+        var facts = parsed.Facts?.Select(f => new UserFact
+        {
+            Content = f.Content ?? "",
+            Category = ParseFactCategory(f.Category),
+            Confidence = f.Confidence,
+            Importance = f.Importance,
+            PromotionPath = DeterminePromotionPath(f.Confidence, f.PromotionPath, contextType),
+            Subject = f.Subject,
+            Predicate = f.Predicate,
+            Object = f.Object,
+            Entities = f.Entities,
+            Source = f.Source
+        }).ToList() ?? [];
+
+        return new FactExtractionResult
+        {
+            Facts = facts,
+            OverallConfidence = parsed.OverallConfidence,
+            ContextType = contextType,
+            Reasoning = parsed.Reasoning
+        };
     }
 
-    private FactValidationResult ParseValidationResponse(
-        string response,
+    private static FactValidationResult ToValidationResult(
+        ValidationResultJson? parsed,
+        string? error,
         IReadOnlyList<MemoryUnit> existingFacts)
     {
-        try
+        if (parsed == null)
         {
-            var jsonStart = response.IndexOf('{');
-            var jsonEnd = response.LastIndexOf('}');
-
-            if (jsonStart == -1 || jsonEnd == -1)
-            {
-                return new FactValidationResult
-                {
-                    IsValid = true,
-                    ConflictType = FactConflictType.None,
-                    RecommendedAction = FactConflictAction.Add,
-                    Confidence = 0.5f
-                };
-            }
-
-            var json = response.Substring(jsonStart, jsonEnd - jsonStart + 1);
-            var parsed = JsonSerializer.Deserialize<ValidationResultJson>(json,
-                s_caseInsensitiveJsonOptions);
-
-            if (parsed == null)
-            {
-                return new FactValidationResult
-                {
-                    IsValid = true,
-                    ConflictType = FactConflictType.None,
-                    RecommendedAction = FactConflictAction.Add,
-                    Confidence = 0.5f
-                };
-            }
-
-            MemoryUnit? conflictingMemory = null;
-            if (parsed.ConflictingFactIndex.HasValue &&
-                parsed.ConflictingFactIndex >= 0 &&
-                parsed.ConflictingFactIndex < existingFacts.Count)
-            {
-                conflictingMemory = existingFacts[parsed.ConflictingFactIndex.Value];
-            }
-
-            return new FactValidationResult
-            {
-                IsValid = parsed.IsValid,
-                ConflictType = ParseConflictType(parsed.ConflictType),
-                ConflictingMemory = conflictingMemory,
-                RecommendedAction = ParseConflictAction(parsed.RecommendedAction),
-                Confidence = parsed.Confidence,
-                Reasoning = parsed.Reasoning,
-                MergedContent = parsed.MergedContent
-            };
-        }
-        catch (JsonException ex)
-        {
-            LogFailedToParseValidationResponse(_logger, ex);
             return new FactValidationResult
             {
                 IsValid = true,
                 ConflictType = FactConflictType.None,
                 RecommendedAction = FactConflictAction.Add,
                 Confidence = 0.5f,
-                Reasoning = $"Parse error: {ex.Message}"
+                Reasoning = $"Parse error: {error}"
             };
         }
+
+        MemoryUnit? conflictingMemory = null;
+        if (parsed.ConflictingFactIndex.HasValue &&
+            parsed.ConflictingFactIndex >= 0 &&
+            parsed.ConflictingFactIndex < existingFacts.Count)
+        {
+            conflictingMemory = existingFacts[parsed.ConflictingFactIndex.Value];
+        }
+
+        return new FactValidationResult
+        {
+            IsValid = parsed.IsValid,
+            ConflictType = ParseConflictType(parsed.ConflictType),
+            ConflictingMemory = conflictingMemory,
+            RecommendedAction = ParseConflictAction(parsed.RecommendedAction),
+            Confidence = parsed.Confidence,
+            Reasoning = parsed.Reasoning,
+            MergedContent = parsed.MergedContent
+        };
     }
 
     private static PromotionPath DeterminePromotionPath(
@@ -542,14 +492,11 @@ public sealed partial class LlmFactExtractor : IFactExtractor
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to validate fact")]
     private static partial void LogFailedToValidateFact(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "No JSON found in extraction response")]
-    private static partial void LogNoJsonInExtractionResponse(ILogger logger);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Fact extraction reply could not be read as JSON, also after one retry ({Reason}); no facts extracted")]
+    private static partial void LogUnreadableExtraction(ILogger logger, string? reason);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse extraction response as JSON")]
-    private static partial void LogFailedToParseExtractionResponse(ILogger logger, Exception ex);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse validation response as JSON")]
-    private static partial void LogFailedToParseValidationResponse(ILogger logger, Exception ex);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Fact validation reply could not be read as JSON, also after one retry ({Reason}); the fact is added")]
+    private static partial void LogUnreadableValidation(ILogger logger, string? reason);
 }
 
 #region JSON Models

@@ -46,14 +46,20 @@ public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
             {
                 Temperature = 0.1f,  // Low temperature for deterministic extraction
                 MaxTokens = 500,
-                StopSequences = new[] { "###" }
+                StopSequences = new[] { "###" },
+                ResponseFormat = CompletionResponseFormat.Json,
             };
 
             LogExtractingKnowledgeQuestionAnswer(_logger, context.Question.Length, context.Answer.Length);
 
-            var response = await _completionService.CompleteAsync(prompt, options, cancellationToken);
+            var (result, error) = await LlmJson.CompleteAsync<ExtractionResult>(_completionService, prompt, options, cancellationToken);
+            if (result is null)
+            {
+                LogUnreadableExtraction(_logger, error);
+                return Array.Empty<ExtractedFact>();
+            }
 
-            var facts = ParseExtractionResponse(response, context);
+            var facts = result.Facts ?? [];
 
             LogExtractedCountFacts(_logger, facts.Count);
 
@@ -81,15 +87,15 @@ public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
             1. Convert the Q&A into declarative factual statements
             2. Assess confidence (0.0-1.0) based on answer certainty
             3. Assess importance (0.0-1.0) based on information value
-            4. Return ONLY valid JSON, no explanations
+            4. Return ONLY one JSON object, no explanation and no code fence; confidence and importance are numbers from 0.0 to 1.0
 
-            Output format:
+            Output format (an example):
             {
               "facts": [
                 {
                   "content": "declarative fact about {{subject}}",
-                  "confidence": 0.0-1.0,
-                  "importance": 0.0-1.0,
+                  "confidence": 0.85,
+                  "importance": 0.7,
                   "source": "extraction method"
                 }
               ]
@@ -107,39 +113,6 @@ public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
             """;
     }
 
-    private IReadOnlyList<ExtractedFact> ParseExtractionResponse(
-        string response,
-        KnowledgeExtractionContext context)
-    {
-        try
-        {
-            // Extract JSON from response (handle potential markdown code blocks)
-            var jsonStart = response.IndexOf('{');
-            var jsonEnd = response.LastIndexOf('}');
-
-            if (jsonStart == -1 || jsonEnd == -1)
-            {
-                LogJSONFoundExtractionResponse(_logger);
-                return Array.Empty<ExtractedFact>();
-            }
-
-            var json = response.Substring(jsonStart, jsonEnd - jsonStart + 1);
-            var result = JsonSerializer.Deserialize<ExtractionResult>(json);
-
-            if (result?.Facts == null || result.Facts.Count == 0)
-            {
-                return Array.Empty<ExtractedFact>();
-            }
-
-            return result.Facts;
-        }
-        catch (JsonException ex)
-        {
-            LogFailedParseExtractionResponseJSON(_logger, ex, response.Length);
-            return Array.Empty<ExtractedFact>();
-        }
-    }
-
     [LoggerMessage(Level = LogLevel.Debug, Message = "Extracting knowledge from Q&A (question length {QuestionLength}, answer length {AnswerLength})")]
     private static partial void LogExtractingKnowledgeQuestionAnswer(ILogger logger, int questionLength, int answerLength);
 
@@ -149,11 +122,8 @@ public sealed partial class LlmKnowledgeExtractor : IKnowledgeExtractor
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to extract knowledge from Q&A")]
     private static partial void LogFailedExtractKnowledge(ILogger logger, Exception ex);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "No JSON found in extraction response")]
-    private static partial void LogJSONFoundExtractionResponse(ILogger logger);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to parse extraction response as JSON (response length {ResponseLength})")]
-    private static partial void LogFailedParseExtractionResponseJSON(ILogger logger, Exception ex, int responseLength);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Knowledge extraction reply could not be read as JSON, also after one retry ({Reason}); no facts extracted")]
+    private static partial void LogUnreadableExtraction(ILogger logger, string? reason);
 }
 
 #region JSON Models

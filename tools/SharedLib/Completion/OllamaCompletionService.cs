@@ -67,6 +67,7 @@ public sealed partial class OllamaCompletionService : ITextCompletionService, ID
             Model = _model,
             Prompt = prompt,
             Stream = false,
+            Format = options?.ResponseFormat == CompletionResponseFormat.Json ? "json" : null,
             Options = MapToOllamaOptions(options)
         };
 
@@ -131,6 +132,10 @@ public sealed partial class OllamaCompletionService : ITextCompletionService, ID
 
         [JsonPropertyName("stream")]
         public bool Stream { get; init; }
+
+        [JsonPropertyName("format")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Format { get; init; }
 
         [JsonPropertyName("options")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

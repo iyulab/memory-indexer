@@ -100,6 +100,9 @@ public sealed partial class OpenAICompletionService : ITextCompletionService
             MaxOutputTokenCount = options.MaxTokens
         };
 
+        if (options.ResponseFormat == CompletionResponseFormat.Json)
+            chatOptions.ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat();
+
         if (options.StopSequences != null)
         {
             foreach (var stop in options.StopSequences)

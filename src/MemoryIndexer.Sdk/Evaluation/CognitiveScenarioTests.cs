@@ -97,9 +97,9 @@ public class CognitiveScenarioTests
             }
             else if (result.ConflictingFactRecalled && result.InitialFactRecalled)
             {
-                // Both facts returned - system detected contradiction
-                result.Outcome = FalseMemoryOutcome.ContradictionDetected;
-                result.Success = true;  // This is also acceptable behavior
+                // Both facts returned; the newer one is there, though nothing says the older one is superseded
+                result.Outcome = FalseMemoryOutcome.BothRecalled;
+                result.Success = true;
             }
             else if (result.InitialFactRecalled && !result.ConflictingFactRecalled)
             {
@@ -388,9 +388,9 @@ public enum FalseMemoryOutcome
     NewerPrioritized,
 
     /// <summary>
-    /// Both facts returned - contradiction detection.
+    /// Both facts returned. Nothing marks them as conflicting: the reader sees two answers and has to tell which is current.
     /// </summary>
-    ContradictionDetected,
+    BothRecalled,
 
     /// <summary>
     /// Older (initial) fact was prioritized - potential issue.

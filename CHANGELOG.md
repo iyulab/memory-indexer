@@ -18,6 +18,22 @@ All notable changes to Memory Indexer are documented here.
 - **Two MCP tools were both named `should_reflect`.** `WithAllMemoryIndexerTools()` registered the user-insight check
   (`MemoryReflectionTools`) and the session check (`SelfEditingMemoryTools`) under one name, so a client could reach only
   one. **Breaking:** the session check is now `should_reflect_on_session`.
+- **A model's JSON that does not read is asked for once more, and a failure says so.** Fact extraction, fact validation,
+  knowledge extraction and conflict analysis cut the reply from its first `{` to its last `}`: a reply with a trailing comma,
+  a quoted number, two objects, or one cut off before it closed read as «no facts» / «new memory» with nothing to tell it
+  apart from a real empty answer — and the prompts' own format examples were not valid JSON (`"confidence": 0.0-1.0`), so a
+  small model that copied them failed every time. The reply's first complete object is read (fences and surrounding text
+  ignored, trailing commas and quoted numbers accepted); one that still does not read is requested again with the reason,
+  then logged as a warning, and the result's `Reasoning` carries the parse error. The examples are valid JSON.
+- **`docs/EVALUATION.md` describes the NIAH haystack the runner builds** (ten fixed filler sentences unless you pass
+  `HaystackContent`), not «~100K tokens from Project Gutenberg». **Breaking:** `FalseMemoryOutcome.ContradictionDetected`
+  is `BothRecalled` — both facts came back, and nothing had detected a contradiction.
+
+### Added
+- **`TextCompletionOptions.ResponseFormat` (`CompletionResponseFormat.Text` / `Json`).** The library sets `Json` on every
+  request it reads as JSON; an `ITextCompletionService` that can constrain its output (a JSON response format) should honour
+  it, and one that cannot may ignore it. The bundled OpenAI and Ollama services send `response_format: json_object` and
+  `format: "json"`.
 
 ### Changed
 - **Breaking: an old memory that matches is no longer ranked out by recency.** `RetrieveAsync` weighs recency at 0.2, and
