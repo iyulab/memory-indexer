@@ -136,7 +136,7 @@ public sealed partial class ScopeManager : IScopeManager
         float importance = 0.5f,
         CancellationToken cancellationToken = default)
     {
-        EnsureInitialized();
+        // A function of type and importance only: it needs no conversation state
 
         // Scope resolution heuristics based on Type × Importance
         var scope = (type, importance) switch

@@ -476,6 +476,13 @@ public sealed class SearchOptions
     public int RerankCandidateMultiplier { get; set; } = 4;
 
     /// <summary>
+    /// The half-life, in days, of a memory's recency in the combined score of <c>IMemoryPrimitives.RetrieveAsync</c>: a memory
+    /// last used this many days ago scores half the recency of a fresh one. Default: 30. Before 0.38.0 recency decayed over
+    /// a day (a week-old memory scored ≈0), so the recency weight ranked any fresh memory level with a far closer old one.
+    /// </summary>
+    public double RecencyHalfLifeDays { get; set; } = 30;
+
+    /// <summary>
     /// Whether to enable HyDE (Hypothetical Document Embeddings) for complex queries.
     /// </summary>
     public bool EnableHyde { get; set; }

@@ -133,35 +133,21 @@ public class SimpleMemoryServiceTests
     }
 
     [Fact]
-    public async Task RememberAsync_Level1_ShouldInitializeScopeManager()
+    public async Task RememberAsync_DoesNotDriveTheScopeManagersConversationState()
     {
-        // Arrange
-        const string userId = "user-1";
-        const string sessionId = "session-1";
+        // The singleton's topic state belongs to one conversation; remembering for any user must not set it
+        await _service.RememberAsync("user-1", sessionId: "session-1", content: "content", cancellationToken: TestContext.Current.CancellationToken);
 
-        // Act
-        await _service.RememberAsync(userId, sessionId: sessionId, content: "content", cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        _scopeManager.IsInitialized.Should().BeTrue();
-        _scopeManager.UserId.Should().Be(userId);
-        _scopeManager.SessionId.Should().Be(sessionId);
+        _scopeManager.IsInitialized.Should().BeFalse();
     }
 
     [Fact]
-    public async Task RememberAsync_Level1_ShouldRecordTurn()
+    public async Task RememberAsync_DoesNotRecordTheTurnForTopicTracking()
     {
-        // Arrange
-        const string userId = "user-1";
-        const string sessionId = "session-1";
-        const string content = "Test content";
+        // Topic tracking embedded every turn a second time and its result was never stored on this path
+        await _service.RememberAsync("user-1", sessionId: "session-1", content: "Test content", cancellationToken: TestContext.Current.CancellationToken);
 
-        // Act
-        await _service.RememberAsync(userId, sessionId: sessionId, content: content, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        _scopeManager.RecordedTurns.Should().ContainSingle();
-        _scopeManager.RecordedTurns[0].Should().Be(content);
+        _scopeManager.RecordedTurns.Should().BeEmpty();
     }
 
     [Fact]
@@ -372,19 +358,14 @@ public class SimpleMemoryServiceTests
     #region EndSessionAsync Tests
 
     [Fact]
-    public async Task EndSessionAsync_ShouldCallScopeManagerEndSession()
+    public async Task EndSessionAsync_DoesNotEndTheScopeManagersConversation()
     {
-        // Arrange
-        const string userId = "user-1";
-        const string sessionId = "session-1";
+        // One user's session end must not reset the state another conversation set on the shared manager
+        await _service.RememberAsync("user-1", sessionId: "session-1", content: "test", cancellationToken: TestContext.Current.CancellationToken);
 
-        await _service.RememberAsync(userId, sessionId: sessionId, content: "test", cancellationToken: TestContext.Current.CancellationToken);
+        await _service.EndSessionAsync("user-1", "session-1", TestContext.Current.CancellationToken);
 
-        // Act
-        await _service.EndSessionAsync(userId, sessionId, TestContext.Current.CancellationToken);
-
-        // Assert
-        _scopeManager.SessionEnded.Should().BeTrue();
+        _scopeManager.SessionEnded.Should().BeFalse();
     }
 
     [Fact]

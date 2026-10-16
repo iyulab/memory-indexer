@@ -71,6 +71,22 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
     #region Content Operations
 
+    private static Dictionary<string, string> WithRelation(Dictionary<string, string>? metadata, Dictionary<string, string>? relation)
+    {
+        if (relation is null)
+        {
+            return metadata ?? [];
+        }
+
+        var merged = metadata is null ? new Dictionary<string, string>(StringComparer.Ordinal) : new Dictionary<string, string>(metadata);
+        foreach (var (key, value) in relation)
+        {
+            merged[key] = value;
+        }
+
+        return merged;
+    }
+
     /// <inheritdoc />
     public async Task<MemoryUnit> EncodeAsync(EncodeRequest request, CancellationToken cancellationToken = default)
     {
@@ -82,6 +98,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
         // Phase 20.1: Check for duplicates before expensive embedding generation
         ReadOnlyMemory<float>? checkedEmbedding = null;
+        Dictionary<string, string>? relation = null;
         if (_deduplicationService != null)
         {
             var contentType = request.Metadata?.TryGetValue("ContentType", out var ctValue) == true
@@ -132,9 +149,14 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                         return dupCheck.ExistingMemory;
 
                     case DuplicateAction.AddWithRelation:
-                        // Continue to store but add relation metadata
-                        // Note: Metadata is added during memory creation (lines below)
+                        // Stored as new, linked to the similar memory (the same keys the service path writes)
                         LogAddingWithRelation(_logger, dupCheck.ExistingMemory!.Id, dupCheck.SimilarityScore);
+                        relation = new Dictionary<string, string>(StringComparer.Ordinal)
+                        {
+                            ["RelatedMemoryId"] = dupCheck.ExistingMemory.Id.ToString(),
+                            ["RelationshipType"] = "similar",
+                            ["SimilarityScore"] = dupCheck.SimilarityScore.ToString("F3", CultureInfo.InvariantCulture),
+                        };
                         break;
 
                     case DuplicateAction.Add:
@@ -207,7 +229,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             ImportanceScore = importanceScore,
             ContentHash = ComputeContentHash(request.Content),
             Topics = topics,
-            Metadata = request.Metadata ?? [],
+            Metadata = WithRelation(request.Metadata, relation),
             IsLocked = request.IsLocked,
             ExpiresAt = request.ExpiresAt,
             Stability = MemoryStability.Volatile,
@@ -643,10 +665,13 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                 Metadata = r
             }).ToList();
 
+            // Every candidate is kept: the combined score below decides, then takes the limit. Cutting here (to twice the
+            // limit) dropped a candidate the vector ranked low before its keyword and importance scores were seen - and the
+            // default reranker passes the vector order through, so the cut was by vector rank alone.
             var rerankResults = await _rerankerService.RerankAsync(
                 request.Query,
                 candidates,
-                Math.Min(request.Limit * 2, filtered.Count), // Get more than needed for final scoring
+                filtered.Count,
                 cancellationToken);
 
             rerankedResults = rerankResults
@@ -677,7 +702,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                 // Calculate individual scores
                 var semanticScore = rerankScore ?? vectorScore; // Use rerank score if available
                 var keywordScore = CalculateKeywordScore(memory.Content, queryTokens);
-                var recencyScore = CalculateRecencyScore(memory);
+                var recencyScore = CalculateRecencyScore(memory, _searchOptions.RecencyHalfLifeDays);
                 var importanceScore = memory.ImportanceScore;
                 var retentionScore = memory.CalculateRetention();
 
@@ -706,7 +731,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                     }
                 };
             })
-            .Where(r => r.Score >= request.MinScore)
+            // MinScore already applied to the vector similarity in the search above: applied again to the combined score it
+            // dropped close matches whose recency or keyword part was low
             .OrderByDescending(r => r.Score)
             .Take(request.Limit)
             .ToList();
@@ -1075,11 +1101,11 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         return (float)matchCount / queryTokens.Count;
     }
 
-    private static float CalculateRecencyScore(MemoryUnit memory)
+    private static float CalculateRecencyScore(MemoryUnit memory, double halfLifeDays)
     {
         var lastAccess = memory.LastAccessedAt ?? memory.CreatedAt;
-        var hoursSince = (DateTime.UtcNow - lastAccess).TotalHours;
-        return (float)Math.Exp(-hoursSince / 24.0); // Decay over ~24 hours
+        var daysSince = Math.Max(0, (DateTime.UtcNow - lastAccess).TotalDays);
+        return halfLifeDays <= 0 ? 1f : (float)Math.Pow(0.5, daysSince / halfLifeDays);
     }
 
     private static RetrievalWeights GetDefaultWeights() => new()

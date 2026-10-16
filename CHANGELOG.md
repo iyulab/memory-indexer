@@ -2,6 +2,36 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Fixed
+- **`RememberAsync` embeds a turn once.** 0.37.0 said so, but that fix covered only the duplicate check and the store: the
+  scope manager embedded every remembered turn a second time to track topics, and its result (a topic id) was neither
+  stored nor read on this path. `RememberAsync` and `EndSessionAsync` no longer drive the scope manager, so ingesting a
+  conversation costs half the embedding calls it did in 0.37.x — and one user's session no longer resets the topic state
+  another user's turns were recorded in (the manager is one singleton). `IScopeManager.ResolveScopeAsync` no longer requires
+  `InitializeAsync` (it reads only the type and importance it is given).
+- **A memory similar to an earlier one is stored linked to it on the `EncodeAsync` path too.** The duplicate check's
+  `AddWithRelation` (the default action for a similar, not identical, memory since 0.36.0) stored the memory without the
+  link; it now carries `RelatedMemoryId`, `RelationshipType: similar` and `SimilarityScore` in its metadata, as the
+  `IMemoryService.StoreAsync` path already did.
+- **Two MCP tools were both named `should_reflect`.** `WithAllMemoryIndexerTools()` registered the user-insight check
+  (`MemoryReflectionTools`) and the session check (`SelfEditingMemoryTools`) under one name, so a client could reach only
+  one. **Breaking:** the session check is now `should_reflect_on_session`.
+
+### Changed
+- **Breaking: an old memory that matches is no longer ranked out by recency.** `RetrieveAsync` weighs recency at 0.2, and
+  it decayed over a day (`exp(−hours/24)`: a week-old memory scored ≈0), so a fresh memory that barely matched ranked level
+  with a much closer one from last month. Recency now halves every `Search.RecencyHalfLifeDays` (default 30).
+- **Breaking: a candidate is no longer cut by vector rank before it is scored.** The reranking stage kept twice the limit
+  (with the default pass-through reranker: the vector order), so a memory the vector ranked third for a limit of one never
+  had its keyword and importance scores counted. Every searched candidate is now scored; the combined score takes the limit.
+- **Breaking: `RetrieveRequest.MinScore` filters the vector similarity once.** It also filtered the combined score, which
+  dropped close matches whose recency or keyword part was low (semantic 0.5, keyword 0, an old memory: 0.28 < 0.3).
+
+### Removed
+- **Breaking: `RetrieveRequest.EnableDAT`.** Nothing read it; weights come from `Weights` or the configured defaults.
+
 ## [v0.37.1] - 2026-10-16
 
 ### Fixed

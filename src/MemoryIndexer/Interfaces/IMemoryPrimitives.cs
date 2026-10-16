@@ -556,7 +556,8 @@ public sealed class RetrieveRequest
     public int Limit { get; init; } = 5;
 
     /// <summary>
-    /// Minimum combined score threshold.
+    /// Minimum vector similarity of a candidate (applied to the search, before the combined score; the combined score is
+    /// not filtered again).
     /// </summary>
     public float MinScore { get; init; } = 0.3f;
 
@@ -577,12 +578,7 @@ public sealed class RetrieveRequest
     public MemoryType[]? Types { get; init; }
 
     /// <summary>
-    /// Whether to use Dynamic Alpha Tuning for weights.
-    /// </summary>
-    public bool EnableDAT { get; init; } = true;
-
-    /// <summary>
-    /// Manual weights (overrides DAT if specified).
+    /// Manual retrieval weights; null uses the configured defaults.
     /// </summary>
     public RetrievalWeights? Weights { get; init; }
 

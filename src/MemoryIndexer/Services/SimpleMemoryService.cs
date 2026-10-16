@@ -91,16 +91,9 @@ public sealed partial class SimpleMemoryService : IMemoryService
             return;
         }
 
-        // Initialize ScopeManager if needed
-        if (!_scopeManager.CurrentState.IsInitialized)
-        {
-            await _scopeManager.InitializeAsync(userId, sessionId, cancellationToken);
-        }
-
-        // Record turn for topic tracking
-        await _scopeManager.RecordTurnAsync(content, role: effectiveRole, cancellationToken);
-
-        // Resolve scope using importance and type
+        // Resolve scope using importance and type. The scope manager's topic tracking is not run here: its result was
+        // never stored or read on this path, and it cost a second embedding per memory (and kept one conversation's
+        // state for every user of the singleton).
         var scope = await _scopeManager.ResolveScopeAsync(
             content,
             effectiveType,
@@ -199,9 +192,6 @@ public sealed partial class SimpleMemoryService : IMemoryService
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
         LogEndSessionAsync(_logger, userId, sessionId);
-
-        // End session in ScopeManager
-        await _scopeManager.EndSessionAsync(cancellationToken);
 
         // Remove implicit session if exists
         _implicitSessions.TryRemove(userId, out _);

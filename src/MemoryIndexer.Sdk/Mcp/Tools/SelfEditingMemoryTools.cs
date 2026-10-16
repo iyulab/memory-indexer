@@ -226,8 +226,8 @@ public sealed class SelfEditingMemoryTools
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Whether reflection is recommended.</returns>
-    [McpServerTool, Description("Check if reflection should be triggered")]
-    public async Task<ShouldReflectToolResult> ShouldReflect(
+    [McpServerTool, Description("Check if reflection should be triggered for a session (accumulated importance against the threshold). For a user's insight reflection use should_reflect.")]
+    public async Task<ShouldReflectToolResult> ShouldReflectOnSession(
         [Description("Session ID (optional)")] string? sessionId = null,
         CancellationToken cancellationToken = default)
     {

@@ -92,4 +92,20 @@ public class McpToolResolutionTests
         Assert.Empty(expected.Except(actual));   // shipped tools WithAllMemoryIndexerTools leaves out
         Assert.Empty(actual.Except(expected));   // registered tools no shipped type declares
     }
+
+    // A client calls a tool by name: two tools with one name means one of them cannot be called (MemoryReflectionTools and
+    // SelfEditingMemoryTools both declared should_reflect, with different meanings)
+    [Fact]
+    public void WithAllMemoryIndexerTools_registers_each_tool_name_once()
+    {
+        using var all = Build(b => b.WithAllMemoryIndexerTools());
+
+        var duplicates = all.GetServices<McpServerTool>()
+            .GroupBy(t => t.ProtocolTool.Name, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToArray();
+
+        Assert.Empty(duplicates);
+    }
 }
