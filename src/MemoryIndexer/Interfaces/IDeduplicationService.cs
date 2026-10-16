@@ -60,6 +60,13 @@ public sealed class DuplicateCheckResult
     /// List of similar memories found (optional).
     /// </summary>
     public List<MemorySearchResult>? SimilarMemories { get; init; }
+
+    /// <summary>
+    /// The embedding of the checked content, when the check computed one to compare it with recent memories; null when it
+    /// decided without one (deduplication off, nothing to compare with, identical text). A caller that stores the content
+    /// next reuses it instead of embedding the same text again.
+    /// </summary>
+    public ReadOnlyMemory<float>? ContentEmbedding { get; init; }
 }
 
 /// <summary>

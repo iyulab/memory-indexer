@@ -2,6 +2,17 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Fixed
+- **Remembering a new memory embeds its content once, not twice.** With deduplication on (the default), the duplicate check
+  embedded the content to compare it with recent memories and `EncodeAsync` then embedded the same text again to store
+  it. The check's embedding is now reused, which halves the embedding calls of ingesting a conversation.
+
+### Added
+- **`DuplicateCheckResult.ContentEmbedding`** — the embedding the check computed for the content (null when it decided
+  without one), for a caller of `IDeduplicationService` that stores the content next.
+
 ## [v0.36.0] - 2026-10-16
 
 ### Fixed

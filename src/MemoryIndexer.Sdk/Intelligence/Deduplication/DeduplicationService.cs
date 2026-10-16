@@ -138,7 +138,8 @@ public sealed partial class DeduplicationService : IDeduplicationService
                         ExistingMemory = mostSimilar,
                         SimilarityScore = highestSimilarity,
                         RecommendedAction = action.Value,
-                        SimilarMemories = similarMemories
+                        SimilarMemories = similarMemories,
+                        ContentEmbedding = newEmbedding
                     };
                 }
             }
@@ -153,7 +154,8 @@ public sealed partial class DeduplicationService : IDeduplicationService
                 IsDuplicate = false,
                 DuplicateType = DuplicateType.None,
                 SimilarityScore = highestSimilarity,
-                RecommendedAction = DuplicateAction.Add
+                RecommendedAction = DuplicateAction.Add,
+                ContentEmbedding = newEmbedding
             };
         }
 
@@ -199,7 +201,8 @@ public sealed partial class DeduplicationService : IDeduplicationService
             ExistingMemory = mostSimilar,
             SimilarityScore = highestSimilarity,
             RecommendedAction = recommendedAction,
-            SimilarMemories = similarMemories
+            SimilarMemories = similarMemories,
+            ContentEmbedding = newEmbedding
         };
     }
 

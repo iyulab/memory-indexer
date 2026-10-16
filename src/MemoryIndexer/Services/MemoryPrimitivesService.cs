@@ -81,6 +81,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         LogEncodingMemory(_logger, request.UserId);
 
         // Phase 20.1: Check for duplicates before expensive embedding generation
+        ReadOnlyMemory<float>? checkedEmbedding = null;
         if (_deduplicationService != null)
         {
             var contentType = request.Metadata?.TryGetValue("ContentType", out var ctValue) == true
@@ -92,6 +93,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                 request.UserId,
                 contentType: contentType,
                 cancellationToken: cancellationToken);
+
+            checkedEmbedding = dupCheck.ContentEmbedding;
 
             if (dupCheck.IsDuplicate)
             {
@@ -142,8 +145,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             }
         }
 
-        // Generate embedding
-        var embedding = await _embeddingService.GenerateEmbeddingAsync(request.Content, cancellationToken);
+        // The duplicate check embedded this content already when it compared it with recent memories.
+        var embedding = checkedEmbedding ?? await _embeddingService.GenerateEmbeddingAsync(request.Content, cancellationToken);
 
         // Auto-classify Type and ImportanceScore if not explicitly specified
         MemoryType memoryType = request.Type ?? MemoryType.Episodic;
