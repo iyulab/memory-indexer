@@ -17,6 +17,9 @@ All notable changes to Memory Indexer are documented here.
   after it are left out and recency is measured back from it (an access recorded later does not count) — a question with its
   own date, such as a benchmark's `question_date` or a replayed conversation, sees what was known then. **Breaking** for
   implementers of `IMemoryService`, as above.
+- **The MCP `store_memory` tool takes the time the content was said: `occurredAt` (ISO 8601).** A time it cannot read is
+  refused with a message rather than stored as now. `MemoryService.StoreAsync` has the same `occurredAt` parameter, before
+  `cancellationToken` (**Breaking** for positional callers).
 
 ## [v0.38.0] - 2026-10-17
 

@@ -1,6 +1,7 @@
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Extensions;
+using MemoryIndexer.Sdk.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
@@ -100,5 +101,21 @@ public class OccurredAtTests
         var context = await memory.RecallAsync("u", "s", "Car: what colour is my car?", asOf: now.AddDays(-5), cancellationToken: Ct);
 
         Assert.Equal(["Spring:", "Winter:"], context.Ranked.Select(r => r.Memory.Content.Split(' ')[0]));
+    }
+
+    [Fact]
+    public async Task TheStoreMemoryTool_TakesTheTimeAsIso8601_AndRefusesOneItCannotRead()
+    {
+        using var provider = Build();
+        var tools = ActivatorUtilities.CreateInstance<MemoryTools>(provider);
+
+        var stored = await tools.StoreMemory("Spring: I drive a blue car to work every day now.", occurredAt: "2026-05-02T09:30:00Z", cancellationToken: Ct);
+        var refused = await tools.StoreMemory("Summer: I drive a green car to work every day now.", occurredAt: "last tuesday", cancellationToken: Ct);
+
+        Assert.True(stored.Success, stored.Message);
+        var memory = await provider.GetRequiredService<IMemoryStore>().GetByIdAsync(provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MemoryIndexerOptions>>().Value.DefaultUserId, Guid.Parse(stored.MemoryId!), Ct);
+        Assert.Equal(new DateTime(2026, 5, 2, 9, 30, 0, DateTimeKind.Utc), memory!.CreatedAt);
+        Assert.False(refused.Success);
+        Assert.Contains("ISO 8601", refused.Message, StringComparison.Ordinal);
     }
 }

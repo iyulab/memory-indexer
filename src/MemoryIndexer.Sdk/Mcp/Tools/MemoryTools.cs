@@ -31,6 +31,7 @@ public sealed class MemoryTools(
     /// <param name="tags">Optional comma-separated tags for categorization.</param>
     /// <param name="sessionId">Optional session ID to group related memories.</param>
     /// <param name="namespace">Optional namespace for memory isolation (e.g. a workspace or project id).</param>
+    /// <param name="occurredAt">Optional ISO 8601 time the content was said or happened, when that is not now.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result with the stored memory ID.</returns>
     [McpServerTool]
@@ -42,8 +43,25 @@ public sealed class MemoryTools(
         [Description("Comma-separated tags for categorization")] string? tags = null,
         [Description("Session ID to group related memories")] string? sessionId = null,
         [Description("Namespace for memory isolation (e.g., workspace or project ID)")] string? @namespace = null,
+        [Description("When the content was said or happened, as an ISO 8601 time (e.g. 2026-05-02T09:30:00Z), if not now - for a conversation imported from a log")] string? occurredAt = null,
         CancellationToken cancellationToken = default)
     {
+        DateTimeOffset? occurred = null;
+        if (!string.IsNullOrWhiteSpace(occurredAt))
+        {
+            if (!DateTimeOffset.TryParse(occurredAt, System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AssumeUniversal, out var parsed))
+            {
+                return new StoreMemoryResult
+                {
+                    Success = false,
+                    Message = $"occurredAt is not an ISO 8601 time: '{occurredAt}'"
+                };
+            }
+
+            occurred = parsed;
+        }
+
         // Check resource limits before storing (Phase v0.6.0-γ)
         if (resourceEnforcer != null)
         {
@@ -75,6 +93,7 @@ public sealed class MemoryTools(
             Math.Clamp(importance, 0f, 1f),
             metadata,
             @namespace,
+            occurred,
             cancellationToken);
 
         // Record usage after successful store (Phase v0.6.0-γ)

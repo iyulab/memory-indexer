@@ -32,6 +32,8 @@ public class MemoryService(
     /// <param name="importance">Optional importance score (0.0 to 1.0).</param>
     /// <param name="metadata">Optional metadata.</param>
     /// <param name="namespace">Optional namespace for memory isolation.</param>
+    /// <param name="occurredAt">When the content was said or happened, when that is not now (the memory's
+    /// <see cref="MemoryUnit.CreatedAt"/>). <see langword="null"/>: now.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The stored memory.</returns>
     public async Task<MemoryUnit> StoreAsync(
@@ -42,6 +44,7 @@ public class MemoryService(
         float? importance = null,
         Dictionary<string, string>? metadata = null,
         string? @namespace = null,
+        DateTimeOffset? occurredAt = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -212,7 +215,8 @@ public class MemoryService(
             Type = type,
             ImportanceScore = importanceScore, // Use calculated score from Phase 22.1 filtering
             ContentHash = ComputeContentHash(content),
-            Metadata = metadata
+            Metadata = metadata,
+            CreatedAt = occurredAt?.UtcDateTime ?? DateTime.UtcNow,
         };
 
         // Phase 26: Conflict resolution (semantic conflict detection)

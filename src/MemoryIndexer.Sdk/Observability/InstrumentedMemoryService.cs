@@ -33,6 +33,7 @@ public sealed partial class InstrumentedMemoryService
         float? importance = null,
         Dictionary<string, string>? metadata = null,
         string? @namespace = null,
+        DateTimeOffset? occurredAt = null,
         CancellationToken cancellationToken = default)
     {
         using var activity = MemoryIndexerTelemetry.StartOperation("MemoryStore", "store");
@@ -53,7 +54,7 @@ public sealed partial class InstrumentedMemoryService
                 activity?.SetTag("memory.namespace", @namespace);
             }
 
-            var result = await _inner.StoreAsync(userId, content, type, sessionId, importance, metadata, @namespace, cancellationToken);
+            var result = await _inner.StoreAsync(userId, content, type, sessionId, importance, metadata, @namespace, occurredAt, cancellationToken);
 
             sw.Stop();
             MemoryIndexerTelemetry.RecordStoreOperation(sw.Elapsed.TotalMilliseconds, 1, content.Length);
