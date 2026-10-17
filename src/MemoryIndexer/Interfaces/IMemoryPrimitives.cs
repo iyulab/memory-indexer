@@ -594,6 +594,14 @@ public sealed class RetrieveRequest
     /// Whether to automatically record access (updates retention).
     /// </summary>
     public bool RecordAccess { get; init; } = true;
+
+    /// <summary>
+    /// Recall as of this time — the question's own date when it is not now (a benchmark question asked «on» a past day, a
+    /// replayed conversation): memories that happened after it are left out (<see cref="MemoryUnit.CreatedAt"/> is when a
+    /// memory happened, <see cref="EncodeRequest.OccurredAt"/>), and recency is measured back from it. An access recorded after
+    /// it does not count as recent. <see langword="null"/> (default): now.
+    /// </summary>
+    public DateTimeOffset? AsOf { get; init; }
 }
 
 /// <summary>

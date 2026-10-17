@@ -71,6 +71,8 @@ public interface IMemoryService
     /// <param name="query">Query text for semantic search</param>
     /// <param name="limit">Maximum number of memories to return (default: 10)</param>
     /// <param name="namespace">Optional namespace filter for memory isolation (e.g., "game:chess", "project:alpha")</param>
+    /// <param name="asOf">Recall as of this time when it is not now — a question asked on a past day: what happened after
+    /// it is left out and recency is measured from it (<see cref="RetrieveRequest.AsOf"/>). <see langword="null"/> (default): now.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>MemoryContext with scope-grouped memories</returns>
     /// <remarks>
@@ -93,6 +95,7 @@ public interface IMemoryService
         string query,
         int limit = 10,
         string? @namespace = null,
+        DateTimeOffset? asOf = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -640,8 +640,10 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             Namespace = request.Namespace,
             Limit = request.Limit * candidateMultiplier, // Get extra for re-ranking/scoring
             Types = request.Types,
-            MinScore = request.MinScore
+            MinScore = request.MinScore,
+            CreatedBefore = request.AsOf?.UtcDateTime,
         };
+        var reference = request.AsOf?.UtcDateTime ?? DateTime.UtcNow;
 
         // Search
         var searchResults = await _memoryStore.SearchAsync(queryEmbedding, searchOptions, cancellationToken);
@@ -708,7 +710,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
                 // Calculate individual scores
                 var semanticScore = rerankScore ?? vectorScore; // Use rerank score if available
                 var keywordScore = CalculateKeywordScore(memory.Content, keywordWeights);
-                var recencyScore = CalculateRecencyScore(memory, _searchOptions.RecencyHalfLifeDays);
+                var recencyScore = CalculateRecencyScore(memory, _searchOptions.RecencyHalfLifeDays, reference);
                 var importanceScore = memory.ImportanceScore;
                 var retentionScore = memory.CalculateRetention();
 
@@ -1135,10 +1137,11 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
         return matched / total;
     }
 
-    private static float CalculateRecencyScore(MemoryUnit memory, double halfLifeDays)
+    private static float CalculateRecencyScore(MemoryUnit memory, double halfLifeDays, DateTime reference)
     {
-        var lastAccess = memory.LastAccessedAt ?? memory.CreatedAt;
-        var daysSince = Math.Max(0, (DateTime.UtcNow - lastAccess).TotalDays);
+        // An access after the reference time (a recall as of a past day) is not recency at that time
+        var lastAccess = memory.LastAccessedAt is { } accessed && accessed <= reference ? accessed : memory.CreatedAt;
+        var daysSince = Math.Max(0, (reference - lastAccess).TotalDays);
         return halfLifeDays <= 0 ? 1f : (float)Math.Pow(0.5, daysSince / halfLifeDays);
     }
 

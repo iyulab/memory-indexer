@@ -48,6 +48,7 @@ public class OccurredAtTests
             ["Car:"] = [1f, 0f, 0f, 0f],
             ["Spring:"] = [0.8f, 0.6f, 0f, 0f],
             ["Summer:"] = [0.8f, -0.6f, 0f, 0f],
+            ["Winter:"] = [0.8f, 0f, 0.6f, 0f],
         }));
         return services.BuildServiceProvider();
     }
@@ -83,5 +84,21 @@ public class OccurredAtTests
 
         Assert.Equal(2, context.Ranked.Count);
         Assert.StartsWith("Summer:", context.Ranked[0].Memory.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ARecallAsOfAPastDay_LeavesOutWhatCameLater_AndMeasuresRecencyFromThatDay()
+    {
+        using var provider = Build();
+        var memory = provider.GetRequiredService<IMemoryService>();
+        var now = DateTimeOffset.UtcNow;
+        await memory.RememberAsync("u", "s", "Winter: I drive a red car to work every day now.", "user", occurredAt: now.AddDays(-30), cancellationToken: Ct);
+        await memory.RememberAsync("u", "s", "Spring: I drive a blue car to work every day now.", "user", occurredAt: now.AddDays(-10), cancellationToken: Ct);
+        await memory.RememberAsync("u", "s", "Summer: I drive a green car to work every day now.", "user", occurredAt: now.AddDays(-1), cancellationToken: Ct);
+
+        // Asked five days ago: summer had not happened yet, and spring was the latest
+        var context = await memory.RecallAsync("u", "s", "Car: what colour is my car?", asOf: now.AddDays(-5), cancellationToken: Ct);
+
+        Assert.Equal(["Spring:", "Winter:"], context.Ranked.Select(r => r.Memory.Content.Split(' ')[0]));
     }
 }

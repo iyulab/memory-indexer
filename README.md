@@ -199,6 +199,9 @@ await memoryService.RememberAsync("user123", "session-1", "I moved to Busan", oc
 // grouped by scope and everything from earlier sessions comes back as UserMemories
 MemoryContext context = await memoryService.RecallAsync("user123", sessionId: null, "UI preferences", limit: 5);
 
+// Recall as of a past day — what happened later is left out and recency counts back from that day
+MemoryContext then = await memoryService.RecallAsync("user123", sessionId: null, "Where do I live?", asOf: DateTimeOffset.Parse("2026-05-10T00:00:00Z"));
+
 // Scores — every recalled memory with its combined score and parts, highest first, for a threshold of your own
 var confident = context.Ranked.Where(r => r.Score >= 0.6f).Select(r => r.Memory);
 ```

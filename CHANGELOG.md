@@ -13,6 +13,10 @@ All notable changes to Memory Indexer are documented here.
   conflict resolution and date ordering then read the import order instead of when things were said. The given time becomes
   the memory's `CreatedAt`; `UpdatedAt` records when it was stored. **Breaking** for implementers of `IMemoryService`: the
   method has a new optional parameter before `cancellationToken` (callers that name their arguments are unaffected).
+- **A recall can be asked as of a past day: `RecallAsync(…, asOf)` and `RetrieveRequest.AsOf`.** Memories that happened
+  after it are left out and recency is measured back from it (an access recorded later does not count) — a question with its
+  own date, such as a benchmark's `question_date` or a replayed conversation, sees what was known then. **Breaking** for
+  implementers of `IMemoryService`, as above.
 
 ## [v0.38.0] - 2026-10-17
 

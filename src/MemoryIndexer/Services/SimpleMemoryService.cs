@@ -131,6 +131,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         string query,
         int limit = 10,
         string? @namespace = null,
+        DateTimeOffset? asOf = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -152,7 +153,8 @@ public sealed partial class SimpleMemoryService : IMemoryService
             Namespace = @namespace,
             Query = query,
             Limit = limit,
-            MinScore = 0.3f
+            MinScore = 0.3f,
+            AsOf = asOf,
         };
 
         var results = await _primitives.RetrieveAsync(retrieveRequest, cancellationToken);
