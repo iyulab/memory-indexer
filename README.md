@@ -195,6 +195,9 @@ await memoryService.RememberAsync("user123", sessionId: null, "My car plate is 1
 // Recall — searches across all of the user's sessions in the namespace; with a sessionId, what that session stored is
 // grouped by scope and everything from earlier sessions comes back as UserMemories
 MemoryContext context = await memoryService.RecallAsync("user123", sessionId: null, "UI preferences", limit: 5);
+
+// Scores — every recalled memory with its combined score and parts, highest first, for a threshold of your own
+var confident = context.Ranked.Where(r => r.Score >= 0.6f).Select(r => r.Memory);
 ```
 
 No `IEmbeddingService` to write when you already hold a `Microsoft.Extensions.AI` generator (OpenAI, Azure OpenAI, Ollama,

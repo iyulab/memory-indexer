@@ -174,7 +174,8 @@ public sealed partial class SimpleMemoryService : IMemoryService
         {
             UserMemories = userMemories,
             SessionMemories = sessionMemories,
-            TopicMemories = topicMemories
+            TopicMemories = topicMemories,
+            Ranked = results.OrderByDescending(r => r.Score).ToList()
         };
 
         LogRecalled(_logger, userMemories.Count, sessionMemories.Count, topicMemories.Count, context.TotalCount);

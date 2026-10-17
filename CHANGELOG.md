@@ -2,6 +2,13 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Added
+- **A recall hands back its scores: `MemoryContext.Ranked`.** Every recalled memory with its retrieval score, highest first —
+  the combined score (the weighted average of the parts) and the parts themselves (`RetrieveResult.Breakdown`: semantic,
+  keyword, recency, importance) — so a consumer can apply its own threshold or ordering. The scope groups are unchanged.
+
 ## [v0.38.0] - 2026-10-17
 
 ### Fixed

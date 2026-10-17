@@ -1,3 +1,5 @@
+using MemoryIndexer.Interfaces;
+
 namespace MemoryIndexer.Models;
 
 /// <summary>
@@ -32,6 +34,13 @@ public sealed class MemoryContext
     /// Internal use - typically not exposed to end users.
     /// </summary>
     public IReadOnlyList<MemoryUnit> TopicMemories { get; init; } = Array.Empty<MemoryUnit>();
+
+    /// <summary>
+    /// Every recalled memory with its retrieval score, highest first — the combined score (a weighted average of the parts)
+    /// and its parts in <see cref="RetrieveResult.Breakdown"/> (semantic, keyword, recency, importance). The same memories as
+    /// <see cref="AllMemories"/>; read it to apply a threshold or an ordering of your own.
+    /// </summary>
+    public IReadOnlyList<RetrieveResult> Ranked { get; init; } = Array.Empty<RetrieveResult>();
 
     /// <summary>
     /// Total count of all memories across all scopes.
