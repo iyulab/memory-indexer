@@ -71,7 +71,7 @@ public enum Tier
     /// - Capacity: Configurable (default 1,000/user, high-value only)
     /// - Expiry: Explicit ForgetUserAsync() only (GDPR compliance)
     /// - Access: ~milliseconds (vector DB query)
-    /// - Storage: IArchiveStore (same backend as Long, different namespace)
+    /// - Storage: IArchiveStore (the same memory store as Long, under the user key ArchiveUserKey.For(userId))
     /// - Promotion: confidence >= 0.8 AND confirmCount >= 3
     /// - Use case: User profile, core facts, learned preferences
     /// </summary>
