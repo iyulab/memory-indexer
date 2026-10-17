@@ -10,12 +10,12 @@ namespace MemoryIndexer.Services;
 /// Delegates to IMemoryPrimitives and uses IMemoryClassifier for auto-classification.
 /// </summary>
 /// <remarks>
-/// This is a facade over the complex VCM architecture, providing:
+/// This is a facade over IMemoryPrimitives, providing:
 /// - **Level 0 (Zero-Config)**: RememberAsync(userId, sessionId: null, content)
 /// - **Level 1 (Session-Aware)**: RememberAsync(userId, sessionId, content)
 ///
 /// For advanced use cases, use:
-/// - Level 2-3: IVirtualContextManager or IMemoryPrimitives directly
+/// - Level 2: IMemoryPrimitives directly
 /// </remarks>
 public sealed partial class SimpleMemoryService : IMemoryService
 {

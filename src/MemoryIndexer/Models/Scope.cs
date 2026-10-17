@@ -20,7 +20,8 @@ namespace MemoryIndexer.Models;
 ///
 /// API Visibility:
 /// - User and Session scopes are exposed to API users
-/// - Topic and Turn scopes are internal to VCM management
+/// - Topic and Turn scopes are assigned internally: IScopeManager.ResolveScopeAsync gives them to
+///   lower-importance episodic and semantic memories (scope is a function of type and importance)
 /// </remarks>
 public enum Scope
 {
@@ -33,7 +34,7 @@ public enum Scope
     /// - Storage: In-memory buffer
     /// </summary>
     /// <remarks>
-    /// NOT exposed to API - internal VCM management only.
+    /// NOT exposed to API - assigned by IScopeManager.ResolveScopeAsync from type and importance.
     /// Roughly equivalent to CPU cache in OS memory hierarchy.
     /// </remarks>
     Turn = 0,
@@ -47,9 +48,8 @@ public enum Scope
     /// - Storage: Working memory tier
     /// </summary>
     /// <remarks>
-    /// NOT exposed to API - internal VCM management only.
-    /// Auto-managed via topic detection (Phase 36.1).
-    /// TopicId field links memories to detected topics.
+    /// NOT exposed to API - assigned by IScopeManager.ResolveScopeAsync from type and importance.
+    /// The optional TopicId field can link memories to a topic; the library does not set it.
     /// </remarks>
     Topic = 1,
 

@@ -31,7 +31,6 @@ Without the SDK, construct the implementations directly — for example `MockEmb
 - `IMemoryStore` - Memory storage operations
 - `IEmbeddingService` - Embedding generation
 - `IScoringService` - Memory relevance scoring
-- `IVirtualContextManager` - Context window management
 
 ### Models
 - `MemoryUnit` - Core memory entity

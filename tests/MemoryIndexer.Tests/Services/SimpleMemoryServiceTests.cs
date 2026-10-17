@@ -133,24 +133,6 @@ public class SimpleMemoryServiceTests
     }
 
     [Fact]
-    public async Task RememberAsync_DoesNotDriveTheScopeManagersConversationState()
-    {
-        // The singleton's topic state belongs to one conversation; remembering for any user must not set it
-        await _service.RememberAsync("user-1", sessionId: "session-1", content: "content", cancellationToken: TestContext.Current.CancellationToken);
-
-        _scopeManager.IsInitialized.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task RememberAsync_DoesNotRecordTheTurnForTopicTracking()
-    {
-        // Topic tracking embedded every turn a second time and its result was never stored on this path
-        await _service.RememberAsync("user-1", sessionId: "session-1", content: "Test content", cancellationToken: TestContext.Current.CancellationToken);
-
-        _scopeManager.RecordedTurns.Should().BeEmpty();
-    }
-
-    [Fact]
     public async Task RememberAsync_Level1_ShouldResolveScopeFromImportance()
     {
         // Arrange
@@ -358,17 +340,6 @@ public class SimpleMemoryServiceTests
     #region EndSessionAsync Tests
 
     [Fact]
-    public async Task EndSessionAsync_DoesNotEndTheScopeManagersConversation()
-    {
-        // One user's session end must not reset the state another conversation set on the shared manager
-        await _service.RememberAsync("user-1", sessionId: "session-1", content: "test", cancellationToken: TestContext.Current.CancellationToken);
-
-        await _service.EndSessionAsync("user-1", "session-1", TestContext.Current.CancellationToken);
-
-        _scopeManager.SessionEnded.Should().BeFalse();
-    }
-
-    [Fact]
     public async Task EndSessionAsync_ShouldRemoveImplicitSession()
     {
         // Arrange
@@ -563,56 +534,12 @@ public class SimpleMemoryServiceTests
 
     private sealed class MockScopeManager : IScopeManager
     {
-        public ScopeState CurrentState { get; } = new ScopeState();
-        public bool IsInitialized { get; private set; }
-        public string? UserId { get; private set; }
-        public string? SessionId { get; private set; }
-        public bool SessionEnded { get; private set; }
-        public List<string> RecordedTurns { get; } = new();
-
-        public Task InitializeAsync(string userId, string sessionId, CancellationToken cancellationToken = default)
-        {
-            IsInitialized = true;
-            UserId = userId;
-            SessionId = sessionId;
-            CurrentState.IsInitialized = true;
-            CurrentState.UserId = userId;
-            CurrentState.SessionId = sessionId;
-            return Task.CompletedTask;
-        }
-
-        public Task<ScopeResolution> RecordTurnAsync(string content, string? role = null, CancellationToken cancellationToken = default)
-        {
-            RecordedTurns.Add(content);
-            return Task.FromResult(new ScopeResolution
-            {
-                ResolvedScope = Scope.Turn,
-                TopicId = "topic-1",
-                BoundaryCrossed = true,
-                BoundaryType = ScopeBoundaryType.Turn,
-                TurnIndex = RecordedTurns.Count,
-                TopicTurnIndex = RecordedTurns.Count,
-                Confidence = 1.0f
-            });
-        }
-
         public Task<Scope> ResolveScopeAsync(string content, MemoryType type, float importance = 0.5f, CancellationToken cancellationToken = default)
         {
             // Simple heuristic: high importance → User, low importance → Session
             var scope = importance >= 0.8f ? Scope.User : Scope.Session;
             return Task.FromResult(scope);
         }
-
-        public Task<bool> DetectTopicChangeAsync(string currentContent, CancellationToken cancellationToken = default) => Task.FromResult(false);
-        public string GetCurrentTopicId() => "topic-1";
-        public IReadOnlyList<MemoryUnit> FilterByScope(IEnumerable<MemoryUnit> memories, Scope targetScope, bool includeNarrower = true) => throw new NotImplementedException();
-        public Task EndSessionAsync(CancellationToken cancellationToken = default)
-        {
-            SessionEnded = true;
-            IsInitialized = false;
-            return Task.CompletedTask;
-        }
-        public ScopeStatistics GetStatistics() => throw new NotImplementedException();
     }
 
     #endregion

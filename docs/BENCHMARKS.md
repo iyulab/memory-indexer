@@ -53,11 +53,8 @@ Benchmarks for the 4-tier memory promotion pipeline (Buffer → Short → Long �
 | T1 ShortTerm: Get all | 237 ns | 3.2 ns | 408 B |
 | T0 Buffer: Enqueue | 244 ns | 2.0 ns | 400 B |
 | T0 Buffer: Enqueue + Drain (5 items) | 1.20 μs | 27 ns | 1.90 KB |
-| VCM: Initialize session | 1.69 μs | 35 ns | 1.76 KB |
 | T1 ShortTerm: Promote memory | 1.80 μs | 16 ns | 5.69 KB |
-| VCM: Get context usage | 2.52 μs | 79 ns | 2.63 KB |
 | T3 Archive: Set entry | 6.04 μs | 23 ns | 392 B |
-| VCM: Consolidate | 6.48 μs | 234 ns | 11.87 KB |
 | Pipeline: Store → Short → Recall | 7.15 μs | 139 ns | 11.19 KB |
 | Pipeline: High-importance path | 9.76 μs | 916 ns | 13.70 KB |
 | Pipeline: Mixed types promotion | 12.97 μs | 307 ns | 22.42 KB |

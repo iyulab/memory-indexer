@@ -19,7 +19,7 @@ Practical patterns and best practices for Memory Indexer in production applicati
 ### Full Configuration Schema
 
 Memory Indexer uses `MemoryIndexerOptions` (section `MemoryIndexer`) for configuration, plus the tier services' own
-sections under `MemoryIndexer:VCM`. Below are the sections this guide covers, with their default values:
+sections under `MemoryIndexer:VCM` (`WorkingMemory`, `SemanticStore`; the section name is historical). Below are the sections this guide covers, with their default values:
 
 ```json
 {

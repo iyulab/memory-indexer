@@ -127,36 +127,3 @@ public enum MemoryStability
     /// </summary>
     Permanent = 4
 }
-
-/// <summary>
-/// Context saturation levels for VCM management.
-/// </summary>
-/// <remarks>
-/// Research reference: research-04.md Section 1.2 "Fragility Tipping Point"
-/// </remarks>
-public enum ContextSaturationLevel
-{
-    /// <summary>
-    /// Normal operation, no action needed.
-    /// Usage: 0-75%
-    /// </summary>
-    Normal = 0,
-
-    /// <summary>
-    /// Approaching capacity, consider optimization.
-    /// Usage: 75-85%
-    /// </summary>
-    Elevated = 1,
-
-    /// <summary>
-    /// Near capacity, active management required.
-    /// Usage: 85-95%
-    /// </summary>
-    High = 2,
-
-    /// <summary>
-    /// At capacity, immediate eviction needed.
-    /// Usage: 95%+
-    /// </summary>
-    Critical = 3
-}

@@ -24,7 +24,6 @@ namespace MemoryIndexer.Interfaces;
 ///
 /// For advanced use cases (Type-Aware, Full Control), use:
 /// - Level 2: IMemoryPrimitives.EncodeAsync (EncodeRequest.Type and ImportanceScore are kept as given; only what is left null is classified)
-/// - Level 3: IVirtualContextManager (full VCM control)
 /// </remarks>
 public interface IMemoryService
 {

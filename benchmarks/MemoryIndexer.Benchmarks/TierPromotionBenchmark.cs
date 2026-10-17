@@ -25,7 +25,6 @@ public class TierPromotionBenchmark
     private IBuffer? _buffer;
     private IShortTermMemory? _shortTermMemory;
     private IArchiveStore? _archiveStore;
-    private IVirtualContextManager? _vcm;
     private const string UserId = "benchmark-user";
     private const string SessionId = "benchmark-session";
 
@@ -46,7 +45,6 @@ public class TierPromotionBenchmark
         _buffer = _serviceProvider.GetRequiredService<IBuffer>();
         _shortTermMemory = _serviceProvider.GetRequiredService<IShortTermMemory>();
         _archiveStore = _serviceProvider.GetRequiredService<IArchiveStore>();
-        _vcm = _serviceProvider.GetRequiredService<IVirtualContextManager>();
     }
 
     [GlobalCleanup]
@@ -203,39 +201,5 @@ public class TierPromotionBenchmark
         await _memoryService!.StoreAsync(UserId, "Routine data", MemoryType.Episodic, SessionId, 0.3f);
 
         var results = await _memoryService!.RecallAsync(UserId, "information knowledge data", limit: 10);
-    }
-
-    // ==================== VCM Operations ====================
-
-    [Benchmark(Description = "VCM: Initialize session")]
-    public async Task VcmInitialize()
-    {
-        await _vcm!.InitializeAsync(UserId, Guid.NewGuid().ToString());
-    }
-
-    [Benchmark(Description = "VCM: Get context usage")]
-    public async Task<ContextUsageStatistics> VcmGetContextUsage()
-    {
-        await _vcm!.InitializeAsync(UserId, SessionId);
-        return await _vcm.GetContextUsageAsync();
-    }
-
-    [Benchmark(Description = "VCM: Consolidate")]
-    public async Task<ConsolidationResult> VcmConsolidate()
-    {
-        await _vcm!.InitializeAsync(UserId, SessionId);
-
-        // Add some data first
-        for (int i = 0; i < 3; i++)
-        {
-            await _memoryService!.StoreAsync(
-                UserId,
-                $"Consolidation test memory {i}",
-                MemoryType.Episodic,
-                SessionId,
-                0.5f);
-        }
-
-        return await _vcm.ConsolidateAsync();
     }
 }

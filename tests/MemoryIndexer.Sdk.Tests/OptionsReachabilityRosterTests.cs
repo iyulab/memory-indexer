@@ -53,7 +53,7 @@ public class OptionsReachabilityRosterTests
     /// <c>ProfileExportOptions.IncludeAuditTrail</c>,
     /// <c>ContextOptimizationOptions.MaxTokens</c>, <c>ExpansionOptions.OnlyAmbiguous</c>,
     /// <c>HybridGraphOptions.SemanticWeight</c>, <c>SummarizationOptions.Style</c> and
-    /// <c>VCMOptions.ConsolidationInterval</c>. Options that were only validated and then used by nothing
+    /// <c>VCMOptions.ConsolidationInterval</c> (removed with the virtual context manager in 0.40.0). Options that were only validated and then used by nothing
     /// went with them - the scan counts a validator read as a read, so they were never listed here.
     /// </para>
     /// <para>

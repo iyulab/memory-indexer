@@ -95,6 +95,7 @@ public class TieredMemoryBenchmark
             0.5f);
 
         await _memoryService.UpdateContentAsync(
+            UserId,
             memory.Id,
             "Updated content for workflow test");
 

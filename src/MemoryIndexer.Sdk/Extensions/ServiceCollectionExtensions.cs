@@ -115,20 +115,14 @@ public static class ServiceCollectionExtensions
         // Register Simple API (Phase 33.1)
         services.TryAddSingleton<IMemoryService, SimpleMemoryService>();
 
-        // Register VCM services (Phase 5)
-        // How ShortTermMemoryService keeps its entries; its capacity is MemoryIndexer:WorkingMemory:Capacity (the Short tier's)
+        // How ShortTermMemoryService keeps its entries (the section keeps its historical name, MemoryIndexer:VCM:WorkingMemory);
+        // its capacity is MemoryIndexer:WorkingMemory:Capacity (the Short tier's)
         services.AddOptions<MemoryIndexer.Services.WorkingMemoryCacheOptions>()
             .BindConfigurationIfPresent("MemoryIndexer:VCM:WorkingMemory");
-        services.AddOptions<VCMOptions>()
-            .BindConfigurationIfPresent("MemoryIndexer:VCM");
-
-        // Register 3-axis model services (Phase 32.3)
-        services.AddOptions<ScopeManagerOptions>()
-            .BindConfigurationIfPresent("MemoryIndexer:ScopeManager");
 
         services.TryAddSingleton<IShortTermMemory, ShortTermMemoryService>();
-        // Completion is optional for these two: their fallbacks run when none is configured (TextCompletion.OrNull),
-        // instead of a placeholder service being handed to them.
+        // Completion is optional here: its fallbacks run when none is configured (TextCompletion.OrNull),
+        // instead of a placeholder service being handed to it.
         services.TryAddSingleton<IMemoryPrimitives>(sp => new MemoryPrimitivesService(
             sp.GetRequiredService<IMemoryStore>(),
             sp.GetRequiredService<IEmbeddingService>(),
@@ -143,16 +137,6 @@ public static class ServiceCollectionExtensions
             TextCompletion.OrNull(sp)));
         services.TryAddSingleton<IScopeManager, ScopeManager>();
         services.TryAddSingleton<ITierManager, TierManager>();
-        services.TryAddSingleton<IVirtualContextManager>(sp => new VirtualContextManager(
-            sp.GetRequiredService<IShortTermMemory>(),
-            sp.GetRequiredService<IMemoryStore>(),
-            sp.GetRequiredService<IEmbeddingService>(),
-            sp.GetRequiredService<IScoringService>(),
-            sp.GetRequiredService<IScopeManager>(),
-            sp.GetRequiredService<ITierManager>(),
-            sp.GetRequiredService<IOptions<VCMOptions>>(),
-            sp.GetRequiredService<ILogger<VirtualContextManager>>(),
-            TextCompletion.OrNull(sp)));
 
         // Register Context Budget API services (Phase v0.9.0)
         services.TryAddSingleton<ITokenCounter, ApproximateTokenCounter>();

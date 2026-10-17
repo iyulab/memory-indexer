@@ -249,7 +249,7 @@ public class ConcurrencyBenchmark
 
         // Parallel updates (tests thread-safety)
         var tasks = Enumerable.Range(0, ConcurrentOperations).Select(i =>
-            _memoryService!.UpdateContentAsync(memory.Id, $"Updated content {i}"));
+            _memoryService!.UpdateContentAsync(userId, memory.Id, $"Updated content {i}"));
 
         await Task.WhenAll(tasks);
     }
@@ -274,7 +274,7 @@ public class ConcurrencyBenchmark
 
         // Parallel delete and store (use hardDelete to prevent GC pressure from soft-deleted entries)
         var deleteTasks = memoryIds.Take(ConcurrentOperations / 2)
-            .Select(id => _memoryService!.DeleteAsync(id, hardDelete: true));
+            .Select(id => _memoryService!.DeleteAsync(userId, id, hardDelete: true));
         var storeTasks = Enumerable.Range(0, ConcurrentOperations / 2)
             .Select(i => _memoryService!.StoreAsync(
                 userId,

@@ -15,6 +15,18 @@ All notable changes to Memory Indexer are documented here.
 - **Breaking: the memory lineage tracker (`IMemoryLineageTracker`, `InMemoryLineageTracker` and their event, option and
   enum types).** It was registered by `AddMemoryIndexer()` but nothing recorded into it, so every lineage query answered
   empty. Where a memory came from is now on the memory itself — `MemoryUnit.SourceRef` and `MemoryUnit.DerivedFrom` above.
+- **Breaking: the virtual context manager (`IVirtualContextManager`, `VirtualContextManager`, `VCMOptions` and their
+  result, state and enum types — `VirtualContextState`, `EvictionResult`, `ConsolidationResult` in `MemoryIndexer.Interfaces`,
+  `TierMigrationResult`, `SessionEndResult`, `ContextUsageStatistics`, `ContextActionRecommendation`, `ContextSaturationLevel`).**
+  It was registered by `AddMemoryIndexer()` but used by nothing in the library, and it held one conversation's paging state in
+  a singleton, so a process could page for only one conversation. The `MemoryIndexer:VCM:WorkingMemory` and
+  `MemoryIndexer:VCM:SemanticStore` sections keep working; the other `MemoryIndexer:VCM` settings are no longer read.
+- **Breaking: `IScopeManager` keeps only `ResolveScopeAsync`.** The topic-tracking members (`CurrentState`, `InitializeAsync`,
+  `RecordTurnAsync`, `DetectTopicChangeAsync`, `GetCurrentTopicId`, `FilterByScope`, `EndSessionAsync`, `GetStatistics`),
+  `ScopeState`, `ScopeResolution`, `ScopeBoundaryType`, `ScopeStatistics` and `ScopeManagerOptions` (`MemoryIndexer:ScopeManager`)
+  are gone — nothing in the remember/recall path read them since topic tracking stopped running there in 0.38.0. `ScopeManager`
+  is stateless and its constructor takes only the logger. Migration: an implementer of `IScopeManager` keeps only
+  `ResolveScopeAsync`.
 
 ## [v0.39.0] - 2026-10-17
 

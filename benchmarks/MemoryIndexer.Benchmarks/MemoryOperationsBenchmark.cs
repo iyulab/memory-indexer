@@ -131,6 +131,7 @@ public class MemoryOperationsBenchmark
             0.5f);
 
         return await _memoryService.UpdateContentAsync(
+            UserId,
             memory.Id,
             "Updated content for benchmarking");
     }
@@ -147,6 +148,6 @@ public class MemoryOperationsBenchmark
 
         // Use hardDelete to actually remove from memory, preventing GC pressure
         // from accumulated soft-deleted entries across benchmark iterations
-        return await _memoryService.DeleteAsync(memory.Id, hardDelete: true);
+        return await _memoryService.DeleteAsync(UserId, memory.Id, hardDelete: true);
     }
 }

@@ -70,8 +70,8 @@ Defines how far a memory reaches across conversations.
 
 | Scope | Level | Lifetime | API Visibility |
 |-------|-------|----------|----------------|
-| `Turn` | S3 | ~seconds | Internal (VCM) |
-| `Topic` | S2 | ~minutes | Internal (VCM) |
+| `Turn` | S3 | ~seconds | Internal (assigned by `ResolveScopeAsync` from type and importance) |
+| `Topic` | S2 | ~minutes | Internal (assigned by `ResolveScopeAsync` from type and importance) |
 | `Session` | S1 | ~hours | Exposed |
 | `User` | S0 | ~forever | Exposed |
 
@@ -143,9 +143,8 @@ Storage location based on persistence and lifespan.
 
 | Service | Interface | Responsibility |
 |---------|-----------|----------------|
-| **Scope Manager** | `IScopeManager` | Resolves Scope dimension, detects topic changes, tracks session boundaries |
+| **Scope Manager** | `IScopeManager` | Resolves the Scope dimension of a memory from its type and importance (`ResolveScopeAsync`); stateless |
 | **Tier Manager** | `ITierManager` | Evaluates tier promotions/demotions, enforces OR/AND logic, manages transitions |
-| **Virtual Context Manager** | `IVirtualContextManager` | Orchestrates all three dimensions, coordinates IScopeManager and ITierManager |
 
 ## Promotion Logic
 
@@ -173,7 +172,7 @@ Storage location based on persistence and lifespan.
                         │
 ┌───────────────────────▼─────────────────────────────┐
 │  Orchestration Layer                                │
-│  VirtualContextManager: coordinates all 3 axes      │
+│  SimpleMemoryService: remember/recall facade        │
 │  MemoryPrimitives: 13 fundamental operations        │
 └───────────────────────┬─────────────────────────────┘
                         │

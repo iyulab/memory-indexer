@@ -94,7 +94,7 @@ public class CompletionDefaultTests
         using var provider = Build();
 
         Assert.NotNull(provider.GetRequiredService<IFactExtractor>());
-        Assert.NotNull(provider.GetRequiredService<IVirtualContextManager>());
+        Assert.NotNull(provider.GetRequiredService<IMemoryPrimitives>());
     }
 
     [Theory]
