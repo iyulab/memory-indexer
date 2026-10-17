@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.40.0] - 2026-10-18
 
 ### Added
 - **A recalled memory says where it came from: `MemoryUnit.SourceRef` and `MemoryUnit.DerivedFrom`.** `RememberAsync(…,
