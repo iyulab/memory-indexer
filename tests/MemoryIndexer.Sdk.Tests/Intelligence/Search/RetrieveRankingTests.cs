@@ -120,4 +120,35 @@ public class RetrieveRankingTests
         Assert.True(results[0].Breakdown!.KeywordScore > results[1].Breakdown!.KeywordScore,
             $"answer {results[0].Breakdown!.KeywordScore} vs {results[1].Breakdown!.KeywordScore}");
     }
+
+    [Fact]
+    public async Task ALongTextContainingTheQueryWords_DoesNotOutscoreAShortOneThatSaysThem_OnKeywordsAlone()
+    {
+        // Both contain «parking permit deadline» once; the long one also contains them because it is long. Counted as
+        // contained-or-not they tie; with BM25's length factor the long one counts each word less. An average-length text
+        // that contains every query word still scores the full 1.0. Limit 2 searches 8 candidates.
+        var (provider, store, primitives) = Build([]);
+        using var _ = provider;
+        var now = DateTime.UtcNow;
+        const string shortOne = "The parking permit deadline is Friday.";
+        var filler = string.Join(' ', Enumerable.Repeat("we went over the budget the schedule and the office move again", 30));
+        var longOne = $"{filler} also the parking permit deadline came up {filler}";
+        await store.StoreAsync(Memory(shortOne, At(0.80f), now), Ct);
+        await store.StoreAsync(Memory(longOne, At(0.80f), now), Ct);
+        string[] others = ["Lunch was at noon today.", "The printer is out of paper.", "Team photo on Monday morning.",
+            "Bring the slides for the review.", "The new chairs arrive next week.", "Water the plants on Thursday."];
+        foreach (var other in others)
+        {
+            await store.StoreAsync(Memory(other, At(0.80f), now), Ct);
+        }
+
+        var results = await primitives.RetrieveAsync(
+            new RetrieveRequest { UserId = "u", Query = "parking permit deadline", Limit = 2, RecordAccess = false }, Ct);
+
+        Assert.Equal(shortOne, results[0].Memory.Content);
+        var shortScore = results.Single(r => r.Memory.Content == shortOne).Breakdown!.KeywordScore;
+        var longScore = results.Single(r => r.Memory.Content == longOne).Breakdown!.KeywordScore;
+        Assert.Equal(1f, shortScore, 3);
+        Assert.True(longScore < 0.5f * shortScore, $"long {longScore} vs short {shortScore}");
+    }
 }

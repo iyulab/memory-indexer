@@ -11,6 +11,14 @@ All notable changes to Memory Indexer are documented here.
   `source_ids` metadata those already wrote). Both live in `Metadata`, so every store keeps them with no schema change.
   **Breaking** for implementers of `IMemoryService` (one more optional parameter before `cancellationToken`).
 
+### Changed
+- **Recall no longer favours a long memory for containing the query's words because it is long.** The keyword part of the
+  combined score counted each query word a memory contains, whatever its length, so a long answer that mentions most
+  words outranked a short statement that is the answer. A contained word now counts by BM25's term-frequency and length
+  factor (`k1` 1.2, `b` 0.75, relative to the candidates' average length), capped at its old value — an average-length
+  memory scores as before. Measured with bge-m3: BEAM 100K NDCG@10 +0.013 [+0.007, +0.019]; LongMemEval_S (120 questions)
+  NDCG@10 +0.007 [−0.005, +0.020], no type significantly lower.
+
 ### Fixed
 - **A promoted fact no longer erases what the profile already held under its key.** Fast-track promotion wrote every fact with
   `IArchiveStore.SetAsync`, so a fact that replaced an earlier one left no history (`GetHistoryAsync` returned only the new

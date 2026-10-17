@@ -709,7 +709,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
         // Keyword weights come from the candidates themselves: a query word most candidates contain («my», «you», «lately»)
         // says little about which one answers, a word few contain says much. Language-neutral - no stopword list.
-        var keywordWeights = KeywordWeights(queryTokens, resultsSource.Select(item => item.Item1.Memory.Content));
+        var keywordModel = KeywordModel.From(queryTokens, resultsSource.Select(item => item.Item1.Memory.Content));
 
         var results = resultsSource
             .Select(item =>
@@ -720,7 +720,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
                 // Calculate individual scores
                 var semanticScore = rerankScore ?? vectorScore; // Use rerank score if available
-                var keywordScore = CalculateKeywordScore(memory.Content, keywordWeights);
+                var keywordScore = keywordModel.Score(memory.Content);
                 var recencyScore = CalculateRecencyScore(memory, _searchOptions.RecencyHalfLifeDays, reference);
                 var importanceScore = memory.ImportanceScore;
                 var retentionScore = memory.CalculateRetention();
@@ -1105,47 +1105,94 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
     private static readonly char[] TokenSeparators = [' ', '\t', '\n', '\r', '.', ',', ';', ':', '!', '?', '(', ')', '[', ']', '{', '}', '"', '\'', '/', '\\', '-', '_', '+', '=', '<', '>', '&', '|', '@', '#', '$', '%', '^', '*', '~', '`'];
 
     /// <summary>
-    /// The weight of each query token among <paramref name="candidates"/>: its inverse document frequency there (the BM25
-    /// form, <c>ln(1 + (N - df + 0.5) / (df + 0.5))</c>), so a token most candidates contain weighs little.
+    /// Keyword match between a candidate and the query, from the candidates themselves: each query token weighs its inverse
+    /// document frequency among them (the BM25 form, <c>ln(1 + (N - df + 0.5) / (df + 0.5))</c>), so a token most candidates
+    /// contain weighs little; and a contained token counts by BM25's term-frequency and length factor
+    /// (<c>(k1 + 1)·tf / (tf + k1·(1 - b + b·len/avglen))</c>, capped at 1), so text of average length that contains a token
+    /// counts it fully and a long text counts it less — a long answer contains many query words by its length alone. The
+    /// score is the weighted share of the query (0.0 to 1.0).
     /// </summary>
-    private static Dictionary<string, float> KeywordWeights(HashSet<string> queryTokens, IEnumerable<string> candidates)
+    private sealed class KeywordModel
     {
-        var documentFrequency = queryTokens.ToDictionary(t => t, _ => 0, StringComparer.Ordinal);
-        var count = 0;
-        foreach (var content in candidates)
+        // BM25's usual constants
+        private const double K1 = 1.2;
+        private const double B = 0.75;
+
+        private readonly Dictionary<string, float> _weights;
+        private readonly float _totalWeight;
+        private readonly double _averageLength;
+
+        private KeywordModel(Dictionary<string, float> weights, double averageLength)
         {
-            count++;
-            var tokens = TokenizeForKeywordMatch(content);
-            foreach (var token in queryTokens)
+            _weights = weights;
+            _totalWeight = weights.Values.Sum();
+            _averageLength = averageLength;
+        }
+
+        public static KeywordModel From(HashSet<string> queryTokens, IEnumerable<string> candidates)
+        {
+            var documentFrequency = queryTokens.ToDictionary(t => t, _ => 0, StringComparer.Ordinal);
+            var count = 0;
+            long totalLength = 0;
+            foreach (var content in candidates)
             {
-                if (tokens.Contains(token))
+                count++;
+                var tokens = KeywordTokens(content);
+                totalLength += tokens.Count;
+                var distinct = tokens.ToHashSet(StringComparer.Ordinal);
+                foreach (var token in queryTokens)
                 {
-                    documentFrequency[token]++;
+                    if (distinct.Contains(token))
+                    {
+                        documentFrequency[token]++;
+                    }
                 }
             }
+
+            var weights = documentFrequency.ToDictionary(
+                kv => kv.Key,
+                kv => (float)Math.Log(1 + ((count - kv.Value + 0.5) / (kv.Value + 0.5))),
+                StringComparer.Ordinal);
+            return new KeywordModel(weights, count == 0 ? 0 : (double)totalLength / count);
         }
 
-        return documentFrequency.ToDictionary(
-            kv => kv.Key,
-            kv => (float)Math.Log(1 + ((count - kv.Value + 0.5) / (kv.Value + 0.5))),
-            StringComparer.Ordinal);
+        public float Score(string content)
+        {
+            if (_totalWeight <= 0f)
+            {
+                return 0f;
+            }
+
+            var tokens = KeywordTokens(content);
+            var lengthNorm = _averageLength > 0 ? 1 - B + (B * tokens.Count / _averageLength) : 1;
+            var frequency = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var token in tokens)
+            {
+                if (_weights.ContainsKey(token))
+                {
+                    frequency[token] = frequency.GetValueOrDefault(token) + 1;
+                }
+            }
+
+            var matched = 0d;
+            foreach (var (token, tf) in frequency)
+            {
+                var factor = Math.Min(1d, (K1 + 1) * tf / (tf + (K1 * lengthNorm)));
+                matched += _weights[token] * factor;
+            }
+
+            return (float)(matched / _totalWeight);
+        }
     }
 
-    /// <summary>
-    /// Keyword match between memory content and the query: the weight of the query tokens the content contains over the
-    /// weight of all query tokens (0.0 to 1.0), weights from <see cref="KeywordWeights"/>.
-    /// </summary>
-    private static float CalculateKeywordScore(string memoryContent, Dictionary<string, float> queryWeights)
+    /// <summary>The keyword tokens of a text, repeats kept (same rule as <see cref="TokenizeForKeywordMatch"/>).</summary>
+    private static List<string> KeywordTokens(string text)
     {
-        var total = queryWeights.Values.Sum();
-        if (total <= 0f)
-        {
-            return 0f;
-        }
-
-        var contentTokens = TokenizeForKeywordMatch(memoryContent);
-        var matched = queryWeights.Where(kv => contentTokens.Contains(kv.Key)).Sum(kv => kv.Value);
-        return matched / total;
+        return text
+            .Split(TokenSeparators, StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => t.Length >= 2)
+            .Select(t => t.ToLowerInvariant())
+            .ToList();
     }
 
     private static float CalculateRecencyScore(MemoryUnit memory, double halfLifeDays, DateTime reference)
