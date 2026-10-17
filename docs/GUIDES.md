@@ -219,6 +219,12 @@ public interface IMemoryStore
 }
 ```
 
+The user's profile (`IArchiveStore`) is kept in this store too: each profile entry is a memory under the user key
+`ArchiveUserKey.For(userId)`, with the entry's properties in `Metadata`. A store needs nothing special for it — it already
+partitions by `UserId`, so recall for the user never sees the profile — but it must keep `Metadata` as given, and
+`GetUserIdsAsync` lists the profile keys alongside the users. A job that visits users skips them with
+`ArchiveUserKey.IsArchiveKey`; a migration copies them, which is how it carries the profiles.
+
 ### Helper Extensions
 
 Use `MemoryStoreExtensions` to reduce boilerplate:

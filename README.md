@@ -104,6 +104,11 @@ user's buffer is due, and the hosted promotion loop drains it into working memor
 (`SensoryBufferOptions.EnableBackgroundWorker`, cadence `MemoryPromotionBackgroundOptions.CheckIntervalSeconds`).
 If you do not enqueue, leave the `SensoryBuffer` section out of your configuration.
 
+**The Archive tier — the user's profile (`IArchiveStore`) — is kept in the configured memory store.** Each promoted fact,
+with its confirmations and version history, is a memory under the user key `ArchiveUserKey.For(userId)`, so the profile
+persists with the SQLite or VectorStore store and never appears in the user's recall. `IMemoryStore.GetUserIdsAsync` lists
+those keys too; a job that visits users skips them with `ArchiveUserKey.IsArchiveKey`.
+
 ## Benchmark Summary
 
 | Operation | Latency | Throughput |

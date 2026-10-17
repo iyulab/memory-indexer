@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
+using MemoryIndexer.Sdk.Intelligence.Profile;
 using Microsoft.Extensions.Logging;
 using MemoryIndexer.Utilities;
 
@@ -254,29 +255,51 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
         }
     }
 
+    /// <summary>
+    /// The facts a new fact is validated against: the user's fact memories and the active entries of the user's profile,
+    /// so a fact that contradicts what the profile already holds is seen as a conflict.
+    /// </summary>
     private async Task<IReadOnlyList<MemoryUnit>> GetExistingFactsAsync(
         string userId,
         CancellationToken cancellationToken)
     {
-        if (_memoryStore == null)
+        var facts = new List<MemoryUnit>();
+
+        if (_memoryStore != null)
         {
-            return [];
+            try
+            {
+                var options = new MemoryFilterOptions
+                {
+                    Types = [MemoryType.Fact, MemoryType.Semantic]
+                };
+
+                facts.AddRange(await _memoryStore.GetAllAsync(userId, options, cancellationToken));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                LogFailedGetExistingFacts(_logger, ex);
+            }
         }
 
         try
         {
-            var options = new MemoryFilterOptions
+            var profile = await _archiveStore.GetAllAsync(userId, cancellationToken);
+            foreach (var entry in profile ?? [])
             {
-                Types = [MemoryType.Fact, MemoryType.Semantic]
-            };
-
-            return await _memoryStore.GetAllAsync(userId, options, cancellationToken);
+                if (entry.IsActive)
+                {
+                    // Carries semantic_key, which a replacement reads to supersede this entry
+                    facts.Add(ArchiveStoreService.ToUnit(userId, entry));
+                }
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            LogFailedGetExistingFacts(_logger, ex);
-            return [];
+            LogFailedGetProfileFacts(_logger, ex);
         }
+
+        return facts;
     }
 
     private enum PromotionDecision
@@ -482,6 +505,9 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get existing facts for validation")]
     private static partial void LogFailedGetExistingFacts(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get the profile facts for validation")]
+    private static partial void LogFailedGetProfileFacts(ILogger logger, Exception ex);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Fast-tracked fact to Archive: Key={KeyHash}, Category={Category}, Confidence={Confidence}")]
     private static partial void LogFastTrackedToArchive(ILogger logger, FingerprintedValue keyHash, FactCategory category, float confidence);

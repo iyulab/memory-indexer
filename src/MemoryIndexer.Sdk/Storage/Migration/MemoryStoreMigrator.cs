@@ -23,7 +23,9 @@ public sealed partial class MemoryStoreMigrator
     /// <param name="source">Source memory store.</param>
     /// <param name="destination">Destination memory store.</param>
     /// <param name="userIds">User IDs to migrate. If null, every user the source store holds memories for
-    /// (<see cref="IMemoryStore.GetUserIdsAsync"/>).</param>
+    /// (<see cref="IMemoryStore.GetUserIdsAsync"/>). That list includes the profile keys
+    /// (<see cref="ArchiveUserKey"/>), so a migration carries the users' profiles with their memories; a caller that names
+    /// users includes <see cref="ArchiveUserKey.For"/>(user) for each profile to carry.</param>
     /// <param name="batchSize">Number of memories to process per batch.</param>
     /// <param name="progress">Optional progress callback (current, total).</param>
     /// <param name="cancellationToken">Cancellation token.</param>

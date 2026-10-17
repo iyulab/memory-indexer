@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using MemoryIndexer.InMemory;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Profile;
@@ -30,6 +31,7 @@ public class FastTrackPromoterArchiveHistoryTests
         embedding.GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new ReadOnlyMemory<float>([1f, 0f]));
         _archive = new ArchiveStoreService(
+            new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance),
             embedding,
             Options.Create(new SemanticStoreOptions()),
             NullLogger<ArchiveStoreService>.Instance);
@@ -70,7 +72,48 @@ public class FastTrackPromoterArchiveHistoryTests
         history.Should().ContainSingle();
     }
 
-    private async Task PromoteAsync(string content, FactConflictAction action, FactConflictType conflict)
+    [Fact]
+    public async Task AContradictingFactLater_IsValidatedAgainstTheFactAlreadyInTheProfile()
+    {
+        await PromoteAsync("User's name is John", FactConflictAction.Add, FactConflictType.None);
+
+        IReadOnlyList<MemoryUnit>? seen = null;
+        _extractor.When(x => x.ValidateAsync(Arg.Any<UserFact>(), Arg.Any<IReadOnlyList<MemoryUnit>>(), Arg.Any<CancellationToken>()))
+            .Do(call => seen = call.ArgAt<IReadOnlyList<MemoryUnit>>(1));
+        await PromoteAsync("User's name is Mike", FactConflictAction.Replace, FactConflictType.Contradiction);
+
+        Assert.NotNull(seen);
+        var archived = Assert.Single(seen);
+        Assert.Equal("User's name is John", archived.Content);
+        Assert.Equal(0.95f, archived.Confidence);
+        Assert.Equal(NameKey, archived.Metadata!["semantic_key"]);
+    }
+
+    [Fact]
+    public async Task AReplacementNamingTheProfileEntry_SupersedesThatEntry()
+    {
+        await PromoteAsync("User's name is John", FactConflictAction.Add, FactConflictType.None, predicate: "called");
+        var existing = (await _archive.GetAllAsync(UserId, TestContext.Current.CancellationToken)).Single();
+
+        // The validator hands back the profile fact it conflicts with; its semantic_key decides which entry is replaced
+        IReadOnlyList<MemoryUnit> seen = [];
+        _extractor.When(x => x.ValidateAsync(Arg.Any<UserFact>(), Arg.Any<IReadOnlyList<MemoryUnit>>(), Arg.Any<CancellationToken>()))
+            .Do(call => seen = call.ArgAt<IReadOnlyList<MemoryUnit>>(1));
+        await PromoteAsync("User's name is Mike", FactConflictAction.Replace, FactConflictType.Contradiction,
+            conflicting: () => seen.Single());
+
+        var current = await _archive.GetAsync(UserId, existing.Key, TestContext.Current.CancellationToken);
+        Assert.Equal("User's name is Mike", current!.Value);
+        Assert.Equal(2, current.Version);
+        Assert.Null(await _archive.GetAsync(UserId, NameKey, TestContext.Current.CancellationToken));
+    }
+
+    private async Task PromoteAsync(
+        string content,
+        FactConflictAction action,
+        FactConflictType conflict,
+        string predicate = "name",
+        Func<MemoryUnit>? conflicting = null)
     {
         var fact = new UserFact
         {
@@ -79,7 +122,7 @@ public class FastTrackPromoterArchiveHistoryTests
             Confidence = 0.95f,
             PromotionPath = PromotionPath.FastTrack,
             Subject = "user",
-            Predicate = "name",
+            Predicate = predicate,
             Object = content[(content.LastIndexOf(' ') + 1)..],
         };
         _extractor.ExtractAsync(Arg.Any<FactExtractionContext>(), Arg.Any<CancellationToken>())
@@ -90,11 +133,12 @@ public class FastTrackPromoterArchiveHistoryTests
                 ContextType = StatementContextType.Direct,
             });
         _extractor.ValidateAsync(Arg.Any<UserFact>(), Arg.Any<IReadOnlyList<MemoryUnit>>(), Arg.Any<CancellationToken>())
-            .Returns(new FactValidationResult
+            .Returns(_ => new FactValidationResult
             {
                 IsValid = true,
                 ConflictType = conflict,
                 RecommendedAction = action,
+                ConflictingMemory = conflicting?.Invoke(),
             });
 
         await _service.ProcessAsync(

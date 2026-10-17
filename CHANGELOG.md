@@ -20,6 +20,16 @@ All notable changes to Memory Indexer are documented here.
 - **Forgetting a user (`ForgetUserAsync`) removes the user's profile too.** The facts promoted into `IArchiveStore` survived
   the GDPR deletion and stayed readable through the profile and conflict APIs. **Breaking** for implementers of
   `IArchiveStore`: `RemoveAllAsync(userId)` is new.
+- **The profile (`IArchiveStore`) is kept in the configured memory store, so it survives a restart.** It lived in a
+  process-local dictionary, so with the SQLite or VectorStore store every promoted fact, confirmation and version history
+  was lost when the process stopped. Each entry is now a memory under the user key `ArchiveUserKey.For(userId)` — every store
+  partitions by user, so profile entries never appear in the user's recall — and fact validation during promotion sees the
+  profile's active entries, so a fact that contradicts the profile is detected. A read's time is kept (at most one write per
+  entry per hour), as retention and decay read it. **Breaking**: `ArchiveStoreService`'s constructor takes the `IMemoryStore`
+  first; for implementers of `IArchiveStore`, `GetStatsAsync` and `HasProfileAsync` replace the
+  synchronous `GetStats` and `HasProfile`. **Breaking** for code that enumerates `IMemoryStore.GetUserIdsAsync`: profile keys
+  are listed there — skip them with `ArchiveUserKey.IsArchiveKey` (a store migration keeps copying them, which carries the
+  profiles).
 
 ### Removed
 - **Breaking: the memory lineage tracker (`IMemoryLineageTracker`, `InMemoryLineageTracker` and their event, option and

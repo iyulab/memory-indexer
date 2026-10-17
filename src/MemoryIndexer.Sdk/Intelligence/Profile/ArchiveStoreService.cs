@@ -1,17 +1,26 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using MemoryIndexer.Interfaces;
+using MemoryIndexer.Models;
+using MemoryIndexer.Utilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MemoryIndexer.Utilities;
 
 namespace MemoryIndexer.Sdk.Intelligence.Profile;
 
 /// <summary>
-/// In-memory implementation of semantic store service.
+/// Semantic store (the user's profile) kept in the configured <see cref="IMemoryStore"/>.
 /// Stores long-term user facts, preferences, and accumulated knowledge.
 /// Implements Tulving's Semantic Memory System for context-independent knowledge.
 /// </summary>
 /// <remarks>
+/// Each entry is one <see cref="MemoryUnit"/> under the user key <see cref="ArchiveUserKey.For"/>(userId), with a
+/// deterministic id derived from the user and the entry key, so the profile persists wherever the memories do (SQLite,
+/// a vector store) and a recall for the user never returns it. The entry's own properties travel in the memory's
+/// metadata (keys prefixed <c>archive.</c>), because not every store has a column for each of them.
+///
 /// AND logic promotion from Episodic→Semantic:
 /// - Minimum 3 confirmations across sessions
 /// - Confidence threshold >= 0.8
@@ -19,25 +28,51 @@ namespace MemoryIndexer.Sdk.Intelligence.Profile;
 /// </remarks>
 public sealed partial class ArchiveStoreService : IArchiveStore
 {
+    /// <summary>The metadata key prefix under which an entry's properties are stored.</summary>
+    internal const string MetadataPrefix = "archive.";
+
+    /// <summary>The metadata key prefix under which an entry's own metadata pairs are stored.</summary>
+    internal const string EntryMetadataPrefix = MetadataPrefix + "meta.";
+
+    /// <summary>The unprefixed metadata key that names the entry key; fact validation reads it to replace a conflicting entry.</summary>
+    internal const string SemanticKeyMetadata = "semantic_key";
+
+    private const string KeyMeta = MetadataPrefix + "key";
+    private const string CategoryMeta = MetadataPrefix + "category";
+    private const string ConfidenceMeta = MetadataPrefix + "confidence";
+    private const string ConfirmationsMeta = MetadataPrefix + "confirmations";
+    private const string SessionsMeta = MetadataPrefix + "source-sessions";
+    private const string CreatedAtMeta = MetadataPrefix + "created-at";
+    private const string UpdatedAtMeta = MetadataPrefix + "updated-at";
+    private const string LastAccessedAtMeta = MetadataPrefix + "last-accessed-at";
+
+    /// <summary>The finest granularity at which a read's time is written back to the store.</summary>
+    private static readonly TimeSpan AccessWriteInterval = TimeSpan.FromHours(1);
+    private const string ValidFromMeta = MetadataPrefix + "valid-from";
+    private const string ValidToMeta = MetadataPrefix + "valid-to";
+    private const string SupersedesMeta = MetadataPrefix + "supersedes";
+    private const string VersionMeta = MetadataPrefix + "version";
+    private const string ActiveMeta = MetadataPrefix + "active";
+
+    private readonly IMemoryStore _store;
     private readonly IEmbeddingService _embeddingService;
     private readonly SemanticStoreOptions _options;
     private readonly ILogger<ArchiveStoreService> _logger;
 
-    // userId -> (key -> entry)
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SemanticStoreEntry>> _profiles = new();
-
     public ArchiveStoreService(
+        IMemoryStore store,
         IEmbeddingService embeddingService,
         IOptions<SemanticStoreOptions> options,
         ILogger<ArchiveStoreService> logger)
     {
+        _store = store;
         _embeddingService = embeddingService;
         _options = options.Value;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public Task<SemanticStoreEntry?> GetAsync(
+    public async Task<SemanticStoreEntry?> GetAsync(
         string userId,
         string key,
         CancellationToken cancellationToken = default)
@@ -45,59 +80,51 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile))
+        var entry = await ReadAsync(userId, key, cancellationToken);
+        if (entry is not null)
         {
-            return Task.FromResult<SemanticStoreEntry?>(null);
+            var now = DateTime.UtcNow;
+
+            // Retention and decay judge an entry by when it was last read, in days, so the read time is kept — at most one
+            // store write per entry per AccessWriteInterval rather than one per read
+            var persist = now - entry.LastAccessedAt >= AccessWriteInterval;
+            entry.LastAccessedAt = now;
+            if (persist)
+            {
+                await _store.UpdateAsync(ToUnit(userId, entry), cancellationToken);
+            }
         }
 
-        if (userProfile.TryGetValue(key, out var entry))
-        {
-            entry.LastAccessedAt = DateTime.UtcNow;
-            return Task.FromResult<SemanticStoreEntry?>(entry);
-        }
-
-        return Task.FromResult<SemanticStoreEntry?>(null);
+        return entry;
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<SemanticStoreEntry>> GetAllAsync(
+    public async Task<IReadOnlyList<SemanticStoreEntry>> GetAllAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile))
-        {
-            return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>([]);
-        }
-
-        var entries = userProfile.Values
+        var entries = await ReadAllAsync(userId, cancellationToken);
+        return entries
             .OrderByDescending(e => e.Confidence)
             .ThenByDescending(e => e.ConfirmationCount)
             .ToList();
-
-        return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>(entries);
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<SemanticStoreEntry>> GetByCategoryAsync(
+    public async Task<IReadOnlyList<SemanticStoreEntry>> GetByCategoryAsync(
         string userId,
         SemanticStoreCategory category,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile))
-        {
-            return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>([]);
-        }
-
-        var entries = userProfile.Values
+        var entries = await ReadAllAsync(userId, cancellationToken);
+        return entries
             .Where(e => e.Category == category)
             .OrderByDescending(e => e.Confidence)
             .ToList();
-
-        return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>(entries);
     }
 
     /// <inheritdoc />
@@ -110,10 +137,11 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         ArgumentNullException.ThrowIfNull(entry);
         ArgumentException.ThrowIfNullOrWhiteSpace(entry.Key);
 
-        var userProfile = _profiles.GetOrAdd(userId, _ => new ConcurrentDictionary<string, SemanticStoreEntry>());
+        var archiveKey = ArchiveUserKey.For(userId);
+        var isUpdate = await ExistsAsync(archiveKey, IdFor(userId, entry.Key), cancellationToken);
 
         // Check max entries limit
-        if (userProfile.Count >= _options.MaxEntriesPerUser && !userProfile.ContainsKey(entry.Key))
+        if (!isUpdate && await _store.GetCountAsync(archiveKey, cancellationToken) >= _options.MaxEntriesPerUser)
         {
             LogUserUserIdSemanticStoreCapacity(_logger, userId, _options.MaxEntriesPerUser);
             return false;
@@ -122,31 +150,20 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         // Generate embedding for semantic search if enabled
         if (_options.EnableSemanticSearch && !entry.Embedding.HasValue)
         {
-            try
-            {
-                var embedding = await _embeddingService.GenerateEmbeddingAsync(
-                    $"{entry.Key}: {entry.Value}", cancellationToken);
-                entry.Embedding = embedding;
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-            {
-                LogFailedGenerateEmbeddingSemanticEntry(_logger, ex, new FingerprintedValue(entry.Key));
-            }
+            entry.Embedding = await TryEmbedAsync(entry.Key, entry.Value, updated: false, cancellationToken);
         }
-
-        var isUpdate = userProfile.ContainsKey(entry.Key);
 
         if (isUpdate)
         {
             // Update existing entry
             entry.UpdatedAt = DateTime.UtcNow;
-            userProfile[entry.Key] = entry;
+            await _store.UpdateAsync(ToUnit(userId, entry), cancellationToken);
             LogUpdatedSemanticEntryKeyUser(_logger, new FingerprintedValue(entry.Key), userId);
         }
         else
         {
             // Add new entry
-            userProfile[entry.Key] = entry;
+            await _store.StoreAsync(ToUnit(userId, entry), cancellationToken);
             LogCreatedSemanticEntryKeyUser(_logger, new FingerprintedValue(entry.Key), userId);
         }
 
@@ -154,7 +171,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
     }
 
     /// <inheritdoc />
-    public Task<SemanticStoreEntry?> ConfirmAsync(
+    public async Task<SemanticStoreEntry?> ConfirmAsync(
         string userId,
         string key,
         string? evidence = null,
@@ -163,14 +180,10 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile))
+        var entry = await ReadAsync(userId, key, cancellationToken);
+        if (entry is null)
         {
-            return Task.FromResult<SemanticStoreEntry?>(null);
-        }
-
-        if (!userProfile.TryGetValue(key, out var entry))
-        {
-            return Task.FromResult<SemanticStoreEntry?>(null);
+            return null;
         }
 
         // Increment confirmation count
@@ -187,13 +200,15 @@ public sealed partial class ArchiveStoreService : IArchiveStore
             entry.Metadata[evidenceKey] = evidence;
         }
 
+        await _store.UpdateAsync(ToUnit(userId, entry), cancellationToken);
+
         LogConfirmedSemanticEntryKeyUser(_logger, new FingerprintedValue(key), userId, entry.ConfirmationCount, entry.Confidence);
 
-        return Task.FromResult<SemanticStoreEntry?>(entry);
+        return entry;
     }
 
     /// <inheritdoc />
-    public Task<bool> RemoveAsync(
+    public async Task<bool> RemoveAsync(
         string userId,
         string key,
         CancellationToken cancellationToken = default)
@@ -201,34 +216,30 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile))
-        {
-            return Task.FromResult(false);
-        }
-
-        var removed = userProfile.TryRemove(key, out _);
+        var removed = await _store.DeleteAsync(
+            ArchiveUserKey.For(userId), IdFor(userId, key), hardDelete: true, cancellationToken);
         if (removed)
         {
             LogRemovedSemanticEntryKeyUser(_logger, new FingerprintedValue(key), userId);
         }
 
-        return Task.FromResult(removed);
+        return removed;
     }
 
     /// <inheritdoc />
-    public Task<int> RemoveAllAsync(
+    public async Task<int> RemoveAllAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
-        if (!_profiles.TryRemove(userId, out var userProfile))
+        var count = await _store.DeleteByUserAsync(ArchiveUserKey.For(userId), hardDelete: true, cancellationToken);
+        if (count > 0)
         {
-            return Task.FromResult(0);
+            LogRemovedProfile(_logger, count, userId);
         }
 
-        LogRemovedProfile(_logger, userProfile.Count, userId);
-        return Task.FromResult(userProfile.Count);
+        return count;
     }
 
     /// <inheritdoc />
@@ -241,58 +252,60 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile) || userProfile.IsEmpty)
+        var entries = await ReadAllAsync(userId, cancellationToken);
+        if (entries.Count == 0)
         {
             return [];
         }
-
-        var entries = userProfile.Values.ToList();
 
         if (_options.EnableSemanticSearch)
         {
             // Semantic search using embeddings
             var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
 
-            var scoredEntries = entries
-                .Where(e => e.Embedding.HasValue)
-                .Select(e => (Entry: e, Score: CosineSimilarity(queryEmbedding.Span, e.Embedding!.Value.Span)))
-                .OrderByDescending(x => x.Score)
-                .Take(limit)
-                .Select(x => x.Entry)
-                .ToList();
+            // An empty query vector cannot be compared with anything: the keyword search below answers instead
+            if (queryEmbedding.Length > 0)
+            {
+                var hits = await _store.SearchAsync(
+                    queryEmbedding,
+                    new MemorySearchOptions { UserId = ArchiveUserKey.For(userId), Limit = limit },
+                    cancellationToken);
 
-            // Also include keyword matches that might not have embeddings
-            var keywordMatches = entries
-                .Where(e => !e.Embedding.HasValue)
-                .Where(e => e.Key.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                           e.Value.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .Take(limit);
+                var scoredEntries = hits
+                    .OrderByDescending(h => h.Score)
+                    .Select(h => ToEntry(h.Memory))
+                    .OfType<SemanticStoreEntry>();
 
-            return scoredEntries.Concat(keywordMatches).Take(limit).ToList();
+                // Also include keyword matches that might not have embeddings
+                var keywordMatches = entries
+                    .Where(e => !e.Embedding.HasValue)
+                    .Where(e => Matches(e, query))
+                    .Take(limit);
+
+                return scoredEntries.Concat(keywordMatches).Take(limit).ToList();
+            }
         }
-        else
-        {
-            // Keyword search
-            return entries
-                .Where(e => e.Key.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                           e.Value.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(e => e.Confidence)
-                .Take(limit)
-                .ToList();
-        }
+
+        // Keyword search
+        return entries
+            .Where(e => Matches(e, query))
+            .OrderByDescending(e => e.Confidence)
+            .Take(limit)
+            .ToList();
     }
 
     /// <inheritdoc />
-    public SemanticStoreStats GetStats(string userId)
+    public async Task<SemanticStoreStats> GetStatsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile) || userProfile.IsEmpty)
+        var entries = await ReadAllAsync(userId, cancellationToken);
+        if (entries.Count == 0)
         {
             return SemanticStoreStats.Empty(userId);
         }
-
-        var entries = userProfile.Values.ToList();
 
         var byCategory = entries
             .GroupBy(e => e.Category)
@@ -304,23 +317,25 @@ public sealed partial class ArchiveStoreService : IArchiveStore
             TotalEntries = entries.Count,
             ConfirmedEntries = entries.Count(e => e.IsConfirmed),
             EntriesByCategory = byCategory,
-            AverageConfidence = entries.Count > 0 ? entries.Average(e => e.Confidence) : 0,
+            AverageConfidence = entries.Average(e => e.Confidence),
             FirstEntryAt = entries.MinBy(e => e.CreatedAt)?.CreatedAt,
             LastUpdatedAt = entries.MaxBy(e => e.UpdatedAt)?.UpdatedAt
         };
     }
 
     /// <inheritdoc />
-    public bool HasProfile(string userId)
+    public async Task<bool> HasProfileAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        return _profiles.TryGetValue(userId, out var profile) && !profile.IsEmpty;
+        return await _store.GetCountAsync(ArchiveUserKey.For(userId), cancellationToken) > 0;
     }
 
     #region Temporal Query Methods (v0.9.2)
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<SemanticStoreEntry>> GetHistoryAsync(
+    public async Task<IReadOnlyList<SemanticStoreEntry>> GetHistoryAsync(
         string userId,
         string key,
         CancellationToken cancellationToken = default)
@@ -328,10 +343,9 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile))
-        {
-            return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>([]);
-        }
+        var userProfile = (await ReadAllAsync(userId, cancellationToken))
+            .GroupBy(e => e.Key, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
         // Build the supersession chain
         var history = new List<SemanticStoreEntry>();
@@ -339,7 +353,7 @@ public sealed partial class ArchiveStoreService : IArchiveStore
 
         while (!string.IsNullOrEmpty(currentKey))
         {
-            if (userProfile.TryGetValue(currentKey, out var entry))
+            if (userProfile.TryGetValue(currentKey, out var entry) && !history.Contains(entry))
             {
                 history.Add(entry);
                 currentKey = entry.SupersedesKey;
@@ -357,34 +371,26 @@ public sealed partial class ArchiveStoreService : IArchiveStore
             .ToList();
 
         // Return newest to oldest
-        var result = supersedingEntries.Concat(history)
+        return supersedingEntries.Concat(history)
             .OrderByDescending(e => e.Version)
             .ThenByDescending(e => e.CreatedAt)
             .ToList();
-
-        return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>(result);
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<SemanticStoreEntry>> GetValidAtAsync(
+    public async Task<IReadOnlyList<SemanticStoreEntry>> GetValidAtAsync(
         string userId,
         DateTime asOfDate,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile))
-        {
-            return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>([]);
-        }
-
-        var validEntries = userProfile.Values
+        var entries = await ReadAllAsync(userId, cancellationToken);
+        return entries
             .Where(e => e.WasValidAt(asOfDate))
             .OrderByDescending(e => e.Confidence)
             .ThenByDescending(e => e.ConfirmationCount)
             .ToList();
-
-        return Task.FromResult<IReadOnlyList<SemanticStoreEntry>>(validEntries);
     }
 
     /// <inheritdoc />
@@ -398,18 +404,11 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(newValue);
 
-        if (!_profiles.TryGetValue(userId, out var userProfile))
+        var existingEntry = await ReadAsync(userId, key, cancellationToken);
+        if (existingEntry is null)
         {
             return null;
         }
-
-        if (!userProfile.TryGetValue(key, out var existingEntry))
-        {
-            return null;
-        }
-
-        // Create superseding version
-        var newEntry = existingEntry.CreateSupersedingVersion(newValue);
 
         // Generate new key for archived entry (append version)
         var archivedKey = $"{key}:v{existingEntry.Version}";
@@ -435,11 +434,11 @@ public sealed partial class ArchiveStoreService : IArchiveStore
             IsActive = false
         };
 
-        // Store archived version
-        userProfile[archivedKey] = archivedEntry;
+        // Store archived version (a new id; storing keeps the times it carries)
+        await _store.StoreAsync(ToUnit(userId, archivedEntry), cancellationToken);
 
         // Update the main entry with new value
-        userProfile[key] = new SemanticStoreEntry
+        var updatedEntry = new SemanticStoreEntry
         {
             Key = key,
             Value = newValue,
@@ -458,43 +457,193 @@ public sealed partial class ArchiveStoreService : IArchiveStore
         // Generate embedding for the updated entry
         if (_options.EnableSemanticSearch)
         {
-            try
-            {
-                var embedding = await _embeddingService.GenerateEmbeddingAsync(
-                    $"{key}: {newValue}", cancellationToken);
-                userProfile[key].Embedding = embedding;
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-            {
-                LogFailedGenerateEmbeddingUpdatedEntry(_logger, ex, new FingerprintedValue(key));
-            }
+            updatedEntry.Embedding = await TryEmbedAsync(key, newValue, updated: true, cancellationToken);
         }
+
+        await _store.UpdateAsync(ToUnit(userId, updatedEntry), cancellationToken);
 
         LogArchivedEntryOldKeyOldVersionCreated(_logger, archivedKey, existingEntry.Version, key, existingEntry.Version + 1);
 
-        return userProfile[key];
+        return updatedEntry;
     }
 
     #endregion
 
-    /// <summary>
-    /// Calculates cosine similarity between two embeddings.
-    /// </summary>
-    private static float CosineSimilarity(ReadOnlySpan<float> a, ReadOnlySpan<float> b)
-    {
-        if (a.Length != b.Length || a.Length == 0) return 0;
+    #region Store mapping
 
-        float dotProduct = 0, normA = 0, normB = 0;
-        for (int i = 0; i < a.Length; i++)
+    /// <summary>
+    /// The id of the memory that holds <paramref name="key"/> in the profile of <paramref name="userId"/>: a name-based
+    /// (RFC 4122 version 5 layout) Guid over SHA-256 of the user and the key, so an entry is found without a lookup table.
+    /// </summary>
+    internal static Guid IdFor(string userId, string key)
+    {
+        Span<byte> hash = stackalloc byte[32];
+        SHA256.HashData(Encoding.UTF8.GetBytes($"{userId}\n{key}"), hash);
+        var bytes = hash[..16];
+        bytes[6] = (byte)((bytes[6] & 0x0F) | 0x50);
+        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
+        return new Guid(bytes, bigEndian: true);
+    }
+
+    /// <summary>
+    /// The memory that holds <paramref name="entry"/> in the profile of <paramref name="userId"/>.
+    /// </summary>
+    internal static MemoryUnit ToUnit(string userId, SemanticStoreEntry entry)
+    {
+        var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            dotProduct += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
+            [SemanticKeyMetadata] = entry.Key,
+            [KeyMeta] = entry.Key,
+            [CategoryMeta] = entry.Category.ToString(),
+            [ConfidenceMeta] = entry.Confidence.ToString("R", CultureInfo.InvariantCulture),
+            [ConfirmationsMeta] = entry.ConfirmationCount.ToString(CultureInfo.InvariantCulture),
+            [SessionsMeta] = JsonSerializer.Serialize(entry.SourceSessions, ArchiveJsonContext.Default.ListString),
+            [CreatedAtMeta] = FormatTime(entry.CreatedAt),
+            [UpdatedAtMeta] = FormatTime(entry.UpdatedAt),
+            [LastAccessedAtMeta] = FormatTime(entry.LastAccessedAt),
+            [VersionMeta] = entry.Version.ToString(CultureInfo.InvariantCulture),
+            [ActiveMeta] = entry.IsActive ? "true" : "false",
+        };
+
+        if (entry.ValidFrom is { } validFrom)
+            metadata[ValidFromMeta] = FormatTime(validFrom);
+        if (entry.ValidTo is { } validTo)
+            metadata[ValidToMeta] = FormatTime(validTo);
+        if (entry.SupersedesKey is { } supersedes)
+            metadata[SupersedesMeta] = supersedes;
+
+        foreach (var (name, value) in entry.Metadata)
+        {
+            metadata[EntryMetadataPrefix + name] = value;
         }
 
-        var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
-        return denominator == 0 ? 0 : dotProduct / denominator;
+        return new MemoryUnit
+        {
+            Id = IdFor(userId, entry.Key),
+            UserId = ArchiveUserKey.For(userId),
+            Content = entry.Value,
+            Embedding = entry.Embedding,
+            Type = MemoryType.Fact,
+            Tier = Tier.Archive,
+            Scope = Scope.User,
+            CreatedAt = entry.CreatedAt,
+            UpdatedAt = entry.UpdatedAt,
+            LastAccessedAt = entry.LastAccessedAt,
+            Confidence = entry.Confidence,
+            ConfirmCount = entry.ConfirmationCount,
+            Metadata = metadata,
+        };
     }
+
+    /// <summary>
+    /// The profile entry a memory holds, or null when the memory is not one (it carries no entry key).
+    /// </summary>
+    internal static SemanticStoreEntry? ToEntry(MemoryUnit unit)
+    {
+        var metadata = unit.Metadata;
+        if (metadata is null || !metadata.TryGetValue(KeyMeta, out var key) || string.IsNullOrEmpty(key))
+        {
+            return null;
+        }
+
+        var entryMetadata = new Dictionary<string, string>();
+        foreach (var (name, value) in metadata)
+        {
+            if (name.StartsWith(EntryMetadataPrefix, StringComparison.Ordinal))
+            {
+                entryMetadata[name[EntryMetadataPrefix.Length..]] = value;
+            }
+        }
+
+        var sessions = metadata.TryGetValue(SessionsMeta, out var sessionsJson) && !string.IsNullOrEmpty(sessionsJson)
+            ? JsonSerializer.Deserialize(sessionsJson, ArchiveJsonContext.Default.ListString) ?? []
+            : [];
+
+        return new SemanticStoreEntry
+        {
+            Key = key,
+            Value = unit.Content,
+            Category = metadata.TryGetValue(CategoryMeta, out var category)
+                && Enum.TryParse<SemanticStoreCategory>(category, ignoreCase: false, out var parsed)
+                    ? parsed
+                    : SemanticStoreCategory.Other,
+            Confidence = ReadFloat(metadata, ConfidenceMeta) ?? unit.Confidence,
+            ConfirmationCount = ReadInt(metadata, ConfirmationsMeta) ?? 1,
+            SourceSessions = sessions,
+            CreatedAt = ReadTime(metadata, CreatedAtMeta) ?? unit.CreatedAt,
+            UpdatedAt = ReadTime(metadata, UpdatedAtMeta) ?? unit.UpdatedAt,
+            LastAccessedAt = ReadTime(metadata, LastAccessedAtMeta) ?? unit.LastAccessedAt ?? unit.UpdatedAt,
+            Embedding = unit.Embedding,
+            Metadata = entryMetadata,
+            ValidFrom = ReadTime(metadata, ValidFromMeta),
+            ValidTo = ReadTime(metadata, ValidToMeta),
+            SupersedesKey = metadata.GetValueOrDefault(SupersedesMeta),
+            Version = ReadInt(metadata, VersionMeta) ?? 1,
+            IsActive = !metadata.TryGetValue(ActiveMeta, out var active) || active != "false",
+        };
+    }
+
+    private async Task<SemanticStoreEntry?> ReadAsync(string userId, string key, CancellationToken cancellationToken)
+    {
+        var unit = await _store.GetByIdAsync(ArchiveUserKey.For(userId), IdFor(userId, key), cancellationToken);
+        return unit is null || unit.IsDeleted ? null : ToEntry(unit);
+    }
+
+    private async Task<List<SemanticStoreEntry>> ReadAllAsync(string userId, CancellationToken cancellationToken)
+    {
+        var units = await _store.GetAllAsync(ArchiveUserKey.For(userId), options: null, cancellationToken);
+        return units
+            .Where(u => !u.IsDeleted)
+            .Select(ToEntry)
+            .OfType<SemanticStoreEntry>()
+            .ToList();
+    }
+
+    private async Task<bool> ExistsAsync(string archiveKey, Guid id, CancellationToken cancellationToken)
+        => await _store.GetByIdAsync(archiveKey, id, cancellationToken) is { IsDeleted: false };
+
+    private async Task<ReadOnlyMemory<float>?> TryEmbedAsync(
+        string key, string value, bool updated, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _embeddingService.GenerateEmbeddingAsync($"{key}: {value}", cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            if (updated)
+                LogFailedGenerateEmbeddingUpdatedEntry(_logger, ex, new FingerprintedValue(key));
+            else
+                LogFailedGenerateEmbeddingSemanticEntry(_logger, ex, new FingerprintedValue(key));
+            return null;
+        }
+    }
+
+    private static bool Matches(SemanticStoreEntry entry, string query)
+        => entry.Key.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || entry.Value.Contains(query, StringComparison.OrdinalIgnoreCase);
+
+    private static string FormatTime(DateTime value) => value.ToString("O", CultureInfo.InvariantCulture);
+
+    private static DateTime? ReadTime(Dictionary<string, string> metadata, string name)
+        => metadata.TryGetValue(name, out var text)
+            && DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var value)
+                ? value
+                : null;
+
+    private static int? ReadInt(Dictionary<string, string> metadata, string name)
+        => metadata.TryGetValue(name, out var text)
+            && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                ? value
+                : null;
+
+    private static float? ReadFloat(Dictionary<string, string> metadata, string name)
+        => metadata.TryGetValue(name, out var text)
+            && float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+                ? value
+                : null;
+
+    #endregion
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "User {UserId} semantic store at capacity ({Max} entries), cannot add new entry")]
     private static partial void LogUserUserIdSemanticStoreCapacity(ILogger logger, string userId, object max);
@@ -523,3 +672,9 @@ public sealed partial class ArchiveStoreService : IArchiveStore
     [LoggerMessage(Level = LogLevel.Debug, Message = "Archived entry {OldKey} (v{OldVersion}) and created new version {NewKey} (v{NewVersion})")]
     private static partial void LogArchivedEntryOldKeyOldVersionCreated(ILogger logger, string oldKey, int oldVersion, string newKey, int newVersion);
 }
+
+/// <summary>
+/// Source-generated JSON for the profile entry fields kept as JSON in a memory's metadata.
+/// </summary>
+[System.Text.Json.Serialization.JsonSerializable(typeof(List<string>))]
+internal sealed partial class ArchiveJsonContext : System.Text.Json.Serialization.JsonSerializerContext;

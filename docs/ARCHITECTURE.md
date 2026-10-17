@@ -89,7 +89,7 @@ Storage location based on persistence and lifespan.
 | `Buffer` (T0) | 60s idle OR 500 tokens OR 3 turns | In-memory | Atkinson-Shiffrin sensory memory |
 | `Short` (T1) | 10min OR 2K tokens OR topic change | Memory cache | Baddeley's working memory |
 | `Long` (T2) | Session duration | Vector DB (SQLite-vec, or your own `IMemoryStore`) | Tulving's episodic memory |
-| `Archive` (T3) | Confidence ≥ 0.8 AND Confirms ≥ 3 | Vector DB (persistent) | Tulving's semantic memory |
+| `Archive` (T3) | Confidence ≥ 0.8 AND Confirms ≥ 3 | The same `IMemoryStore`, under `ArchiveUserKey.For(userId)` | Tulving's semantic memory |
 
 ## Memory Flow Diagram
 
@@ -214,7 +214,7 @@ Storage location based on persistence and lifespan.
 | Buffer (T0) | `IBuffer` | `BufferService` |
 | Short (T1) | `IShortTermMemory` | `ShortTermMemoryService` |
 | Long (T2) | `ILongTermStore` | `InMemoryEpisodicStore` |
-| Archive (T3) | `IArchiveStore` | `SemanticStoreService` |
+| Archive (T3) | `IArchiveStore` | `ArchiveStoreService` (entries kept in the configured `IMemoryStore` under `ArchiveUserKey.For(userId)`) |
 
 ### Promotion Services
 

@@ -24,6 +24,9 @@ namespace MemoryIndexer.Interfaces;
 /// - Minimum confirmation count (3 sessions)
 /// - High confidence threshold (0.8)
 /// - Consistency across episodes
+///
+/// The built-in implementation keeps the profile in the configured <see cref="IMemoryStore"/>, under
+/// <see cref="ArchiveUserKey.For"/>(userId), so it lasts as long as the memories do and never appears in the user's recall.
 /// </remarks>
 public interface IArchiveStore
 {
@@ -129,15 +132,21 @@ public interface IArchiveStore
     /// Gets semantic knowledge statistics for a user.
     /// </summary>
     /// <param name="userId">The user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Semantic store statistics.</returns>
-    SemanticStoreStats GetStats(string userId);
+    Task<SemanticStoreStats> GetStatsAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if a user has any semantic knowledge.
     /// </summary>
     /// <param name="userId">The user ID.</param>
-    /// <returns>True if semantic store exists.</returns>
-    bool HasProfile(string userId);
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the user's profile holds at least one entry.</returns>
+    Task<bool> HasProfileAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
 
     #region Temporal Query Methods (v0.9.2)
 

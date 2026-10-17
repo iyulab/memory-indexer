@@ -386,6 +386,7 @@ public static class ServiceCollectionExtensions
         // Register semantic store service (Phase 14.4 → Cognitive terminology Phase 30)
         services.AddOptions<SemanticStoreOptions>()
             .BindConfigurationIfPresent("MemoryIndexer:VCM:SemanticStore");
+        // The profile lives in the configured IMemoryStore (under ArchiveUserKey), so it persists with the memories
         services.TryAddSingleton<IArchiveStore, ArchiveStoreService>();
 
         // Register Long → Archive promotion service (Phase 52)

@@ -25,7 +25,7 @@ public class ArchiveStoreHealthCheck : IHealthCheck
     {
         try
         {
-            var stats = _semanticStore.GetStats("__health_check_test__");
+            var stats = await _semanticStore.GetStatsAsync("__health_check_test__", cancellationToken);
 
             var data = new Dictionary<string, object>
             {
@@ -75,7 +75,7 @@ public class ArchiveStoreHealthCheck : IHealthCheck
                 $"Semantic store healthy ({stats.TotalEntries} entries, {stats.ConfirmedEntries} confirmed, avg confidence: {stats.AverageConfidence:F2})",
                 data);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return HealthCheckResult.Unhealthy(
                 "Failed to check Semantic store health",

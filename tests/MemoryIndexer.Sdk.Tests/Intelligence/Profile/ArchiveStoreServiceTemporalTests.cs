@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using MemoryIndexer.InMemory;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Profile;
 using Microsoft.Extensions.Logging;
@@ -35,6 +36,7 @@ public class ArchiveStoreServiceTemporalTests
             .Returns(_testEmbedding);
 
         _service = new ArchiveStoreService(
+            new InMemoryMemoryStore(Microsoft.Extensions.Logging.Abstractions.NullLogger<InMemoryMemoryStore>.Instance),
             _mockEmbeddingService,
             options,
             _mockLogger);

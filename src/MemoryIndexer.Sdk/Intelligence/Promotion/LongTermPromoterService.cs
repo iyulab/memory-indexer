@@ -217,6 +217,12 @@ public sealed partial class LongTermPromoterService : ILongTermPromoter
         var users = new List<string>();
         foreach (var userId in await _memoryStore.GetUserIdsAsync(cancellationToken))
         {
+            // A profile key holds the user's profile, not a user's memories
+            if (ArchiveUserKey.IsArchiveKey(userId))
+            {
+                continue;
+            }
+
             var longTier = await _memoryStore.GetAllAsync(
                 userId, new MemoryFilterOptions { Tiers = [Tier.Long], Limit = 1 }, cancellationToken);
             if (longTier.Count > 0)

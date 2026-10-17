@@ -361,7 +361,7 @@ public class HealthCheckTests
     {
         // Arrange
         var mockStore = Substitute.For<IArchiveStore>();
-        mockStore.GetStats(Arg.Any<string>())
+        mockStore.GetStatsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new SemanticStoreStats
             {
                 UserId = "__health_check_test__",
@@ -391,7 +391,7 @@ public class HealthCheckTests
     {
         // Arrange
         var mockStore = Substitute.For<IArchiveStore>();
-        mockStore.GetStats(Arg.Any<string>())
+        mockStore.GetStatsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new SemanticStoreStats
             {
                 UserId = "__health_check_test__",
@@ -416,7 +416,7 @@ public class HealthCheckTests
     {
         // Arrange
         var mockStore = Substitute.For<IArchiveStore>();
-        mockStore.GetStats(Arg.Any<string>())
+        mockStore.GetStatsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new SemanticStoreStats
             {
                 UserId = "__health_check_test__",
@@ -441,7 +441,7 @@ public class HealthCheckTests
     {
         // Arrange
         var mockStore = Substitute.For<IArchiveStore>();
-        mockStore.GetStats(Arg.Any<string>())
+        mockStore.GetStatsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new SemanticStoreStats
             {
                 UserId = "__health_check_test__",

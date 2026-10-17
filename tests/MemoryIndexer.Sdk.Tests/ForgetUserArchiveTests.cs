@@ -40,7 +40,7 @@ public class ForgetUserArchiveTests
         await memory.ForgetUserAsync("u", Ct);
 
         Assert.Empty(await archive.GetAllAsync("u", Ct));
-        Assert.False(archive.HasProfile("u"));
+        Assert.False(await archive.HasProfileAsync("u", Ct));
         Assert.Single(await archive.GetAllAsync("other", Ct));
     }
 

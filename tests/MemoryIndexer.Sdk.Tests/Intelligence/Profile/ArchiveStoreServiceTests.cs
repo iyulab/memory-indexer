@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using MemoryIndexer.InMemory;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Sdk.Intelligence.Profile;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -28,6 +29,7 @@ public class ArchiveStoreServiceTests
         };
 
         _profileService = new ArchiveStoreService(
+            new InMemoryMemoryStore(NullLogger<InMemoryMemoryStore>.Instance),
             _embeddingServiceMock,
             Options.Create(_options),
             NullLogger<ArchiveStoreService>.Instance);
@@ -356,7 +358,7 @@ public class ArchiveStoreServiceTests
         await _profileService.ConfirmAsync(userId, "skill1", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        var stats = _profileService.GetStats(userId);
+        var stats = await _profileService.GetStatsAsync(userId, TestContext.Current.CancellationToken);
 
         // Assert
         stats.TotalEntries.Should().Be(3);
@@ -366,10 +368,10 @@ public class ArchiveStoreServiceTests
     }
 
     [Fact]
-    public void GetStats_NoProfile_ReturnsEmptyStats()
+    public async Task GetStats_NoProfile_ReturnsEmptyStats()
     {
         // Act
-        var stats = _profileService.GetStats("nonexistent-user");
+        var stats = await _profileService.GetStatsAsync("nonexistent-user", TestContext.Current.CancellationToken);
 
         // Assert
         stats.TotalEntries.Should().Be(0);
@@ -388,14 +390,14 @@ public class ArchiveStoreServiceTests
         await _profileService.SetAsync(userId, CreateTestEntry("key", "value"), TestContext.Current.CancellationToken);
 
         // Act & Assert
-        _profileService.HasProfile(userId).Should().BeTrue();
+        (await _profileService.HasProfileAsync(userId, TestContext.Current.CancellationToken)).Should().BeTrue();
     }
 
     [Fact]
-    public void HasProfile_NoEntries_ReturnsFalse()
+    public async Task HasProfile_NoEntries_ReturnsFalse()
     {
         // Act & Assert
-        _profileService.HasProfile("nonexistent-user").Should().BeFalse();
+        (await _profileService.HasProfileAsync("nonexistent-user", TestContext.Current.CancellationToken)).Should().BeFalse();
     }
 
     #endregion
