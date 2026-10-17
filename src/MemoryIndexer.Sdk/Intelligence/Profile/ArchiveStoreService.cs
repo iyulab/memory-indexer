@@ -216,6 +216,22 @@ public sealed partial class ArchiveStoreService : IArchiveStore
     }
 
     /// <inheritdoc />
+    public Task<int> RemoveAllAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        if (!_profiles.TryRemove(userId, out var userProfile))
+        {
+            return Task.FromResult(0);
+        }
+
+        LogRemovedProfile(_logger, userProfile.Count, userId);
+        return Task.FromResult(userProfile.Count);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SemanticStoreEntry>> SearchAsync(
         string userId,
         string query,
@@ -497,6 +513,9 @@ public sealed partial class ArchiveStoreService : IArchiveStore
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Removed semantic entry {KeyHash} for user {UserId}")]
     private static partial void LogRemovedSemanticEntryKeyUser(ILogger logger, FingerprintedValue keyHash, string userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Removed the profile of user {UserId} ({Count} entries)")]
+    private static partial void LogRemovedProfile(ILogger logger, int count, string userId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to generate embedding for updated entry {KeyHash}")]
     private static partial void LogFailedGenerateEmbeddingUpdatedEntry(ILogger logger, Exception ex, FingerprintedValue keyHash);

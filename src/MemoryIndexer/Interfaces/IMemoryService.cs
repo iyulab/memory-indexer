@@ -128,6 +128,7 @@ public interface IMemoryService
     /// <remarks>
     /// Behavior:
     /// - Deletes all memories for the user across all sessions
+    /// - Deletes the user's profile (the facts promoted into <see cref="IArchiveStore"/>), when one is registered
     /// - Irreversible operation
     /// - Use for GDPR "right to be forgotten" compliance
     /// </remarks>

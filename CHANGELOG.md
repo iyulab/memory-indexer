@@ -17,6 +17,9 @@ All notable changes to Memory Indexer are documented here.
   value) and the same fact promoted again reset its confirmation count to 1. A different value now supersedes the current one
   through `ArchiveAndUpdateAsync` (the earlier value stays, inactive, with its `ValidTo`), and the same value is a confirmation
   (`ConfirmAsync`).
+- **Forgetting a user (`ForgetUserAsync`) removes the user's profile too.** The facts promoted into `IArchiveStore` survived
+  the GDPR deletion and stayed readable through the profile and conflict APIs. **Breaking** for implementers of
+  `IArchiveStore`: `RemoveAllAsync(userId)` is new.
 
 ### Removed
 - **Breaking: the memory lineage tracker (`IMemoryLineageTracker`, `InMemoryLineageTracker` and their event, option and

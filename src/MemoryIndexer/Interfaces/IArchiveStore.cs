@@ -102,6 +102,16 @@ public interface IArchiveStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Removes every entry of a user's profile, superseded versions included.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of entries removed.</returns>
+    Task<int> RemoveAllAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Searches semantic entries by content similarity.
     /// </summary>
     /// <param name="userId">The user ID.</param>

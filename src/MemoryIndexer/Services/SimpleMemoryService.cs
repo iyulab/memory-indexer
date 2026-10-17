@@ -23,6 +23,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
     private readonly IMemoryStore _store;
     private readonly IMemoryClassifier _classifier;
     private readonly IScopeManager _scopeManager;
+    private readonly IArchiveStore? _archive;
     private readonly ILogger<SimpleMemoryService> _logger;
 
     // Implicit session tracking for zero-config (Level 0) calls. The service is a singleton, so concurrent callers share it.
@@ -33,12 +34,14 @@ public sealed partial class SimpleMemoryService : IMemoryService
         IMemoryClassifier classifier,
         IScopeManager scopeManager,
         IMemoryStore store,
-        ILogger<SimpleMemoryService> logger)
+        ILogger<SimpleMemoryService> logger,
+        IArchiveStore? archive = null)
     {
         _primitives = primitives;
         _store = store;
         _classifier = classifier;
         _scopeManager = scopeManager;
+        _archive = archive;
         _logger = logger;
     }
 
@@ -218,6 +221,12 @@ public sealed partial class SimpleMemoryService : IMemoryService
         // Every memory of the user, locked ones included, removed from the store itself — not the results of a search,
         // which is capped and ranked and skips what it does not match
         var deleted = await _store.DeleteByUserAsync(userId, hardDelete: true, cancellationToken);
+
+        // The user's profile (facts promoted out of the memories) goes with them
+        if (_archive is not null)
+        {
+            await _archive.RemoveAllAsync(userId, cancellationToken);
+        }
 
         // Remove implicit session
         _implicitSessions.TryRemove(userId, out _);
