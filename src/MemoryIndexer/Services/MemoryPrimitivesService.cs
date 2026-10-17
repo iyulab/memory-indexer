@@ -232,6 +232,8 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             Metadata = WithRelation(request.Metadata, relation),
             IsLocked = request.IsLocked,
             ExpiresAt = request.ExpiresAt,
+            CreatedAt = request.OccurredAt?.UtcDateTime ?? DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
             Stability = MemoryStability.Volatile,
             RetentionScore = 1.0f
         };

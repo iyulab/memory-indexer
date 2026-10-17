@@ -40,6 +40,8 @@ public interface IMemoryService
     /// <param name="type">The memory's type when the caller knows it (e.g. <see cref="MemoryType.Fact"/> for "remember that
     /// ..."). Overrides the classifier's type, and the content is kept even if the classifier would drop it as
     /// transient. <see langword="null"/> (default) lets the classifier decide.</param>
+    /// <param name="occurredAt">When the content was said or happened, when that is not now — a conversation imported from
+    /// a log. Recency and «newer wins» read it (<see cref="EncodeRequest.OccurredAt"/>). <see langword="null"/> (default): now.</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Task representing the async operation</returns>
     /// <remarks>
@@ -57,6 +59,7 @@ public interface IMemoryService
         string? role = null,
         string? @namespace = null,
         MemoryType? type = null,
+        DateTimeOffset? occurredAt = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

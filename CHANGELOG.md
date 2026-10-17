@@ -8,6 +8,11 @@ All notable changes to Memory Indexer are documented here.
 - **A recall hands back its scores: `MemoryContext.Ranked`.** Every recalled memory with its retrieval score, highest first —
   the combined score (the weighted average of the parts) and the parts themselves (`RetrieveResult.Breakdown`: semantic,
   keyword, recency, importance) — so a consumer can apply its own threshold or ordering. The scope groups are unchanged.
+- **An imported turn keeps the time it was said: `RememberAsync(…, occurredAt)` and `EncodeRequest.OccurredAt`.** A
+  conversation brought in from a log, or a batch indexed after the fact, used to become «now» — recency, «newer wins»
+  conflict resolution and date ordering then read the import order instead of when things were said. The given time becomes
+  the memory's `CreatedAt`; `UpdatedAt` records when it was stored. **Breaking** for implementers of `IMemoryService`: the
+  method has a new optional parameter before `cancellationToken` (callers that name their arguments are unaffected).
 
 ## [v0.38.0] - 2026-10-17
 

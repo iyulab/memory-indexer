@@ -61,7 +61,9 @@ public sealed class MemoryUnit
     public ReadOnlyMemory<float>? Embedding { get; set; }
 
     /// <summary>
-    /// When this memory was originally created.
+    /// When the content happened: the time the caller gave (<see cref="Interfaces.EncodeRequest.OccurredAt"/> — a message
+    /// imported from a log keeps its own time), otherwise when the memory was created. Recency, «newer wins» conflict
+    /// resolution and date ordering read it; <see cref="UpdatedAt"/> records when it was last written.
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

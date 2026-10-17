@@ -244,6 +244,14 @@ public sealed class EncodeRequest
     /// Optional expiration time.
     /// </summary>
     public DateTime? ExpiresAt { get; init; }
+
+    /// <summary>
+    /// When the content happened — the time of the message or event it records — when that is not now: a conversation
+    /// imported from a log, a batch indexed after the fact. Becomes the memory's <see cref="MemoryUnit.CreatedAt"/>, which
+    /// recency, «newer wins» conflict resolution and date ordering read; <see cref="MemoryUnit.UpdatedAt"/> still records
+    /// when it was stored. <see langword="null"/> (default): now.
+    /// </summary>
+    public DateTimeOffset? OccurredAt { get; init; }
 }
 
 /// <summary>
