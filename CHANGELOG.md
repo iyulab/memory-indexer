@@ -11,6 +11,13 @@ All notable changes to Memory Indexer are documented here.
   `source_ids` metadata those already wrote). Both live in `Metadata`, so every store keeps them with no schema change.
   **Breaking** for implementers of `IMemoryService` (one more optional parameter before `cancellationToken`).
 
+### Fixed
+- **A promoted fact no longer erases what the profile already held under its key.** Fast-track promotion wrote every fact with
+  `IArchiveStore.SetAsync`, so a fact that replaced an earlier one left no history (`GetHistoryAsync` returned only the new
+  value) and the same fact promoted again reset its confirmation count to 1. A different value now supersedes the current one
+  through `ArchiveAndUpdateAsync` (the earlier value stays, inactive, with its `ValidTo`), and the same value is a confirmation
+  (`ConfirmAsync`).
+
 ### Removed
 - **Breaking: the memory lineage tracker (`IMemoryLineageTracker`, `InMemoryLineageTracker` and their event, option and
   enum types).** It was registered by `AddMemoryIndexer()` but nothing recorded into it, so every lineage query answered

@@ -349,7 +349,7 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
         var key = GenerateFactKey(fact);
         var entry = CreateSemanticEntry(key, fact, sessionId);
 
-        await _archiveStore.SetAsync(userId, entry, cancellationToken);
+        await WriteVersionedAsync(userId, entry, sessionId, cancellationToken);
 
         LogFastTrackedToArchive(_logger, new FingerprintedValue(key), fact.Category, fact.Confidence);
     }
@@ -370,9 +370,50 @@ public sealed partial class FastTrackPromoterService : IFastTrackPromoter
 
         var entry = CreateSemanticEntry(key, fact, null);
 
-        await _archiveStore.SetAsync(userId, entry, cancellationToken);
+        await WriteVersionedAsync(userId, entry, sessionId: null, cancellationToken);
 
         LogReplacedInArchive(_logger, new FingerprintedValue(key), fact.Category, fact.Confidence);
+    }
+
+    /// <summary>
+    /// Writes a promoted fact without losing what the archive already knows under its key: the same value again is a
+    /// confirmation, a different value supersedes the current one and keeps it as history (<see cref="IArchiveStore.ArchiveAndUpdateAsync"/>).
+    /// </summary>
+    private async Task WriteVersionedAsync(
+        string userId,
+        SemanticStoreEntry entry,
+        string? sessionId,
+        CancellationToken cancellationToken)
+    {
+        var existing = await _archiveStore.GetAsync(userId, entry.Key, cancellationToken);
+        if (existing is null)
+        {
+            await _archiveStore.SetAsync(userId, entry, cancellationToken);
+            return;
+        }
+
+        if (string.Equals(existing.Value, entry.Value, StringComparison.Ordinal))
+        {
+            await _archiveStore.ConfirmAsync(userId, entry.Key, sessionId, cancellationToken);
+            return;
+        }
+
+        var superseding = await _archiveStore.ArchiveAndUpdateAsync(userId, entry.Key, entry.Value, cancellationToken);
+        if (superseding is null)
+        {
+            await _archiveStore.SetAsync(userId, entry, cancellationToken);
+            return;
+        }
+
+        // The new version starts from the promoted fact's own assessment, not the value it replaced.
+        superseding.Category = entry.Category;
+        superseding.Confidence = entry.Confidence;
+        if (sessionId is not null)
+        {
+            superseding.SourceSessions.Add(sessionId);
+        }
+
+        await _archiveStore.SetAsync(userId, superseding, cancellationToken);
     }
 
     private static string GenerateFactKey(UserFact fact)

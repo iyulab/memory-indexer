@@ -397,7 +397,6 @@ public sealed partial class ArchiveStoreService : IArchiveStore
 
         // Generate new key for archived entry (append version)
         var archivedKey = $"{key}:v{existingEntry.Version}";
-        existingEntry.Key.GetType(); // Key is init-only, so we need to create a new entry for archive
 
         // Archive old entry with versioned key
         var archivedEntry = new SemanticStoreEntry
