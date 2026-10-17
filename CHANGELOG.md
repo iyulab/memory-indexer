@@ -11,6 +11,11 @@ All notable changes to Memory Indexer are documented here.
   `source_ids` metadata those already wrote). Both live in `Metadata`, so every store keeps them with no schema change.
   **Breaking** for implementers of `IMemoryService` (one more optional parameter before `cancellationToken`).
 
+### Removed
+- **Breaking: the memory lineage tracker (`IMemoryLineageTracker`, `InMemoryLineageTracker` and their event, option and
+  enum types).** It was registered by `AddMemoryIndexer()` but nothing recorded into it, so every lineage query answered
+  empty. Where a memory came from is now on the memory itself — `MemoryUnit.SourceRef` and `MemoryUnit.DerivedFrom` above.
+
 ## [v0.39.0] - 2026-10-17
 
 ### Added

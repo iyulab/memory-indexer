@@ -327,9 +327,6 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<RateLimitOptions>();
         services.TryAddSingleton<IRateLimiter, SlidingWindowRateLimiter>();
 
-        // Register memory lineage tracking (Phase 4.2)
-        services.TryAddSingleton<IMemoryLineageTracker, InMemoryLineageTracker>();
-
         // Register multi-tenant services (Phase 4.3)
         services.TryAddSingleton<AsyncLocalTenantContextAccessor>();
         services.TryAddSingleton<ITenantContext>(sp => sp.GetRequiredService<AsyncLocalTenantContextAccessor>());

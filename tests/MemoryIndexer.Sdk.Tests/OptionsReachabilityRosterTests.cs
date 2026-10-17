@@ -70,7 +70,7 @@ public class OptionsReachabilityRosterTests
     /// <c>UseSpoMatching</c>, <c>OptimizationOptions.EnableArchival</c>,
     /// <c>ProfileExportOptions.IncludeHistory</c>, <c>ContradictionDetectionOptions.AsOfDate</c>,
     /// <c>ConsolidationOptions.ForgettingDecayRate</c> and <c>ArchiveThreshold</c>, and
-    /// <c>LineageQueryOptions.IncludeRelated</c>.
+    /// <c>LineageQueryOptions.IncludeRelated</c> (gone with the lineage tracker in 0.40.0).
     /// </para>
     /// <para>
     /// 0.18.0 closed the last four by hand. Three were promises with nothing behind them and no way to
