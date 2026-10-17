@@ -192,8 +192,10 @@ await memoryService.RememberAsync("user123", sessionId: null, "User prefers dark
 await memoryService.RememberAsync("user123", "session-1", "My car plate is 12-3456", type: MemoryType.Fact);
 await memoryService.RememberAsync("user123", sessionId: null, "My car plate is 12-3456", type: MemoryType.Fact);  // without a session
 
-// Store a turn imported from a log with the time it was said — recency and «newer wins» read that time, not the import order
-await memoryService.RememberAsync("user123", "session-1", "I moved to Busan", occurredAt: DateTimeOffset.Parse("2026-05-02T09:30:00Z"));
+// Store a turn imported from a log with the time it was said — recency and «newer wins» read that time, not the import order —
+// and the log's own id for it, which a recalled memory hands back as SourceRef
+await memoryService.RememberAsync("user123", "session-1", "I moved to Busan",
+    occurredAt: DateTimeOffset.Parse("2026-05-02T09:30:00Z"), sourceRef: "conversation-7/turn-42");
 
 // Recall — searches across all of the user's sessions in the namespace; with a sessionId, what that session stored is
 // grouped by scope and everything from earlier sessions comes back as UserMemories

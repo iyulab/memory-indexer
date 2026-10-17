@@ -71,6 +71,17 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
     #region Content Operations
 
+    private static Dictionary<string, string> WithSourceRef(Dictionary<string, string> metadata, string? sourceRef)
+    {
+        if (string.IsNullOrEmpty(sourceRef))
+        {
+            return metadata;
+        }
+
+        var withSource = new Dictionary<string, string>(metadata, StringComparer.Ordinal) { [MemoryUnit.SourceRefKey] = sourceRef };
+        return withSource;
+    }
+
     private static Dictionary<string, string> WithRelation(Dictionary<string, string>? metadata, Dictionary<string, string>? relation)
     {
         if (relation is null)
@@ -229,7 +240,7 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
             ImportanceScore = importanceScore,
             ContentHash = ComputeContentHash(request.Content),
             Topics = topics,
-            Metadata = WithRelation(request.Metadata, relation),
+            Metadata = WithSourceRef(WithRelation(request.Metadata, relation), request.SourceRef),
             IsLocked = request.IsLocked,
             ExpiresAt = request.ExpiresAt,
             CreatedAt = request.OccurredAt?.UtcDateTime ?? DateTime.UtcNow,

@@ -2,6 +2,15 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Added
+- **A recalled memory says where it came from: `MemoryUnit.SourceRef` and `MemoryUnit.DerivedFrom`.** `RememberAsync(…,
+  sourceRef)` / `EncodeRequest.SourceRef` take the caller's message or turn id and a recalled memory hands it back; a summary,
+  a merge or a reflection lists the memories it was made from (`DerivedFrom`, read from the `summary_of` / `merged_from` /
+  `source_ids` metadata those already wrote). Both live in `Metadata`, so every store keeps them with no schema change.
+  **Breaking** for implementers of `IMemoryService` (one more optional parameter before `cancellationToken`).
+
 ## [v0.39.0] - 2026-10-17
 
 ### Added

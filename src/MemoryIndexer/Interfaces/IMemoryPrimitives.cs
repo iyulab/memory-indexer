@@ -252,6 +252,12 @@ public sealed class EncodeRequest
     /// when it was stored. <see langword="null"/> (default): now.
     /// </summary>
     public DateTimeOffset? OccurredAt { get; init; }
+
+    /// <summary>
+    /// The caller's id for what the content records — the message or turn id in the caller's own log — so a recalled memory
+    /// can be traced back to it (<see cref="MemoryUnit.SourceRef"/>). <see langword="null"/> (default): none.
+    /// </summary>
+    public string? SourceRef { get; init; }
 }
 
 /// <summary>

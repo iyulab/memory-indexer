@@ -202,6 +202,47 @@ public sealed class MemoryUnit
     /// </summary>
     public Dictionary<string, string>? Metadata { get; set; }
 
+    /// <summary>The <see cref="Metadata"/> key that holds <see cref="SourceRef"/>.</summary>
+    public const string SourceRefKey = "source_ref";
+
+    /// <summary>
+    /// The caller's id for what this memory records — a message or turn id given to <c>RememberAsync(…, sourceRef)</c> or
+    /// <see cref="Interfaces.EncodeRequest.SourceRef"/>; <see langword="null"/> when none was given. Kept in
+    /// <see cref="Metadata"/> under <see cref="SourceRefKey"/>, so every store keeps it.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? SourceRef => Metadata?.GetValueOrDefault(SourceRefKey);
+
+    /// <summary>
+    /// The memories this one was made from: a summary's (<c>summary_of</c>), a merge's (<c>merged_from</c>) or a reflection's
+    /// (<c>source_ids</c>) sources, as recorded in <see cref="Metadata"/>. Empty for a memory stored as given.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<Guid> DerivedFrom
+    {
+        get
+        {
+            if (Metadata is null)
+            {
+                return [];
+            }
+
+            foreach (var key in DerivationKeys)
+            {
+                if (Metadata.TryGetValue(key, out var ids) && !string.IsNullOrWhiteSpace(ids))
+                {
+                    return [.. ids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+                        .Where(guid => guid != Guid.Empty)];
+                }
+            }
+
+            return [];
+        }
+    }
+
+    private static readonly string[] DerivationKeys = ["summary_of", "merged_from", "source_ids"];
+
     /// <summary>
     /// Soft delete flag.
     /// </summary>

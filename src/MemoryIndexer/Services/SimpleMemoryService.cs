@@ -51,6 +51,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         string? @namespace = null,
         MemoryType? type = null,
         DateTimeOffset? occurredAt = null,
+        string? sourceRef = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -117,6 +118,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
             ImportanceScore = classification.Importance,
             Topics = classification.Topics.ToList(),
             OccurredAt = occurredAt,
+            SourceRef = sourceRef,
         };
 
         var memory = await _primitives.EncodeAsync(encodeRequest, cancellationToken);
