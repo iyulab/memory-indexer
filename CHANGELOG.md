@@ -12,7 +12,9 @@ All notable changes to Memory Indexer are documented here.
   conversation brought in from a log, or a batch indexed after the fact, used to become «now» — recency, «newer wins»
   conflict resolution and date ordering then read the import order instead of when things were said. The given time becomes
   the memory's `CreatedAt`; `UpdatedAt` records when it was stored. **Breaking** for implementers of `IMemoryService`: the
-  method has a new optional parameter before `cancellationToken` (callers that name their arguments are unaffected).
+  method has a new optional parameter before `cancellationToken` (callers that name their arguments are unaffected in
+  source, but a package compiled against 0.38.0 needs a rebuild — IronHive.Agent.Memory 0.65.0 does; take IronHive.Agent 0.66.0
+  with this release).
 - **A recall can be asked as of a past day: `RecallAsync(…, asOf)` and `RetrieveRequest.AsOf`.** Memories that happened
   after it are left out and recency is measured back from it (an access recorded later does not count) — a question with its
   own date, such as a benchmark's `question_date` or a replayed conversation, sees what was known then. **Breaking** for
