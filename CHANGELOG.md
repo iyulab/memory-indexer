@@ -2,7 +2,7 @@
 
 All notable changes to Memory Indexer are documented here.
 
-## [Unreleased]
+## [v0.39.0] - 2026-10-17
 
 ### Added
 - **A recall hands back its scores: `MemoryContext.Ranked`.** Every recalled memory with its retrieval score, highest first —
