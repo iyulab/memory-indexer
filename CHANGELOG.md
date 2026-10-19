@@ -2,6 +2,11 @@
 
 All notable changes to Memory Indexer are documented here.
 
+## [Unreleased]
+
+### Dependencies
+- .NET runtime packages 10.0.12 -> 10.0.13 (`Microsoft.Extensions.*`, `Microsoft.Data.Sqlite`, `System.Numerics.Tensors`, `Microsoft.AspNetCore.SpaProxy`) — the servicing band LMSupply's next release requires.
+
 ## [v0.40.0] - 2026-10-18
 
 ### Added
