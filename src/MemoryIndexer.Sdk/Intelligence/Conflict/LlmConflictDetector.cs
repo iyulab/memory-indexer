@@ -25,11 +25,14 @@ namespace MemoryIndexer.Sdk.Intelligence.Conflict;
 /// </remarks>
 public sealed partial class LlmConflictDetector
 {
-    private readonly ITextCompletionService _completionService;
+    private readonly ITextCompletionService? _completionService;
     private readonly ILogger<LlmConflictDetector> _logger;
 
+    /// <param name="completionService">The model that analyzes a pair, or <see langword="null"/> when none is configured: every
+    /// pair is then treated as unrelated (the new memory is added) without a model call or an error log.</param>
+    /// <param name="logger">Logger.</param>
     public LlmConflictDetector(
-        ITextCompletionService completionService,
+        ITextCompletionService? completionService,
         ILogger<LlmConflictDetector> logger)
     {
         _completionService = completionService;
@@ -44,6 +47,18 @@ public sealed partial class LlmConflictDetector
         MemoryUnit existingMemory,
         CancellationToken cancellationToken = default)
     {
+        if (_completionService is null)
+        {
+            // No model configured: conflict analysis is an optional step, not a failure.
+            return new ConflictAnalysis
+            {
+                ConflictType = ConflictType.None,
+                Confidence = 0.5f,
+                RecommendedAction = MemoryAction.Add,
+                Reasoning = "No text completion service is configured; treating as new memory"
+            };
+        }
+
         try
         {
             var prompt = BuildConflictAnalysisPrompt(newMemory, existingMemory);

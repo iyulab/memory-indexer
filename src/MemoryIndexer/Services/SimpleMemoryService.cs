@@ -46,7 +46,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
     }
 
     /// <inheritdoc />
-    public async Task RememberAsync(
+    public async Task<MemoryUnit?> RememberAsync(
         string userId,
         string? sessionId,
         string content,
@@ -55,6 +55,8 @@ public sealed partial class SimpleMemoryService : IMemoryService
         MemoryType? type = null,
         DateTimeOffset? occurredAt = null,
         string? sourceRef = null,
+        float? importance = null,
+        IReadOnlyDictionary<string, string>? metadata = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -86,6 +88,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         // dropped as transient — the caller asked for it to be kept.
         var effectiveType = type ?? classification.Type;
         var shouldPersist = type is not null || classification.ShouldPersist;
+        var effectiveImportance = importance is { } given ? Math.Clamp(given, 0f, 1f) : classification.Importance;
 
         LogClassified(_logger, effectiveType, classification.Tier, classification.Importance, shouldPersist);
 
@@ -93,7 +96,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         if (!shouldPersist)
         {
             LogSkippingTransient(_logger);
-            return;
+            return null;
         }
 
         // Resolve scope using importance and type. The scope manager's topic tracking is not run here: its result was
@@ -102,7 +105,7 @@ public sealed partial class SimpleMemoryService : IMemoryService
         var scope = await _scopeManager.ResolveScopeAsync(
             content,
             effectiveType,
-            classification.Importance,
+            effectiveImportance,
             cancellationToken);
 
         LogResolvedScope(_logger, scope);
@@ -118,15 +121,17 @@ public sealed partial class SimpleMemoryService : IMemoryService
             Type = effectiveType,
             Scope = scope,
             Tier = classification.Tier,
-            ImportanceScore = classification.Importance,
+            ImportanceScore = effectiveImportance,
             Topics = classification.Topics.ToList(),
             OccurredAt = occurredAt,
             SourceRef = sourceRef,
+            Metadata = metadata is null ? null : new Dictionary<string, string>(metadata, StringComparer.Ordinal),
         };
 
         var memory = await _primitives.EncodeAsync(encodeRequest, cancellationToken);
 
         LogRemembered(_logger, memory.Id, memory.Type, memory.Scope, memory.Tier);
+        return memory;
     }
 
     /// <inheritdoc />

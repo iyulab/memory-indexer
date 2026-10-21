@@ -88,6 +88,25 @@ public class OccurredAtTests
     }
 
     [Fact]
+    public async Task TheLaterStatement_StillRanksFirst_WhenTheSameRecallIsAskedAgain()
+    {
+        // Recall records access. Recency read the last access, so after one recall both statements looked just recalled,
+        // the recency part tied and the older one - stored first - came first. Stored in time order here, so a tie shows.
+        using var provider = Build();
+        var memory = provider.GetRequiredService<IMemoryService>();
+        await memory.RememberAsync("u", "s", "Spring: I drive a blue car to work every day now.", "user",
+            occurredAt: DateTimeOffset.UtcNow.AddDays(-10), cancellationToken: Ct);
+        await memory.RememberAsync("u", "s", "Summer: I drive a green car to work every day now.", "user",
+            occurredAt: DateTimeOffset.UtcNow.AddDays(-1), cancellationToken: Ct);
+
+        var first = await memory.RecallAsync("u", "s", "Car: what colour is my car?", cancellationToken: Ct);
+        var again = await memory.RecallAsync("u", "s", "Car: what colour is my car?", cancellationToken: Ct);
+
+        Assert.StartsWith("Summer:", first.Ranked[0].Memory.Content, StringComparison.Ordinal);
+        Assert.StartsWith("Summer:", again.Ranked[0].Memory.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ARecallAsOfAPastDay_LeavesOutWhatCameLater_AndMeasuresRecencyFromThatDay()
     {
         using var provider = Build();
@@ -117,5 +136,44 @@ public class OccurredAtTests
         Assert.Equal(new DateTime(2026, 5, 2, 9, 30, 0, DateTimeKind.Utc), memory!.CreatedAt);
         Assert.False(refused.Success);
         Assert.Contains("ISO 8601", refused.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheMcpTools_RankTheLaterStatementFirst_AsTheSdkDoes()
+    {
+        // The MCP server's store_memory / recall_memory are the SDK's remember and recall: the same recency, read from
+        // occurredAt. (Before: a separate store path, and a recall that recorded access before scoring — every candidate
+        // looked just accessed, so the older statement could win.)
+        using var provider = Build();
+        var tools = ActivatorUtilities.CreateInstance<MemoryTools>(provider);
+        var now = DateTimeOffset.UtcNow;
+
+        Assert.True((await tools.StoreMemory("Spring: I drive a blue car to work every day now.",
+            occurredAt: now.AddDays(-10).ToString("O"), cancellationToken: Ct)).Success);
+        Assert.True((await tools.StoreMemory("Summer: I drive a green car to work every day now.",
+            occurredAt: now.AddDays(-1).ToString("O"), cancellationToken: Ct)).Success);
+
+        var first = await tools.RecallMemory("Car: what colour is my car?", cancellationToken: Ct);
+        var again = await tools.RecallMemory("Car: what colour is my car?", cancellationToken: Ct);
+
+        Assert.Equal(["Summer:", "Spring:"], first.Memories.Select(m => m.Content.Split(' ')[0]));
+        Assert.Equal(["Summer:", "Spring:"], again.Memories.Select(m => m.Content.Split(' ')[0]));
+    }
+
+    [Fact]
+    public async Task TheStoreMemoryTool_ClassifiesAnUntypedTurn_AndDropsSmallTalk_ButKeepsATypedOne()
+    {
+        using var provider = Build();
+        var tools = ActivatorUtilities.CreateInstance<MemoryTools>(provider);
+
+        var smallTalk = await tools.StoreMemory("thanks!", cancellationToken: Ct);
+        var kept = await tools.StoreMemory("thanks!", type: "fact", cancellationToken: Ct);
+
+        Assert.True(smallTalk.Success);
+        Assert.Null(smallTalk.MemoryId);
+        Assert.Contains("small talk", smallTalk.Message, StringComparison.Ordinal);
+        Assert.NotNull(kept.MemoryId);
+        var all = await tools.GetAllMemories(cancellationToken: Ct);
+        Assert.Equal(1, all.TotalCount);
     }
 }

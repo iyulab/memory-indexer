@@ -21,16 +21,16 @@ namespace MemoryIndexer.Sdk.Intelligence.Classification;
 /// Length is measured with the registered <see cref="ITokenCounter"/>, not by splitting on spaces: Korean puts
 /// particles inside space-separated units and Chinese and Japanese use no spaces at all, so a word count calls almost
 /// every turn in those languages short. Length decides the tier (where a memory lives), never whether it is kept —
-/// only small talk (<see cref="MemoryClassification.Transient"/>) is dropped. The small-talk lexicon is English; a
-/// turn in another language that is all greeting is kept at <see cref="Tier.Short"/> rather than risk dropping one
-/// that carries information.
+/// only small talk (<see cref="MemoryClassification.Transient"/>) is dropped. The small-talk lexicon is English and
+/// Korean (whole-word forms only: «고마워요!» is small talk, «고마워요, 차는 파란색이에요» is not); a turn in another language
+/// that is all greeting is kept at <see cref="Tier.Short"/> rather than risk dropping one that carries information.
 /// </remarks>
 public sealed partial class LocalMemoryClassifier : IMemoryClassifier
 {
     // Thresholds were written in English words; ~0.75 words per token is the usual English ratio, so each is the
-    // same English length in tokens (5 → 7, 20 → 27, 50 → 67, 100 → 133).
-    private const int TransientMaxTokens = 7;
+    // same English length in tokens (20 → 27, 50 → 67, 100 → 133).
     private const int ShortEpisodicBelowTokens = 27;
+    private const int TransientMaxWords = 6;
     private const int ArchiveSemanticAboveTokens = 67;
     private const int ArchiveProceduralAboveTokens = 133;
     private const float ImportancePerToken = 0.00375f;
@@ -122,7 +122,11 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
             "yes", "no", "sure", "got it", "understood", "bye", "goodbye",
             "see you", "hmm", "um", "uh", "well", "cool", "great", "nice",
             "yeah", "yep", "nope", "alright", "all right", "sounds good", "good", "oh", "ah", "haha", "lol",
-            "good morning", "good night", "sure thing", "there", "so much", "a lot", "very much", "you", "too", "again"
+            "good morning", "good night", "sure thing", "there", "so much", "a lot", "very much", "you", "too", "again",
+            // Korean, as whole words (particles attach to words, so a phrase list of stems would not match)
+            "안녕", "안녕하세요", "안녕히", "가세요", "계세요", "고마워", "고마워요", "고맙습니다", "고맙네요", "감사", "감사해요",
+            "감사합니다", "정말", "너무", "진짜", "네", "넵", "예", "응", "어", "아", "오", "그래", "그래요", "그렇군요", "알겠어",
+            "알겠어요", "알겠습니다", "좋아", "좋아요", "좋네요", "좋습니다", "괜찮아요", "수고하세요", "수고하셨습니다"
         }
         .Select(phrase => phrase.Split(' '))
         .OrderByDescending(words => words.Length)
@@ -240,7 +244,7 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
         var tokens = _tokenCounter.Count(content);
 
         // Small talk is the only content that is not kept.
-        if (IsTransientContent(lower, tokens))
+        if (IsTransientContent(lower))
         {
             return MemoryClassification.Transient;
         }
@@ -409,16 +413,17 @@ public sealed partial class LocalMemoryClassifier : IMemoryClassifier
     /// every word belongs to a <see cref="TransientPhrases"/> phrase. A prefix or suffix match is not enough: it
     /// dropped "ok, my plate is 12-3456" with its acknowledgement and "his name is Kim" as "hi".
     /// </summary>
-    private static bool IsTransientContent(string lower, int tokens)
+    private static bool IsTransientContent(string lower)
     {
-        if (tokens > TransientMaxTokens)
-        {
-            return false;
-        }
-
+        // Bounded by words, not tokens: a token budget calibrated on English rejected a two-word Korean acknowledgement
+        // («네, 알겠습니다») before the word rule below was reached. Small talk is a handful of words in any language.
         var words = WordRegex().Matches(RoleLabelRegex().Replace(lower, string.Empty, 1))
             .Select(match => match.Value)
             .ToArray();
+        if (words.Length > TransientMaxWords)
+        {
+            return false;
+        }
 
         // Nothing left but a role label, punctuation or emoji counts as small talk: there is nothing to remember.
         var index = 0;

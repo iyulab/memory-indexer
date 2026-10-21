@@ -1197,9 +1197,10 @@ public sealed partial class MemoryPrimitivesService : IMemoryPrimitives
 
     private static float CalculateRecencyScore(MemoryUnit memory, double halfLifeDays, DateTime reference)
     {
-        // An access after the reference time (a recall as of a past day) is not recency at that time
-        var lastAccess = memory.LastAccessedAt is { } accessed && accessed <= reference ? accessed : memory.CreatedAt;
-        var daysSince = Math.Max(0, (reference - lastAccess).TotalDays);
+        // Recency is how long ago the memory happened (CreatedAt = occurredAt when given), not when it was last recalled:
+        // reading the last access let every recall reorder the next one - the first recall ranked the newer of two
+        // statements first, recorded access to both, and the same recall then ranked the older one first.
+        var daysSince = Math.Max(0, (reference - memory.CreatedAt).TotalDays);
         return halfLifeDays <= 0 ? 1f : (float)Math.Pow(0.5, daysSince / halfLifeDays);
     }
 

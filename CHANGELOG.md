@@ -4,6 +4,30 @@ All notable changes to Memory Indexer are documented here.
 
 ## [Unreleased]
 
+### Changed
+- **The MCP server's `store_memory` and `recall_memory` are the SDK's remember and recall.** `store_memory` went to a
+  separate store path that never classified: every turn was stored as `episodic` at importance 0.5, small talk included.
+  It now goes through `IMemoryService.RememberAsync` — classified, small talk dropped (the result says so, with no id).
+  `type` and `importance` are optional and, when given, override the classifier as in the SDK. `recall_memory` ranks with
+  `IMemoryPrimitives.RetrieveAsync`, the SDK's ranking, instead of a scorer that recorded every candidate's access before
+  scoring it (so recency was "just now" for all of them and `occurredAt` had no effect). **Breaking** for MCP clients:
+  an untyped turn's stored type and importance, and scores (now 0–1).
+- **Recency reads when a memory happened, not when it was last recalled.** It took the last access when there was one,
+  so a recall reordered the next: the first recall ranked the later of two statements first, recorded access to both,
+  and the same recall then ranked the earlier one first. `occurredAt` (or the store time) is now the only input.
+  **Breaking** (ranking).
+- **`IMemoryService.RememberAsync` returns the stored memory** (`null` when it was dropped as small talk) and takes the
+  caller's `importance` and `metadata`. **Breaking** for implementers of `IMemoryService`; a caller that awaited the
+  `Task` compiles unchanged (recompile — the return type changed).
+- **Korean small talk is dropped like English** («고마워요!», «네, 알겠습니다») — whole-word forms only, so a turn that also
+  carries information is kept. Small talk is bounded by words instead of an English-calibrated token count, which
+  rejected a two-word Korean acknowledgement before the word rule ran.
+
+### Fixed
+- **No `fail` log on a store without a completion service.** The conflict detector asked the unconfigured completion
+  service, logged the refusal as an error with a stack trace, and added the memory anyway; without a completion service
+  it now adds without asking (`LlmConflictDetector` accepts a null service).
+
 ### Dependencies
 - .NET runtime packages 10.0.12 -> 10.0.13 (`Microsoft.Extensions.*`, `Microsoft.Data.Sqlite`, `System.Numerics.Tensors`, `Microsoft.AspNetCore.SpaProxy`) — the servicing band LMSupply's next release requires.
 

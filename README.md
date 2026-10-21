@@ -151,7 +151,12 @@ embedding provider lets the server start with no configuration for local use; it
 deterministic, non-semantic vectors (a startup warning is logged). Text completion is off unless you
 register an `ITextCompletionService`: summaries keep the memories' own text, and LLM fact extraction
 returns nothing. `RememberAsync` itself never calls a model — it classifies a turn by rules and stores the turn's own text;
-LLM fact extraction runs only when you call it (the `extract_facts` tool, the fast-track promoter). A request whose answer
+LLM fact extraction runs only when you call it (the `extract_facts` tool — registered by the SDK's `WithAllMemoryIndexerTools()`,
+not by this server, which serves the seven memory tools of `WithMemoryTools()` — or the fast-track promoter). Without a
+completion service, conflict analysis on the store path is skipped (the new memory is added) rather than logged as a failure.
+The server's `store_memory` and `recall_memory` are the SDK's `RememberAsync` and recall: an untyped turn is classified and
+small talk ("thanks!", "고마워요!") is not stored — pass `type` to keep it — and recall ranks with the same recency, read from
+`occurredAt`, so the later of two statements about the same thing comes first. A request whose answer
 is read as JSON carries `TextCompletionOptions.ResponseFormat = Json` — map it to your model's JSON mode if it has one. Without `DOTNET_ENVIRONMENT=Development`,
 the server loads `appsettings.Production.json`, which embeds with the server's own in-process LMSupply model
 (`Embedding:Provider: Custom`, `Model: default` = BAAI/bge-m3, 1024 dimensions; any LMSupply model id or alias works,

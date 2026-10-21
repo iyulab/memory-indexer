@@ -12,8 +12,14 @@ namespace MemoryIndexer.Sdk.Mcp.Tools;
 /// <summary>
 /// MCP tools for memory operations.
 /// </summary>
+/// <remarks>
+/// <c>store_memory</c> and <c>recall_memory</c> are the SDK's own remember and recall (<see cref="IMemoryService.RememberAsync"/>,
+/// <see cref="IMemoryPrimitives.RetrieveAsync"/>): the same classification and small-talk drop, and the same ranking — whose
+/// recency reads <c>occurredAt</c> — as an application calling the SDK. The other tools work on stored memories by id.
+/// </remarks>
 [McpServerToolType]
 public sealed class MemoryTools(
+    IMemoryService sdkMemory,
     MemoryService memoryService,
     IMemoryStore memoryStore,
     IMemoryPrimitives memoryPrimitives,
@@ -26,8 +32,9 @@ public sealed class MemoryTools(
     /// Stores new content in long-term memory with semantic indexing.
     /// </summary>
     /// <param name="content">The content to memorize.</param>
-    /// <param name="type">Memory type: episodic (events), semantic (facts), procedural (how-to), fact (specific facts).</param>
-    /// <param name="importance">Importance score from 0.0 (trivial) to 1.0 (critical). Default: 0.5</param>
+    /// <param name="type">Memory type: episodic (events), semantic (facts), procedural (how-to), fact (specific facts). Omitted:
+    /// the classifier decides, and small talk ("thanks!") is not stored. Given: kept as that type.</param>
+    /// <param name="importance">Importance score from 0.0 (trivial) to 1.0 (critical). Omitted: the classifier's score.</param>
     /// <param name="tags">Optional comma-separated tags for categorization.</param>
     /// <param name="sessionId">Optional session ID to group related memories.</param>
     /// <param name="namespace">Optional namespace for memory isolation (e.g. a workspace or project id).</param>
@@ -35,11 +42,11 @@ public sealed class MemoryTools(
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result with the stored memory ID.</returns>
     [McpServerTool]
-    [Description("Store content in long-term memory with semantic indexing. Use this to remember important information, facts, preferences, or events from conversations.")]
+    [Description("Store content in long-term memory with semantic indexing. Use this to remember important information, facts, preferences, or events from conversations. Without a type, the content is classified and small talk is not stored.")]
     public async Task<StoreMemoryResult> StoreMemory(
         [Description("The content to memorize")] string content,
-        [Description("Memory type: episodic, semantic, procedural, or fact")] string type = "episodic",
-        [Description("Importance score (0.0 to 1.0)")] float importance = 0.5f,
+        [Description("Memory type: episodic, semantic, procedural, or fact. Omit to let the classifier decide")] string? type = null,
+        [Description("Importance score (0.0 to 1.0). Omit to let the classifier decide")] float? importance = null,
         [Description("Comma-separated tags for categorization")] string? tags = null,
         [Description("Session ID to group related memories")] string? sessionId = null,
         [Description("Namespace for memory isolation (e.g., workspace or project ID)")] string? @namespace = null,
@@ -77,24 +84,28 @@ public sealed class MemoryTools(
             }
         }
 
-        var memoryType = ParseMemoryType(type);
-        var metadata = new Dictionary<string, string>();
+        MemoryType? memoryType = string.IsNullOrWhiteSpace(type) ? null : ParseMemoryType(type);
+        Dictionary<string, string>? metadata = string.IsNullOrWhiteSpace(tags) ? null : new() { ["tags"] = tags };
 
-        if (!string.IsNullOrWhiteSpace(tags))
-        {
-            metadata["tags"] = tags;
-        }
-
-        var memory = await memoryService.StoreAsync(
+        var memory = await sdkMemory.RememberAsync(
             indexerOptions.Value.DefaultUserId,
-            content,
-            memoryType,
             sessionId,
-            Math.Clamp(importance, 0f, 1f),
-            metadata,
-            @namespace,
-            occurred,
-            cancellationToken);
+            content,
+            @namespace: @namespace,
+            type: memoryType,
+            occurredAt: occurred,
+            importance: importance,
+            metadata: metadata,
+            cancellationToken: cancellationToken);
+
+        if (memory is null)
+        {
+            return new StoreMemoryResult
+            {
+                Success = true,
+                Message = "Not stored: classified as small talk. Pass a type to keep it."
+            };
+        }
 
         // Record usage after successful store (Phase v0.6.0-γ)
         if (usageTracker != null)
@@ -139,15 +150,15 @@ public sealed class MemoryTools(
             types = [ParseMemoryType(type)];
         }
 
-        var results = await memoryService.RecallAsync(
-            indexerOptions.Value.DefaultUserId,
-            query,
-            limit,
-            sessionId,
-            types,
-            metadataFilter: null,
-            @namespace: @namespace,
-            cancellationToken);
+        var results = await memoryPrimitives.RetrieveAsync(new RetrieveRequest
+        {
+            UserId = indexerOptions.Value.DefaultUserId,
+            Query = query,
+            Limit = limit,
+            SessionId = sessionId,
+            Namespace = @namespace,
+            Types = types,
+        }, cancellationToken);
 
         return new RecallMemoryResult
         {

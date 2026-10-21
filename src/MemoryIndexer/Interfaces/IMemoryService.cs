@@ -43,8 +43,12 @@ public interface IMemoryService
     /// a log. Recency and «newer wins» read it (<see cref="EncodeRequest.OccurredAt"/>). <see langword="null"/> (default): now.</param>
     /// <param name="sourceRef">The caller's id for the message or turn — read back from a recalled memory as
     /// <see cref="MemoryUnit.SourceRef"/>. <see langword="null"/> (default): none.</param>
+    /// <param name="importance">The memory's importance (0–1) when the caller knows it; clamped. Overrides the classifier's
+    /// score but not its small-talk drop (only <paramref name="type"/> keeps transient content). <see langword="null"/>
+    /// (default): the classifier's score.</param>
+    /// <param name="metadata">Caller metadata kept on the memory (e.g. tags). <see langword="null"/> (default): none.</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Task representing the async operation</returns>
+    /// <returns>The stored memory, or <see langword="null"/> when the content was dropped as small talk.</returns>
     /// <remarks>
     /// Behavior:
     /// - Auto-detects Type with the registered <see cref="IMemoryClassifier"/>, unless <paramref name="type"/> is given
@@ -53,7 +57,7 @@ public interface IMemoryService
     /// - Enables session-scoped recall
     /// - Role preserved in T0-T2 tiers, abstracted in T3 (semantic)
     /// </remarks>
-    Task RememberAsync(
+    Task<MemoryUnit?> RememberAsync(
         string userId,
         string? sessionId,
         string content,
@@ -62,6 +66,8 @@ public interface IMemoryService
         MemoryType? type = null,
         DateTimeOffset? occurredAt = null,
         string? sourceRef = null,
+        float? importance = null,
+        IReadOnlyDictionary<string, string>? metadata = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

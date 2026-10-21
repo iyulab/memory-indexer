@@ -272,7 +272,8 @@ public static class ServiceCollectionExtensions
 
         // Register memory conflict resolver (Phase 26)
         services.TryAddSingleton<IMemoryConflictResolver, RecencyWeightedResolver>();
-        services.TryAddSingleton<LlmConflictDetector>();
+        services.TryAddSingleton(sp => new LlmConflictDetector(
+            TextCompletion.OrNull(sp), sp.GetRequiredService<ILogger<LlmConflictDetector>>()));
 
         // Register intelligence services (Phase 2)
         services.TryAddSingleton<IHybridSearchService, HybridSearchService>();

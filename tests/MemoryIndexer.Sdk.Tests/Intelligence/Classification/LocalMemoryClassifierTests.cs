@@ -363,6 +363,10 @@ public class LocalMemoryClassifierTests
     [InlineData("Thank you so much!")]
     [InlineData("Good morning!")]
     [InlineData("👍")]
+    [InlineData("고마워요!")]
+    [InlineData("User: 네, 알겠습니다.")]
+    [InlineData("정말 감사합니다 :)")]
+    [InlineData("안녕하세요")]
     public async Task ClassifyAsync_SmallTalkOnly_IsDropped(string content)
     {
         var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);
@@ -382,6 +386,8 @@ public class LocalMemoryClassifierTests
     [InlineData("User: my project codename is Teal Whale 1005")]
     [InlineData("ok, my plate is 12-3456")]
     [InlineData("his name is Kim")]
+    [InlineData("고마워요, 차는 파란색이에요")]
+    [InlineData("네, 서울로 이사했어요")]
     public async Task ClassifyAsync_AShortTurnThatCarriesInformation_IsKept(string content)
     {
         var result = await _classifier.ClassifyAsync(content, cancellationToken: TestContext.Current.CancellationToken);

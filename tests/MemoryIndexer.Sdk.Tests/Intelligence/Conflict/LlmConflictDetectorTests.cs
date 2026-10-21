@@ -1,7 +1,11 @@
 
+using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
+using MemoryIndexer.Sdk.Extensions;
 using MemoryIndexer.Sdk.Intelligence.Conflict;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -24,6 +28,47 @@ public sealed class LlmConflictDetectorTests
         _detector = new LlmConflictDetector(
             _mockCompletion,
             NullLogger<LlmConflictDetector>.Instance);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_WithTheDefaultRegistrationAndNoCompletionService_AddsWithoutAnErrorLog()
+    {
+        // The MCP server's default configuration has no completion model: the analysis is skipped, not «failed».
+        var errors = new List<string>();
+        var services = new ServiceCollection();
+        services.AddLogging(b => b.AddProvider(new ErrorCollector(errors)));
+        services.AddMemoryIndexer(o =>
+        {
+            o.Embedding.Provider = EmbeddingProvider.Mock;
+            o.Embedding.Dimensions = 4;
+        });
+        using var provider = services.BuildServiceProvider();
+        var detector = provider.GetRequiredService<LlmConflictDetector>();
+
+        var analysis = await detector.AnalyzeAsync(CreateMemory("I moved to Seoul"), CreateMemory("I moved to Busan"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(MemoryAction.Add, analysis.RecommendedAction);
+        Assert.Contains("No text completion service", analysis.Reasoning, StringComparison.Ordinal);
+        Assert.Empty(errors);
+    }
+
+    private sealed class ErrorCollector(List<string> errors) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new Logger(errors, categoryName);
+        public void Dispose() { }
+
+        private sealed class Logger(List<string> errors, string category) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+            public bool IsEnabled(LogLevel logLevel) => true;
+            public void Log<TState>(LogLevel logLevel, EventId eventId,
+                TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel >= LogLevel.Error)
+                    lock (errors) errors.Add($"{category}: {formatter(state, exception)}");
+            }
+        }
     }
 
     [Fact]
