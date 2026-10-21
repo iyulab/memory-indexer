@@ -1,3 +1,4 @@
+using MemoryIndexer.Utilities;
 using System.Numerics.Tensors;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -145,7 +146,7 @@ public sealed partial class ParentChildChunkManager : IParentChildChunkManager
             .Select(c => new
             {
                 Chunk = c,
-                Score = CalculateCosineSimilarity(queryEmbedding, c.Embedding!.Value)
+                Score = VectorMath.CosineSimilarity(queryEmbedding, c.Embedding!.Value)
             })
             .OrderByDescending(x => x.Score)
             .Take(topK * 2) // Over-fetch to deduplicate parents
@@ -371,30 +372,12 @@ public sealed partial class ParentChildChunkManager : IParentChildChunkManager
             {
                 MatchedChunk = p,
                 ParentChunk = p,
-                Score = CalculateCosineSimilarity(queryEmbedding, p.Embedding!.Value),
+                Score = VectorMath.CosineSimilarity(queryEmbedding, p.Embedding!.Value),
                 MatchType = ChunkMatchType.ParentDirect
             })
             .OrderByDescending(x => x.Score)
             .Take(topK)
             .ToList();
-    }
-
-    /// <summary>
-    /// Calculates cosine similarity between query and chunk embeddings.
-    /// </summary>
-    private static float CalculateCosineSimilarity(ReadOnlyMemory<float> a, ReadOnlyMemory<float> b)
-    {
-        var spanA = a.Span;
-        var spanB = b.Span;
-
-        var dotProduct = TensorPrimitives.Dot(spanA, spanB);
-        var normA = TensorPrimitives.Norm(spanA);
-        var normB = TensorPrimitives.Norm(spanB);
-
-        if (normA == 0 || normB == 0)
-            return 0f;
-
-        return dotProduct / (normA * normB);
     }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Created {ChildCount} child chunks from content of length {Length}")]

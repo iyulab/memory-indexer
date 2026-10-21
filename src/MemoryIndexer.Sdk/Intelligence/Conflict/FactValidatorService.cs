@@ -1,4 +1,5 @@
-﻿using MemoryIndexer.Interfaces;
+﻿using MemoryIndexer.Utilities;
+using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MemoryIndexer.Sdk.Intelligence.Conflict;
@@ -209,7 +210,7 @@ public sealed partial class FactValidatorService : IFactValidator
             // Check semantic similarity
             if (newEmbedding != null && existing.Embedding != null)
             {
-                var similarity = CosineSimilarity(newEmbedding.Value.Span, existing.Embedding.Value.Span);
+                var similarity = VectorMath.CosineSimilarity(newEmbedding.Value.Span, existing.Embedding.Value.Span);
 
                 if (similarity >= 0.95f)
                 {
@@ -385,22 +386,6 @@ public sealed partial class FactValidatorService : IFactValidator
         }
 
         return false;
-    }
-
-    private static float CosineSimilarity(ReadOnlySpan<float> a, ReadOnlySpan<float> b)
-    {
-        if (a.Length != b.Length) return 0;
-
-        float dotProduct = 0, normA = 0, normB = 0;
-        for (var i = 0; i < a.Length; i++)
-        {
-            dotProduct += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
-        return denominator > 0 ? dotProduct / denominator : 0;
     }
 
     private static FactResolutionStrategy DetermineStrategy(

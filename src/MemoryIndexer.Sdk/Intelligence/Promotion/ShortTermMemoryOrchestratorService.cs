@@ -1,3 +1,4 @@
+using MemoryIndexer.Utilities;
 using System.Collections.Concurrent;
 using System.Text;
 using MemoryIndexer.Configuration;
@@ -123,7 +124,7 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
                 state.CurrentTopicEmbedding.Length > 0 &&
                 state.LastTopicEmbedding.Length > 0)
             {
-                var similarity = CosineSimilarity(
+                var similarity = VectorMath.CosineSimilarity(
                     state.CurrentTopicEmbedding.Span,
                     state.LastTopicEmbedding.Span);
 
@@ -318,7 +319,7 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
             state.CurrentTopicEmbedding.Length > 0 &&
             state.LastTopicEmbedding.Length > 0)
         {
-            var similarity = CosineSimilarity(
+            var similarity = VectorMath.CosineSimilarity(
                 state.CurrentTopicEmbedding.Span,
                 state.LastTopicEmbedding.Span);
 
@@ -373,25 +374,6 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
         sb.AppendLine(CultureInfo.InvariantCulture, $"[{memories.Count} memories archived]");
 
         return sb.ToString();
-    }
-
-    /// <summary>
-    /// Calculates cosine similarity between two embeddings.
-    /// </summary>
-    private static float CosineSimilarity(ReadOnlySpan<float> a, ReadOnlySpan<float> b)
-    {
-        if (a.Length != b.Length || a.Length == 0) return 0;
-
-        float dotProduct = 0, normA = 0, normB = 0;
-        for (int i = 0; i < a.Length; i++)
-        {
-            dotProduct += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
-        return denominator == 0 ? 0 : dotProduct / denominator;
     }
 
     /// <summary>

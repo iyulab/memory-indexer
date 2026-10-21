@@ -1,4 +1,5 @@
-﻿using System.Numerics.Tensors;
+﻿using MemoryIndexer.Utilities;
+using System.Numerics.Tensors;
 using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -273,7 +274,7 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
             // 1. Similarity to centroid (relevance to overall topic)
             if (sentence.Embedding.HasValue)
             {
-                score += CalculateCosineSimilarity(sentence.Embedding.Value, centroid) * 0.3f;
+                score += VectorMath.CosineSimilarity(sentence.Embedding.Value, centroid) * 0.3f;
             }
 
             // 2. Position score (earlier sentences often more important)
@@ -442,24 +443,6 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
         }
 
         return centroid;
-    }
-
-    private static float CalculateCosineSimilarity(ReadOnlyMemory<float> a, ReadOnlyMemory<float> b)
-    {
-        var spanA = a.Span;
-        var spanB = b.Span;
-
-        if (spanA.Length != spanB.Length)
-            return 0f;
-
-        var dotProduct = TensorPrimitives.Dot(spanA, spanB);
-        var normA = TensorPrimitives.Norm(spanA);
-        var normB = TensorPrimitives.Norm(spanB);
-
-        if (normA == 0 || normB == 0)
-            return 0f;
-
-        return dotProduct / (normA * normB);
     }
 
     private static List<string> SplitIntoSentences(string text)

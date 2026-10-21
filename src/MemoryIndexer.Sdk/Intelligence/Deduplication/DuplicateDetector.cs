@@ -1,3 +1,4 @@
+using MemoryIndexer.Utilities;
 using System.Numerics.Tensors;
 using System.Security.Cryptography;
 using System.Text;
@@ -63,7 +64,7 @@ public sealed partial class DuplicateDetector
                 if (other.Id == memory.Id || processed.Contains(other.Id) || !other.Embedding.HasValue)
                     continue;
 
-                var similarity = CalculateCosineSimilarity(
+                var similarity = VectorMath.CosineSimilarity(
                     memory.Embedding.Value, other.Embedding.Value);
 
                 if (similarity >= threshold)
@@ -212,26 +213,6 @@ public sealed partial class DuplicateDetector
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Merged {Count} duplicates into {Id}")]
     private static partial void LogMergedDuplicates(ILogger logger, int count, Guid id);
-
-    private static float CalculateCosineSimilarity(
-        ReadOnlyMemory<float> embedding1,
-        ReadOnlyMemory<float> embedding2)
-    {
-        var span1 = embedding1.Span;
-        var span2 = embedding2.Span;
-
-        if (span1.Length != span2.Length)
-            return 0f;
-
-        var dotProduct = TensorPrimitives.Dot(span1, span2);
-        var norm1 = TensorPrimitives.Norm(span1);
-        var norm2 = TensorPrimitives.Norm(span2);
-
-        if (norm1 == 0 || norm2 == 0)
-            return 0f;
-
-        return dotProduct / (norm1 * norm2);
-    }
 }
 
 /// <summary>

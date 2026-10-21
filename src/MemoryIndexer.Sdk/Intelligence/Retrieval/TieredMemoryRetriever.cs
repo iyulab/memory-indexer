@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using MemoryIndexer.Utilities;
+using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using MemoryIndexer.Sdk.Intelligence.Graph;
@@ -271,7 +272,7 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
             {
                 if (memory.Embedding is { Length: > 0 })
                 {
-                    var similarity = ComputeCosineSimilarity(queryEmbedding, memory.Embedding.Value);
+                    var similarity = VectorMath.CosineSimilarity(queryEmbedding, memory.Embedding.Value);
                     scored.Add((memory, similarity));
                 }
                 else
@@ -450,31 +451,6 @@ public sealed partial class TieredMemoryRetriever : ITieredRetrievalStrategy
             < 720 => 1.0f,    // This month
             _ => 0.9f         // Older
         };
-    }
-
-    private static float ComputeCosineSimilarity(
-        ReadOnlyMemory<float> a,
-        ReadOnlyMemory<float> b)
-    {
-        if (a.Length != b.Length || a.Length == 0)
-            return 0f;
-
-        var spanA = a.Span;
-        var spanB = b.Span;
-
-        float dotProduct = 0f;
-        float normA = 0f;
-        float normB = 0f;
-
-        for (int i = 0; i < spanA.Length; i++)
-        {
-            dotProduct += spanA[i] * spanB[i];
-            normA += spanA[i] * spanA[i];
-            normB += spanB[i] * spanB[i];
-        }
-
-        var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
-        return denominator > 0 ? dotProduct / denominator : 0f;
     }
 
     private static int EstimateTokens(string content)

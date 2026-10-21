@@ -1,4 +1,5 @@
-﻿using System.Numerics.Tensors;
+﻿using MemoryIndexer.Utilities;
+using System.Numerics.Tensors;
 using MemoryIndexer.Configuration;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
@@ -166,7 +167,7 @@ public sealed partial class MemoryQualityAnalyzer : IMemoryQualityService
         try
         {
             var queryEmbedding = await _embeddingService.GenerateQueryEmbeddingAsync(query, cancellationToken);
-            var similarity = CalculateCosineSimilarity(memory.Embedding!.Value, queryEmbedding);
+            var similarity = VectorMath.CosineSimilarity(memory.Embedding!.Value, queryEmbedding);
             return Math.Clamp(similarity, 0f, 1f);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
@@ -386,29 +387,6 @@ public sealed partial class MemoryQualityAnalyzer : IMemoryQualityService
                    (0.30f * completeness) +
                    (0.35f * consistency);
         }
-    }
-
-    /// <summary>
-    /// Calculates cosine similarity between two embeddings.
-    /// </summary>
-    private static float CalculateCosineSimilarity(
-        ReadOnlyMemory<float> embedding1,
-        ReadOnlyMemory<float> embedding2)
-    {
-        var span1 = embedding1.Span;
-        var span2 = embedding2.Span;
-
-        if (span1.Length != span2.Length)
-            return 0f;
-
-        var dotProduct = TensorPrimitives.Dot(span1, span2);
-        var norm1 = TensorPrimitives.Norm(span1);
-        var norm2 = TensorPrimitives.Norm(span2);
-
-        if (norm1 == 0 || norm2 == 0)
-            return 0f;
-
-        return dotProduct / (norm1 * norm2);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Deduplication service not available, defaulting uniqueness to 1.0")]

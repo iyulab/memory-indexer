@@ -1,3 +1,4 @@
+using MemoryIndexer.Utilities;
 using System.Numerics.Tensors;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -164,7 +165,7 @@ public sealed partial class TopicSegmenter
             var leftWindow = AverageEmbeddings(embeddings, leftStart, i + 1);
             var rightWindow = AverageEmbeddings(embeddings, i + 1, rightEnd + 1);
 
-            var similarity = CalculateCosineSimilarity(leftWindow, rightWindow);
+            var similarity = VectorMath.CosineSimilarity(leftWindow, rightWindow);
             similarities.Add(similarity);
         }
 
@@ -373,21 +374,6 @@ public sealed partial class TopicSegmenter
         }
 
         return result;
-    }
-
-    /// <summary>
-    /// Calculates cosine similarity between two vectors.
-    /// </summary>
-    private static float CalculateCosineSimilarity(float[] a, float[] b)
-    {
-        var dotProduct = TensorPrimitives.Dot(a.AsSpan(), b.AsSpan());
-        var normA = TensorPrimitives.Norm(a.AsSpan());
-        var normB = TensorPrimitives.Norm(b.AsSpan());
-
-        if (normA == 0 || normB == 0)
-            return 0f;
-
-        return dotProduct / (normA * normB);
     }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Segmenting {Count} sentences")]

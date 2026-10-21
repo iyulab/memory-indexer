@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using MemoryIndexer.Utilities;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -495,7 +496,7 @@ public partial class FactInferenceService : IFactInferenceEngine
                 if (assigned.Contains(other.Key)) continue;
                 if (fact.Embedding == null || other.Embedding == null) continue;
 
-                var similarity = CosineSimilarity(fact.Embedding.Value.Span, other.Embedding.Value.Span);
+                var similarity = VectorMath.CosineSimilarity(fact.Embedding.Value.Span, other.Embedding.Value.Span);
                 if (similarity >= threshold)
                 {
                     cluster.Add(other);
@@ -508,22 +509,6 @@ public partial class FactInferenceService : IFactInferenceEngine
         }
 
         return clusters;
-    }
-
-    private static float CosineSimilarity(ReadOnlySpan<float> a, ReadOnlySpan<float> b)
-    {
-        if (a.Length != b.Length) return 0;
-
-        float dotProduct = 0, normA = 0, normB = 0;
-        for (var i = 0; i < a.Length; i++)
-        {
-            dotProduct += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
-        return denominator > 0 ? dotProduct / denominator : 0;
     }
 
     private static string? ExtractNegatedSubject(string value)

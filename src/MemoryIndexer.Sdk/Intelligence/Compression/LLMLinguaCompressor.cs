@@ -1,3 +1,4 @@
+using MemoryIndexer.Utilities;
 using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -384,7 +385,7 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
             var embedding = embeddings[i];
 
             // Calculate similarity to centroid (relevance to overall content)
-            var similarity = CalculateCosineSimilarity(embedding, centroid);
+            var similarity = VectorMath.CosineSimilarity(embedding, centroid);
 
             // Position score
             var positionScore = i < sentences.Count / 4 ? 0.8f : (i > 3 * sentences.Count / 4 ? 0.7f : 0.5f);
@@ -589,31 +590,6 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
         }
 
         return centroid;
-    }
-
-    private static float CalculateCosineSimilarity(ReadOnlyMemory<float> a, ReadOnlyMemory<float> b)
-    {
-        var spanA = a.Span;
-        var spanB = b.Span;
-
-        if (spanA.Length != spanB.Length || spanA.Length == 0)
-            return 0f;
-
-        var dotProduct = 0f;
-        var normA = 0f;
-        var normB = 0f;
-
-        for (var i = 0; i < spanA.Length; i++)
-        {
-            dotProduct += spanA[i] * spanB[i];
-            normA += spanA[i] * spanA[i];
-            normB += spanB[i] * spanB[i];
-        }
-
-        normA = MathF.Sqrt(normA);
-        normB = MathF.Sqrt(normB);
-
-        return normA > 0 && normB > 0 ? dotProduct / (normA * normB) : 0f;
     }
 
     private static CompressionResult CreateEmptyResult() => new()
