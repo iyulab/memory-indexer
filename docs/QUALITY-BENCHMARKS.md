@@ -19,7 +19,7 @@ separately from the model that answers.
 | Broken out by | question type — knowledge-update and temporal-reasoning are the closest public measure of conflict resolution and temporal validity |
 | Not used | the GPT-4o-judged answer score: it measures the answering model as much as the memory |
 
-A stored memory must keep the id of the session and turn it came from, so a recalled fact can be matched to the gold labels.
+A stored memory must keep the id of the session and turn it came from, so a recalled fact can be matched to the gold labels: `RememberAsync(…, sourceRef:)` stores the caller's turn id and a recalled memory hands it back as `MemoryUnit.SourceRef` (a merged or summarized memory lists its originals in `DerivedFrom`). The history's own times go in as `RememberAsync(…, occurredAt:)`, and a question asked on a past day is recalled with `RecallAsync(…, asOf:)`.
 
 ## Considered and not chosen
 
@@ -50,3 +50,5 @@ First measurement (2026-10-16): LongMemEval_S cleaned, the first 5 questions of 
 By question type (0.36.0): knowledge-update session R@5 1.00 / turn R@10 0.93; multi-session 0.68 / 0.59;
 single-session-preference 1.00 / 0.47; temporal-reasoning 0.90 / 0.84. 0.35.0's default deduplication skipped, merged or
 overwrote most turns by similarity (see the 0.36.0 changelog).
+
+With the history's own times (0.39.0, every temporal-reasoning (127) and knowledge-update (72) question, paired bootstrap 95 %): passing each session's date as `occurredAt` and the question date as `asOf` **lowers** temporal-reasoning (any-evidence R@5 0.976 → 0.835), because LongMemEval dates some evidence sessions after the question and `asOf` correctly leaves them out. Measured with `asOf` = the later of the question date and the last session (recency from the question, nothing filtered), temporal-reasoning NDCG@10 rises 0.679 → 0.697 [+0.004, +0.033] and knowledge-update session R@5 falls 0.049 [−0.083, −0.021] — the superseded fact's session now ranks below the update, which the metric counts as a miss. The recency defaults were kept.
