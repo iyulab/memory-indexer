@@ -15,7 +15,9 @@ All notable changes to Memory Indexer are documented here.
 - **Recency reads when a memory happened, not when it was last recalled.** It took the last access when there was one,
   so a recall reordered the next: the first recall ranked the later of two statements first, recorded access to both,
   and the same recall then ranked the earlier one first. `occurredAt` (or the store time) is now the only input.
-  **Breaking** (ranking).
+  **Breaking** (ranking). Measured with bge-m3 against 0.40.0: LongMemEval_S knowledge-update and temporal-reasoning
+  (`occurredAt` + `asOf`) and BEAM 100K give identical top-10 lists (40/40 and 355/355) — both recall once per question, so
+  only a repeated recall sees the difference.
 - **`IMemoryService.RememberAsync` returns the stored memory** (`null` when it was dropped as small talk) and takes the
   caller's `importance` and `metadata`. **Breaking** for implementers of `IMemoryService`; a caller that awaited the
   `Task` compiles unchanged (recompile — the return type changed).
