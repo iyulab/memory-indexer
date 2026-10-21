@@ -15,7 +15,6 @@ using MemoryIndexer.Sdk.Intelligence.Extraction;
 using MemoryIndexer.Sdk.Intelligence.Consolidation;
 using MemoryIndexer.Sdk.Intelligence.Graph;
 using MemoryIndexer.Sdk.Intelligence.Compression;
-using MemoryIndexer.Sdk.Intelligence.ContextOptimization;
 using MemoryIndexer.Sdk.Intelligence.Deduplication;
 using MemoryIndexer.Sdk.Intelligence.Evaluation;
 using MemoryIndexer.Sdk.Intelligence.KnowledgeGraph;
@@ -301,9 +300,6 @@ public static class ServiceCollectionExtensions
         // Register self-editing memory services (Phase 3)
         services.TryAddSingleton<ISelfEditingMemoryService, MemGPTStyleMemoryManager>();
 
-        // Register context optimization services (Phase 3)
-        services.TryAddSingleton<IContextOptimizer, ContextWindowOptimizer>();
-
         // Register security services (Phase 4)
         services.TryAddSingleton<IPiiDetector, RegexPiiDetector>();
         services.TryAddSingleton<IPromptInjectionDetector, PromptInjectionDetector>();
@@ -316,16 +312,11 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<AsyncLocalTenantContextAccessor>();
         services.TryAddSingleton<ITenantContext>(sp => sp.GetRequiredService<AsyncLocalTenantContextAccessor>());
         services.TryAddSingleton<ITenantContextAccessor>(sp => sp.GetRequiredService<AsyncLocalTenantContextAccessor>());
-        services.TryAddSingleton<IAuthorizationService, DefaultAuthorizationService>();
-        services.TryAddSingleton<IAuditLogger, InMemoryAuditLogger>();
 
         // Register evaluation services (Phase 4.4)
         services.TryAddSingleton<QualityTargets>();
         services.TryAddSingleton<IRetrievalEvaluator, DefaultRetrievalEvaluator>();
         services.TryAddSingleton<ILoCoMoEvaluator, LoCoMoEvaluator>();
-
-        // Register observability services (Phase 4.5)
-        services.TryAddSingleton<InstrumentedMemoryService>();
 
         // Register memory export/import services (Phase v0.6.0-β)
         services.TryAddSingleton<IMemoryExporter, JsonMemoryExporter>();

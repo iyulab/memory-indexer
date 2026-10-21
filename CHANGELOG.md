@@ -23,6 +23,18 @@ All notable changes to Memory Indexer are documented here.
   carries information is kept. Small talk is bounded by words instead of an English-calibrated token count, which
   rejected a two-word Korean acknowledgement before the word rule ran.
 
+### Removed
+- **Services `AddMemoryIndexer()` registered that nothing used, and the README claims they backed.** **Breaking** (public
+  types): `IAuthorizationService` / `DefaultAuthorizationService` (with `Permission`, `AuthorizationResult`, `BuiltInRoles`)
+  and `IAuditLogger` / `InMemoryAuditLogger` (with `AuditEvent`, `AuditAction`, `AuditOutcome`, `AuditSeverity`,
+  `AuditLogQuery`, `AuditStatistics`) — no store or recall path asked them, so the SDK README's «complete tenant isolation»
+  was not true; `TenantInfo.Roles` / `Permissions`, which only the authorization service read; `IContextOptimizer` /
+  `ContextWindowOptimizer` (with `ContextOptimizationOptions`, `HyDEResult`, `ExpandedChunkResult`,
+  `ContextOptimizationResult`) — no caller, and the `memory_context_optimize` tool the README listed never existed;
+  `InstrumentedMemoryService` — a decorator nothing resolved. Migration: none of these did anything on their own; code
+  that resolved one keeps its own implementation. The SDK README now says what is opt-in (security tools,
+  evaluators) and lists the MCP tools by registration call.
+
 ### Fixed
 - **No `fail` log on a store without a completion service.** The conflict detector asked the unconfigured completion
   service, logged the refusal as an error with a stack trace, and added the memory anyway; without a completion service

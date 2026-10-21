@@ -54,16 +54,6 @@ public sealed class TenantContextData
     public required string UserId { get; init; }
 
     /// <summary>
-    /// User's roles within the tenant.
-    /// </summary>
-    public IReadOnlyList<string> Roles { get; init; } = [];
-
-    /// <summary>
-    /// User's permissions (resolved from roles).
-    /// </summary>
-    public IReadOnlySet<Permission> Permissions { get; init; } = new HashSet<Permission>();
-
-    /// <summary>
     /// Tenant-specific configuration.
     /// </summary>
     public TenantConfiguration? Configuration { get; init; }
