@@ -2,6 +2,7 @@ using MemoryIndexer.Utilities;
 using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
 using Microsoft.Extensions.Logging;
+using MemoryIndexer.Services.TokenCounting;
 
 namespace MemoryIndexer.Sdk.Intelligence.Compression;
 
@@ -518,11 +519,9 @@ public sealed partial class LLMLinguaCompressor : IPromptCompressor
             .ToList();
     }
 
-    private static int EstimateTokenCount(string text)
-    {
-        // Rough estimate: 1 token ≈ 4 characters
-        return text.Length / 4;
-    }
+    private static readonly ApproximateTokenCounter TokenCounter = new();
+
+    private static int EstimateTokenCount(string text) => TokenCounter.Count(text);
 
     private static bool IsCapitalized(string token)
     {

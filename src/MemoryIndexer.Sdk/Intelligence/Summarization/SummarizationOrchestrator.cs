@@ -4,6 +4,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using MemoryIndexer.Services.TokenCounting;
 
 namespace MemoryIndexer.Sdk.Intelligence.Summarization;
 
@@ -12,6 +13,8 @@ namespace MemoryIndexer.Sdk.Intelligence.Summarization;
 /// </summary>
 public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrator
 {
+    private static readonly ApproximateTokenCounter TokenCounter = new();
+
     private readonly ISummarizationTrigger _trigger;
     private readonly ISummarizationService _summarizer;
     private readonly IMemoryStore _memoryStore;
@@ -95,8 +98,7 @@ public sealed partial class SummarizationOrchestrator : ISummarizationOrchestrat
         state.MemoryIds.Add(memory.Id);
         state.AccumulatedImportance += memory.ImportanceScore;
 
-        // Estimate token count (rough: 4 chars = 1 token)
-        var estimatedTokens = memory.Content.Length / 4;
+        var estimatedTokens = TokenCounter.Count(memory.Content);
         state.CurrentTokenCount += estimatedTokens;
 
         // Register event with importance metadata

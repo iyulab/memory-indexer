@@ -166,8 +166,8 @@ public class ShortTermMemoryOrchestratorServiceTests
         var orchestrator = CreateOrchestratorWithOptions(options);
 
         const string userId = "user-1";
-        // Content with ~100 tokens (400 characters)
-        var longContent = new string('a', 400);
+        // Content with ~111 tokens (150 Hangul at 1.35 characters per token)
+        var longContent = new string('가', 150);
         await orchestrator.RecordActivityAsync(userId, "session-1", CreateTestMemory(userId, longContent), TestContext.Current.CancellationToken);
 
         // Act

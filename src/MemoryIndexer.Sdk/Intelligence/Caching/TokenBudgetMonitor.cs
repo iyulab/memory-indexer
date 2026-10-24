@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using MemoryIndexer.Services.TokenCounting;
 
 namespace MemoryIndexer.Sdk.Intelligence.Caching;
 
@@ -88,13 +89,12 @@ public sealed partial class TokenBudgetMonitor : ITokenBudgetMonitor
         }
     }
 
+    private static readonly ApproximateTokenCounter TokenCounter = new();
+
     /// <inheritdoc/>
     public int EstimateTokens(string content)
     {
-        // Simple estimation: ~4 characters per token for English
-        // This is a rough approximation - production should use tiktoken or similar
-        if (string.IsNullOrEmpty(content)) return 0;
-        return (int)Math.Ceiling(content.Length / 4.0);
+        return TokenCounter.Count(content);
     }
 
     /// <inheritdoc/>

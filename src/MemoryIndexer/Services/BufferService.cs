@@ -4,6 +4,7 @@ using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using TokenEstimation;
 
 namespace MemoryIndexer.Services;
 
@@ -333,11 +334,7 @@ public sealed partial class BufferService : IBuffer
     /// </summary>
     private static int EstimateTokenCount(string content)
     {
-        if (string.IsNullOrEmpty(content)) return 0;
-
-        // Simple estimation: ~4 characters per token (English average)
-        // More accurate: use tiktoken library
-        return (int)Math.Ceiling(content.Length / 4.0);
+        return CharTokenEstimator.Count(content, CharTokenRatios.O200k);
     }
 
     /// <summary>

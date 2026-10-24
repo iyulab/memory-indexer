@@ -171,7 +171,7 @@ public class TokenBudgetMonitorTests
         // Act
         var estimate = _monitor.EstimateTokens("Hello, world!"); // 13 chars
 
-        // Assert - roughly 4 chars per token
+        // Assert - 10 letters / 7 + 2 punctuation / 1.25 + 1 space / 2.75 = 3.4
         Assert.InRange(estimate, 2, 5);
     }
 

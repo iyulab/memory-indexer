@@ -192,11 +192,11 @@ public class RollingSummaryManagerTests
             Arg.Any<CancellationToken>())
             .Returns(expectedSummary);
 
-        // Create memory with content that exceeds token threshold (4 chars ≈ 1 token)
+        // Create memory with content that exceeds token threshold (Hangul ≈ 1.35 characters per token)
         var memory = new MemoryUnit
         {
             Id = Guid.NewGuid(),
-            Content = new string('x', 250), // ~62 tokens, exceeds 50
+            Content = new string('가', 100), // ~74 tokens, exceeds 50
             UserId = "user-1"
         };
 

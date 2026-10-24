@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using MemoryIndexer.Interfaces;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
+using MemoryIndexer.Services.TokenCounting;
 
 namespace MemoryIndexer.Sdk.Intelligence.Summarization;
 
@@ -454,11 +455,9 @@ public sealed partial class ExtractiveSummarizer : ISummarizationService
             .ToList();
     }
 
-    private static int EstimateTokenCount(string text)
-    {
-        // Rough estimate: 1 token ≈ 4 characters for English
-        return text.Length / 4;
-    }
+    private static readonly ApproximateTokenCounter TokenCounter = new();
+
+    private static int EstimateTokenCount(string text) => TokenCounter.Count(text);
 
     private static bool HasNamedEntities(string text)
     {

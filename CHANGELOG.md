@@ -5,6 +5,14 @@ All notable changes to Memory Indexer are documented here.
 ## [Unreleased]
 
 ### Changed
+- **Token estimates count Korean, code and JSON at their real weight.** `ApproximateTokenCounter` and the SDK's budget
+  monitor, compressor, summarizers and promotion service now charge each kind of character at its own ratio fitted to
+  o200k_base (Hangul 1.35 characters per token, Latin letters 7, punctuation 1.25 …). The SDK services counted four characters
+  per token for everything — Korean at about 0.4 of the real count, so budgets and the rolling and session summary thresholds
+  were reached at about 2.5 times the intended tokens — and the counter charged one token per Hangul character (1.17 of the
+  real count) and four characters per token elsewhere. **Breaking** (observable counts): budgets fill, summaries trigger and
+  `Truncate` cuts at different points.
+
 - **The MCP server's `store_memory` and `recall_memory` are the SDK's remember and recall.** `store_memory` went to a
   separate store path that never classified: every turn was stored as `episodic` at importance 0.5, small talk included.
   It now goes through `IMemoryService.RememberAsync` — classified, small talk dropped (the result says so, with no id).
@@ -26,6 +34,8 @@ All notable changes to Memory Indexer are documented here.
   rejected a two-word Korean acknowledgement before the word rule ran.
 
 ### Removed
+- **Breaking: `ApproximateTokenCounter(double charsPerToken)`** — the per-kind ratios replace the single Latin ratio.
+  Migration: `new ApproximateTokenCounter()`.
 - **Services `AddMemoryIndexer()` registered that nothing used, and the README claims they backed.** **Breaking** (public
   types): `IAuthorizationService` / `DefaultAuthorizationService` (with `Permission`, `AuthorizationResult`, `BuiltInRoles`)
   and `IAuditLogger` / `InMemoryAuditLogger` (with `AuditEvent`, `AuditAction`, `AuditOutcome`, `AuditSeverity`,

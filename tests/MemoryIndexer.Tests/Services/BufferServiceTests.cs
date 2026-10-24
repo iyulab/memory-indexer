@@ -235,8 +235,8 @@ public class BufferServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        // Each item ~125 tokens (500 chars / 4), need 4 items to exceed 500 threshold
-        var longContent = new string('x', 500);
+        // Each item ~149 tokens (200 Hangul at 1.35 characters per token), 4 items exceed the 500 threshold
+        var longContent = new string('가', 200);
         await _buffer.EnqueueAsync(longContent, userId, cancellationToken: TestContext.Current.CancellationToken);
         await _buffer.EnqueueAsync(longContent, userId, cancellationToken: TestContext.Current.CancellationToken);
         await _buffer.EnqueueAsync(longContent, userId, cancellationToken: TestContext.Current.CancellationToken);
@@ -445,14 +445,14 @@ public class BufferServiceTests
     {
         // Arrange
         const string userId = "user-1";
-        // 100 characters should be ~25 tokens (100/4)
-        var content = new string('a', 100);
+        // 100 Hangul should be ~74 tokens (o200k_base takes about 1.35 Hangul per token) — not 25, as four characters per token said
+        var content = new string('가', 100);
 
         // Act
         var item = await _buffer.EnqueueAsync(content, userId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        item.TokenCount.Should().BeInRange(20, 30);
+        item.TokenCount.Should().BeInRange(70, 80);
     }
 
     #endregion

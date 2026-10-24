@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
+using MemoryIndexer.Services.TokenCounting;
 
 namespace MemoryIndexer.Sdk.Intelligence.Summarization;
 
@@ -10,6 +11,8 @@ namespace MemoryIndexer.Sdk.Intelligence.Summarization;
 /// </summary>
 public sealed partial class RollingSummaryManager : IRollingSummaryManager
 {
+    private static readonly ApproximateTokenCounter TokenCounter = new();
+
     private readonly ISummarizationService _summarizer;
     private readonly ILogger<RollingSummaryManager> _logger;
     private readonly ConcurrentDictionary<string, RollingSummaryState> _states = new();
@@ -57,8 +60,7 @@ public sealed partial class RollingSummaryManager : IRollingSummaryManager
         state.WindowMemories.Add(memory);
         state.TotalMemoriesProcessed++;
 
-        // Estimate token count (rough: 4 chars = 1 token)
-        var estimatedTokens = memory.Content.Length / 4;
+        var estimatedTokens = TokenCounter.Count(memory.Content);
         state.WindowTokenCount += estimatedTokens;
 
         LogAddedMemoryToWindow(_logger, sessionId, state.WindowMemories.Count, state.WindowTokenCount);

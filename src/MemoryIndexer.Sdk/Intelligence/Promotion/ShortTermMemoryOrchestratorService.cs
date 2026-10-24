@@ -7,6 +7,7 @@ using MemoryIndexer.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Globalization;
+using MemoryIndexer.Services.TokenCounting;
 
 namespace MemoryIndexer.Sdk.Intelligence.Promotion;
 
@@ -332,14 +333,9 @@ public sealed partial class ShortTermMemoryOrchestratorService : IShortTermMemor
         return null;
     }
 
-    /// <summary>
-    /// Estimates token count from text (~4 characters per token).
-    /// </summary>
-    private static int EstimateTokens(string text)
-    {
-        if (string.IsNullOrEmpty(text)) return 0;
-        return (int)Math.Ceiling(text.Length / 4.0);
-    }
+    private static readonly ApproximateTokenCounter TokenCounter = new();
+
+    private static int EstimateTokens(string text) => TokenCounter.Count(text);
 
     /// <summary>
     /// Creates an extractive summary from memories.
