@@ -7,23 +7,23 @@
     <PackageVersion Include="ModelContextProtocol" Version="2.3.0" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.0" />
     <!-- Microsoft Extensions (.NET 10) -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.14" />
     <!-- Vector Data -->
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
     <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="10.11.0" />
     <!-- Database -->
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.14" />
     <!-- Explicit lift: Microsoft.Data.Sqlite 10.0.8 pulls SQLitePCLRaw 2.1.11
          (NU1903 high, GHSA-2m69-gcr7-jv3q); upstream 2.1.12 stable landed 2026-07-09.
          Direct reference in MemoryIndexer.Sdk so the >= 2.1.12 floor propagates to consumers. -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <!-- Numerics -->
-    <PackageVersion Include="System.Numerics.Tensors" Version="10.0.13" />
+    <PackageVersion Include="System.Numerics.Tensors" Version="10.0.14" />
     <!-- Build -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.402" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
     <!-- Testing -->
     <!-- xUnit v3 / Microsoft.Testing.Platform -->
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
@@ -48,7 +48,7 @@
     <!-- OpenAI -->
     <PackageVersion Include="OpenAI" Version="2.14.0" />
     <!-- ASP.NET Core -->
-    <PackageVersion Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.14" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.1" />
     <PackageVersion Include="Microsoft.OpenApi" Version="3.11.0" />
     <!-- OpenTelemetry Observability -->

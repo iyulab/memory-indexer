@@ -55,6 +55,7 @@ All notable changes to Memory Indexer are documented here.
 ### Dependencies
 - .NET runtime packages 10.0.12 -> 10.0.13 (`Microsoft.Extensions.*`, `Microsoft.Data.Sqlite`, `System.Numerics.Tensors`, `Microsoft.AspNetCore.SpaProxy`) — the servicing band LMSupply's next release requires.
 - `ModelContextProtocol` / `.AspNetCore` 2.2.0 -> 2.3.0, OpenTelemetry 1.15.x -> 1.20.1 (SDK, exporters, hosting, HTTP instrumentation).
+- Re-pinned third-party packages: 7 .NET servicing pins (Microsoft.AspNetCore, Microsoft.Data, Microsoft.Extensions, System.Numerics) 10.0.13 -> 10.0.14 (the 10.0.14 security servicing release); `Microsoft.SourceLink.GitHub` 10.0.402 -> 10.0.403.
 
 ## [v0.40.0] - 2026-10-18
 
