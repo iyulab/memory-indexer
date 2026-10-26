@@ -683,7 +683,7 @@ All notable changes to Memory Indexer are documented here.
 ## [v0.19.17] - 2026-09-28
 
 ### Changed
-- Re-pinned sibling package(s) `LMSupply.Embedder` 0.87.0 -> 0.88.0, `LMSupply.Generator` 0.87.0 -> 0.88.0 — re-consumption of already-consumed iyulab packages. No source changes.
+- Re-pinned sibling package(s) `LMSupply.Embedder` 0.87.0 -> 0.88.0, `LMSupply.Generator` 0.87.0 -> 0.88.0 — re-consumption of already-consumed iyulab packages. No source changes. LMSupply 0.137.0 changes the token estimate it falls back to when a local server reports no usage: Korean text now counts about 2.5x more tokens than before, English slightly fewer, digits more.
 
 ## [v0.19.16] - 2026-09-28
 
