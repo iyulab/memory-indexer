@@ -40,7 +40,7 @@ public sealed class KnowledgeGraphTools
     /// <param name="content">The text content to analyze.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of extracted entities with types and confidence scores.</returns>
-    [McpServerTool, Description("Extract entities (people, organizations, dates, etc.) from text content")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Extract entities (people, organizations, dates, etc.) from text content")]
     public async Task<ExtractEntitiesResult> ExtractEntities(
         [Description("Text content to extract entities from")] string content,
         CancellationToken cancellationToken = default)
@@ -78,7 +78,7 @@ public sealed class KnowledgeGraphTools
     /// <param name="content">The text content to analyze.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of relationships between entities.</returns>
-    [McpServerTool, Description("Extract relationships between entities in text content")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Extract relationships between entities in text content")]
     public async Task<ExtractRelationsResult> ExtractRelations(
         [Description("Text content to extract relations from")] string content,
         CancellationToken cancellationToken = default)
@@ -120,7 +120,7 @@ public sealed class KnowledgeGraphTools
     /// <param name="rebuildIfExists">Whether to rebuild if graph already exists.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Summary of the built knowledge graph.</returns>
-    [McpServerTool, Description("Build a knowledge graph from stored memories")]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false), Description("Build a knowledge graph from stored memories")]
     public async Task<BuildGraphResult> BuildKnowledgeGraph(
         [Description("User ID (optional, defaults to 'default')")] string? userId = null,
         [Description("Rebuild graph even if it exists")] bool rebuildIfExists = false,
@@ -192,7 +192,7 @@ public sealed class KnowledgeGraphTools
     /// <param name="maxResults">Maximum entities to return.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching entities and their relationships.</returns>
-    [McpServerTool, Description("Query the knowledge graph for entities and relationships")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Query the knowledge graph for entities and relationships")]
     public async Task<QueryGraphResult> QueryKnowledgeGraph(
         [Description("Search query for entities")] string query,
         [Description("User ID (optional)")] string? userId = null,
@@ -266,7 +266,7 @@ public sealed class KnowledgeGraphTools
     /// <param name="userId">User ID whose graph to analyze.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Graph statistics including entity and relation counts by type.</returns>
-    [McpServerTool, Description("Get statistics about the knowledge graph")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Get statistics about the knowledge graph")]
     public Task<GraphStatsResult> GetGraphStats(
         [Description("User ID (optional)")] string? userId = null,
         CancellationToken cancellationToken = default)
@@ -314,7 +314,7 @@ public sealed class KnowledgeGraphTools
     /// <param name="userId">User ID whose graph to clear.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the clear operation.</returns>
-    [McpServerTool, Description("Clear the cached knowledge graph")]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false), Description("Clear the cached knowledge graph")]
     public Task<ClearGraphResult> ClearKnowledgeGraph(
         [Description("User ID (optional)")] string? userId = null,
         CancellationToken cancellationToken = default)

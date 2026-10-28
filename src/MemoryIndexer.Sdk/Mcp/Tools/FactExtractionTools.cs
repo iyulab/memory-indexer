@@ -18,7 +18,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IO
     /// Extract facts from conversational content.
     /// Identifies user facts (name, preferences, etc.) and determines promotion path.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Extract facts from conversational content. Identifies user facts like name, preferences, and determines whether they should be fast-tracked to long-term memory.")]
     public async Task<FactExtractionToolResult> ExtractFacts(
         [Description("The content to analyze for facts")] string content,
@@ -80,7 +80,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IO
     /// Get user profile with extracted facts.
     /// Retrieves all facts stored for a user from the Archive.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get user profile with all extracted facts. Retrieves persistent facts about the user from long-term memory.")]
     public async Task<UserProfileToolResult> GetUserProfile(
         [Description("User ID (default: 'default')")] string? userId = null,
@@ -128,7 +128,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IO
     /// <summary>
     /// Get available fact categories.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("List available fact categories for filtering and organization.")]
     public static Task<FactCategoriesResult> GetFactCategories(CancellationToken cancellationToken = default)
     {
@@ -156,7 +156,7 @@ public sealed class FactExtractionTools(IFastTrackPromoter fastTrackPromoter, IO
     /// <summary>
     /// Get promotion path information.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("List available promotion paths and their criteria.")]
     public static Task<PromotionPathsResult> GetPromotionPaths(CancellationToken cancellationToken = default)
     {

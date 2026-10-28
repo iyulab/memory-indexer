@@ -21,7 +21,7 @@ public class ResourceManagementTools(
     /// <summary>
     /// Get current resource usage for a user.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get current resource usage statistics including memory count, storage size, and breakdown by tier and type.")]
     public async Task<UsageResult> GetUsage(
         [Description("User ID to get usage for (optional, defaults to current user)")] string? userId = null,
@@ -51,7 +51,7 @@ public class ResourceManagementTools(
     /// <summary>
     /// Get resource limits for a user.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get the resource limits applicable to a user, including maximum memories and storage size.")]
     public LimitsResult GetLimits(
         [Description("User ID to get limits for (optional, defaults to current user)")] string? userId = null)
@@ -77,7 +77,7 @@ public class ResourceManagementTools(
     /// <summary>
     /// Check if a store operation is allowed.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Check if a store operation would be allowed within current resource limits.")]
     public async Task<EnforcementCheckResult> CanStore(
         [Description("Estimated size in bytes of the memory to store")] long estimatedSizeBytes = 0,
@@ -106,7 +106,7 @@ public class ResourceManagementTools(
     /// <summary>
     /// Check if a batch store operation is allowed.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Check if a batch store operation would be allowed within current resource limits.")]
     public async Task<EnforcementCheckResult> CanStoreBatch(
         [Description("Number of memories to store")] int count,
@@ -136,7 +136,7 @@ public class ResourceManagementTools(
     /// <summary>
     /// Get tenant-level usage aggregation.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get aggregated resource usage for a tenant, including all users and breakdown by tier and type.")]
     public TenantUsageResult GetTenantUsage(
         [Description("Tenant ID to get usage for")] string tenantId)
@@ -161,7 +161,7 @@ public class ResourceManagementTools(
     /// <summary>
     /// Get global usage summary across all users.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get global resource usage summary across all users and tenants.")]
     public GlobalUsageResult GetGlobalSummary()
     {
@@ -189,7 +189,7 @@ public class ResourceManagementTools(
     /// <summary>
     /// Refresh usage from store for a user.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Refresh and recalculate usage from the actual memory store for a user.")]
     public async Task<RefreshResult> RefreshUsage(
         [Description("User ID to refresh (optional, defaults to current user)")] string? userId = null,

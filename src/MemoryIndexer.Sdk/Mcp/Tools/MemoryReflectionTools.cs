@@ -32,7 +32,7 @@ public sealed partial class MemoryReflectionTools
     /// <summary>
     /// Analyzes memories for issues like contradictions and outdated information.
     /// </summary>
-    [McpServerTool, Description("Analyze memories for contradictions, outdated info, and duplicates. Returns health assessment.")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Analyze memories for contradictions, outdated info, and duplicates. Returns health assessment.")]
     public async Task<string> MemoryAnalyze(
         [Description("User ID")] string userId,
         [Description("Focus query (optional)")] string? focusQuery = null,
@@ -88,7 +88,7 @@ public sealed partial class MemoryReflectionTools
     /// <summary>
     /// Applies corrections to memories.
     /// </summary>
-    [McpServerTool, Description("Apply corrections to memories. Resolves contradictions and updates outdated info.")]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false), Description("Apply corrections to memories. Resolves contradictions and updates outdated info.")]
     public async Task<string> MemoryCorrect(
         [Description("User ID")] string userId,
         [Description("Minimum priority (Low, Normal, High, Critical)")] string minPriority = "Normal",
@@ -144,7 +144,7 @@ public sealed partial class MemoryReflectionTools
     /// <summary>
     /// Updates confidence scores with time decay.
     /// </summary>
-    [McpServerTool, Description("Update memory confidence scores with time decay and access patterns.")]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false), Description("Update memory confidence scores with time decay and access patterns.")]
     public async Task<string> MemoryUpdateConfidence(
         [Description("User ID")] string userId,
         [Description("Decay half-life in days")] int halfLifeDays = 30,
@@ -173,7 +173,7 @@ public sealed partial class MemoryReflectionTools
     /// <summary>
     /// Triggers a reflection cycle to generate insights.
     /// </summary>
-    [McpServerTool, Description("Trigger reflection to generate insights from recent memories. Creates higher-level understanding.")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Trigger reflection to generate insights from recent memories. Creates higher-level understanding.")]
     public async Task<string> MemoryReflect(
         [Description("User ID")] string userId,
         [Description("Focus topic (optional)")] string? focusTopic = null,
@@ -238,7 +238,7 @@ public sealed partial class MemoryReflectionTools
     /// <summary>
     /// Checks if reflection should be triggered.
     /// </summary>
-    [McpServerTool, Description("Check if reflection should be triggered based on accumulated memories and importance.")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Check if reflection should be triggered based on accumulated memories and importance.")]
     public async Task<string> ShouldReflect(
         [Description("User ID")] string userId,
         CancellationToken cancellationToken = default)

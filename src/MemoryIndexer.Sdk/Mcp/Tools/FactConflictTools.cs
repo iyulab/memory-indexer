@@ -21,7 +21,7 @@ public sealed class FactConflictTools(
     /// Validate a fact against existing facts.
     /// Detects conflicts and recommends resolution action.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Validate a fact against existing facts. Detects conflicts and recommends resolution action based on category-specific rules.")]
     public async Task<ValidateFactResult> ValidateFact(
         [Description("The fact content to validate")] string content,
@@ -85,7 +85,7 @@ public sealed class FactConflictTools(
     /// Get the version history of a fact.
     /// Returns all versions from newest to oldest.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get the version history of a fact. Returns all versions in the supersession chain from newest to oldest.")]
     public async Task<FactHistoryResult> GetFactHistory(
         [Description("The fact key to get history for")] string key,
@@ -122,7 +122,7 @@ public sealed class FactConflictTools(
     /// <summary>
     /// Get facts that were valid at a specific point in time.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get all facts that were valid at a specific point in time (temporal query).")]
     public async Task<TemporalFactsResult> GetFactsValidAt(
         [Description("The date to query (ISO 8601 format, e.g., '2024-01-15')")] string asOfDate,
@@ -165,7 +165,7 @@ public sealed class FactConflictTools(
     /// Archive an existing fact and update with new value.
     /// Creates a versioned history chain.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description("Archive an existing fact and update with a new value. Preserves the old version in a history chain.")]
     public async Task<ArchiveAndUpdateResult> ArchiveAndUpdateFact(
         [Description("The fact key to update")] string key,
@@ -200,7 +200,7 @@ public sealed class FactConflictTools(
     /// <summary>
     /// Get category-specific resolution rules.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get the resolution rules for a specific fact category.")]
     public Task<CategoryRuleResult> GetCategoryRule(
         [Description("Fact category: Identity, Preference, Relationship, Location, Temporal, Skill, Goal, Health, Professional, General")] string category,
@@ -232,7 +232,7 @@ public sealed class FactConflictTools(
     /// <summary>
     /// List all category resolution rules.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("List all category-specific resolution rules.")]
     public static Task<AllCategoryRulesResult> GetAllCategoryRules(CancellationToken cancellationToken = default)
     {

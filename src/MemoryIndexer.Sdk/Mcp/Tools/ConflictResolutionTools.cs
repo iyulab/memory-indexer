@@ -46,7 +46,7 @@ public sealed class ConflictResolutionTools
     /// <param name="limit">Maximum existing memories to compare against.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Contradiction detection result.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Detect if new content contradicts existing memories. Use before storing potentially conflicting information.")]
     public async Task<DetectContradictionResult> DetectContradiction(
         [Description("Content to check for contradictions")] string content,
@@ -120,7 +120,7 @@ public sealed class ConflictResolutionTools
     /// <param name="strategy">Resolution strategy to apply.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Resolution result with recommended action.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Description("Resolve a contradiction between new content and existing memory. Apply a resolution strategy.")]
     public async Task<ResolveContradictionResult> ResolveContradiction(
         [Description("New content that conflicts")] string newContent,
@@ -204,7 +204,7 @@ public sealed class ConflictResolutionTools
     /// <param name="applyResolution">Whether to apply the resolution (update/delete memories).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Auto-resolution result with action taken.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Description("Automatically detect and resolve contradictions for new content. Combines detection and resolution.")]
     public async Task<AutoResolveResult> AutoResolveContradiction(
         [Description("New content to check")] string content,
@@ -306,7 +306,7 @@ public sealed class ConflictResolutionTools
     /// <param name="confidence">Confidence level of the contradiction (0.0-1.0).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Strategy recommendation with explanation.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get a recommendation on how to handle a specific type of contradiction.")]
     public Task<StrategyRecommendationResult> GetResolutionStrategy(
         [Description("Contradiction type: Factual, Temporal, Preference, Semantic, Logical")] string contradictionType,

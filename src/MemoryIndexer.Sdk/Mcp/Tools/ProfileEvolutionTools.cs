@@ -37,7 +37,7 @@ public class ProfileEvolutionTools
     /// <summary>
     /// Runs inference on user's facts to derive new insights.
     /// </summary>
-    [McpServerTool(Name = "infer_facts")]
+    [McpServerTool(Name = "infer_facts", ReadOnly = true, OpenWorld = false)]
     [Description("Run inference on user's profile facts to derive new insights and relationships.")]
     public async Task<InferFactsResult> InferFacts(
         [Description("User ID (default: 'default')")] string userId = "default",
@@ -79,7 +79,7 @@ public class ProfileEvolutionTools
     /// <summary>
     /// Gets registered inference rules.
     /// </summary>
-    [McpServerTool(Name = "get_inference_rules")]
+    [McpServerTool(Name = "get_inference_rules", ReadOnly = true, OpenWorld = false)]
     [Description("Get list of registered inference rules.")]
     public Task<GetInferenceRulesResult> GetInferenceRules(CancellationToken cancellationToken = default)
     {
@@ -105,7 +105,7 @@ public class ProfileEvolutionTools
     /// <summary>
     /// Creates a snapshot of user's current profile.
     /// </summary>
-    [McpServerTool(Name = "create_profile_snapshot")]
+    [McpServerTool(Name = "create_profile_snapshot", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description("Create a point-in-time snapshot of user's profile for tracking changes.")]
     public async Task<CreateSnapshotResult> CreateProfileSnapshot(
         [Description("User ID (default: 'default')")] string userId = "default",
@@ -136,7 +136,7 @@ public class ProfileEvolutionTools
     /// <summary>
     /// Lists profile snapshots.
     /// </summary>
-    [McpServerTool(Name = "list_profile_snapshots")]
+    [McpServerTool(Name = "list_profile_snapshots", ReadOnly = true, OpenWorld = false)]
     [Description("List available profile snapshots for a user.")]
     public async Task<ListSnapshotsResult> ListProfileSnapshots(
         [Description("User ID (default: 'default')")] string userId = "default",
@@ -163,7 +163,7 @@ public class ProfileEvolutionTools
     /// <summary>
     /// Compares two profile snapshots.
     /// </summary>
-    [McpServerTool(Name = "compare_snapshots")]
+    [McpServerTool(Name = "compare_snapshots", ReadOnly = true, OpenWorld = false)]
     [Description("Compare two profile snapshots to see what changed.")]
     public async Task<CompareSnapshotsResult> CompareSnapshots(
         [Description("Older snapshot ID")] string olderSnapshotId,
@@ -220,7 +220,7 @@ public class ProfileEvolutionTools
     /// <summary>
     /// Gets stale facts that may need re-confirmation.
     /// </summary>
-    [McpServerTool(Name = "get_stale_facts")]
+    [McpServerTool(Name = "get_stale_facts", ReadOnly = true, OpenWorld = false)]
     [Description("Get facts with decayed confidence that may need re-confirmation.")]
     public async Task<GetStaleFactsResult> GetStaleFacts(
         [Description("User ID (default: 'default')")] string userId = "default",
@@ -265,7 +265,7 @@ public class ProfileEvolutionTools
     /// <summary>
     /// Calculates decayed confidence for a specific fact.
     /// </summary>
-    [McpServerTool(Name = "calculate_decay")]
+    [McpServerTool(Name = "calculate_decay", ReadOnly = true, OpenWorld = false)]
     [Description("Calculate the current decayed confidence for a fact.")]
     public async Task<CalculateDecayResult> CalculateDecay(
         [Description("Fact key")] string factKey,
@@ -313,7 +313,7 @@ public class ProfileEvolutionTools
     /// <summary>
     /// Exports user profile data (GDPR compliance).
     /// </summary>
-    [McpServerTool(Name = "export_profile")]
+    [McpServerTool(Name = "export_profile", ReadOnly = true, OpenWorld = false)]
     [Description("Export user profile data in JSON format for GDPR compliance.")]
     public async Task<ExportProfileResult> ExportProfile(
         [Description("User ID (default: 'default')")] string userId = "default",

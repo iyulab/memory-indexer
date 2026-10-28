@@ -4,6 +4,14 @@ All notable changes to Memory Indexer are documented here.
 
 ## [Unreleased]
 
+### Added
+- **Every MCP tool declares its safety hints.** All 94 tools now carry `ReadOnly`, `OpenWorld` and, for the 24 that write, `Destructive`
+  and `Idempotent` in `tools/list`, so a client's approval policy reads the server instead of guessing from a tool's name. 70 tools
+  only read; 24 change state, of which 13 overwrite, merge or remove what was there (`delete_memory`, `update_memory`,
+  `apply_retention_policy`, `import_memories`, `clear_knowledge_graph`, ...). None is open-world: the tools work on the server's own
+  store and process state. Recall's access-count bookkeeping is not counted as a modification. A fact pins the writers and the
+  destructive ones by name, so a new tool has to be classified on purpose.
+
 ### Changed
 - **Token estimates count Korean, code and JSON at their real weight.** `ApproximateTokenCounter` and the SDK's budget
   monitor, compressor, summarizers and promotion service now charge each kind of character at its own ratio fitted to

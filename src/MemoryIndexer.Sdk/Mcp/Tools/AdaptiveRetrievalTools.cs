@@ -41,7 +41,7 @@ public sealed class AdaptiveRetrievalTools
     /// <param name="context">Optional conversation context for better classification.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Classification result with intent type and suggested retrieval approach.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Classify query intent to determine optimal retrieval strategy. Identifies factual, contextual, temporal, or relational queries.")]
     public async Task<ClassifyQueryToolResult> ClassifyQueryIntent(
         [Description("Query to classify")] string query,
@@ -76,7 +76,7 @@ public sealed class AdaptiveRetrievalTools
     /// <param name="sessionId">Optional session ID for scoped retrieval.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Adaptive retrieval results with strategy explanation.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Smart retrieval that auto-selects strategy based on query intent. Best for general queries where you want optimal results without manual tuning.")]
     public async Task<AdaptiveRetrievalToolResult> AdaptiveRecall(
         [Description("Search query")] string query,
@@ -138,7 +138,7 @@ public sealed class AdaptiveRetrievalTools
     /// <param name="sessionId">Optional session ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Tiered retrieval results.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Retrieve from specific tiers with custom priority. Use for fine-grained control over retrieval sources.")]
     public async Task<TieredRetrievalToolResult> TieredRecall(
         [Description("Search query")] string query,
@@ -213,7 +213,7 @@ public sealed class AdaptiveRetrievalTools
     /// <param name="informationType">Type of information needed (facts, context, history, relationships).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Retrieval strategy recommendations.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get recommendations for retrieving specific information types. Helps choose the right strategy.")]
     public static Task<RetrievalRecommendationToolResult> GetRetrievalRecommendation(
         [Description("Information type: facts, context, history, relationships, all")] string informationType = "all",

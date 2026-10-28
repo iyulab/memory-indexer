@@ -21,7 +21,7 @@ public class BackupRestoreTools(IMemoryExporter exporter, IOptions<MemoryIndexer
     /// <summary>
     /// Export memories to JSON format for backup.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Export memories to JSON format for backup. Returns the exported data as a JSON string that can be saved to a file.")]
     public async Task<ExportResult> ExportMemories(
         [Description("Include embeddings in export (can be large)")] bool includeEmbeddings = false,
@@ -72,7 +72,7 @@ public class BackupRestoreTools(IMemoryExporter exporter, IOptions<MemoryIndexer
     /// <summary>
     /// Import memories from a JSON backup.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description("Import memories from a JSON backup. Provide the JSON data that was previously exported.")]
     public async Task<ImportResultSummary> ImportMemories(
         [Description("The JSON data from a previous export")] string jsonData,
@@ -145,7 +145,7 @@ public class BackupRestoreTools(IMemoryExporter exporter, IOptions<MemoryIndexer
     /// <summary>
     /// Get backup statistics without exporting data.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get statistics about memories that would be exported, without actually exporting the data.")]
     public async Task<BackupStatsResult> GetBackupStats(
         [Description("Only count memories created/updated after this ISO 8601 timestamp")] string? since = null,

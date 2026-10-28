@@ -30,7 +30,7 @@ public sealed class SecurityTools
     /// <param name="minConfidence">Minimum confidence threshold (0.0 to 1.0).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of detected PII entities.</returns>
-    [McpServerTool, Description("Detect PII (names, SSN, credit cards, etc.) in text")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Detect PII (names, SSN, credit cards, etc.) in text")]
     public async Task<PiiDetectionToolResult> DetectPii(
         [Description("Text to analyze for PII")] string text,
         [Description("Minimum confidence (0.0-1.0, default 0.5)")] float minConfidence = 0.5f,
@@ -73,7 +73,7 @@ public sealed class SecurityTools
     /// <param name="mode">Redaction mode: Replace, FullMask, PartialMask, Hash, or Remove.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Redacted text and redaction details.</returns>
-    [McpServerTool, Description("Redact PII from text by replacing with placeholders")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Redact PII from text by replacing with placeholders")]
     public async Task<PiiRedactionToolResult> RedactPii(
         [Description("Text to redact")] string text,
         [Description("Minimum confidence (0.0-1.0, default 0.5)")] float minConfidence = 0.5f,
@@ -131,7 +131,7 @@ public sealed class SecurityTools
     /// <param name="text">Text to analyze.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Safety assessment with detected patterns.</returns>
-    [McpServerTool, Description("Check text for prompt injection attacks")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Check text for prompt injection attacks")]
     public async Task<InjectionDetectionToolResult> DetectPromptInjection(
         [Description("Text to analyze for injection attacks")] string text,
         CancellationToken cancellationToken = default)
@@ -175,7 +175,7 @@ public sealed class SecurityTools
     /// <param name="minRiskToSanitize">Minimum risk level to trigger sanitization.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Sanitized text.</returns>
-    [McpServerTool, Description("Sanitize text to neutralize prompt injection attacks")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Sanitize text to neutralize prompt injection attacks")]
     public async Task<SanitizationToolResult> SanitizeInput(
         [Description("Text to sanitize")] string text,
         [Description("Mode: Neutralize (default), Remove, Block, Escape")] string mode = "Neutralize",
@@ -244,7 +244,7 @@ public sealed class SecurityTools
     /// <param name="maxRiskLevel">Maximum allowed injection risk level.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Validation result with recommendations.</returns>
-    [McpServerTool, Description("Validate content for both PII and injection risks before storage")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Validate content for both PII and injection risks before storage")]
     public async Task<ContentValidationResult> ValidateContent(
         [Description("Content to validate")] string content,
         [Description("Allow PII (warns but doesn't block)")] bool allowPii = false,

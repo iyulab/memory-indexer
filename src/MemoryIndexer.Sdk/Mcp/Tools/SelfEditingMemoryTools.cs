@@ -29,7 +29,7 @@ public sealed class SelfEditingMemoryTools
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the replace operation.</returns>
-    [McpServerTool, Description("Replace content in working memory at a specified location")]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false), Description("Replace content in working memory at a specified location")]
     public async Task<MemoryReplaceToolResult> MemoryReplace(
         [Description("Memory location key (e.g., 'user_preferences', 'current_task')")] string location,
         [Description("New content to store at this location")] string newContent,
@@ -69,7 +69,7 @@ public sealed class SelfEditingMemoryTools
     /// <param name="tags">Optional tags for organization.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result with the archived memory ID.</returns>
-    [McpServerTool, Description("Insert content into archival memory for long-term storage")]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false), Description("Insert content into archival memory for long-term storage")]
     public async Task<ArchivalInsertToolResult> ArchivalMemoryInsert(
         [Description("Content to archive for long-term storage")] string content,
         [Description("Category (e.g., 'preferences', 'facts', 'procedures')")] string? category = null,
@@ -116,7 +116,7 @@ public sealed class SelfEditingMemoryTools
     /// <param name="maxResults">Maximum results to return.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Matching archival memories.</returns>
-    [McpServerTool, Description("Search archival memory for relevant content")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Search archival memory for relevant content")]
     public async Task<ArchivalSearchToolResult> ArchivalMemorySearch(
         [Description("Search query for archival memory")] string query,
         [Description("Maximum results to return")] int maxResults = 10,
@@ -156,7 +156,7 @@ public sealed class SelfEditingMemoryTools
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Current working memory snapshot.</returns>
-    [McpServerTool, Description("Get current working memory state")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Get current working memory state")]
     public async Task<WorkingMemoryToolResult> GetWorkingMemory(
         [Description("Session ID (optional)")] string? sessionId = null,
         CancellationToken cancellationToken = default)
@@ -187,7 +187,7 @@ public sealed class SelfEditingMemoryTools
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Update result with potential reflection trigger.</returns>
-    [McpServerTool, Description("Update working memory with new conversation context")]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false), Description("Update working memory with new conversation context")]
     public async Task<UpdateWorkingMemoryToolResult> UpdateWorkingMemory(
         [Description("New context to incorporate")] string newContext,
         [Description("Session ID (optional)")] string? sessionId = null,
@@ -226,7 +226,7 @@ public sealed class SelfEditingMemoryTools
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Whether reflection is recommended.</returns>
-    [McpServerTool, Description("Check if reflection should be triggered for a session (accumulated importance against the threshold). For a user's insight reflection use should_reflect.")]
+    [McpServerTool(ReadOnly = true, OpenWorld = false), Description("Check if reflection should be triggered for a session (accumulated importance against the threshold). For a user's insight reflection use should_reflect.")]
     public async Task<ShouldReflectToolResult> ShouldReflectOnSession(
         [Description("Session ID (optional)")] string? sessionId = null,
         CancellationToken cancellationToken = default)
@@ -252,7 +252,7 @@ public sealed class SelfEditingMemoryTools
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the reflection process.</returns>
-    [McpServerTool, Description("Perform reflection to consolidate and summarize memories")]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false), Description("Perform reflection to consolidate and summarize memories")]
     public async Task<ReflectionToolResult> PerformReflection(
         [Description("Session ID (optional)")] string? sessionId = null,
         CancellationToken cancellationToken = default)
@@ -280,7 +280,7 @@ public sealed class SelfEditingMemoryTools
     /// <param name="sessionId">Session identifier.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the management operation.</returns>
-    [McpServerTool, Description("Manage context window by pruning or archiving old content")]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false), Description("Manage context window by pruning or archiving old content")]
     public async Task<ContextManagementToolResult> ManageContextWindow(
         [Description("Maximum tokens to retain (default: 4000)")] int maxTokens = 4000,
         [Description("Session ID (optional)")] string? sessionId = null,

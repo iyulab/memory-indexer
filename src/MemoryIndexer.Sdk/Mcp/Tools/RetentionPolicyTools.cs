@@ -17,7 +17,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     /// <summary>
     /// Preview what would be cleaned up by the retention policy.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Preview what would be cleaned up by the retention policy without actually deleting anything.")]
     public async Task<RetentionPreviewResult> PreviewCleanup(
         [Description("User ID to preview cleanup for (default: configured default user)")] string? userId = null,
@@ -73,7 +73,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     /// <summary>
     /// Apply retention policy to clean up old or low-confidence entries.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description("Apply retention policy to archive or delete old/low-confidence entries. Use dryRun=true to preview without changes.")]
     public async Task<RetentionApplyResult> ApplyRetentionPolicy(
         [Description("User ID to apply policy to (default: configured default user)")] string? userId = null,
@@ -117,7 +117,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     /// <summary>
     /// Get retention rules for all categories.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get retention rules showing how long each category of memory is kept.")]
     public Task<RetentionRulesResult> GetRetentionRules(CancellationToken cancellationToken = default)
     {
@@ -146,7 +146,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     /// <summary>
     /// Get retention rule for a specific category.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get the retention rule for a specific memory category.")]
     public Task<RetentionRuleDetailResult> GetRetentionRule(
         [Description("Category: Fact, Preference, Skill, Interest, Relationship, Work, Goal, Behavior, Communication, Other")] string category,
@@ -182,7 +182,7 @@ public class RetentionPolicyTools(IRetentionPolicyService retentionService, IOpt
     /// <summary>
     /// Evaluate retention decision for a specific entry.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Evaluate the retention decision for a specific entry by key.")]
     public async Task<RetentionEvaluateResult> EvaluateRetention(
         [Description("The key of the entry to evaluate")] string key,

@@ -41,7 +41,7 @@ public sealed class MemoryTools(
     /// <param name="occurredAt">Optional ISO 8601 time the content was said or happened, when that is not now.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result with the stored memory ID.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description("Store content in long-term memory with semantic indexing. Use this to remember important information, facts, preferences, or events from conversations. Without a type, the content is classified and small talk is not stored.")]
     public async Task<StoreMemoryResult> StoreMemory(
         [Description("The content to memorize")] string content,
@@ -132,7 +132,7 @@ public sealed class MemoryTools(
     /// <param name="namespace">Optional filter by namespace.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of relevant memories with similarity scores.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Search memories using semantic similarity. Use this to recall relevant past information, facts, or events based on a query.")]
     public async Task<RecallMemoryResult> RecallMemory(
         [Description("Search query to find relevant memories")] string query,
@@ -187,7 +187,7 @@ public sealed class MemoryTools(
     /// <param name="namespace">Optional filter by namespace.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of all matching memories.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get all stored memories with optional filtering. Use this to review what has been memorized.")]
     public async Task<GetAllMemoriesResult> GetAllMemories(
         [Description("Maximum memories to return")] int limit = 50,
@@ -239,7 +239,7 @@ public sealed class MemoryTools(
     /// <param name="importance">New importance score (leave null to keep existing).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Update result.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description("Update an existing memory's content or importance. Use this to correct or enhance stored information.")]
     public async Task<UpdateMemoryResult> UpdateMemory(
         [Description("Memory ID to update")] string memoryId,
@@ -282,7 +282,7 @@ public sealed class MemoryTools(
     /// <param name="permanent">If true (default), the memory and its text are removed. If false, it is only hidden (soft delete).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Delete result.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description("Delete a memory by its ID. Use this to remove outdated or incorrect information.")]
     public async Task<DeleteMemoryResult> DeleteMemory(
         [Description("Memory ID to delete")] string memoryId,
@@ -330,7 +330,7 @@ public sealed class MemoryTools(
     /// <param name="memoryId">The ID of the memory to retrieve.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Memory details.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get detailed information about a specific memory by its ID.")]
     public async Task<GetMemoryResult> GetMemory(
         [Description("Memory ID to retrieve")] string memoryId,
@@ -387,7 +387,7 @@ public sealed class MemoryTools(
     /// <param name="source">Source of confirmation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Confirmation result.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description("Confirm a memory to increase its confirmation count. Memories with 3+ confirmations and high confidence become eligible for Archive tier promotion.")]
     public async Task<ConfirmMemoryResult> ConfirmMemory(
         [Description("Memory ID to confirm")] string memoryId,

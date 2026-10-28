@@ -58,7 +58,7 @@ public sealed class AdvancedMemoryTools
     /// <param name="sessionId">Filter by session ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Search results with relevance scores.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Advanced hybrid search combining semantic understanding and keyword matching. Best for queries with specific terms or technical content.")]
     public async Task<SearchMemoryResult> SearchMemory(
         [Description("Search query")] string query,
@@ -116,7 +116,7 @@ public sealed class AdvancedMemoryTools
     /// <param name="minSimilarity">Minimum similarity threshold (0.0 to 1.0).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of related memories.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Find memories semantically related to a specific memory. Useful for discovering connections and context.")]
     public async Task<GetRelatedMemoriesResult> GetRelatedMemories(
         [Description("Memory ID to find relations for")] string memoryId,
@@ -184,7 +184,7 @@ public sealed class AdvancedMemoryTools
     /// <param name="threshold">Similarity threshold (0.0 to 1.0).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Duplicate check result with recommendations.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Check if content is a duplicate of existing memories. Helps avoid storing redundant information.")]
     public async Task<CheckDuplicateResult> CheckDuplicate(
         [Description("Content to check for duplicates")] string content,
@@ -219,7 +219,7 @@ public sealed class AdvancedMemoryTools
     /// <param name="mergeStrategy">Strategy for merging: keepOldest, keepNewest, keepMostAccessed, keepHighestImportance.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Duplicate detection and merge result.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Description("Find duplicate memories and optionally merge them. Helps clean up redundant stored information.")]
     public async Task<MergeMemoriesResult> FindAndMergeDuplicates(
         [Description("Automatically merge duplicates")] bool autoMerge = false,
@@ -280,7 +280,7 @@ public sealed class AdvancedMemoryTools
     /// <param name="type">Memory type for context.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Suggested importance score with analysis.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Analyze content to suggest an appropriate importance score before storing.")]
     public Task<AnalyzeImportanceResult> AnalyzeImportance(
         [Description("Content to analyze")] string content,
@@ -314,7 +314,7 @@ public sealed class AdvancedMemoryTools
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Index rebuild result.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Rebuild the search index for improved hybrid search performance. Run after bulk operations.")]
     public async Task<RebuildIndexResult> RebuildSearchIndex(
         CancellationToken cancellationToken = default)
@@ -337,7 +337,7 @@ public sealed class AdvancedMemoryTools
     /// <param name="compressionRatio">Target compression ratio (0.1 to 0.5).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Summary of selected memories.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Summarize memories to create a compressed representation. Useful for context window optimization.")]
     public async Task<SummarizeMemoriesResult> SummarizeMemories(
         [Description("Optional query to filter memories")] string? query = null,
@@ -407,7 +407,7 @@ public sealed class AdvancedMemoryTools
     /// <param name="levels">Number of hierarchy levels (2-5).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Hierarchical summary structure.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Create hierarchical summary structure with multiple abstraction levels. Efficient for large memory sets.")]
     public async Task<CreateHierarchySummaryResult> CreateHierarchySummary(
         [Description("Number of hierarchy levels (2-5)")] int levels = 3,
@@ -462,7 +462,7 @@ public sealed class AdvancedMemoryTools
     /// <param name="maxTokens">Maximum context window size.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Whether summarization is recommended.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Check if context window optimization via summarization is recommended based on current usage.")]
     public async Task<ShouldSummarizeResult> ShouldSummarize(
         [Description("Current token count in context")] int currentTokenCount,

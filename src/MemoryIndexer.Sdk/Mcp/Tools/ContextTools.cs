@@ -20,7 +20,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder, IOptions<Memory
     /// Build context using a token-budget-aware strategy.
     /// Assembles context from recent conversation, semantic memories, episodic session context, and user facts.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Build context using token budget allocation. Combines recent conversation, semantic memories, session context, and user facts based on the selected strategy.")]
     public async Task<ContextBuildResult> ContextBuild(
         [Description("Query for semantic search relevance")] string query,
@@ -72,7 +72,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder, IOptions<Memory
     /// Get recent conversation turns up to a token limit.
     /// Retrieves from Buffer (T0) and Short-Term (T1) memory in chronological order.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get recent conversation turns up to a token limit. Useful for maintaining conversation continuity in sequential tasks.")]
     public async Task<RecentConversationResult> GetRecentConversation(
         [Description("Maximum tokens to include (default: 1000)")] int maxTokens = 1000,
@@ -104,7 +104,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder, IOptions<Memory
     /// Get session-scoped episodic context up to a token limit.
     /// Retrieves episodic memories from a specific session (e.g., game progress, task state).
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get session-scoped episodic memories up to a token limit. Useful for retrieving session-specific context like game progress or task state.")]
     public async Task<SessionContextResult> GetSessionContext(
         [Description("Session ID to retrieve context from")] string sessionId,
@@ -137,7 +137,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder, IOptions<Memory
     /// Get user-scoped facts and knowledge up to a token limit.
     /// Retrieves persistent user facts that span across sessions.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get user-scoped facts and knowledge up to a token limit. Retrieves persistent facts about the user that span across sessions.")]
     public async Task<UserFactsResult> GetUserFacts(
         [Description("Maximum tokens to include (default: 500)")] int maxTokens = 500,
@@ -168,7 +168,7 @@ public sealed class ContextTools(IContextBuilder contextBuilder, IOptions<Memory
     /// <summary>
     /// Get available context strategies with their budget allocations.
     /// </summary>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("List available context strategies and their token budget allocations.")]
     public static Task<StrategyListResult> GetContextStrategies(CancellationToken cancellationToken = default)
     {

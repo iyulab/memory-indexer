@@ -41,7 +41,7 @@ public sealed class GraphTraversalTools
     /// <param name="minCommunitySize">Minimum members for a valid community.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Community detection result with cluster assignments.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Detect communities in the memory graph. Groups related memories into thematic clusters.")]
     public async Task<DetectCommunitiesToolResult> DetectCommunities(
         [Description("Max iterations (1-100)")] int maxIterations = 20,
@@ -82,7 +82,7 @@ public sealed class GraphTraversalTools
     /// <param name="communityId">The community ID to retrieve.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of memories in the community.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get all memories in a specific community cluster.")]
     public async Task<GetCommunityMemoriesToolResult> GetCommunityMemories(
         [Description("Community ID")] int communityId,
@@ -115,7 +115,7 @@ public sealed class GraphTraversalTools
     /// <param name="communityId">The community ID to summarize.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Community summary with topic label and key entities.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get a summary description of a community cluster.")]
     public async Task<CommunitySummaryToolResult> GetCommunitySummary(
         [Description("Community ID")] int communityId,
@@ -150,7 +150,7 @@ public sealed class GraphTraversalTools
     /// <param name="tolerance">Convergence tolerance.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Importance computation result.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description("Compute entity importance using PageRank. Identifies key entities in the knowledge graph.")]
     public async Task<ComputeImportanceToolResult> ComputeImportance(
         [Description("Damping factor (0.1-0.99)")] float dampingFactor = 0.85f,
@@ -198,7 +198,7 @@ public sealed class GraphTraversalTools
     /// <param name="entityName">The entity name to look up.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Entity importance score.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get the importance score for a specific entity.")]
     public async Task<GetEntityImportanceToolResult> GetEntityImportance(
         [Description("Entity name")] string entityName,
@@ -225,7 +225,7 @@ public sealed class GraphTraversalTools
     /// <param name="topK">Number of entities to return (1-100).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Ranked list of important entities.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Get the most important entities ranked by PageRank score.")]
     public async Task<GetTopEntitiesToolResult> GetTopEntities(
         [Description("Number to return (1-100)")] int topK = 20,
@@ -261,7 +261,7 @@ public sealed class GraphTraversalTools
     /// <param name="topK">Maximum related memories to return (1-50).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Related memories ranked by graph proximity.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Find memories related to a given memory through shared entities.")]
     public async Task<FindRelatedMemoriesToolResult> FindRelatedMemories(
         [Description("Source memory ID")] string memoryId,
@@ -308,7 +308,7 @@ public sealed class GraphTraversalTools
     /// <param name="maxMemories">Maximum memories in subgraph (1-100).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Extracted subgraph with memories, entities, and relations.</returns>
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, OpenWorld = false)]
     [Description("Extract a subgraph centered on specific memories. Returns nodes and relationships.")]
     public async Task<ExtractSubgraphToolResult> ExtractSubgraph(
         [Description("Comma-separated memory IDs")] string memoryIds,
