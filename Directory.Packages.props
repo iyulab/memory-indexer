@@ -4,8 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- MCP SDK -->
-    <PackageVersion Include="ModelContextProtocol" Version="2.3.0" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.0" />
+    <PackageVersion Include="ModelContextProtocol" Version="2.3.1" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.1" />
     <!-- Microsoft Extensions (.NET 10) -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
