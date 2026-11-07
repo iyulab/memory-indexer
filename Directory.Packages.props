@@ -4,8 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- MCP SDK -->
-    <PackageVersion Include="ModelContextProtocol" Version="2.3.1" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.1" />
+    <PackageVersion Include="ModelContextProtocol" Version="2.4.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
     <!-- Microsoft Extensions (.NET 10) -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
@@ -46,7 +46,7 @@
     <!-- Environment -->
     <PackageVersion Include="DotNetEnv" Version="3.2.0" />
     <!-- OpenAI -->
-    <PackageVersion Include="OpenAI" Version="2.14.0" />
+    <PackageVersion Include="OpenAI" Version="2.15.0" />
     <!-- ASP.NET Core -->
     <PackageVersion Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.14" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.1" />
@@ -54,7 +54,7 @@
     <!-- OpenTelemetry Observability -->
     <PackageVersion Include="OpenTelemetry" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.2" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
   </ItemGroup>
